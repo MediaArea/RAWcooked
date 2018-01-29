@@ -12,9 +12,10 @@
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
 #include <cstdint>
+#include <cstddef>
 //---------------------------------------------------------------------------
 
-typedef void(*write_file_call)(uint8_t*, uint64_t, void*);
+typedef void(*write_file_call)(uint8_t*, size_t, void*);
 
 class dpx
 {

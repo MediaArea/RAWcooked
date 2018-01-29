@@ -42,7 +42,7 @@ public:
     quant_tables_struct     QuantTables;
     size_t                  Contexts_Count;
 
-    quant_table_set_struct::quant_table_set_struct() : 
+    quant_table_set_struct() :
         Contexts_Count(0)
     {
     }

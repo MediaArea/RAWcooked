@@ -49,7 +49,7 @@ static size_t Size_EB(uint32_t Name, uint64_t Size)
 }
 
 //---------------------------------------------------------------------------
-static void Put_EB(unsigned char* Buffer, uint64_t& Offset, uint32_t Name, uint64_t Size)
+static void Put_EB(unsigned char* Buffer, size_t& Offset, uint32_t Name, uint64_t Size)
 {
     size_t N_l = 1;
     while (Name >> (N_l * 7))
