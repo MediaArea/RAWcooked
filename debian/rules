@@ -12,8 +12,6 @@ configure-stamp:
 	cd Project/GNU/CLI && ./autogen
 	cd Project/GNU/CLI && ./configure --prefix=/usr
 
-	cd Project/Qt && ./prepare
-
 	touch $@
 
 
@@ -24,48 +22,28 @@ build-stamp: configure-stamp
 	# Add here commands to compile the package.
 	cd Project/GNU/CLI && $(MAKE)
 
-	cd Project/Qt && $(MAKE)
-
 	touch $@
 
-clean: 
+clean:
 	dh_testdir
 	dh_testroot
 
 	# Add here commands to clean up after the build process.
 	# $(MAKE) clean
 
-	dh_clean 
+	dh_clean
 
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k 
+	dh_clean -k
 	dh_installdirs
 
 	# Add here commands to install the package into debian/tmp
 	cd Project/GNU/CLI && $(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
-	cd Project/Qt && install -m 755 rawcooked-gui  $(CURDIR)/debian/tmp/usr/bin/rawcooked-gui
 
 	install -dm 755 $(CURDIR)/debian/tmp/usr/share/doc/rawcooked
 	install -m 644 License.html $(CURDIR)/debian/tmp/usr/share/doc/rawcooked
-
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/doc/rawcooked-gui
-	install -m 644 License.html $(CURDIR)/debian/tmp/usr/share/doc/rawcooked-gui
-
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/pixmaps
-	install -m 644 Source/Resource/Image/Icon.png $(CURDIR)/debian/tmp/usr/share/pixmaps/rawcooked.png
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/icons/hicolor/128x128/apps
-	install -m 644 Source/Resource/Image/Icon.png $(CURDIR)/debian/tmp/usr/share/icons/hicolor/128x128/apps/rawcooked.png
-
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/applications
-	install -m 644 Project/Qt/rawcooked-gui.desktop $(CURDIR)/debian/tmp/usr/share/applications
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/apps/konqueror/servicemenus/
-	install -m 644 Project/Qt/rawcooked-gui.kde3.desktop $(CURDIR)/debian/tmp/usr/share/apps/konqueror/servicemenus/rawcooked-gui.desktop
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/kde4/services/ServiceMenus/
-	install -m 644 Project/Qt/rawcooked-gui.kde4.desktop $(CURDIR)/debian/tmp/usr/share/kde4/services/ServiceMenus/rawcooked-gui.desktop
-	install -dm 755 $(CURDIR)/debian/tmp/usr/share/kservices5/ServiceMenus/
-	install -m 644 Project/Qt/rawcooked-gui.kde4.desktop $(CURDIR)/debian/tmp/usr/share/kservices5/ServiceMenus/rawcooked-gui.desktop
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -77,7 +55,6 @@ binary-arch: build install
 	dh_testroot
 	dh_install --sourcedir=debian/tmp
 	dh_installchangelogs -p rawcooked History_CLI.txt
-	dh_installchangelogs -p rawcooked-gui History_GUI.txt
 	dh_installdocs
 	dh_installexamples
 #	dh_install
@@ -93,7 +70,6 @@ binary-arch: build install
 	dh_installman
 	dh_link
 	dh_strip -p rawcooked --dbg-package=rawcooked-dbg
-	dh_strip -p rawcooked-gui --dbg-package=rawcooked-gui-dbg
 	dh_compress
 	dh_fixperms
 #	dh_perl
