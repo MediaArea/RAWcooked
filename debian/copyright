@@ -1,0 +1,23 @@
+This package was debianized by Jerome Martinez <info@mediaarea.net> on
+Sun, 01 Jan 2017 01:00:00 +0000.
+
+It was downloaded from <https://mediaarea.net>
+
+Upstream Author(s):
+
+    Library of Congress
+
+Copyright:
+
+    (c) 2017 MediaArea.net SARL <Info@MediaArea.net>
+
+License:
+
+    MIT
+
+The Debian packaging is (C) 2017, MediaArea.net SARL
+Guidelines Initiative and is licensed under the MIT,
+see `/usr/share/common-licenses/MIT'.
+
+# Please also look if there are files or directories which have a
+# different copyright/license attached and list them here.

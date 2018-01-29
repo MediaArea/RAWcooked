@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Version=1.0
+Name=RAWCooked
+GenericName=Media Analyzer
+Comment=Edit MOV files
+Icon=rawcooked
+Exec=rawcooked-gui %f
+Terminal=false
+MimeType=
+Categories=AudioVideo;AudioVideoEditing;

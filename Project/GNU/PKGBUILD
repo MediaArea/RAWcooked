@@ -1,0 +1,57 @@
+# $Id$
+# Maintainer: MediaArea.net SARL <info@mediaarea.net>
+
+pkgname=('rawcooked' 'rawcooked-gui')
+pkgver=18.01
+pkgrel=1
+pkgdesc="(To be filled)"
+url="http://mediaarea.net"
+license=('MIT')
+source=(${pkgname}_${pkgver}-1.tar.gz)
+md5sums=('00000000000000000000000000000000')
+arch=('i686' 'x86_64')
+makedepends=('qt5-base' 'qt5-tools' 'ca-certificates' 'libzen')
+
+prepare() {
+
+    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    sh ./autogen
+    ./configure --prefix=/usr
+
+    cd "${srcdir}"/rawcooked/Project/Qt
+    ./prepare
+}
+
+build() {
+    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    make
+
+    cd "${srcdir}"/rawcooked/Project/Qt
+    make
+}
+
+package_rawcooked() {
+    pkgdesc="${pkgdesc} (CLI)"
+    depends=('libzen')
+
+    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    make DESTDIR="${pkgdir}" install
+
+    install -D -m 0644 "${srcdir}"/rawcooked/History_CLI.txt "${pkgdir}"/usr/share/docs/${pkgname}/History.txt
+    install -D -m 0644 "${srcdir}"/rawcooked/License.html "${pkgdir}"/usr/share/licenses/${pkgname}/License.html
+}
+
+package_rawcooked-gui() {
+    pkgdesc="${pkgdesc} (GUI)"
+    depends=('qt5-base')
+
+    install -D -m 0644 "${srcdir}"/rawcooked/Project/Qt/rawcooked-gui "${pkgdir}"/usr/bin/rawcooked-gui
+    install -D -m 0644 "${srcdir}"/rawcooked/Source/Resource/Image/Icon.png "${pkgdir}"/usr/share/icons/hicolor/128x128/apps/rawcooked.png
+    install -D -m 0644 "${srcdir}"/rawcooked/Source/Resource/Image/Icon.png "${pkgdir}"/usr/share/pixmaps/rawcooked.png
+    install -D -m 0644 "${srcdir}"/rawcooked/Project/Qt/rawcooked-gui.desktop "${pkgdir}"/usr/share/applications/rawcooked-gui.desktop
+    install -D -m 0644 "${srcdir}"/rawcooked/Project/Qt/rawcooked-gui.kde3.desktop "${pkgdir}"/usr/share/apps/konqueror/servicemenus/rawcooked-gui.desktop
+    install -D -m 0644 "${srcdir}"/rawcooked/Project/Qt/rawcooked-gui.kde4.desktop "${pkgdir}"/usr/share/kde4/services/ServiceMenus/rawcooked-gui.desktop
+    install -D -m 0644 "${srcdir}"/rawcooked/Project/Qt/rawcooked-gui.kde4.desktop "${pkgdir}"/usr/share/kservices5/ServiceMenus/rawcooked-gui.desktop
+    install -D -m 0644 "${srcdir}"/rawcooked/History_GUI.txt "${pkgdir}"/usr/share/docs/${pkgname}/History.txt
+    install -D -m 0644 "${srcdir}"/rawcooked/License.html "${pkgdir}"/usr/share/licenses/${pkgname}/License.html
+}

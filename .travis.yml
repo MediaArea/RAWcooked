@@ -1,0 +1,18 @@
+language: cpp
+
+sudo: required
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+    - os: osx
+      compiler: clang
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then sudo apt-get update -qq ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then sudo apt-get install -y libqt4-dev valgrind ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew update ; true ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install md5sha1sum qt@5.5 ; true ; fi
+
+script: export PATH=/usr/local/opt/qt@5.5/bin:$PATH && cd Project/GNU/CLI/ && ./autogen.sh && ./configure && make && make clone_testing_files && make check && cd ../../Qt && ./prepare INCLUDEPATH+=/usr/local/include CONFIG+=c++11 -after QMAKE_MACOSX_DEPLOYMENT_TARGET=10.9 && make
