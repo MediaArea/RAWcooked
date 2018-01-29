@@ -19,7 +19,8 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/ThirdParty/md5/md5.c
 
-AM_CPPFLAGS = -std=c++0x -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include
+AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include
+AM_CXXFLAGS = -std=c++0x
 
 #AM_TESTS_FD_REDIRECT = 9>&2
 #TESTS = test/test.sh
