@@ -1,7 +1,7 @@
 Source: rawcooked
 Priority: optional
 Maintainer: Jerome Martinez <info@mediaarea.net>
-Build-Depends: debhelper (>= 5), qtbase5-dev, qt5-default, libzen-dev, pkg-config, automake, autoconf, libtool
+Build-Depends: debhelper (>= 5), pkg-config, automake, autoconf, libtool
 Standards-Version: 3.7.3
 Section: libs
 Homepage: https://mediaarea.net
@@ -24,24 +24,3 @@ Description: RAWCooked provides:
  (To be filled)
  .
  This package contains the debugging symbols.
-
-Package: rawcooked-gui
-Section: utils
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: RAWCooked provides:
- .
- (To be filled)
- .
- This package contains the graphical user interface
-
-Package: rawcooked-gui-dbg
-Section: debug
-Architecture: any
-Priority: extra
-Depends: rawcooked-gui (= ${binary:Version})
-Description: RAWCooked provides:
- .
- (To be filled)
- .
- This package contains the debugging symbols of the graphical user interface.

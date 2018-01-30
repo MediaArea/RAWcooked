@@ -51,7 +51,11 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
             string t = OutFileNameS.substr(0, i);
             if (access(t.c_str(), 0))
             {
+                #if defined(_WIN32) || defined(_WINDOWS)
                 if (mkdir(t.c_str()))
+                #else
+                if (mkdir(t.c_str(), 0755))
+                #endif
                     exit(0);
             }
         }
