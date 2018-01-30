@@ -107,6 +107,8 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
             }
         }
     }
+    else
+        Path_Pos = 0;
 
     size_t After_Pos = FN.find_last_of("0123456789");
     if (After_Pos != (size_t)-1)
