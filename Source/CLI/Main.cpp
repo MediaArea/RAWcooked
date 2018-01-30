@@ -37,7 +37,7 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
 
     stringstream OutFileName;
-    OutFileName << WriteToDisk_Data->FileName << ".RAWCooked\\" << WriteToDisk_Data->FileNameDPX;
+    OutFileName << WriteToDisk_Data->FileName << ".RAWCooked" << PathSeparator << WriteToDisk_Data->FileNameDPX;
     string OutFileNameS = OutFileName.str().c_str();
     FILE* F = fopen(OutFileNameS.c_str(), "wb");
     if (!F)
