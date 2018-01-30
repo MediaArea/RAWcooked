@@ -201,7 +201,7 @@ int ParseFile(const char* Name)
             DPX.Parse();
             if (DPX.ErrorMessage())
             {
-                cout << "Untested " << DPX.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+                cerr << "Untested " << DPX.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
                 return 1;
             }
             i++;
@@ -242,7 +242,7 @@ int ParseFile(const char* Name)
 
     if (M.Frame.ErrorMessage())
     {
-        cout << "Untested " << M.Frame.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+        cerr << "Untested " << M.Frame.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
         return 1;
     }
 
@@ -269,10 +269,10 @@ int ParseFile(const char* Name)
         Command += Files[0];
         Command += ".mkv\"";
 
-        cout << "Launch this command line:\n" << Command << endl;
+        cout << Command << endl;
     }
     else if (!M.Frame.RawFrame || M.Frame.RawFrame->Planes.empty())
-        cout << "Problem while parsing the MKV file" << endl;
+        cerr << "Problem while parsing the MKV file" << endl;
     else
         cout << "Files are in " << Name << ".RAWCooked" << endl;
 
@@ -286,8 +286,9 @@ int main(int argc, char* argv[])
         return Usage(argv[0]);
 
     for (int i = 1; i < argc; i++)
-        ParseFile(argv[i]);
+        if (ParseFile(argv[i]))
+            return 1;
 
-    return 1;
+    return 0;
 }
 
