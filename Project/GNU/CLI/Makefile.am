@@ -22,6 +22,13 @@ rawcooked_SOURCES = \
 AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include
 AM_CXXFLAGS = -std=c++0x
 
-#AM_TESTS_FD_REDIRECT = 9>&2
-#TESTS = test/test.sh
-#TESTING_DIR = test/TestingFiles
+AM_TESTS_FD_REDIRECT = 9>&2
+
+TESTS = test/test1.sh
+
+TESTING_DIR = test/TestingFiles
+
+clone_testing_files: $(TESTING_DIR)
+
+$(TESTING_DIR):
+	git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles.git test/TestingFiles

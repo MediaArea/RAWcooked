@@ -1,0 +1,15 @@
+Formats/DPX/Features/EndOfImagePadding/cropped_DPX_137_4K_10bit.dpx fail
+Formats/DPX/Features/JunkAfterData/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.Padding.dpx fail
+Formats/DPX/Flavors/A_8_Packed_BE/Alpha_8_bit.dpx fail
+Formats/DPX/Flavors/RGBA_8_Packed_NE/8bit_a.dpx pass
+Formats/DPX/Flavors/RGBA_8_Packed_NE/RGBA_8_bit.dpx pass
+Formats/DPX/Flavors/RGBA_10_FilledA_BE/10bit_a.dpx fail
+Formats/DPX/Flavors/RGBA_12_Packed_BE/12bit_a.dpx fail
+Formats/DPX/Flavors/RGBA_16_Packed_BE/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.dpx fail
+Formats/DPX/Flavors/RGB_8_Packed_NE/8bit.dpx fail
+Formats/DPX/Flavors/RGB_10_FilledA_BE/10bit.dpx pass
+Formats/DPX/Flavors/RGB_10_FilledA_LE/image090003.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/12bit.dpx fail
+Formats/DPX/Flavors/RGB_12_Packed_BE/RGB_12_bit.dpx fail
+Formats/DPX/Flavors/RGB_16F_Packed_BE/RGB_half_float_16_bit.dpx fail
+Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass

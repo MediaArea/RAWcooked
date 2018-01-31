@@ -16,4 +16,4 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew update ; true ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install ffmpeg ; true ; fi
 
-script: cd Project/GNU/CLI/ && sh autogen.sh && ./configure && make
+script: cd Project/GNU/CLI/ && sh autogen.sh && ./configure && make && make clone_testing_files && make check
