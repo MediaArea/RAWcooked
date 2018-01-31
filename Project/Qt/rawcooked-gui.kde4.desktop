@@ -7,7 +7,7 @@ Actions=rawcooked-gui
 X-KDE-Priority=TopLevel
 
 [Desktop Action rawcooked-gui]
-Name=RAWCooked
+Name=RAWcooked
 GenericName=Media Editor
 Exec=rawcooked-gui %u
 Icon=rawcooked

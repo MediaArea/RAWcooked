@@ -10,7 +10,7 @@ Package: rawcooked
 Section: utils
 Architecture: any
 Depends: ${shlibs:Depends}
-Description: RAWCooked provides:
+Description: RAWcooked provides:
  .
  (To be filled)
 
@@ -19,7 +19,7 @@ Section: debug
 Architecture: any
 Priority: extra
 Depends: rawcooked (= ${binary:Version})
-Description: RAWCooked provides:
+Description: RAWcooked provides:
  .
  (To be filled)
  .

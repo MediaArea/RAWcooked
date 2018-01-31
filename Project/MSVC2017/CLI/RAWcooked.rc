@@ -16,12 +16,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "MediaArea.net"
-            VALUE "FileDescription", "RAWCooked"
+            VALUE "FileDescription", "RAWcooked"
             VALUE "FileVersion", "18.01.0.0"
-            VALUE "InternalName", "RAWCooked - CLI"
+            VALUE "InternalName", "RAWcooked - CLI"
             VALUE "LegalCopyright", "MediaArea.net"
-            VALUE "OriginalFilename", "RAWCooked.exe"
-            VALUE "ProductName", "RAWCooked"
+            VALUE "OriginalFilename", "RAWcooked.exe"
+            VALUE "ProductName", "RAWcooked"
             VALUE "ProductVersion", "18.01.0.0"
         END
     END

@@ -130,8 +130,8 @@ matroska::matroska() :
     DPX_Buffer_Name(NULL),
     DPX_Buffer_Pos(0),
     DPX_Buffer_Count(0),
-    RAWCooked_LibraryName_OK(false),
-    RAWCooked_LibraryVersion_OK(false),
+    RAWcooked_LibraryName_OK(false),
+    RAWcooked_LibraryVersion_OK(false),
     R_A(NULL),
     R_B(NULL)
 {
@@ -281,7 +281,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryN
     {
         exit(0);
     }
-    RAWCooked_LibraryName_OK = true;
+    RAWcooked_LibraryName_OK = true;
 }
 
 //---------------------------------------------------------------------------
@@ -294,7 +294,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryV
     {
         exit(0);
     }
-    RAWCooked_LibraryVersion_OK = true;
+    RAWcooked_LibraryVersion_OK = true;
 }
 
 //---------------------------------------------------------------------------
@@ -311,7 +311,7 @@ void matroska::Segment_Cluster_SimpleBlock()
         // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
         if (!R_A)
         {
-            if (!RAWCooked_LibraryName_OK || !RAWCooked_LibraryVersion_OK)
+            if (!RAWcooked_LibraryName_OK || !RAWcooked_LibraryVersion_OK)
                 exit(0);
             R_A = new raw_frame;
             R_B = new raw_frame;

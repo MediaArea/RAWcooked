@@ -20,7 +20,7 @@ Zen_Make()
 }
 
 #############################################################################
-# RAWCooked
+# RAWcooked
 if test -e Project/Qt/rawcooked-gui.pro; then
  pushd Project/Qt
  test -e Makefile && rm Makefile
@@ -28,18 +28,18 @@ if test -e Project/Qt/rawcooked-gui.pro; then
  if test -e Makefile; then
   make clean
   Zen_Make
-  if test -e rawcooked-gui || test -e RAWCooked.app || test -e "RAWCooked.app"; then
-   echo RAWCooked compiled
+  if test -e rawcooked-gui || test -e RAWcooked.app || test -e "RAWcooked.app"; then
+   echo RAWcooked compiled
   else
-   echo Problem while compiling RAWCooked
+   echo Problem while compiling RAWcooked
    exit
   fi
  else
-  echo Problem while configuring RAWCooked
+  echo Problem while configuring RAWcooked
   exit
  fi
 else
- echo RAWCooked directory is not found
+ echo RAWcooked directory is not found
  exit
 fi
 cd $Home
@@ -47,4 +47,4 @@ cd $Home
 #############################################################################
 # Going home
 cd $Home
-echo "RAWCooked (GUI) executable is in Project/Qt"
+echo "RAWcooked (GUI) executable is in Project/Qt"

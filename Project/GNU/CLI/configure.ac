@@ -143,7 +143,7 @@ dnl ### Report how we have been configured
 dnl #########################################################################
 
 echo ""
-echo "Configured RAWCooked for '$build'"
+echo "Configured RAWcooked for '$build'"
 echo ""
 echo "  CXXFLAGS: $CXXFLAGS"
 echo "  LIBS: $LIBS"

@@ -5,15 +5,15 @@
  */
 
 //---------------------------------------------------------------------------
-#include "Lib/RAWCooked/RAWCooked.h"
+#include "Lib/RAWcooked/RAWcooked.h"
 #include "Lib/Config.h"
 #include <cstring>
 using namespace std;
 //---------------------------------------------------------------------------
 
 // Top level
-static const uint32_t Name_RawCookedTrack = 0x7274; // " rt", RAWCooked Track part
-static const uint32_t Name_RawCookedBlock = 0x7262; // " rb", RAWCooked BlockGroup part
+static const uint32_t Name_RawCookedTrack = 0x7274; // " rt", RAWcooked Track part
+static const uint32_t Name_RawCookedBlock = 0x7262; // " rb", RAWcooked BlockGroup part
 // File data
 static const uint32_t Name_RawCooked_BeforeData = 0x01;
 static const uint32_t Name_RawCooked_AfterData = 0x02;
@@ -31,7 +31,7 @@ static const uint32_t Name_RawCooked_FileSHA256 = 0x21;
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
 
-extern const char* LibraryName = "__RAWCooked__";
+extern const char* LibraryName = "__RAWcooked__";
 extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 1__";
 
 //---------------------------------------------------------------------------

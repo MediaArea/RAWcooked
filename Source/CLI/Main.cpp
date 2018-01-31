@@ -37,7 +37,7 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
 
     stringstream OutFileName;
-    OutFileName << WriteToDisk_Data->FileName << ".RAWCooked" << PathSeparator << WriteToDisk_Data->FileNameDPX;
+    OutFileName << WriteToDisk_Data->FileName << ".RAWcooked" << PathSeparator << WriteToDisk_Data->FileNameDPX;
     string OutFileNameS = OutFileName.str().c_str();
     FILE* F = fopen(OutFileNameS.c_str(), "wb");
     if (!F)
@@ -274,7 +274,7 @@ int ParseFile(const char* Name)
     else if (!M.Frame.RawFrame || M.Frame.RawFrame->Planes.empty())
         cerr << "Problem while parsing the MKV file" << endl;
     else
-        cout << "Files are in " << Name << ".RAWCooked" << endl;
+        cout << "Files are in " << Name << ".RAWcooked" << endl;
 
     return 0;
 }

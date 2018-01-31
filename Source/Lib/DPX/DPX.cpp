@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/DPX/DPX.h"
-#include "Lib/RAWCooked/RAWCooked.h"
+#include "Lib/RAWcooked/RAWcooked.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -187,15 +187,15 @@ bool dpx::Parse()
     if (Style >= DPX_Style_Max)
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
 
-    // Write RAWCooked file
+    // Write RAWcooked file
     if (WriteFileCall)
     {
-        rawcooked RAWCooked;
-        RAWCooked.WriteFileCall = WriteFileCall;
-        RAWCooked.WriteFileCall_Opaque = WriteFileCall_Opaque;
-        RAWCooked.Buffer = Buffer;
-        RAWCooked.Buffer_Size = OffsetToImage;
-        RAWCooked.Parse();
+        rawcooked RAWcooked;
+        RAWcooked.WriteFileCall = WriteFileCall;
+        RAWcooked.WriteFileCall_Opaque = WriteFileCall_Opaque;
+        RAWcooked.Buffer = Buffer;
+        RAWcooked.Buffer_Size = OffsetToImage;
+        RAWcooked.Parse();
     }
 
     return 0;

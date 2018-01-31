@@ -81,8 +81,8 @@ private:
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelHeight);
     MATROSKA_ELEMENT(Void);
 
-    bool                        RAWCooked_LibraryName_OK;
-    bool                        RAWCooked_LibraryVersion_OK;
+    bool                        RAWcooked_LibraryName_OK;
+    bool                        RAWcooked_LibraryVersion_OK;
     uint8_t**                   DPX_Buffer;
     uint64_t*                   DPX_Buffer_Size;
     string*                     DPX_Buffer_Name;

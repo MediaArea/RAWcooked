@@ -20,7 +20,7 @@ Zen_Make()
 }
 
 #############################################################################
-# RAWCooked
+# RAWcooked
 if test -e Project/GNU/CLI/configure; then
  cd Project/GNU/CLI/
  test -e Makefile && rm Makefile
@@ -30,17 +30,17 @@ if test -e Project/GNU/CLI/configure; then
   make clean
   Zen_Make
   if test -e rawcooked; then
-   echo RAWCooked compiled
+   echo RAWcooked compiled
   else
-   echo Problem while compiling RAWCooked
+   echo Problem while compiling RAWcooked
    exit
   fi
  else
-  echo Problem while configuring RAWCooked
+  echo Problem while configuring RAWcooked
   exit
  fi
 else
- echo RAWCooked directory is not found
+ echo RAWcooked directory is not found
  exit
 fi
 cd $Home
@@ -48,5 +48,5 @@ cd $Home
 #############################################################################
 # Going home
 cd $Home
-echo "RAWCooked (CLI) executable is in Project/GNU/CLI"
+echo "RAWcooked (CLI) executable is in Project/GNU/CLI"
 echo "For installing, cd Project/GNU/CLI && make install"

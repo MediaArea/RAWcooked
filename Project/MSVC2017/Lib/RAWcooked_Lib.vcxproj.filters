@@ -55,10 +55,10 @@
     <Filter Include="Header Files\DPX">
       <UniqueIdentifier>{a9a17abe-9c4b-48f9-9193-30b60eb38fc0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\RAWCooked">
+    <Filter Include="Header Files\RAWcooked">
       <UniqueIdentifier>{c3e2c1bc-a03b-4f71-992b-f95b5806d46c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\RAWCooked">
+    <Filter Include="Source Files\RAWcooked">
       <UniqueIdentifier>{88504ec6-4042-49ff-9bac-a60b15353367}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\FFV1\Coder">
@@ -117,8 +117,8 @@
     <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h">
       <Filter>Header Files\DPX</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\RAWCooked\RAWCooked.h">
-      <Filter>Header Files\RAWCooked</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h">
+      <Filter>Header Files\RAWcooked</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h">
       <Filter>Header Files\FFV1\Coder</Filter>
@@ -167,8 +167,8 @@
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\md5\md5.c">
       <Filter>ThirdParty\md5</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\RAWCooked\RAWCooked.cpp">
-      <Filter>Source Files\RAWCooked</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp">
+      <Filter>Source Files\RAWcooked</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp">
       <Filter>Source Files\FFV1\Coder</Filter>

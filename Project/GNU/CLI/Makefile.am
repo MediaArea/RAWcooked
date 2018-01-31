@@ -15,7 +15,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
     ../../../Source/Lib/FrameHash/FrameHash_MD5.cpp \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
-    ../../../Source/Lib/RAWCooked/RAWCooked.cpp \
+    ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/ThirdParty/md5/md5.c
 

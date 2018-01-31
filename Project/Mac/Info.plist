@@ -5,13 +5,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>RAWCooked</string>
+	<string>RAWcooked</string>
 	<key>CFBundleIconFile</key>
 	<string>Icon</string>
 	<key>CFBundleIdentifier</key>
 	<string>net.mediaarea.rawcooked.mac</string>
 	<key>CFBundleName</key>
-	<string>RAWCooked</string>
+	<string>RAWcooked</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

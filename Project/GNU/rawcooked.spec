@@ -12,7 +12,7 @@ Release:		1
 Summary:		(To be filled) (CLI)
 Group:			Productivity/Multimedia/Other
 License:		MIT
-URL:			https://mediaarea.net/RAWCooked
+URL:			https://mediaarea.net/RAWcooked
 Packager:		Jerome Martinez <info@mediaarea.net>
 Source0:		rawcooked_%{version}-1.tar.gz
 BuildRoot:		%{_tmppath}/%{name}-%{version}-%{release}-root
@@ -25,7 +25,7 @@ BuildRequires:	dos2unix
 %description
 rawcooked CLI (Command Line Interface)
 
-RAWCooked provides this service:
+RAWcooked provides this service:
 
 (To be filled)
 

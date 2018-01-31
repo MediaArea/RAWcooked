@@ -2,12 +2,12 @@
 RequestExecutionLevel admin
 
 ; Some defines
-!define PRODUCT_NAME "RAWCooked"
+!define PRODUCT_NAME "RAWcooked"
 !define PRODUCT_NAME_EXE "${PRODUCT_NAME}.exe"
 !define PRODUCT_PUBLISHER "MediaArea.net"
 !define PRODUCT_VERSION "18.01"
 !define PRODUCT_VERSION4 "${PRODUCT_VERSION}.0.0"
-!define PRODUCT_WEB_SITE "https://mediaarea.net/RAWCooked"
+!define PRODUCT_WEB_SITE "https://mediaarea.net/RAWcooked"
 !define COMPANY_REGISTRY "Software\MediaArea"
 !define PRODUCT_REGISTRY "Software\MediaArea\${PRODUCT_NAME}"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME_EXE}"
@@ -59,7 +59,7 @@ BrandingText " "
 ; Modern UI end
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "..\..\RAWCooked_GUI_${PRODUCT_VERSION}_Windows_x64.exe"
+OutFile "..\..\RAWcooked_GUI_${PRODUCT_VERSION}_Windows_x64.exe"
 InstallDir "$PROGRAMFILES\${PRODUCT_NAME}"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails nevershow
