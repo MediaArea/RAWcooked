@@ -23,6 +23,8 @@ public:
     uint64_t                    Style_Private; //Used by specialized style for marking the configuration of such style (e.g. endianess of DPX)
     uint8_t*                    Pre;
     size_t                      Pre_Size;
+    uint8_t*                    Post;
+    size_t                      Post_Size;
 
     struct plane
     {
@@ -73,7 +75,9 @@ public:
     style                       Style;
 
     raw_frame() :
-        Style_Private(0)
+        Style_Private(0),
+        Pre(NULL),
+        Post(NULL)
     {
     }
     

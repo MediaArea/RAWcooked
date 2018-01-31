@@ -292,7 +292,7 @@ void slice::Parse()
     //SliceFooter
     if (P->ConfigurationRecord_IsPresent)
     {
-        //uint32_t slice_size = BigEndian2int24u(Buffer + (size_t)Buffer_Offset); // slice_size //TODO: test when in buggy stream parsing mode
+        //uint32_t slice_size = BigEndian2int24u(Before + (size_t)Buffer_Offset); // slice_size //TODO: test when in buggy stream parsing mode
         //if (Element_Offset_Begin + slice_size != Buffer_Offset)
         //    P->Error("FFV1-SLICE-slice_size:1");
         if (P->ec == 1)

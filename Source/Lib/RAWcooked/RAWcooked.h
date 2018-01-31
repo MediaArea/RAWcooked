@@ -21,8 +21,11 @@ class rawcooked
 public:
     rawcooked();
 
-    uint8_t*                    Buffer;
-    uint64_t                    Buffer_Size;
+    uint8_t*                    Before;
+    uint64_t                    Before_Size;
+
+    uint8_t*                    After;
+    uint64_t                    After_Size;
 
     void Parse();
 

@@ -105,8 +105,10 @@ void rawcooked::Parse()
     uint64_t Block_Size = 0;
     uint64_t FileName_Size = strlen(WriteToDisk_Data->FileNameDPX);
     Block_Size += Size_EB(Name_RawCooked_FileName, FileName_Size);
-    uint64_t BeforeData_Size = 4 + Buffer_Size; // uncompressed size then data
+    uint64_t BeforeData_Size = 4 + Before_Size; // uncompressed size then data
     Block_Size += Size_EB(Name_RawCooked_BeforeData, BeforeData_Size);
+    uint64_t AfterData_Size = 4 + After_Size; // uncompressed size then data
+    Block_Size += Size_EB(Name_RawCooked_AfterData, AfterData_Size);
     Out_Size += Size_EB(Name_RawCookedBlock, Block_Size);
 
     // Fill
@@ -130,10 +132,22 @@ void rawcooked::Parse()
     Put_EB(Out, Out_Offset, Name_RawCooked_FileName, FileName_Size);
     memcpy(Out + Out_Offset, WriteToDisk_Data->FileNameDPX, FileName_Size);
     Out_Offset += FileName_Size;
-    Put_EB(Out, Out_Offset, Name_RawCooked_BeforeData, BeforeData_Size);
-    memset(Out + Out_Offset, 0, 4);
-    Out_Offset += 4;
-    memcpy(Out + Out_Offset, Buffer, Buffer_Size);
+    if (BeforeData_Size)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCooked_BeforeData, BeforeData_Size);
+        memset(Out + Out_Offset, 0, 4);
+        Out_Offset += 4;
+        memcpy(Out + Out_Offset, Before, Before_Size);
+        Out_Offset += Before_Size;
+    }
+    if (AfterData_Size)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCooked_AfterData, AfterData_Size);
+        memset(Out + Out_Offset, 0, 4);
+        Out_Offset += 4;
+        memcpy(Out + Out_Offset, After, After_Size);
+        Out_Offset += After_Size;
+    }
 
     // Write
     if (WriteFileCall)

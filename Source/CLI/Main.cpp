@@ -65,6 +65,8 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
         fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
     for (size_t p = 0; p<RawFrame->Planes.size(); p++)
         fwrite(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size, 1, F);
+    if (RawFrame->Post)
+        fwrite(RawFrame->Post, RawFrame->Post_Size, 1, F);
     fclose(F);
 }
 

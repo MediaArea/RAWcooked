@@ -31,7 +31,7 @@ public:
     void SetWidth(uint32_t width);
     void SetHeight(uint32_t width);
 
-    // Buffer - Global
+    // Before - Global
     void Read_Buffer_OutOfBand(uint8_t* Buffer, size_t Buffer_Size);
     void Read_Buffer_Continue(uint8_t* Buffer, size_t Buffer_Size);
 

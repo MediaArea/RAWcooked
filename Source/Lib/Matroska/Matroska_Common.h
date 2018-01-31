@@ -66,6 +66,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack);
@@ -83,8 +84,10 @@ private:
 
     bool                        RAWcooked_LibraryName_OK;
     bool                        RAWcooked_LibraryVersion_OK;
-    uint8_t**                   DPX_Buffer;
-    uint64_t*                   DPX_Buffer_Size;
+    uint8_t**                   DPX_Before;
+    uint8_t**                   DPX_After;
+    uint64_t*                   DPX_Before_Size;
+    uint64_t*                   DPX_After_Size;
     string*                     DPX_Buffer_Name;
     size_t                      DPX_Buffer_Pos;
     size_t                      DPX_Buffer_Count;

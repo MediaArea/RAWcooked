@@ -170,8 +170,7 @@ bool dpx::Parse()
         return Error("Offset to data");
     if (Get_X4() != 0)
         return Error("End-of-line padding");
-    if (Get_X4() != 0)
-        return Error("End-of-image padding");
+    uint32_t EndOfImagePadding = Get_X4();
 
     // Supported?
     Style = 0;
@@ -193,8 +192,10 @@ bool dpx::Parse()
         rawcooked RAWcooked;
         RAWcooked.WriteFileCall = WriteFileCall;
         RAWcooked.WriteFileCall_Opaque = WriteFileCall_Opaque;
-        RAWcooked.Buffer = Buffer;
-        RAWcooked.Buffer_Size = OffsetToImage;
+        RAWcooked.Before = Buffer;
+        RAWcooked.Before_Size = OffsetToImage;
+        RAWcooked.After = Buffer + Buffer_Size - EndOfImagePadding;
+        RAWcooked.After_Size = EndOfImagePadding;
         RAWcooked.Parse();
     }
 

@@ -94,6 +94,7 @@ ELEMENT_CASE(    7262, Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
+ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName)
 ELEMENT_END()
@@ -126,7 +127,8 @@ matroska::matroska() :
     WriteFrameCall(NULL),
     WriteFrameCall_Opaque(NULL),
     IsDetected(false),
-    DPX_Buffer(NULL),
+    DPX_Before(NULL),
+    DPX_After(NULL),
     DPX_Buffer_Name(NULL),
     DPX_Buffer_Pos(0),
     DPX_Buffer_Count(0),
@@ -236,6 +238,28 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock()
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData()
+{
+    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
+        return;
+
+    DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!DPX_After)
+    {
+        DPX_After = new uint8_t*[1000000];
+        memset(DPX_After, 0x00, 1000000 * sizeof(uint8_t*));
+        DPX_After_Size = new uint64_t[1000000];
+        memset(DPX_After_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+    delete[] DPX_After[DPX_Buffer_Count];
+    DPX_After_Size[DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
+    DPX_After[DPX_Buffer_Count] = new uint8_t[DPX_After_Size[DPX_Buffer_Count]];
+    memcpy(DPX_After[DPX_Buffer_Count], Buffer + Buffer_Offset + 4, DPX_After_Size[DPX_Buffer_Count]);
+    DPX_Buffer_Count++;
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName()
 {
     if (!DPX_Buffer_Name)
@@ -251,17 +275,17 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeDa
     if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
         return;
 
-    if (!DPX_Buffer)
+    if (!DPX_Before)
     {
-        DPX_Buffer = new uint8_t*[1000000];
-        memset(DPX_Buffer, 0x00, 1000000 * sizeof(uint8_t*));
-        DPX_Buffer_Size = new uint64_t[1000000];
-        memset(DPX_Buffer_Size, 0x00, 1000000 * sizeof(uint64_t));
+        DPX_Before = new uint8_t*[1000000];
+        memset(DPX_Before, 0x00, 1000000 * sizeof(uint8_t*));
+        DPX_Before_Size = new uint64_t[1000000];
+        memset(DPX_Before_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    delete[] DPX_Buffer[DPX_Buffer_Count];
-    DPX_Buffer_Size[DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    DPX_Buffer[DPX_Buffer_Count] = new uint8_t[DPX_Buffer_Size[DPX_Buffer_Count]];
-    memcpy(DPX_Buffer[DPX_Buffer_Count], Buffer + Buffer_Offset + 4, DPX_Buffer_Size[DPX_Buffer_Count]);
+    delete[] DPX_Before[DPX_Buffer_Count];
+    DPX_Before_Size[DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
+    DPX_Before[DPX_Buffer_Count] = new uint8_t[DPX_Before_Size[DPX_Buffer_Count]];
+    memcpy(DPX_Before[DPX_Buffer_Count], Buffer + Buffer_Offset + 4, DPX_Before_Size[DPX_Buffer_Count]);
     DPX_Buffer_Count++;
 }
 
@@ -321,10 +345,10 @@ void matroska::Segment_Cluster_SimpleBlock()
         else
             Frame.RawFrame = R_A;
 
-        if (DPX_Buffer && DPX_Buffer_Size[DPX_Buffer_Pos])
+        if (DPX_Before && DPX_Before_Size[DPX_Buffer_Pos])
         {
-            Frame.RawFrame->Pre = DPX_Buffer[DPX_Buffer_Pos];
-            Frame.RawFrame->Pre_Size = DPX_Buffer_Size[DPX_Buffer_Pos];
+            Frame.RawFrame->Pre = DPX_Before[DPX_Buffer_Pos];
+            Frame.RawFrame->Pre_Size = DPX_Before_Size[DPX_Buffer_Pos];
             if (DPX_Buffer_Pos == 0)
             {
                 dpx DPX;
@@ -335,6 +359,13 @@ void matroska::Segment_Cluster_SimpleBlock()
                 R_A->Style_Private = DPX.Style;
                 R_B->Style_Private = DPX.Style;
             }
+
+            if (DPX_After && DPX_After_Size[DPX_Buffer_Pos])
+            {
+                Frame.RawFrame->Post = DPX_After[DPX_Buffer_Pos];
+                Frame.RawFrame->Post_Size = DPX_After_Size[DPX_Buffer_Pos];
+            }
+
             DPX_Buffer_Pos++;
         }
         Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
