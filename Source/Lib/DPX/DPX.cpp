@@ -138,7 +138,7 @@ bool dpx::Parse()
     uint32_t OffsetToImage = Get_X4();
     if (OffsetToImage > Buffer_Size)
         return Error("Offset to image data in bytes");
-    uint32_t VersioNumber = Get_X4();
+    uint32_t VersioNumber = Get_B4();
     switch (VersioNumber)
     {
         case 0x56312E30: // V1.0
