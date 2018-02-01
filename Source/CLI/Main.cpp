@@ -150,8 +150,16 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
         }
     }
 
-    char Size = '0' + (char)FN.size();
-    FileName_Template = Path + Before + "%0" + Size + "d" + After;
+    if (Files.empty())
+    {
+        Files.push_back(Name);
+        FileName_Template = Name;
+    }
+    else
+    {
+        char Size = '0' + (char)FN.size();
+        FileName_Template = Path + Before + "%0" + Size + "d" + After;
+    }
     
 }
 
