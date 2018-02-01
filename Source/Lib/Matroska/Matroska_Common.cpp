@@ -9,6 +9,7 @@
 #include "Lib/DPX/DPX.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
+#include <stdlib.h>
 #include <cstdio>
 #include <thread>
 #include "ThreadPool.h"
