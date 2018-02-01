@@ -4,8 +4,8 @@ RAWcooked encodes RAW audio-visual data into the Matroska container (MKV), using
 
 ## Status
 
-Not yet ready for production use, for tests only 
+Not ready for production use yet, for testing purpose only.
 
 ## License
 
-MIT license
+[MIT License](LICENSE)
