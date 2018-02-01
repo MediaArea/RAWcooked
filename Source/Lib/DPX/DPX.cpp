@@ -56,7 +56,7 @@ struct dpx_tested DPX_Tested[] =
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
     { RGBA      ,  8, Packed , BE, dpx::RGBA_8 },
-//    { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE }, // Not supported by FFmpeg
+    { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
 };
 
 //---------------------------------------------------------------------------
