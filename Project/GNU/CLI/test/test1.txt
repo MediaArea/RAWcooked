@@ -1,4 +1,4 @@
-Formats/DPX/Features/EndOfImagePadding/cropped_DPX_137_4K_10bit.dpx fail
+Formats/DPX/Features/EndOfImagePadding/cropped_DPX_137_4K_10bit.dpx pass
 Formats/DPX/Features/JunkAfterData/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.Padding.dpx fail
 Formats/DPX/Flavors/A_8_Packed_BE/Alpha_8_bit.dpx fail
 Formats/DPX/Flavors/RGBA_8_Packed_NE/8bit_a.dpx pass

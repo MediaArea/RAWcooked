@@ -6,6 +6,14 @@ files_path="${script_path}/TestingFiles"
 
 rcode=0
 
+if which md5sum ; then
+    md5cmd="md5sum"
+elif which md5 ; then
+    md5cmd="md5 -r"
+else
+    exit 1
+fi >/dev/null 2>&1
+
 fd=1
 if command exec >&9 ; then
     fd=9
@@ -22,7 +30,6 @@ while read line ; do
     want="$(echo "${line}" | cut -d' ' -f2)"
     test=$(basename "${path}")
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
-echo "NOT FOUND: ${files_path}/${path}/${file}"
         continue
     fi
 
@@ -37,29 +44,23 @@ echo "NOT FOUND: ${files_path}/${path}/${file}"
             fi
 
             # check expected result
-            if [ "${result}" -ne "0" ] ; then
-                if [ "${want}" == "fail" ] ; then
-                    echo "OK: ${test}/${file}" >&${fd}
-                    continue
-                else
-                    echo "NOK: ${test}/${file}" >&${fd}
-                    rcode=1
-                    continue
-                fi
-            fi
-
-            # check result file generation
-            cmdline=$(echo -e "${cmdline}" | grep ffmpeg)
-            if [ -z "${cmdline}" ] ; then
-                echo "NOK: ${test}/${file}" >&${fd}
+            if [ "${want}" == "fail" ] && [ "${result}" -ne "0" ] ; then
+                echo "OK: ${test}/${file}, file rejected at input" >&${fd}
+                continue
+            elif [ "${want}" == "fail" ] || [ "${result}" -ne "0" ] ; then
+                echo "NOK: ${test}/${file}, file rejected at input" >&${fd}
                 rcode=1
                 continue
             fi
 
-            eval "${cmdline} </dev/null >/dev/null 2>&1" 
+            # check result file generation
+            cmdline=$(echo -e "${cmdline}" | grep ffmpeg) 2>/dev/null
+            if [ -n "${cmdline}" ] ; then
+                eval "${cmdline} </dev/null >/dev/null 2>&1"
+            fi
 
             if [ ! -e "${file}.mkv" ] ; then
-                echo "NOK: ${test}/${file}" >&${fd}
+                echo "NOK: ${test}/${file}, mkv not generated" >&${fd}
                 rcode=1
                 continue
             fi
@@ -73,20 +74,16 @@ echo "NOT FOUND: ${files_path}/${path}/${file}"
                 rcode=1
             fi
 
-            md5_a="$(md5sum "${file}" | cut -d' ' -f1 2>/dev/null)"
-            md5_b="$(md5sum "${file}.mkv.RAWcooked/${file}" | cut -d' ' -f1 2>/dev/null)"
+            md5_a="$(${md5cmd} "${file}" | cut -d' ' -f1)" 2>/dev/null
+            md5_b="$(${md5cmd} "${file}.mkv.RAWcooked/${file}" | cut -d' ' -f1)" 2>/dev/null
 
             # check result file
-            if [ "${md5_a}" == "${md5_b}" ] && [ "${want}" == "pass" ] ; then
-                echo "OK: ${test}/${file}" >&${fd}
+            if [ -n "${md5_a}" ] && [ -n "${md5_b}" ] && [ "${md5_a}" == "${md5_b}" ] ; then
+                echo "OK: ${test}/${file}, checksums match" >&${fd}
                 continue
-            fi
-            
-            if [ "${want}" == "pass" ] ; then
-                echo "NOK: ${file}" >&${fd}
+            else
+                echo "NOK: ${path}/${file}, checksums mismatch" >&${fd}
                 rcode=1
-            elif  [ "${want}" == "fail" ] ; then
-                echo "OK: ${test}/${file}" >&${fd}
             fi
     popd >/dev/null 2>&1
 done < "${script_path}/test1.txt"
