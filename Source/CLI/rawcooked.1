@@ -1,0 +1,18 @@
+.TH "RAWcooked" "1" "https://mediaarea\.net/RAWcooked" "2018\-02\-02" "MediaArea\.net & AV Preservation by reto\.ch"
+.SH NAME
+\fBRAWcooked\fR \- encodes RAW audio\-visual data into the Matroska container
+.SH SYNOPSIS
+.SS
+\fBrawcooked \fR[\fB\-h\fR]
+.TP
+.B \-h
+display a help message
+.SH DESCRIPTION
+.TP
+\fBRAWcooked\fR encodes RAW audio\-visual data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up the back-up process on LTO cartridges\.
+.TP
+When needed, the uncompressed source is retrieved bit-by-bit, in a manner faster than uncompressed sources directly stored on LTO cartridges\.
+.SH COPYRIGHT
+Copyright (c) 2018 MediaArea\.net SARL & AV Preservation by reto\.ch
+.SH LICENSE
+\fBRAWcooked\fR is released under a MIT License\.
