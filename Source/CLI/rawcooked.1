@@ -1,6 +1,6 @@
 .TH "RAWcooked" "1" "https://mediaarea\.net/RAWcooked" "2018\-02\-03" "single images \<\-> stream"
 .SH NAME
-\fBRAWcooked\fR \- encodes RAW audio\-visual data into the Matroska container
+\fBRAWcooked\fR \- encode and decode audio\-visual RAW data with Matroska, FFV1 and FLAC
 .SH SYNOPSIS
 .SS
 \fBrawcooked \fIfile
@@ -27,7 +27,7 @@ Decodes the video of \fIfile\fB\.mkv\fR back to its original format\. All metada
 Displays a help message\.
 .SH DESCRIPTION
 .TP
-\fBRAWcooked\fR encodes RAW audio\-visual data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up the back-up process on LTO cartridges\.
+\fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up the back-up process on LTO cartridges\.
 .TP
 When needed, the uncompressed source is retrieved \fBbit\-by\-bit\fR, in a manner faster than uncompressed sources directly stored on LTO cartridges\.
 .SH COPYRIGHT
