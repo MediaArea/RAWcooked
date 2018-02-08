@@ -81,7 +81,7 @@ void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, void* Opaque)
         OutFileName.resize(Path_Pos + 1);
     else
         OutFileName.clear();
-    OutFileName += "rawcooked.1"; //TODO: ID of the track
+    OutFileName += "rawcooked.id=1"; //TODO: ID of the track
     FILE* F = fopen(OutFileName.c_str(), WriteToDisk_Data->IsFirstFrame?"wb":"ab");
     fwrite(Buffer, Buffer_Size, 1, F);
     fclose(F);
@@ -120,6 +120,8 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
     }
 
     size_t Before_Pos = FN.find_last_not_of("0123456789");
+    if (Before_Pos + 9 < After_Pos)
+        Before_Pos = After_Pos - 9;
     if (Before_Pos != (size_t)-1)
     {
         Before = FN.substr(0, Before_Pos + 1);
@@ -259,6 +261,14 @@ int ParseFile(const char* Name)
     // Processing DPX to MKV/FFV1
     if (!M.IsDetected)
     {
+        string OutFileName(Files[0]); //TODO: remove duplicated code
+        size_t Path_Pos = OutFileName.rfind(PathSeparator);
+        if (Path_Pos != ((size_t)-1))
+            OutFileName.resize(Path_Pos + 1);
+        else
+            OutFileName.clear();
+        OutFileName += "rawcooked.id=1"; //TODO: ID of the track
+
         string Command;
         Command += "ffmpeg";
         if (!FileName_StartNumber.empty() && !FileName_Template.empty())
@@ -275,7 +285,7 @@ int ParseFile(const char* Name)
             Command += Files[0];
             Command += "\"";
         }
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices 64 -strict -2 -attach rawcooked.1 -metadata:s:t mimetype=application/octet-stream \"";
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices 64 -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
         Command += Files[0];
         Command += ".mkv\"";
 
