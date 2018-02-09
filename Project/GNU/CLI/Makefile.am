@@ -22,6 +22,8 @@ rawcooked_SOURCES = \
 AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include
 AM_CXXFLAGS = -std=c++0x
 
+man1_MANS = ../../../Source/CLI/rawcooked.1
+
 AM_TESTS_FD_REDIRECT = 9>&2
 
 TESTS = test/test1.sh
