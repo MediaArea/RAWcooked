@@ -47,10 +47,11 @@ struct dpx_tested
     uint8_t                     BitDepth;
     packing                     Packing;
     endianess                   Endianess;
-    uint8_t                     Code;
+    dpx::style                  Style;
 };
 
-struct dpx_tested DPX_Tested[] =
+const size_t DPX_Tested_Size = 6;
+struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
@@ -173,18 +174,19 @@ bool dpx::Parse()
     uint32_t EndOfImagePadding = Get_X4();
 
     // Supported?
-    Style = 0;
-    for (; Style < DPX_Style_Max; Style++)
+    size_t Tested = 0;
+    for (; Tested < DPX_Tested_Size; Tested++)
     {
-        dpx_tested& DPX_Tested_Item = DPX_Tested[Style];
+        dpx_tested& DPX_Tested_Item = DPX_Tested[Tested];
         if (DPX_Tested_Item.Descriptor == Descriptor
-         && DPX_Tested_Item.BitDepth == BitDepth
-         && DPX_Tested_Item.Packing == Packing
-         && DPX_Tested_Item.Endianess == (IsBigEndian?BE:LE))
+            && DPX_Tested_Item.BitDepth == BitDepth
+            && DPX_Tested_Item.Packing == Packing
+            && DPX_Tested_Item.Endianess == (IsBigEndian ? BE : LE))
             break;
     }
-    if (Style >= DPX_Style_Max)
+    if (Tested >= DPX_Tested_Size)
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
+    Style = DPX_Tested[Tested].Style;
 
     // Write RAWcooked file
     if (WriteFileCall)
