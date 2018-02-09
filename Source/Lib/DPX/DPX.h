@@ -40,8 +40,8 @@ public:
 
     enum style
     {
-        RGB_10_MethodA_LE,
-        RGB_10_MethodA_BE,
+        RGB_10_FilledA_LE,
+        RGB_10_FilledA_BE,
         RGB_16_BE,
         RGBA_8,
         RGBA_16_BE,
