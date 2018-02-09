@@ -29,6 +29,8 @@ private:
     size_t                      Bits;
     pixel_t                     Offset;
     uint64_t                    Style_Private; //Used by specialized style for marking the configuration of such style (e.g. endianess of DPX)
+    uint64_t                    Status_Private; //Used by specialized style for marking private status (e.g. wich datum position in DPX)
+    uint64_t                    Data_Private; //Used by specialized style for marking private status (e.g. wich data from previous datum in DPX)
 
     void FFmpeg_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
     void DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);

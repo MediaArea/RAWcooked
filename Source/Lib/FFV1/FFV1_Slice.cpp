@@ -170,8 +170,8 @@ bool slice::SliceHeader()
         P->Error("FFV1-SLICE-picture_structure:1");
     sar_num = E.u(States);
     sar_den = E.u(States);
-    if ((sar_num && !sar_den) || (!sar_num && sar_den))
-        P->Error("FFV1-SLICE-sar_den:1");
+    //if ((sar_num && !sar_den) || (!sar_num && sar_den))
+    //    P->Error("FFV1-SLICE-sar_den:1"); //TODO: check FFmpeg code, looks like it is set to 0/1 when unknown
 
     return true;
 }

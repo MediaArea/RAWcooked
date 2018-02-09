@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/RawFrame/RawFrame.h"
+#include "Lib/DPX/DPX.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -60,17 +61,19 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, 
 {
     switch (colorspace_type)
     {
-        case 1: // JPEG2000-RCT --> RGB Packed
-                switch (bits_per_raw_sample)
+        case 1: // JPEG2000-RCT --> RGB
+                switch (Style_Private)
                 {
-                    case 8: //
-                            Planes.push_back(new plane(width, height, 3+(alpha_plane?1:0))); // 3x8-bit
+                    case dpx::RGBA_8:
+                            Planes.push_back(new plane(width, height, (3 + (alpha_plane ? 1 : 0)) * 8)); // 3x8-bit or 4x8-bit
                             break;
-                    case 10: //
-                            Planes.push_back(new plane(width, height, 4)); // 3x10-bit in 32-bit
+                    case dpx::RGB_10_FilledA_LE:
+                    case dpx::RGB_10_FilledA_BE:
+                            Planes.push_back(new plane(width, height, 32)); // 3x10-bit in 32-bit
                             break;
-                    case 16: //
-                            Planes.push_back(new plane(width, height, (3+(alpha_plane?1:0))*2)); // 3x16-bit
+                    case dpx::RGB_16_BE:
+                    case dpx::RGBA_16_BE:
+                            Planes.push_back(new plane(width, height, (3 + (alpha_plane ? 1 : 0)) * 16)); // 3x16-bit or 4x16-bit
                             break;
                 }
         default: ;

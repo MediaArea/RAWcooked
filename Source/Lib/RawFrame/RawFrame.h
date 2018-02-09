@@ -33,19 +33,19 @@ public:
         size_t                  Width;
         size_t                  Width_Padding;
         size_t                  Height;
-        size_t                  BytesPerPixel;
+        size_t                  BitsPerPixel;
 
-        plane(size_t Width_, size_t Height_, size_t BytesPerPixel_)
+        plane(size_t Width_, size_t Height_, size_t BitsPerPixel_)
             :
             Width(Width_),
             Height(Height_),
-            BytesPerPixel(BytesPerPixel_)
+            BitsPerPixel(BitsPerPixel_)
         {
             Width_Padding=0; //TODO: option for padding size
             if (Width_Padding)
                 Width_Padding-=Width%Width_Padding;
                 
-            Buffer_Size=(Width+Width_Padding)*Height*BytesPerPixel;
+            Buffer_Size=(Width+Width_Padding)*Height*BitsPerPixel/8;
             Buffer=new uint8_t[Buffer_Size];
             memset(Buffer, 0, Buffer_Size);
         }
@@ -57,12 +57,12 @@ public:
 
         size_t ValidBytesPerLine()
         {
-            return Width*BytesPerPixel;
+            return Width*BitsPerPixel/8;
         }
 
         size_t AllBytesPerLine()
         {
-            return (Width+Width_Padding)*BytesPerPixel;
+            return (Width+Width_Padding)*BitsPerPixel/8;
         }
     };
     std::vector<plane*> Planes;
