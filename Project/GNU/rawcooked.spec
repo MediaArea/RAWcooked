@@ -64,6 +64,7 @@ popd
 %doc License.html
 %doc History_CLI.txt
 %{_bindir}/rawcooked
+%{_mandir}/man1/rawcooked.*
 
 %changelog
 * Mon Jan 01 2018 Jerome Martinez <info@mediaarea.net> - 18.01-0

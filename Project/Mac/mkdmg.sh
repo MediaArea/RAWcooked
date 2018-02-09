@@ -62,7 +62,9 @@ if [ "$KIND" = "CLI" ]; then
     cd ../../Mac
 
     mkdir -p "${FILES}-Root/usr/local/bin"
+    mkdir -p "${FILES}-Root/usr/local/share/man/man1"
     cp "../GNU/CLI/${APPNAME_lower}" "${FILES}-Root/usr/local/bin"
+    cp "../../Source/CLI/rawcooked.1" "${FILES}-Root/usr/local/share/man/man1"
     codesign -f -s "Developer ID Application: ${SIGNATURE}" --verbose "${FILES}-Root/usr/local/bin/${APPNAME_lower}"
 
     pkgbuild --root "${FILES}-Root" --identifier "net.mediaarea.${APPNAME_lower}.mac-${KIND_lower}" --sign "Developer ID Installer: ${SIGNATURE}" --version "${VERSION}" "${FILES}/${APPNAME_lower}.pkg"
