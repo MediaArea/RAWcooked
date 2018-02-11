@@ -304,6 +304,8 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
         return Usage(argv[0]);
+    if (strcmp(argv[1], "--help") == 0)
+        return Help(argv[0]);
 
     for (int i = 1; i < argc; i++)
         if (ParseFile(argv[i]))
