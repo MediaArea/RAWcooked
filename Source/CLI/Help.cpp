@@ -26,6 +26,7 @@ ReturnValue Usage(const char* Name)
 {
     printf("Usage: \"%s [options] FileNames [options]\"\n", Name);
     printf("\"%s --help\" for displaying more information\n", Name);
+    printf("or \"man %s\" for displaying the man page\n", Name);
 
     return ReturnValue_OK;
 }
