@@ -50,13 +50,19 @@ struct dpx_tested
     dpx::style                  Style;
 };
 
-const size_t DPX_Tested_Size = 6;
+const size_t DPX_Tested_Size = 7;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
+//    { RGB       , 12, Packed , BE, dpx::RGB_12_Packed_BE }, // Not supported by FFmpeg DPX parser
+    { RGB       , 12, MethodA, BE, dpx::RGB_12_FilledA_BE },
+    { RGB       , 12, MethodA, LE, dpx::RGB_12_FilledA_LE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
     { RGBA      ,  8, Packed , BE, dpx::RGBA_8 },
+//    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser and FFmpeg FFV1 codec
+//    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE }, // Not supported by FFmpeg FFV1 codec
+//    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE }, // Not supported by FFmpeg FFV1 codec
     { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
 };
 
@@ -190,7 +196,21 @@ bool dpx::Parse()
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
     Style = DPX_Tested[Tested].Style;
 
-    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + BitsPerPixel((style)Style) * Width * Height / 8);
+    // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
+    size_t Slice_Multiplier = PixelSync((style)Style);
+    for (slice_x = 8; slice_x; slice_x--)
+    {
+        if (Width % (slice_x * Slice_Multiplier) == 0)
+            break;
+    }
+    if (slice_x == 0)
+        return Error("Pixels in slice not on a 32-bit boundary");
+
+    // Computing EndOfImagePadding
+    size_t ContentSize_Multiplier = BitsPerPixel((style)Style);
+    if (ContentSize_Multiplier == 0)
+        return Error("(Internal error)");
+    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / 8);
 
     // Write RAWcooked file
     if (WriteFileCall)
@@ -213,17 +233,46 @@ size_t dpx::BitsPerPixel(dpx::style Style)
 {
     switch (Style)
     {
-        case dpx::RGBA_8:
-                                        return 32; // 4x8-bit
-        case dpx::RGB_10_FilledA_LE:
-        case dpx::RGB_10_FilledA_BE:
-                                        return 32; // 3x10-bit in 32-bit
-        case dpx::RGB_16_BE:
-                                        return 48; // 3x16-bit
-        case dpx::RGBA_16_BE:
-                                        return 64; // 4x16-bit
+        case dpx::RGB_10_FilledA_BE:    // 3x10-bit content + 2-bit zero-padding in 32-bit
+        case dpx::RGB_10_FilledA_LE:    // 3x10-bit content + 2-bit zero-padding in 32-bit
+        case dpx::RGBA_8:               // 4x8-bit content
+                                        return 32;
+        case dpx::RGB_12_Packed_BE:     // 3x12-bit
+                                        return 36; 
+        case dpx::RGB_12_FilledA_BE:    // 3x(12-bit content + 4-bit zero-padding)
+        case dpx::RGB_12_FilledA_LE:    // 3x(12-bit content + 4-bit zero-padding)
+        case dpx::RGB_16_BE:            // 3x16-bit content
+        case dpx::RGBA_12_Packed_BE:    // 4x12-bit content
+                                        return 48; 
+        case dpx::RGBA_12_FilledA_BE:   // 4x(12-bit content + 4-bit zero-padding)
+        case dpx::RGBA_12_FilledA_LE:   // 4x(12-bit content + 4-bit zero-padding)
+        case dpx::RGBA_16_BE:           // 4x16-bit content
+                                        return 64; 
         default:
                                         return 0;
     }
 }
 
+//---------------------------------------------------------------------------
+size_t dpx::PixelSync(dpx::style Style)
+{
+    switch (Style)
+    {
+        case dpx::RGBA_8:
+        case dpx::RGB_10_FilledA_BE:
+        case dpx::RGB_10_FilledA_LE:
+        case dpx::RGB_12_FilledA_BE:
+        case dpx::RGB_12_FilledA_LE:
+        case dpx::RGB_16_BE:
+        case dpx::RGBA_12_FilledA_BE:
+        case dpx::RGBA_12_FilledA_LE:
+        case dpx::RGBA_16_BE:
+                                        return 1;
+        case dpx::RGBA_12_Packed_BE:    // 2x4x12-bit in 1x3x32-bit
+                                        return 2;
+        case dpx::RGB_12_Packed_BE:     // 8x3x12-bit in 3x3x32-bit
+                                        return 8;
+        default:
+                                        return 0;
+    }
+}

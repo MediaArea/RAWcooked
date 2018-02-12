@@ -195,6 +195,7 @@ int ParseFile(const char* Name)
     string FileName_Template;
     string FileName_StartNumber;
     size_t Path_Pos=0;
+    string slices;
     if (!M.IsDetected)
     {
         DetectSequence(Name, Files, Path_Pos, FileName_Template, FileName_StartNumber);
@@ -217,6 +218,12 @@ int ParseFile(const char* Name)
                 return 1;
             }
             i++;
+            if (WriteToDisk_Data.IsFirstFrame)
+            {
+                stringstream t;
+                t << DPX.slice_x * DPX.slice_x;
+                slices = t.str();
+            }
             WriteToDisk_Data.IsFirstFrame = false;
 
             if (i >= Files.size())
@@ -285,7 +292,7 @@ int ParseFile(const char* Name)
             Command += Files[0];
             Command += "\"";
         }
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices 64 -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + slices + " -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
         Command += Files[0];
         Command += ".mkv\"";
 

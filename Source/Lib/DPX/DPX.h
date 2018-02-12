@@ -34,6 +34,7 @@ public:
 
     // Info
     uint64_t                    Style;
+    size_t                      slice_x;
 
     // Error message
     const char*                 ErrorMessage();
@@ -42,14 +43,21 @@ public:
     {
         RGB_10_FilledA_LE,
         RGB_10_FilledA_BE,
+        RGB_12_Packed_BE,
+        RGB_12_FilledA_BE,
+        RGB_12_FilledA_LE,
         RGB_16_BE,
         RGBA_8,
+        RGBA_12_Packed_BE,
+        RGBA_12_FilledA_BE,
+        RGBA_12_FilledA_LE,
         RGBA_16_BE,
         DPX_Style_Max,
     };
 
     // Info about formats
     static size_t BitsPerPixel(style Style);
+    static size_t PixelSync(style Style); // Need no overlap every x pixels
 
 private:
     size_t                      Buffer_Offset;
