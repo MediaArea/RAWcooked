@@ -48,6 +48,9 @@ public:
         DPX_Style_Max,
     };
 
+    // Info about formats
+    static size_t BitsPerPixel(style Style);
+
 private:
     size_t                      Buffer_Offset;
     bool                        IsBigEndian;

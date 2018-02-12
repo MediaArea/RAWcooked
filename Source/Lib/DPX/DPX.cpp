@@ -47,16 +47,17 @@ struct dpx_tested
     uint8_t                     BitDepth;
     packing                     Packing;
     endianess                   Endianess;
-    uint8_t                     Code;
+    dpx::style                  Style;
 };
 
-struct dpx_tested DPX_Tested[] =
+const size_t DPX_Tested_Size = 6;
+struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
     { RGBA      ,  8, Packed , BE, dpx::RGBA_8 },
-//    { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE }, // Not supported by FFmpeg
+    { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
 };
 
 //---------------------------------------------------------------------------
@@ -155,6 +156,8 @@ bool dpx::Parse()
         return Error("Image orientation");
     if (Get_X2() != 1)
         return Error("Number of image elements");
+    uint32_t Width = Get_X4();
+    uint32_t Height = Get_X4();
     Buffer_Offset = 780;
     if (Get_X4() != 0)
         return Error("Data sign");
@@ -170,21 +173,24 @@ bool dpx::Parse()
         return Error("Offset to data");
     if (Get_X4() != 0)
         return Error("End-of-line padding");
-    uint32_t EndOfImagePadding = Get_X4();
+    //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
 
     // Supported?
-    Style = 0;
-    for (; Style < DPX_Style_Max; Style++)
+    size_t Tested = 0;
+    for (; Tested < DPX_Tested_Size; Tested++)
     {
-        dpx_tested& DPX_Tested_Item = DPX_Tested[Style];
+        dpx_tested& DPX_Tested_Item = DPX_Tested[Tested];
         if (DPX_Tested_Item.Descriptor == Descriptor
-         && DPX_Tested_Item.BitDepth == BitDepth
-         && DPX_Tested_Item.Packing == Packing
-         && DPX_Tested_Item.Endianess == (IsBigEndian?BE:LE))
+            && DPX_Tested_Item.BitDepth == BitDepth
+            && DPX_Tested_Item.Packing == Packing
+            && DPX_Tested_Item.Endianess == (IsBigEndian ? BE : LE))
             break;
     }
-    if (Style >= DPX_Style_Max)
+    if (Tested >= DPX_Tested_Size)
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
+    Style = DPX_Tested[Tested].Style;
+
+    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + BitsPerPixel((style)Style) * Width * Height / 8);
 
     // Write RAWcooked file
     if (WriteFileCall)
@@ -201,3 +207,23 @@ bool dpx::Parse()
 
     return 0;
 }
+
+//---------------------------------------------------------------------------
+size_t dpx::BitsPerPixel(dpx::style Style)
+{
+    switch (Style)
+    {
+        case dpx::RGBA_8:
+                                        return 32; // 4x8-bit
+        case dpx::RGB_10_FilledA_LE:
+        case dpx::RGB_10_FilledA_BE:
+                                        return 32; // 3x10-bit in 32-bit
+        case dpx::RGB_16_BE:
+                                        return 48; // 3x16-bit
+        case dpx::RGBA_16_BE:
+                                        return 64; // 4x16-bit
+        default:
+                                        return 0;
+    }
+}
+
