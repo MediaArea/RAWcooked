@@ -156,6 +156,8 @@ bool dpx::Parse()
         return Error("Image orientation");
     if (Get_X2() != 1)
         return Error("Number of image elements");
+    uint32_t Width = Get_X4();
+    uint32_t Height = Get_X4();
     Buffer_Offset = 780;
     if (Get_X4() != 0)
         return Error("Data sign");
@@ -171,7 +173,7 @@ bool dpx::Parse()
         return Error("Offset to data");
     if (Get_X4() != 0)
         return Error("End-of-line padding");
-    uint32_t EndOfImagePadding = Get_X4();
+    //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
 
     // Supported?
     size_t Tested = 0;
@@ -188,6 +190,8 @@ bool dpx::Parse()
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
     Style = DPX_Tested[Tested].Style;
 
+    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + BitsPerPixel((style)Style) * Width * Height / 8);
+
     // Write RAWcooked file
     if (WriteFileCall)
     {
@@ -203,3 +207,23 @@ bool dpx::Parse()
 
     return 0;
 }
+
+//---------------------------------------------------------------------------
+size_t dpx::BitsPerPixel(dpx::style Style)
+{
+    switch (Style)
+    {
+        case dpx::RGBA_8:
+                                        return 32; // 4x8-bit
+        case dpx::RGB_10_FilledA_LE:
+        case dpx::RGB_10_FilledA_BE:
+                                        return 32; // 3x10-bit in 32-bit
+        case dpx::RGB_16_BE:
+                                        return 48; // 3x16-bit
+        case dpx::RGBA_16_BE:
+                                        return 64; // 4x16-bit
+        default:
+                                        return 0;
+    }
+}
+
