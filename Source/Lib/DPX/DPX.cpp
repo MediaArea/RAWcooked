@@ -50,7 +50,7 @@ struct dpx_tested
     dpx::style                  Style;
 };
 
-const size_t DPX_Tested_Size = 7;
+const size_t DPX_Tested_Size = 10;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
@@ -59,11 +59,14 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { RGB       , 12, MethodA, BE, dpx::RGB_12_FilledA_BE },
     { RGB       , 12, MethodA, LE, dpx::RGB_12_FilledA_LE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
+    { RGB       , 16, MethodA, BE, dpx::RGB_16_BE },
+    { RGB       , 16, MethodA, LE, dpx::RGB_16_LE },
     { RGBA      ,  8, Packed , BE, dpx::RGBA_8 },
 //    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser and FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE }, // Not supported by FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE }, // Not supported by FFmpeg FFV1 codec
     { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
+    { RGBA      , 16, MethodA, LE, dpx::RGBA_16_LE },
 };
 
 //---------------------------------------------------------------------------
@@ -242,11 +245,13 @@ size_t dpx::BitsPerPixel(dpx::style Style)
         case dpx::RGB_12_FilledA_BE:    // 3x(12-bit content + 4-bit zero-padding)
         case dpx::RGB_12_FilledA_LE:    // 3x(12-bit content + 4-bit zero-padding)
         case dpx::RGB_16_BE:            // 3x16-bit content
+        case dpx::RGB_16_LE:            // 3x16-bit content
         case dpx::RGBA_12_Packed_BE:    // 4x12-bit content
                                         return 48; 
         case dpx::RGBA_12_FilledA_BE:   // 4x(12-bit content + 4-bit zero-padding)
         case dpx::RGBA_12_FilledA_LE:   // 4x(12-bit content + 4-bit zero-padding)
         case dpx::RGBA_16_BE:           // 4x16-bit content
+        case dpx::RGBA_16_LE:           // 4x16-bit content
                                         return 64; 
         default:
                                         return 0;
@@ -264,9 +269,11 @@ size_t dpx::PixelSync(dpx::style Style)
         case dpx::RGB_12_FilledA_BE:
         case dpx::RGB_12_FilledA_LE:
         case dpx::RGB_16_BE:
+        case dpx::RGB_16_LE:
         case dpx::RGBA_12_FilledA_BE:
         case dpx::RGBA_12_FilledA_LE:
         case dpx::RGBA_16_BE:
+        case dpx::RGBA_16_LE:
                                         return 1;
         case dpx::RGBA_12_Packed_BE:    // 2x4x12-bit in 1x3x32-bit
                                         return 2;

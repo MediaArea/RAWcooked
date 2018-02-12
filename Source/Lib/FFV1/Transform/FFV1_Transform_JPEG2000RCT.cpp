@@ -186,6 +186,13 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_16[x*3+2] = ((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);  // Swap bytes
                                         }
                                         break;
+            case dpx::RGB_16_LE:
+                                        { 
+                                        FrameBuffer_Temp_16[x*3]   = r;
+                                        FrameBuffer_Temp_16[x*3+1] = g;
+                                        FrameBuffer_Temp_16[x*3+2] = b;
+                                        }
+                                        break;
             case dpx::RGBA_8:
                                         {
                                         pixel_t a = A[x];
@@ -244,6 +251,15 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_16[x*4+1] = (uint16_t)((g & 0xFF00) >> 8) | ((g & 0xFF) << 8);  // Swap bytes
                                         FrameBuffer_Temp_16[x*4+2] = (uint16_t)((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);  // Swap bytes
                                         FrameBuffer_Temp_16[x*4+3] = (uint16_t)((a & 0xFF00) >> 8) | ((a & 0xFF) << 8);  // Swap bytes
+                                        }
+                                        break;
+            case dpx::RGBA_16_LE:
+                                        {
+                                        pixel_t a = A[x];
+                                        FrameBuffer_Temp_16[x*4]   = r;
+                                        FrameBuffer_Temp_16[x*4+1] = g;
+                                        FrameBuffer_Temp_16[x*4+2] = b;
+                                        FrameBuffer_Temp_16[x*4+3] = a;
                                         }
                                         break;
             default:;

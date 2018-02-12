@@ -47,11 +47,13 @@ public:
         RGB_12_FilledA_BE,
         RGB_12_FilledA_LE,
         RGB_16_BE,
+        RGB_16_LE,
         RGBA_8,
         RGBA_12_Packed_BE,
         RGBA_12_FilledA_BE,
         RGBA_12_FilledA_LE,
         RGBA_16_BE,
+        RGBA_16_LE,
         DPX_Style_Max,
     };
 
