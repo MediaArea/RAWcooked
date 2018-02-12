@@ -50,6 +50,8 @@ public:
         RGB_16_BE,
         RGB_16_LE,
         RGBA_8,
+        RGBA_10_FilledA_LE,
+        RGBA_10_FilledA_BE,
         RGBA_12_Packed_BE,
         RGBA_12_FilledA_BE,
         RGBA_12_FilledA_LE,
@@ -59,8 +61,8 @@ public:
     };
 
     // Info about formats
-    static size_t BitsPerPixel(style Style);
-    static size_t PixelSync(style Style); // Need no overlap every x pixels
+    static size_t BitsPerBlock(style Style);
+    static size_t PixelsPerBlock(style Style); // Need no overlap every x pixels
 
 private:
     size_t                      Buffer_Offset;

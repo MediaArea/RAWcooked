@@ -70,6 +70,8 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { RGBA      ,  8, Packed , LE, dpx::RGBA_8 },
     { RGBA      ,  8, MethodA, BE, dpx::RGBA_8 },
     { RGBA      ,  8, MethodA, LE, dpx::RGBA_8 },
+//    { RGBA      , 10, MethodA, LE, dpx::RGBA_10_FilledA_LE },
+//    { RGBA      , 10, MethodA, BE, dpx::RGBA_10_FilledA_BE },
 //    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser and FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE }, // Not supported by FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE }, // Not supported by FFmpeg FFV1 codec
@@ -210,7 +212,9 @@ bool dpx::Parse()
     Style = DPX_Tested[Tested].Style;
 
     // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
-    size_t Slice_Multiplier = PixelSync((style)Style);
+    size_t Slice_Multiplier = PixelsPerBlock((style)Style);
+    if (Slice_Multiplier == 0)
+        return Error("(Internal error)");
     for (slice_x = 8; slice_x; slice_x--)
     {
         if (Width % (slice_x * Slice_Multiplier) == 0)
@@ -220,10 +224,10 @@ bool dpx::Parse()
         return Error("Pixels in slice not on a 32-bit boundary");
 
     // Computing EndOfImagePadding
-    size_t ContentSize_Multiplier = BitsPerPixel((style)Style);
+    size_t ContentSize_Multiplier = BitsPerBlock((style)Style);
     if (ContentSize_Multiplier == 0)
         return Error("(Internal error)");
-    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / 8);
+    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8);
 
     // Write RAWcooked file
     if (WriteFileCall)
@@ -242,7 +246,7 @@ bool dpx::Parse()
 }
 
 //---------------------------------------------------------------------------
-size_t dpx::BitsPerPixel(dpx::style Style)
+size_t dpx::BitsPerBlock(dpx::style Style)
 {
     switch (Style)
     {
@@ -252,26 +256,30 @@ size_t dpx::BitsPerPixel(dpx::style Style)
         case dpx::RGB_10_FilledA_LE:    // 3x10-bit content + 2-bit zero-padding in 32-bit
         case dpx::RGBA_8:               // 4x8-bit content
                                         return 32;
-        case dpx::RGB_12_Packed_BE:     // 3x12-bit
-                                        return 36; 
         case dpx::RGB_12_FilledA_BE:    // 3x(12-bit content + 4-bit zero-padding)
         case dpx::RGB_12_FilledA_LE:    // 3x(12-bit content + 4-bit zero-padding)
         case dpx::RGB_16_BE:            // 3x16-bit content
         case dpx::RGB_16_LE:            // 3x16-bit content
-        case dpx::RGBA_12_Packed_BE:    // 4x12-bit content
                                         return 48; 
         case dpx::RGBA_12_FilledA_BE:   // 4x(12-bit content + 4-bit zero-padding)
         case dpx::RGBA_12_FilledA_LE:   // 4x(12-bit content + 4-bit zero-padding)
         case dpx::RGBA_16_BE:           // 4x16-bit content
         case dpx::RGBA_16_LE:           // 4x16-bit content
                                         return 64; 
+        case dpx::RGBA_12_Packed_BE:    // 4x12-bit content, multiplied by 2 pixels in a supported block
+                                        return 96; 
+        case dpx::RGBA_10_FilledA_BE:   // 4x10-bit content, 2-bit padding every 30-bit, multiplied by 3 pixels in a supported block
+        case dpx::RGBA_10_FilledA_LE:   // 4x10-bit content, 2-bit padding every 30-bit, multiplied by 3 pixels in a supported block
+                                        return 128; 
+        case dpx::RGB_12_Packed_BE:     // 3x12-bit content, multiplied by 8 pixels in a supported block
+                                        return 288;
         default:
                                         return 0;
     }
 }
 
 //---------------------------------------------------------------------------
-size_t dpx::PixelSync(dpx::style Style)
+size_t dpx::PixelsPerBlock(dpx::style Style)
 {
     switch (Style)
     {
@@ -288,9 +296,12 @@ size_t dpx::PixelSync(dpx::style Style)
         case dpx::RGBA_16_BE:
         case dpx::RGBA_16_LE:
                                         return 1;
-        case dpx::RGBA_12_Packed_BE:    // 2x4x12-bit in 1x3x32-bit
+        case dpx::RGBA_12_Packed_BE:    // 2x4x12-bit in 3x32-bit
                                         return 2;
-        case dpx::RGB_12_Packed_BE:     // 8x3x12-bit in 3x3x32-bit
+        case dpx::RGBA_10_FilledA_BE:   // 3x4x10-bit in 3x32-bit
+        case dpx::RGBA_10_FilledA_LE:   // 3x4x10-bit in 3x32-bit
+                                        return 3;
+        case dpx::RGB_12_Packed_BE:     // 8x3x12-bit in 9x32-bit
                                         return 8;
         default:
                                         return 0;
