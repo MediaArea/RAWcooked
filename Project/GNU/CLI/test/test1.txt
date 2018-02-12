@@ -1,10 +1,10 @@
 Formats/DPX/Features/EndOfImagePadding/cropped_DPX_137_4K_10bit.dpx pass
 Formats/DPX/Features/JunkAfterData/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.Padding.dpx pass
 Formats/DPX/Flavors/A_8_Packed_BE/Alpha_8_bit.dpx fail
-Formats/DPX/Flavors/RGBA_8_FilledA_BE/checkerboard_1080p_nuke_bigendian_8bit_alpha.dpx fail
+Formats/DPX/Flavors/RGBA_8_FilledA_BE/checkerboard_1080p_nuke_bigendian_8bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_8_Packed_BE/8bit_a.dpx pass
 Formats/DPX/Flavors/RGBA_8_Packed_BE/RGBA_8_bit.dpx pass
-Formats/DPX/Flavors/RGBA_8_Packed_LE/checkerboard_1080p_nuke_littleendian_8bit_alpha.dpx fail
+Formats/DPX/Flavors/RGBA_8_Packed_LE/checkerboard_1080p_nuke_littleendian_8bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_10_FilledA_BE/10bit_a.dpx fail
 Formats/DPX/Flavors/RGBA_10_FilledA_BE/checkerboard_1080p_nuke_bigendian_10bit_alpha.dpx fail
 Formats/DPX/Flavors/RGBA_10_FilledA_LE/checkerboard_1080p_nuke_littleendian_10bit_alpha.dpx fail
@@ -14,9 +14,9 @@ Formats/DPX/Flavors/RGBA_12_Packed_BE/12bit_a.dpx fail
 Formats/DPX/Flavors/RGBA_16_FilledA_BE/checkerboard_1080p_nuke_bigendian_16bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_16_FilledA_LE/checkerboard_1080p_nuke_littleendian_16bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_16_Packed_BE/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.dpx pass
-Formats/DPX/Flavors/RGB_8_Packed_BE/8bit.dpx fail
-Formats/DPX/Flavors/RGB_8_Packed_BE/checkerboard_1080p_nuke_bigendian_8bit_noalpha.dpx fail
-Formats/DPX/Flavors/RGB_8_Packed_LE/checkerboard_1080p_nuke_littleendian_8bit_noalpha.dpx fail
+Formats/DPX/Flavors/RGB_8_Packed_BE/8bit.dpx pass
+Formats/DPX/Flavors/RGB_8_Packed_BE/checkerboard_1080p_nuke_bigendian_8bit_noalpha.dpx pass
+Formats/DPX/Flavors/RGB_8_Packed_LE/checkerboard_1080p_nuke_littleendian_8bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_BE/10bit.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_BE/checkerboard_1080p_nuke_bigendian_10bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_LE/checkerboard_1080p_nuke_littleendian_10bit_noalpha.dpx pass

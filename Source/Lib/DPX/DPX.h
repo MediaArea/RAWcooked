@@ -41,6 +41,7 @@ public:
 
     enum style
     {
+        RGB_8,
         RGB_10_FilledA_LE,
         RGB_10_FilledA_BE,
         RGB_12_Packed_BE,

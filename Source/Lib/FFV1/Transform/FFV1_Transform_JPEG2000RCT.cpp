@@ -100,6 +100,13 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
 
         switch (Style_Private)
         {
+            case dpx::RGB_8:
+                                        {
+                                        FrameBuffer_Temp_8[x*3]   = (uint8_t)r;
+                                        FrameBuffer_Temp_8[x*3+1] = (uint8_t)g;
+                                        FrameBuffer_Temp_8[x*3+2] = (uint8_t)b;
+                                        }
+                                        break;
             case dpx::RGB_10_FilledA_LE:
                                         {
                                         FrameBuffer_Temp_32[x] = (r << 22) | (b << 12) | (g << 2); // Exception indicated in specs, g and b are inverted
