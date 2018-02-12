@@ -62,7 +62,7 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, 
     switch (colorspace_type)
     {
         case 1: // JPEG2000-RCT --> RGB
-                Planes.push_back(new plane(width, height, dpx::BitsPerPixel((dpx::style)Style_Private)));
+                Planes.push_back(new plane(width, height, dpx::BitsPerBlock((dpx::style)Style_Private), dpx::PixelsPerBlock((dpx::style)Style_Private)));
         default: ;
     }
 }

@@ -23,7 +23,7 @@ transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_,
     {
         FrameBuffer_Temp[p] = RawFrame->Planes[p]->Buffer;
         FrameBuffer_Temp[p] += y_offset*RawFrame->Planes[p]->AllBytesPerLine();
-        FrameBuffer_Temp[p] += x_offset*RawFrame->Planes[p]->BitsPerPixel/8; //TODO: check when not byte boundary
+        FrameBuffer_Temp[p] += x_offset*RawFrame->Planes[p]->BitsPerBlock/RawFrame->Planes[p]->PixelsPerBlock/8; //TODO: check when not byte boundary
     }
 }
 
@@ -209,27 +209,56 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_8[x*4+3] = (uint8_t)a;
                                         }
                                         break;
-            case dpx::RGBA_12_Packed_BE:
+            case dpx::RGBA_10_FilledA_BE:
                                         {
                                         pixel_t a = A[x];
                                         uint32_t c;
                                         switch (s)
                                         {
                                             case 0:
-                                                    c = (b << 24) | (g << 12) | r;
+                                                    c = (r << 22) | (g << 12) | (b << 2);
                                                     FrameBuffer_Temp_32[t] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
-                                                    Data_Private = (a << 4) | (b >> 8);
+                                                    Data_Private = (a << 22);
                                                     break;
                                             case 1:
-                                                    c = (g << 28) | (r << 16) | (uint32_t)Data_Private;
+                                                    c = (uint32_t)Data_Private | (r << 12) | (g << 2);
+                                                    FrameBuffer_Temp_32[t] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
+                                                    Data_Private = (b << 22) | (a << 12);
+                                                    break;
+                                            case 2:
+                                                    c = (uint32_t)Data_Private | (r << 2);
                                                     FrameBuffer_Temp_32[t++] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
-                                                    c = (a << 20) | (b << 8) | (g >> 4);
+                                                    c = (g << 22) | (b << 12) | (a << 2);
                                                     FrameBuffer_Temp_32[t] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
                                                     break;
                                         }
                                         t++;
                                         s++;
-                                        if (s == 2)
+                                        if (s == 3)
+                                            s = 0;
+                                        }
+                                        break;
+            case dpx::RGBA_10_FilledA_LE:
+                                        {
+                                        pixel_t a = A[x];
+                                        switch (s)
+                                        {
+                                            case 0:
+                                                    FrameBuffer_Temp_32[t] = (r << 22) | (g << 12) | (b << 2);
+                                                    Data_Private = (a << 22);
+                                                    break;
+                                            case 1:
+                                                    FrameBuffer_Temp_32[t] = (uint32_t)Data_Private | (r << 12) | (g << 2);
+                                                    Data_Private = (b << 22) | (a << 12);
+                                                    break;
+                                            case 2:
+                                                    FrameBuffer_Temp_32[t++] = (uint32_t)Data_Private | (r << 2);
+                                                    FrameBuffer_Temp_32[t] = (g << 22) | (b << 12) | (a << 2);
+                                                    break;
+                                        }
+                                        t++;
+                                        s++;
+                                        if (s == 3)
                                             s = 0;
                                         }
                                         break;
