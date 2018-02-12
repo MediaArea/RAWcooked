@@ -50,21 +50,31 @@ struct dpx_tested
     dpx::style                  Style;
 };
 
-const size_t DPX_Tested_Size = 10;
+const size_t DPX_Tested_Size = 20;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
+    { RGB       ,  8, Packed , BE, dpx::RGB_8 },
+    { RGB       ,  8, Packed , LE, dpx::RGB_8 },
+    { RGB       ,  8, MethodA, BE, dpx::RGB_8 },
+    { RGB       ,  8, MethodA, LE, dpx::RGB_8 },
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
 //    { RGB       , 12, Packed , BE, dpx::RGB_12_Packed_BE }, // Not supported by FFmpeg DPX parser
     { RGB       , 12, MethodA, BE, dpx::RGB_12_FilledA_BE },
     { RGB       , 12, MethodA, LE, dpx::RGB_12_FilledA_LE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
+    { RGB       , 16, Packed , LE, dpx::RGB_16_LE },
     { RGB       , 16, MethodA, BE, dpx::RGB_16_BE },
     { RGB       , 16, MethodA, LE, dpx::RGB_16_LE },
     { RGBA      ,  8, Packed , BE, dpx::RGBA_8 },
+    { RGBA      ,  8, Packed , LE, dpx::RGBA_8 },
+    { RGBA      ,  8, MethodA, BE, dpx::RGBA_8 },
+    { RGBA      ,  8, MethodA, LE, dpx::RGBA_8 },
 //    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser and FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE }, // Not supported by FFmpeg FFV1 codec
 //    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE }, // Not supported by FFmpeg FFV1 codec
+    { RGBA      , 16, Packed , BE, dpx::RGBA_16_BE },
+    { RGBA      , 16, Packed , LE, dpx::RGBA_16_LE },
     { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
     { RGBA      , 16, MethodA, LE, dpx::RGBA_16_LE },
 };
@@ -236,6 +246,8 @@ size_t dpx::BitsPerPixel(dpx::style Style)
 {
     switch (Style)
     {
+        case dpx::RGB_8:                // 3x8-bit content
+                                        return 24;
         case dpx::RGB_10_FilledA_BE:    // 3x10-bit content + 2-bit zero-padding in 32-bit
         case dpx::RGB_10_FilledA_LE:    // 3x10-bit content + 2-bit zero-padding in 32-bit
         case dpx::RGBA_8:               // 4x8-bit content
@@ -263,6 +275,7 @@ size_t dpx::PixelSync(dpx::style Style)
 {
     switch (Style)
     {
+        case dpx::RGB_8:
         case dpx::RGBA_8:
         case dpx::RGB_10_FilledA_BE:
         case dpx::RGB_10_FilledA_LE:
