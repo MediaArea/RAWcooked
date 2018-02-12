@@ -20,8 +20,8 @@ Formats/DPX/Flavors/RGB_10_FilledA_BE/10bit.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_BE/checkerboard_1080p_nuke_bigendian_10bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_LE/checkerboard_1080p_nuke_littleendian_10bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_10_FilledA_LE/image090003.dpx pass
-Formats/DPX/Flavors/RGB_12_FilledA_BE/checkerboard_1080p_nuke_bigendian_12bit_noalpha.dpx fail
-Formats/DPX/Flavors/RGB_12_FilledA_LE/checkerboard_1080p_nuke_littleendian_12bit_noalpha.dpx fail
+Formats/DPX/Flavors/RGB_12_FilledA_BE/checkerboard_1080p_nuke_bigendian_12bit_noalpha.dpx pass
+Formats/DPX/Flavors/RGB_12_FilledA_LE/checkerboard_1080p_nuke_littleendian_12bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_12_Packed_BE/12bit.dpx fail
 Formats/DPX/Flavors/RGB_12_Packed_BE/af093_ifa2006350_10000086400.dpx fail
 Formats/DPX/Flavors/RGB_12_Packed_BE/RGB_12_bit.dpx fail
