@@ -262,6 +262,30 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                             s = 0;
                                         }
                                         break;
+            case dpx::RGBA_12_Packed_BE:
+                                        {
+                                        pixel_t a = A[x];
+                                        uint32_t c;
+                                        switch (s)
+                                        {
+                                            case 0:
+                                                    c = (b << 24) | (g << 12) | r;
+                                                    FrameBuffer_Temp_32[t] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
+                                                    Data_Private = (a << 4) | (b >> 8);
+                                                    break;
+                                            case 1:
+                                                    c = (g << 28) | (r << 16) | (uint32_t)Data_Private;
+                                                    FrameBuffer_Temp_32[t++] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
+                                                    c = (a << 20) | (b << 8) | (g >> 4);
+                                                    FrameBuffer_Temp_32[t] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
+                                                    break;
+                                        }
+                                        t++;
+                                        s++;
+                                        if (s == 2)
+                                            s = 0;
+                                        }
+                                        break;
             case dpx::RGBA_12_FilledA_BE:
                                         {
                                         pixel_t a = A[x];
