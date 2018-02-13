@@ -65,6 +65,19 @@ while read line ; do
                 continue
             fi
 
+            # check framemd5
+            pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:dpx,' | cut -d, -f2)
+            ffmpeg -i "${file}.mkv" -pix_fmt ${pixfmt} -f framemd5 "${file}.mkv.framemd5"
+
+            framemd5_a="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.framemd5")"
+            framemd5_b="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.mkv.framemd5")"
+
+            if [ -z "${framemd5_a}" ] || [ -z "${framemd5_b}" ] || [ "${framemd5_a}" != "${framemd5_b}" ] ; then
+                echo "NOK: ${test}/${file}, framemd5 mismatch" >&${fd}
+                rcode=1
+                continue
+            fi
+
             ${valgrind} rawcooked "${file}.mkv" >/dev/null 2>&1
             result=$?
             
