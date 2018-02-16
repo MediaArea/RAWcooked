@@ -32,6 +32,16 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+struct ffmpeg_info_struct
+{
+    string FileName;
+    string FileName_StartNumber;
+    string FileName_Template;
+    string Slices;
+};
+std::vector<ffmpeg_info_struct> FFmpeg_Info;
+
+//---------------------------------------------------------------------------
 void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
 {
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
@@ -75,14 +85,9 @@ void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, void* Opaque)
 {
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
 
-    string OutFileName(WriteToDisk_Data->FileName);
-    size_t Path_Pos = OutFileName.rfind(PathSeparator);
-    if (Path_Pos != ((size_t)-1))
-        OutFileName.resize(Path_Pos + 1);
-    else
-        OutFileName.clear();
-    OutFileName += "rawcooked.id=1"; //TODO: ID of the track
-    FILE* F = fopen(OutFileName.c_str(), WriteToDisk_Data->IsFirstFrame?"wb":"ab");
+    string OutFileName(FFmpeg_Info.empty()?WriteToDisk_Data->FileName:FFmpeg_Info[0].FileName);
+    OutFileName += ".rawcookedattachment";
+    FILE* F = fopen(OutFileName.c_str(), (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)?"wb":"ab");
     fwrite(Buffer, Buffer_Size, 1, F);
     fclose(F);
 }
@@ -166,9 +171,10 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
 }
 
 //---------------------------------------------------------------------------
-int ParseFile(const char* Name)
+int ParseFile(const char* Name, bool IsFirstFile)
 {
     write_to_disk_struct WriteToDisk_Data;
+    WriteToDisk_Data.IsFirstFile = IsFirstFile;
     WriteToDisk_Data.FileName = Name;
     
     #if defined(_WIN32) || defined(_WINDOWS)
@@ -259,49 +265,83 @@ int ParseFile(const char* Name)
         close(F);
     #endif
 
-    if (M.Frame.ErrorMessage())
+    if (M.ErrorMessage())
     {
-        cerr << "Untested " << M.Frame.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+        cerr << "Untested " << M.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
         return 1;
     }
 
     // Processing DPX to MKV/FFV1
     if (!M.IsDetected)
     {
-        string OutFileName(Files[0]); //TODO: remove duplicated code
-        size_t Path_Pos = OutFileName.rfind(PathSeparator);
-        if (Path_Pos != ((size_t)-1))
-            OutFileName.resize(Path_Pos + 1);
-        else
-            OutFileName.clear();
-        OutFileName += "rawcooked.id=1"; //TODO: ID of the track
+        ffmpeg_info_struct info;
 
-        string Command;
-        Command += "ffmpeg";
+        info.FileName = Files[0];
         if (!FileName_StartNumber.empty() && !FileName_Template.empty())
         {
-            Command += " -start_number ";
-            Command += FileName_StartNumber;
-            Command += " -i \"";
-            Command += FileName_Template;
-            Command += "\"";
+            info.FileName_StartNumber = FileName_StartNumber;
+            info.FileName_Template = FileName_Template;
         }
-        else
-        {
-            Command += " -i \"";
-            Command += Files[0];
-            Command += "\"";
-        }
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + slices + " -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
-        Command += Files[0];
-        Command += ".mkv\"";
 
-        cout << Command << endl;
+        info.Slices = slices;
+
+        FFmpeg_Info.push_back(info);
+
     }
-    else if (!M.Frame.RawFrame || M.Frame.RawFrame->Planes.empty())
-        cerr << "Problem while parsing the MKV file" << endl;
     else
         cout << "Files are in " << Name << ".RAWcooked" << endl;
+
+    return 0;
+}
+
+int FFmpeg_Command(const char* FileName)
+{
+    // Multiple slices number currently not supported
+    for (size_t i = 1; i < FFmpeg_Info.size(); i++)
+        if (FFmpeg_Info[i].Slices != FFmpeg_Info[0].Slices)
+        {
+            cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
+            return 1;
+        }
+    
+    string OutFileName(FFmpeg_Info[0].FileName); //TODO: remove duplicated code
+    OutFileName += ".rawcookedattachment";
+
+    string Command;
+    Command += "ffmpeg";
+    
+    // Input
+    for (size_t i = 0; i < FFmpeg_Info.size(); i++)
+    {
+        // FileName_StartNumber (if needed)
+        if (!FFmpeg_Info[i].FileName_StartNumber.empty())
+        {
+            Command += " -start_number ";
+            Command += FFmpeg_Info[i].FileName_StartNumber;
+        }
+
+        // FileName_Template (is the file name if no sequence detected)
+        Command += " -i \"";
+        Command += FFmpeg_Info[i].FileName_Template.empty() ? FFmpeg_Info[i].FileName : FFmpeg_Info[i].FileName_Template;
+        Command += "\"";
+    }
+
+    // Map when there are several streams
+    if (FFmpeg_Info.size()>1)
+        for (size_t i = 0; i < FFmpeg_Info.size(); i++)
+        {
+            stringstream t;
+            t << i;
+            Command += " -map ";
+            Command += t.str();
+        }
+
+    // Output
+    Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices + " -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
+    Command += FileName;
+    Command += ".mkv\"";
+
+    cout << Command << endl;
 
     return 0;
 }
@@ -315,8 +355,11 @@ int main(int argc, char* argv[])
         return Help(argv[0]);
 
     for (int i = 1; i < argc; i++)
-        if (ParseFile(argv[i]))
+        if (ParseFile(argv[i], i == 1))
             return 1;
+
+    if (!FFmpeg_Info.empty())
+        return FFmpeg_Command(argv[1]);
 
     return 0;
 }

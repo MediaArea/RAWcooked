@@ -128,15 +128,8 @@ matroska::matroska() :
     WriteFrameCall(NULL),
     WriteFrameCall_Opaque(NULL),
     IsDetected(false),
-    DPX_Before(NULL),
-    DPX_After(NULL),
-    DPX_Buffer_Name(NULL),
-    DPX_Buffer_Pos(0),
-    DPX_Buffer_Count(0),
     RAWcooked_LibraryName_OK(false),
-    RAWcooked_LibraryVersion_OK(false),
-    R_A(NULL),
-    R_B(NULL)
+    RAWcooked_LibraryVersion_OK(false)
 {
     FramesPool = new ThreadPool(1);
     FramesPool->init();
@@ -230,6 +223,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         return;
 
     IsList = true;
+
+    TrackInfo_Pos = (size_t)-1;
 }
 
 //---------------------------------------------------------------------------
@@ -244,30 +239,34 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterDat
     if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
         return;
 
-    DPX_Buffer_Count--; //TODO: right method for knowing the position
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
-    if (!DPX_After)
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!TrackInfo_Current->DPX_After)
     {
-        DPX_After = new uint8_t*[1000000];
-        memset(DPX_After, 0x00, 1000000 * sizeof(uint8_t*));
-        DPX_After_Size = new uint64_t[1000000];
-        memset(DPX_After_Size, 0x00, 1000000 * sizeof(uint64_t));
+        TrackInfo_Current->DPX_After = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_After, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_After_Size = new uint64_t[1000000];
+        memset(TrackInfo_Current->DPX_After_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    delete[] DPX_After[DPX_Buffer_Count];
-    DPX_After_Size[DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    DPX_After[DPX_Buffer_Count] = new uint8_t[DPX_After_Size[DPX_Buffer_Count]];
-    memcpy(DPX_After[DPX_Buffer_Count], Buffer + Buffer_Offset + 4, DPX_After_Size[DPX_Buffer_Count]);
-    DPX_Buffer_Count++;
+    delete[] TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count];
+    TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
+    TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count] = new uint8_t[TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]];
+    memcpy(TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]);
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName()
 {
-    if (!DPX_Buffer_Name)
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_Buffer_Name)
     {
-        DPX_Buffer_Name = new string[1000000];
+        TrackInfo_Current->DPX_Buffer_Name = new string[1000000];
     }
-    DPX_Buffer_Name[DPX_Buffer_Count] = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    TrackInfo_Current->DPX_Buffer_Name[TrackInfo_Current->DPX_Buffer_Count] = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
 }
 
 //---------------------------------------------------------------------------
@@ -276,24 +275,30 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeDa
     if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
         return;
 
-    if (!DPX_Before)
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_Before)
     {
-        DPX_Before = new uint8_t*[1000000];
-        memset(DPX_Before, 0x00, 1000000 * sizeof(uint8_t*));
-        DPX_Before_Size = new uint64_t[1000000];
-        memset(DPX_Before_Size, 0x00, 1000000 * sizeof(uint64_t));
+        TrackInfo_Current->DPX_Before = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_Before, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_Before_Size = new uint64_t[1000000];
+        memset(TrackInfo_Current->DPX_Before_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    delete[] DPX_Before[DPX_Buffer_Count];
-    DPX_Before_Size[DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    DPX_Before[DPX_Buffer_Count] = new uint8_t[DPX_Before_Size[DPX_Buffer_Count]];
-    memcpy(DPX_Before[DPX_Buffer_Count], Buffer + Buffer_Offset + 4, DPX_Before_Size[DPX_Buffer_Count]);
-    DPX_Buffer_Count++;
+    delete[] TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count];
+    TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
+    TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count] = new uint8_t[TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]];
+    memcpy(TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]);
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 {
     IsList = true;
+
+    TrackInfo_Pos++;
+    if (TrackInfo_Pos >= TrackInfo.size())
+        TrackInfo.push_back(new trackinfo());
 }
 
 //---------------------------------------------------------------------------
@@ -331,51 +336,56 @@ void matroska::Segment_Cluster()
 //---------------------------------------------------------------------------
 void matroska::Segment_Cluster_SimpleBlock()
 {
-    if (Levels[Level].Offset_End - Buffer_Offset > 4 && (Buffer[Buffer_Offset]&0x7F) == 1) // TODO: check the ID and format
+    if (Levels[Level].Offset_End - Buffer_Offset > 4)
     {
+        uint8_t TrackID = Buffer[Buffer_Offset] & 0x7F;
+        if (!TrackID || TrackID > TrackInfo.size())
+            return; // Problem
+        trackinfo* TrackInfo_Current = TrackInfo[TrackID - 1];
+
         // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
-        if (!R_A)
+        if (!TrackInfo_Current->R_A)
         {
             if (!RAWcooked_LibraryName_OK || !RAWcooked_LibraryVersion_OK)
                 exit(0);
-            R_A = new raw_frame;
-            R_B = new raw_frame;
+            TrackInfo_Current->R_A = new raw_frame;
+            TrackInfo_Current->R_B = new raw_frame;
         }
-        if (DPX_Buffer_Pos % 2)
-            Frame.RawFrame = R_B;
+        if (TrackInfo_Current->DPX_Buffer_Pos % 2)
+            TrackInfo_Current->Frame.RawFrame = TrackInfo_Current->R_B;
         else
-            Frame.RawFrame = R_A;
+            TrackInfo_Current->Frame.RawFrame = TrackInfo_Current->R_A;
 
-        if (DPX_Before && DPX_Before_Size[DPX_Buffer_Pos])
+        if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Pos])
         {
-            Frame.RawFrame->Pre = DPX_Before[DPX_Buffer_Pos];
-            Frame.RawFrame->Pre_Size = DPX_Before_Size[DPX_Buffer_Pos];
-            if (DPX_Buffer_Pos == 0)
+            TrackInfo_Current->Frame.RawFrame->Pre = TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Pos];
+            TrackInfo_Current->Frame.RawFrame->Pre_Size = TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Pos];
+            if (TrackInfo_Current->DPX_Buffer_Pos == 0)
             {
                 dpx DPX;
-                DPX.Buffer = Frame.RawFrame->Pre;
-                DPX.Buffer_Size = Frame.RawFrame->Pre_Size;
+                DPX.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                DPX.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
                 if (DPX.Parse())
                     return;
-                R_A->Style_Private = DPX.Style;
-                R_B->Style_Private = DPX.Style;
+                TrackInfo_Current->R_A->Style_Private = DPX.Style;
+                TrackInfo_Current->R_B->Style_Private = DPX.Style;
             }
 
-            if (DPX_After && DPX_After_Size[DPX_Buffer_Pos])
+            if (TrackInfo_Current->DPX_After && TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos])
             {
-                Frame.RawFrame->Post = DPX_After[DPX_Buffer_Pos];
-                Frame.RawFrame->Post_Size = DPX_After_Size[DPX_Buffer_Pos];
+                TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Pos];
+                TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos];
             }
 
-            DPX_Buffer_Pos++;
+            TrackInfo_Current->DPX_Buffer_Pos++;
         }
-        Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
+        TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
         if (WriteFrameCall)
         {
             write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-            WriteToDisk_Data->FileNameDPX = DPX_Buffer_Name[DPX_Buffer_Pos - 1].c_str();
+            WriteToDisk_Data->FileNameDPX = TrackInfo_Current->DPX_Buffer_Name[TrackInfo_Current->DPX_Buffer_Pos - 1].c_str();
 
-            FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, Frame.RawFrame, WriteFrameCall_Opaque);
+            FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
         }
     }
 }
@@ -384,12 +394,18 @@ void matroska::Segment_Cluster_SimpleBlock()
 void matroska::Segment_Tracks()
 {
     IsList = true;
+
+    TrackInfo_Pos = (size_t)-1;
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Tracks_TrackEntry()
 {
     IsList = true;
+
+    TrackInfo_Pos++;
+    if (TrackInfo_Pos >= TrackInfo.size())
+        TrackInfo.push_back(new trackinfo());
 }
 
 //---------------------------------------------------------------------------
@@ -403,7 +419,9 @@ void matroska::Segment_Tracks_TrackEntry_CodecPrivate()
 {
     if (Levels[Level].Offset_End - Buffer_Offset > 0x28)
     {
-        Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Levels[Level].Offset_End - Buffer_Offset - 0x28);
+        trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+        TrackInfo_Current->Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Levels[Level].Offset_End - Buffer_Offset - 0x28);
     }
 }
 
@@ -415,7 +433,9 @@ void matroska::Segment_Tracks_TrackEntry_Video_PixelWidth()
         Data = ((uint32_t)Buffer[Buffer_Offset]);
     if (Levels[Level].Offset_End - Buffer_Offset == 2)
         Data = (((uint32_t)Buffer[Buffer_Offset]) << 8) | ((uint32_t)Buffer[Buffer_Offset + 1]);
-    Frame.SetWidth(Data);
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+    TrackInfo_Current->Frame.SetWidth(Data);
 }
 
 //---------------------------------------------------------------------------
@@ -426,5 +446,21 @@ void matroska::Segment_Tracks_TrackEntry_Video_PixelHeight()
         Data = ((uint32_t)Buffer[Buffer_Offset]);
     if (Levels[Level].Offset_End - Buffer_Offset == 2)
         Data = (((uint32_t)Buffer[Buffer_Offset]) << 8) | ((uint32_t)Buffer[Buffer_Offset + 1]);
-    Frame.SetHeight(Data);
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+    TrackInfo_Current->Frame.SetHeight(Data);
+}
+
+//***************************************************************************
+// Errors
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+const char* matroska::ErrorMessage()
+{
+    for (size_t i = 0; i < TrackInfo.size(); i++)
+        if (TrackInfo[i]->Frame.ErrorMessage())
+            return TrackInfo[i]->Frame.ErrorMessage();
+
+    return NULL;
 }

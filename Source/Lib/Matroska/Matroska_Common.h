@@ -13,6 +13,7 @@
 #include "Lib/FFV1/FFV1_Frame.h"
 #include <cstdint>
 #include <string>
+#include <vector>
 //---------------------------------------------------------------------------
 
 class matroska_mapping;
@@ -31,13 +32,14 @@ public:
 
     void                        Parse();
 
-    frame                       Frame;
-
     write_frame_call            WriteFrameCall;
     void*                       WriteFrameCall_Opaque;
 
     // Info
     bool                        IsDetected;
+
+    // Error message
+    const char*                 ErrorMessage();
 
 private:
     uint64_t                    Buffer_Offset;
@@ -84,15 +86,35 @@ private:
 
     bool                        RAWcooked_LibraryName_OK;
     bool                        RAWcooked_LibraryVersion_OK;
-    uint8_t**                   DPX_Before;
-    uint8_t**                   DPX_After;
-    uint64_t*                   DPX_Before_Size;
-    uint64_t*                   DPX_After_Size;
-    string*                     DPX_Buffer_Name;
-    size_t                      DPX_Buffer_Pos;
-    size_t                      DPX_Buffer_Count;
-    raw_frame*                  R_A;
-    raw_frame*                  R_B;
+    struct trackinfo
+    {
+        uint8_t**               DPX_Before;
+        uint8_t**               DPX_After;
+        uint64_t*               DPX_Before_Size;
+        uint64_t*               DPX_After_Size;
+        string*                 DPX_Buffer_Name;
+        size_t                  DPX_Buffer_Pos;
+        size_t                  DPX_Buffer_Count;
+        raw_frame*              R_A;
+        raw_frame*              R_B;
+        frame                   Frame;
+
+        trackinfo() :
+            DPX_Before(NULL),
+            DPX_After(NULL),
+            DPX_Before_Size(0),
+            DPX_After_Size(0),
+            DPX_Buffer_Name(NULL),
+            DPX_Buffer_Pos(0),
+            DPX_Buffer_Count(0),
+            R_A(NULL),
+            R_B(NULL)
+            {
+            }
+    };
+    vector<trackinfo*>          TrackInfo;
+    size_t                      TrackInfo_Pos;
+    vector<uint8_t>             ID_to_TrackOrder;
     ThreadPool*                 FramesPool;
 };
 
