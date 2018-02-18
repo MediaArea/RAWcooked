@@ -35,6 +35,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\RIFF\RIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\md5\md5.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
@@ -53,6 +54,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\RIFF\RIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\md5\md5.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

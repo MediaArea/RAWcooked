@@ -50,7 +50,7 @@ struct dpx_tested
     dpx::style                  Style;
 };
 
-const size_t DPX_Tested_Size = 20;
+const size_t DPX_Tested_Size = 24;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       ,  8, Packed , BE, dpx::RGB_8 },
@@ -70,11 +70,11 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { RGBA      ,  8, Packed , LE, dpx::RGBA_8 },
     { RGBA      ,  8, MethodA, BE, dpx::RGBA_8 },
     { RGBA      ,  8, MethodA, LE, dpx::RGBA_8 },
-//    { RGBA      , 10, MethodA, LE, dpx::RGBA_10_FilledA_LE },
-//    { RGBA      , 10, MethodA, BE, dpx::RGBA_10_FilledA_BE },
-//    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser and FFmpeg FFV1 codec
-//    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE }, // Not supported by FFmpeg FFV1 codec
-//    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE }, // Not supported by FFmpeg FFV1 codec
+    { RGBA      , 10, MethodA, LE, dpx::RGBA_10_FilledA_LE },
+    { RGBA      , 10, MethodA, BE, dpx::RGBA_10_FilledA_BE },
+//    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser
+    { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE },
+    { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE },
     { RGBA      , 16, Packed , BE, dpx::RGBA_16_BE },
     { RGBA      , 16, Packed , LE, dpx::RGBA_16_LE },
     { RGBA      , 16, MethodA, BE, dpx::RGBA_16_BE },
