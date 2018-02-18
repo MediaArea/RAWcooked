@@ -8,6 +8,7 @@
 #include "CLI/Help.h"
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/RIFF/RIFF.h"
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include <sstream>
@@ -49,7 +50,7 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
     stringstream OutFileName;
     OutFileName << WriteToDisk_Data->FileName << ".RAWcooked" << PathSeparator << WriteToDisk_Data->FileNameDPX;
     string OutFileNameS = OutFileName.str().c_str();
-    FILE* F = fopen(OutFileNameS.c_str(), "wb");
+    FILE* F = fopen(OutFileNameS.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb");
     if (!F)
     {
         size_t i = 0;
@@ -69,10 +70,12 @@ void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
                     exit(0);
             }
         }
-        F = fopen(OutFileName.str().c_str(), "wb");
+        F = fopen(OutFileName.str().c_str(), (RawFrame->Buffer && !RawFrame->Pre) ?"ab":"wb");
     }
     if (RawFrame->Pre)
         fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
+    if (RawFrame->Buffer)
+        fwrite(RawFrame->Buffer, RawFrame->Buffer_Size, 1, F);
     for (size_t p = 0; p<RawFrame->Planes.size(); p++)
         fwrite(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size, 1, F);
     if (RawFrame->Post)
@@ -92,7 +95,7 @@ void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, void* Opaque)
     fclose(F);
 }
 
-void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber)
+void DetectPathPos(const char* Name, vector<string>& Files, size_t& Path_Pos)
 {
     string FN(Name);
     string Path;
@@ -116,6 +119,16 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
     }
     else
         Path_Pos = 0;
+}
+
+void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber)
+{
+    string FN(Name);
+    string Path;
+    string After;
+    string Before;
+    
+    DetectPathPos(Name, Files, Path_Pos);
 
     size_t After_Pos = FN.find_last_of("0123456789");
     if (After_Pos != (size_t)-1)
@@ -202,7 +215,31 @@ int ParseFile(const char* Name, bool IsFirstFile)
     string FileName_StartNumber;
     size_t Path_Pos=0;
     string slices;
+
+    riff RIFF;
     if (!M.IsDetected)
+    {
+        DetectPathPos(Name, Files, Path_Pos);
+
+        WriteToDisk_Data.IsFirstFrame = true;
+        WriteToDisk_Data.FileNameDPX = Name + Path_Pos;
+
+        RIFF.WriteFileCall = &WriteToDisk;
+        RIFF.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
+        RIFF.Buffer = Buffer;
+        RIFF.Buffer_Size = Buffer_Size;
+        RIFF.Parse();
+        if (RIFF.ErrorMessage())
+        {
+            cerr << "Untested " << RIFF.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+            return 1;
+        }
+
+        if (RIFF.IsDetected)
+            Files.push_back(Name);
+    }
+
+    if (!M.IsDetected && !RIFF.IsDetected)
     {
         DetectSequence(Name, Files, Path_Pos, FileName_Template, FileName_StartNumber);
         
@@ -256,6 +293,8 @@ int ParseFile(const char* Name, bool IsFirstFile)
         }
     }
 
+    M.Shutdown();
+
     #if defined(_WIN32) || defined(_WINDOWS)
         UnmapViewOfFile(Buffer);
         CloseHandle(mapping);
@@ -298,7 +337,7 @@ int FFmpeg_Command(const char* FileName)
 {
     // Multiple slices number currently not supported
     for (size_t i = 1; i < FFmpeg_Info.size(); i++)
-        if (FFmpeg_Info[i].Slices != FFmpeg_Info[0].Slices)
+        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != FFmpeg_Info[0].Slices)
         {
             cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
             return 1;
@@ -337,7 +376,10 @@ int FFmpeg_Command(const char* FileName)
         }
 
     // Output
-    Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices + " -strict -2 -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t filename=rawcooked.id=1 \"";
+    if (!FFmpeg_Info[0].Slices.empty())
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices + " -strict -2";
+    Command += " -c:a copy";
+    Command += " -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t \"filename=RAWcooked reversibility data\" \"";
     Command += FileName;
     Command += ".mkv\"";
 

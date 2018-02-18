@@ -25,6 +25,9 @@ public:
     size_t                      Pre_Size;
     uint8_t*                    Post;
     size_t                      Post_Size;
+    uint8_t*                    Buffer;
+    size_t                      Buffer_Size;
+    bool                        Buffer_IsOwned;
 
     struct plane
     {
@@ -79,12 +82,16 @@ public:
     raw_frame() :
         Style_Private(0),
         Pre(NULL),
-        Post(NULL)
+        Post(NULL),
+        Buffer(NULL)
     {
     }
     
     ~raw_frame()
     {
+        if (Buffer && Buffer_IsOwned)
+            delete[] Buffer;
+
         for (size_t i = 0; i < Planes.size(); i++)
             delete Planes[i];
     }

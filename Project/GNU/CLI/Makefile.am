@@ -17,6 +17,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
+    ../../../Source/Lib/RIFF/RIFF.cpp \
     ../../../Source/Lib/ThirdParty/md5/md5.c
 
 AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include

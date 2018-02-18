@@ -31,6 +31,7 @@ public:
     uint64_t                    Buffer_Size;
 
     void                        Parse();
+    void                        Shutdown();
 
     write_frame_call            WriteFrameCall;
     void*                       WriteFrameCall_Opaque;
@@ -72,17 +73,29 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion);
     MATROSKA_ELEMENT(Segment_Cluster);
     MATROSKA_ELEMENT(Segment_Cluster_SimpleBlock);
     MATROSKA_ELEMENT(Segment_Tracks);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry);
+    MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_CodecID);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_CodecPrivate);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelWidth);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelHeight);
     MATROSKA_ELEMENT(Void);
+
+    enum format
+    {
+        Format_None,
+        Format_FFV1,
+        Format_PCM,
+        Format_Max,
+    };
 
     bool                        RAWcooked_LibraryName_OK;
     bool                        RAWcooked_LibraryVersion_OK;
@@ -98,6 +111,8 @@ private:
         raw_frame*              R_A;
         raw_frame*              R_B;
         frame                   Frame;
+        bool                    Unique;
+        format                  Format;
 
         trackinfo() :
             DPX_Before(NULL),
@@ -108,7 +123,9 @@ private:
             DPX_Buffer_Pos(0),
             DPX_Buffer_Count(0),
             R_A(NULL),
-            R_B(NULL)
+            R_B(NULL),
+            Unique(false),
+            Format(Format_None)
             {
             }
     };

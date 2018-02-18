@@ -21,6 +21,8 @@ class rawcooked
 public:
     rawcooked();
 
+    bool                        Unique; // If set, data is for the whole stream (unique file)
+
     uint8_t*                    Before;
     uint64_t                    Before_Size;
 

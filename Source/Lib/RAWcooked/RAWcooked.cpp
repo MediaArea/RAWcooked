@@ -76,6 +76,7 @@ static void Put_EB(unsigned char* Buffer, size_t& Offset, uint32_t Name, uint64_
 
 //---------------------------------------------------------------------------
 rawcooked::rawcooked() :
+    Unique(false),
     WriteFileCall(NULL),
     WriteFileCall_Opaque(NULL)
 {
@@ -98,7 +99,6 @@ void rawcooked::Parse()
         Track_Size += Size_EB(Name_RawCooked_LibraryName, LibraryName_Size);
         LibraryVersion_Size = strlen(LibraryVersion);
         Track_Size += Size_EB(Name_RawCooked_LibraryVersion, LibraryVersion_Size);
-        Out_Size += Size_EB(Name_RawCookedTrack, Track_Size);
     }
 
     // Size computing - Block part
@@ -109,7 +109,19 @@ void rawcooked::Parse()
     Block_Size += Size_EB(Name_RawCooked_BeforeData, BeforeData_Size);
     uint64_t AfterData_Size = 4 + After_Size; // uncompressed size then data
     Block_Size += Size_EB(Name_RawCooked_AfterData, AfterData_Size);
-    Out_Size += Size_EB(Name_RawCookedBlock, Block_Size);
+
+    // Case if the file is unique
+    if (Unique)
+    {
+        Track_Size += Block_Size;
+        Block_Size = 0;
+    }
+
+    // Size computing - Headers
+    if (Track_Size)
+        Out_Size += Size_EB(Name_RawCookedTrack, Track_Size);
+    if (Block_Size)
+        Out_Size += Size_EB(Name_RawCookedBlock, Block_Size);
 
     // Fill
     uint8_t* Out = new uint8_t[Out_Size];
@@ -128,7 +140,8 @@ void rawcooked::Parse()
     }
 
     // Fill - Block part
-    Put_EB(Out, Out_Offset, Name_RawCookedBlock, Block_Size);
+    if (Block_Size)
+        Put_EB(Out, Out_Offset, Name_RawCookedBlock, Block_Size);
     Put_EB(Out, Out_Offset, Name_RawCooked_FileName, FileName_Size);
     memcpy(Out + Out_Offset, WriteToDisk_Data->FileNameDPX, FileName_Size);
     Out_Offset += FileName_Size;
