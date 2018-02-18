@@ -35,3 +35,4 @@ Formats/DPX/Flavors/RGB_16_FilledA_LE/checkerboard_1080p_nuke_littleendian_16bit
 Formats/DPX/Flavors/RGB_16_Packed_BE/16bit.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_BE/058142ce-aeb9-4f5c-b3c7-7590f09c757d_00090000.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass
+Formats/DPX/Flavors/RGB_16_Packed_LE/Dufay_000001.dpx pass
