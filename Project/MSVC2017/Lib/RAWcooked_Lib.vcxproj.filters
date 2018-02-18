@@ -79,6 +79,12 @@
     <Filter Include="Source Files\DPX">
       <UniqueIdentifier>{5154ec89-4df8-41dc-88cd-9f7fb3ea2f31}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\RIFF">
+      <UniqueIdentifier>{c0f1c942-c682-441f-b78d-18043ec4b2eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RIFF">
+      <UniqueIdentifier>{e92f4c0c-4015-4076-8d5d-ec6dafb5e905}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -138,6 +144,9 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h">
       <Filter>ThirdParty\thread-pool</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\RIFF\RIFF.h">
+      <Filter>Header Files\RIFF</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\CRC32.cpp">
@@ -181,6 +190,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp">
       <Filter>Source Files\DPX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\RIFF\RIFF.cpp">
+      <Filter>Source Files\RIFF</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

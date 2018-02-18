@@ -21,6 +21,7 @@ typedef int32_t pixel_t;
 struct write_to_disk_struct
 {
     const char* FileName;
+    bool        IsFirstFile;
     bool        IsFirstFrame;
     const char* FileNameDPX;
 };
