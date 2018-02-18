@@ -377,7 +377,7 @@ int FFmpeg_Command(const char* FileName)
 
     // Output
     if (!FFmpeg_Info[0].Slices.empty())
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices + " -strict -2";
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices;
     Command += " -c:a copy";
     Command += " -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t \"filename=RAWcooked reversibility data\" \"";
     Command += FileName;
