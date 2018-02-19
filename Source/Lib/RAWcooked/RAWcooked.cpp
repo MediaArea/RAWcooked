@@ -26,7 +26,7 @@ static const uint32_t Name_RawCooked_FileName = 0x10;
 // File stats
 static const uint32_t Name_RawCooked_FileMD5 = 0x20;
 static const uint32_t Name_RawCooked_FileSHA1 = 0x21;
-static const uint32_t Name_RawCooked_FileSHA256 = 0x21;
+static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
 // Global information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
