@@ -101,19 +101,23 @@ void DetectPathPos(const char* Name, vector<string>& Files, size_t& Path_Pos)
     string Path;
     string After;
     string Before;
-    Path_Pos = FN.rfind(PathSeparator);
+    Path_Pos = FN.find_last_of("/\\");
     if (Path_Pos != (size_t)-1)
     {
         Path_Pos++;
         Path = FN.substr(0, Path_Pos);
         if (Path_Pos > 2)
         {
-            size_t Path_Pos2 = FN.rfind(PathSeparator, Path_Pos - 2);
+            size_t Path_Pos2 = FN.find_last_of("/\\", Path_Pos - 2);
             FN.erase(0, Path_Pos);
 
             if (Path_Pos2 != (size_t)-1)
             {
                 Path_Pos = Path_Pos2 + 1;
+            }
+            else
+            {
+                Path_Pos = 0;
             }
         }
     }

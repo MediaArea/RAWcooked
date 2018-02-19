@@ -218,7 +218,7 @@ void matroska::Parse()
             Level++;
         else
         {
-            while (Buffer_Offset >= Levels[Level - 1].Offset_End)
+            while (Level && Buffer_Offset >= Levels[Level - 1].Offset_End)
             {
                 Levels[Level].SubElements = NULL;
                 Level--;
