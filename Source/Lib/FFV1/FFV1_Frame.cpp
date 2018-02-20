@@ -7,7 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
-#include "Lib/CRC32/CRC32.h"
+#include "Lib/CRC32/ZenCRC32.h"
 #include "ThreadPool.h"
 //---------------------------------------------------------------------------
 
@@ -111,7 +111,7 @@ void frame::Read_Buffer_OutOfBand(uint8_t* Buffer, size_t Buffer_Size)
         P.Error("FFV1-HEADER-END:1");
         return;
     }
-    if (CRC32(Buffer, (size_t)Buffer_Size))
+    if (ZenCRC32(Buffer, (size_t)Buffer_Size))
         P.Error("FFV1-HEADER-configuration_record_crc_parity:1");
 
     E.AssignBuffer(Buffer, Buffer_Size-4);

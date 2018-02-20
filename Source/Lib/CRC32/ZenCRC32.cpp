@@ -5,7 +5,7 @@
  */
 
 //---------------------------------------------------------------------------
-#include "Lib/CRC32/CRC32.h"
+#include "Lib/CRC32/ZenCRC32.h"
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -1059,7 +1059,7 @@ static const uint32_t CRC32_Table[16*256] =
 #include <string>
 #include <sstream>
 #include <iomanip>
-int CRC32_Init(uint32_t *Table, uint32_t poly)
+int ZenCRC32_Init(uint32_t *Table, uint32_t poly)
 {
     for (size_t i = 0; i < 256; i++)
     {
@@ -1094,7 +1094,7 @@ int CRC32_Init(uint32_t *Table, uint32_t poly)
 }
 #endif
 
-uint32_t CRC32(const uint8_t* Buffer, size_t Size)
+uint32_t ZenCRC32(const uint8_t* Buffer, size_t Size)
 {
     uint32_t C = 0; 
     const uint8_t *End = Buffer + Size;

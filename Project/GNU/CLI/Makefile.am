@@ -4,7 +4,7 @@ bin_PROGRAMS = rawcooked
 rawcooked_SOURCES = \
     ../../../Source/CLI/Help.cpp \
     ../../../Source/CLI/Main.cpp \
-    ../../../Source/Lib/CRC32/CRC32.cpp \
+    ../../../Source/Lib/CRC32/ZenCRC32.cpp \
     ../../../Source/Lib/DPX/DPX.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
@@ -18,9 +18,20 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/RIFF/RIFF.cpp \
+    ../../../Source/Lib/ThirdParty/zlib/adler32.c \
+    ../../../Source/Lib/ThirdParty/zlib/compress.c \
+    ../../../Source/Lib/ThirdParty/zlib/crc32.c \
+    ../../../Source/Lib/ThirdParty/zlib/deflate.c \
+    ../../../Source/Lib/ThirdParty/zlib/infback.c \
+    ../../../Source/Lib/ThirdParty/zlib/inffast.c \
+    ../../../Source/Lib/ThirdParty/zlib/inflate.c \
+    ../../../Source/Lib/ThirdParty/zlib/inftrees.c \
+    ../../../Source/Lib/ThirdParty/zlib/trees.c \
+    ../../../Source/Lib/ThirdParty/zlib/uncompr.c \
+    ../../../Source/Lib/ThirdParty/zlib/zutil.c \
     ../../../Source/Lib/ThirdParty/md5/md5.c
 
-AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include
+AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include -I../../../Source/Lib/ThirdParty/zlib
 AM_CXXFLAGS = -std=c++0x
 
 man1_MANS = ../../../Source/CLI/rawcooked.1
