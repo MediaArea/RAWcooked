@@ -11,6 +11,8 @@
 //---------------------------------------------------------------------------
 #include <cstdint>
 #include <cstddef>
+#include <string>
+using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -23,5 +25,13 @@ struct write_to_disk_struct
     const char* FileName;
     bool        IsFirstFile;
     bool        IsFirstFrame;
-    const char* FileNameDPX;
+    string      FileNameDPX;
+
+    // Actually RAWcooked data. TODO: move it in a specific structure
+    uint8_t*    FirstFrame_Before;
+    size_t      FirstFrame_Before_Size;
+    uint8_t*    FirstFrame_After;
+    size_t      FirstFrame_After_Size;
+    uint8_t*    FirstFrame_FileName;
+    size_t      FirstFrame_FileName_Size;
 };

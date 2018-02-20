@@ -39,6 +39,17 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\md5\md5.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\gzguts.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffixed.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zconf.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zlib.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp" />
@@ -56,6 +67,20 @@
     <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RIFF\RIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\md5\md5.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\compress.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\infback.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\uncompr.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Source\Lib\ThirdParty\zlib\README" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <thread>
 #include "ThreadPool.h"
+#include "zlib.h"
 //---------------------------------------------------------------------------
 
 extern const char* LibraryName;
@@ -37,6 +38,26 @@ static int Get_EB(unsigned char* Buffer, uint64_t& Offset, uint64_t& Name, uint6
 
     Size = Buffer[Offset];
     s = 0;
+    while (!(Size&(((uint64_t)1) << (7 - s))))
+        s++;
+    Size ^= (((uint64_t)1) << (7 - s));
+    while (s)
+    {
+        Size <<= 8;
+        Offset++;
+        s--;
+        Size |= Buffer[Offset];
+    }
+    Offset++;
+
+    return 1;
+}
+
+//---------------------------------------------------------------------------
+static int Get_EB(unsigned char* Buffer, uint64_t& Offset, uint64_t& Size)
+{
+    Size = Buffer[Offset];
+    uint64_t s = 0;
     while (!(Size&(((uint64_t)1) << (7 - s))))
         s++;
     Size ^= (((uint64_t)1) << (7 - s));
@@ -98,6 +119,9 @@ ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
 ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName)
+ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData)
+ELEMENT_VOID(       3, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData)
+ELEMENT_VOID(      11, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
@@ -106,6 +130,9 @@ ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName)
 ELEMENT_VOID(      70, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName)
 ELEMENT_VOID(      71, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion)
+ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseAfterData)
+ELEMENT_VOID(       3, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseBeforeData)
+ELEMENT_VOID(      11, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Cluster)
@@ -166,7 +193,7 @@ void matroska::Shutdown()
                 if (WriteFrameCall)
                 {
                     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                    WriteToDisk_Data->FileNameDPX = TrackInfo_Current->DPX_Buffer_Name[0].c_str();
+                    WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                     WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
@@ -273,11 +300,44 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock()
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_FileName)
+    {
+        TrackInfo_Current->DPX_FileName = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_FileName, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_FileName_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_FileName_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+
+    Uncompress(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!TrackInfo_Current->DPX_Before)
+    {
+        TrackInfo_Current->DPX_Before = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_Before, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_Before_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_Before_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+
+    Uncompress(TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    TrackInfo_Current->DPX_Buffer_Count++;
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData()
 {
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
-        return;
-
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
     TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
@@ -286,47 +346,88 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterDat
     {
         TrackInfo_Current->DPX_After = new uint8_t*[1000000];
         memset(TrackInfo_Current->DPX_After, 0x00, 1000000 * sizeof(uint8_t*));
-        TrackInfo_Current->DPX_After_Size = new uint64_t[1000000];
+        TrackInfo_Current->DPX_After_Size = new size_t[1000000];
         memset(TrackInfo_Current->DPX_After_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    delete[] TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count];
-    TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count] = new uint8_t[TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]];
-    memcpy(TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    Uncompress(TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
     TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
-void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName()
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName()
 {
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
-    if (!TrackInfo_Current->DPX_Buffer_Name)
+    if (!TrackInfo_Current->DPX_FileName)
     {
-        TrackInfo_Current->DPX_Buffer_Name = new string[1000000];
+        TrackInfo_Current->DPX_FileName = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_FileName, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_FileName_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_FileName_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    TrackInfo_Current->DPX_Buffer_Name[TrackInfo_Current->DPX_Buffer_Count] = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+
+    Uncompress(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    if (TrackInfo_Current->Mask_FileName)
+    {
+        for (size_t i = 0; i < TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_FileName_Size; i++)
+            TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_FileName[i];
+    }
+
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
-void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData()
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData()
 {
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
-        return;
-
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
 
     if (!TrackInfo_Current->DPX_Before)
     {
         TrackInfo_Current->DPX_Before = new uint8_t*[1000000];
         memset(TrackInfo_Current->DPX_Before, 0x00, 1000000 * sizeof(uint8_t*));
-        TrackInfo_Current->DPX_Before_Size = new uint64_t[1000000];
+        TrackInfo_Current->DPX_Before_Size = new size_t[1000000];
         memset(TrackInfo_Current->DPX_Before_Size, 0x00, 1000000 * sizeof(uint64_t));
     }
-    delete[] TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count];
-    TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count] = new uint8_t[TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]];
-    memcpy(TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    Uncompress(TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    if (TrackInfo_Current->Mask_Before)
+    {
+        for (size_t i = 0; i < TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_Before_Size; i++)
+            TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_Before[i];
+    }
+
+    TrackInfo_Current->DPX_Buffer_Count++;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!TrackInfo_Current->DPX_After)
+    {
+        TrackInfo_Current->DPX_After = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_After, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_After_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_After_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+
+    Uncompress(TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    if (TrackInfo_Current->Mask_After)
+    {
+        for (size_t i = 0; i < TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_After_Size; i++)
+            TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_After[i];
+    }
+
     TrackInfo_Current->DPX_Buffer_Count++;
 }
 
@@ -341,27 +442,27 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 }
 
 //---------------------------------------------------------------------------
-void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData()
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName()
 {
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
+    if (Levels[Level - 1].Offset_End - Buffer_Offset < 1)
         return;
 
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
-    if (!TrackInfo_Current->DPX_After)
+    if (!TrackInfo_Current->DPX_FileName)
     {
-        TrackInfo_Current->DPX_After = new uint8_t*[1];
-        TrackInfo_Current->DPX_After_Size = new uint64_t[1];
+        TrackInfo_Current->DPX_FileName = new uint8_t*[1];
+        TrackInfo_Current->DPX_FileName_Size = new size_t[1];
     }
-    TrackInfo_Current->DPX_After_Size[0] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    TrackInfo_Current->DPX_After[0] = new uint8_t[TrackInfo_Current->DPX_After_Size[0]];
-    memcpy(TrackInfo_Current->DPX_After[0], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_After_Size[0]);
+    TrackInfo_Current->Unique = true;
+
+    Uncompress(TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeData()
 {
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x00 || Buffer[Buffer_Offset + 1] != 0x00 || Buffer[Buffer_Offset + 2] != 0x00 || Buffer[Buffer_Offset + 3] != 0x00)
+    if (Levels[Level - 1].Offset_End - Buffer_Offset < 1)
         return;
 
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
@@ -369,24 +470,53 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeDa
     if (!TrackInfo_Current->DPX_Before)
     {
         TrackInfo_Current->DPX_Before = new uint8_t*[1];
-        TrackInfo_Current->DPX_Before_Size = new uint64_t[1];
+        TrackInfo_Current->DPX_Before_Size = new size_t[1];
     }
-    TrackInfo_Current->DPX_Before_Size[0] = Levels[Level].Offset_End - Buffer_Offset - 4;
-    TrackInfo_Current->DPX_Before[0] = new uint8_t[TrackInfo_Current->DPX_Before_Size[0]];
-    memcpy(TrackInfo_Current->DPX_Before[0], Buffer + Buffer_Offset + 4, TrackInfo_Current->DPX_Before_Size[0]);
     TrackInfo_Current->Unique = true;
+
+    Uncompress(TrackInfo_Current->DPX_Before[0], TrackInfo_Current->DPX_Before_Size[0]);
 }
 
 //---------------------------------------------------------------------------
-void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName()
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData()
+{
+    if (Levels[Level - 1].Offset_End - Buffer_Offset < 1)
+        return;
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_After)
+    {
+        TrackInfo_Current->DPX_After = new uint8_t*[1];
+        TrackInfo_Current->DPX_After_Size = new size_t[1];
+    }
+    TrackInfo_Current->Unique = true;
+
+    Uncompress(TrackInfo_Current->DPX_After[0], TrackInfo_Current->DPX_After_Size[0]);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName()
 {
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
-    if (!TrackInfo_Current->DPX_Buffer_Name)
-    {
-        TrackInfo_Current->DPX_Buffer_Name = new string[1];
-    }
-    TrackInfo_Current->DPX_Buffer_Name[TrackInfo_Current->DPX_Buffer_Count] = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    Uncompress(TrackInfo_Current->Mask_FileName, TrackInfo_Current->Mask_FileName_Size);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseBeforeData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    Uncompress(TrackInfo_Current->Mask_Before, TrackInfo_Current->Mask_Before_Size);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseAfterData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    Uncompress(TrackInfo_Current->Mask_After, TrackInfo_Current->Mask_After_Size);
 }
 
 //---------------------------------------------------------------------------
@@ -474,7 +604,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                             if (WriteFrameCall)
                             {
                                 write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                                WriteToDisk_Data->FileNameDPX = TrackInfo_Current->DPX_Buffer_Name[TrackInfo_Current->DPX_Buffer_Pos - 1].c_str();
+                                WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos - 1], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos - 1]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                                 WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
@@ -503,7 +633,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                             if (WriteFrameCall)
                             {
                                 write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                                WriteToDisk_Data->FileNameDPX = TrackInfo_Current->DPX_Buffer_Name[0].c_str();
+                                WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                                 WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
@@ -599,4 +729,40 @@ const char* matroska::ErrorMessage()
             return TrackInfo[i]->Frame.ErrorMessage();
 
     return NULL;
+}
+
+//***************************************************************************
+// Utils
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
+{
+    uint64_t RealBuffer_Size;
+    Get_EB(Buffer, Buffer_Offset, RealBuffer_Size);
+    if (RealBuffer_Size)
+    {
+        Output_Size = RealBuffer_Size;
+        Output = new uint8_t[Output_Size];
+
+        uLongf t = (uLongf)RealBuffer_Size;
+        if (uncompress((Bytef*)Output, &t, (const Bytef*)Buffer + Buffer_Offset, (uLong)(Levels[Level].Offset_End - Buffer_Offset))<0)
+        {
+            delete[] Output;
+            Output = NULL;
+            Output_Size = 0;
+        }
+        if (t != RealBuffer_Size)
+        {
+            delete[] Output;
+            Output = NULL;
+            Output_Size = 0;
+        }
+    }
+    else
+    {
+        Output_Size = Levels[Level].Offset_End - Buffer_Offset;
+        Output = new uint8_t[Output_Size];
+        memcpy(Output, Buffer + Buffer_Offset, Output_Size);
+    }
 }

@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/RAWcooked/RAWcooked.h"
 #include "Lib/Config.h"
+#include "zlib.h"
 #include <cstring>
 using namespace std;
 //---------------------------------------------------------------------------
@@ -17,12 +18,14 @@ static const uint32_t Name_RawCookedBlock = 0x7262; // " rb", RAWcooked BlockGro
 // File data
 static const uint32_t Name_RawCooked_BeforeData = 0x01;
 static const uint32_t Name_RawCooked_AfterData = 0x02;
-static const uint32_t Name_RawCooked_BeforeData_Mask = 0x03; // Invalid in BlockGroup
-static const uint32_t Name_RawCooked_AfterData_Mask = 0x04; // Invalid in BlockGroup
-static const uint32_t Name_RawCooked_BeforeData_AddToMask = 0x05; // Invalid in Track
-static const uint32_t Name_RawCooked_AfterData_AddToMask = 0x06; // Invalid in Track
+static const uint32_t Name_RawCooked_MaskBaseBeforeData = 0x03; // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskBaseAfterData = 0x04; // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskAdditionBeforeData = 0x03; // In Track only
+static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04; // In Track only
 // File metadata
 static const uint32_t Name_RawCooked_FileName = 0x10;
+static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11; // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track only
 // File stats
 static const uint32_t Name_RawCooked_FileMD5 = 0x20;
 static const uint32_t Name_RawCooked_FileSHA1 = 0x21;
@@ -32,7 +35,7 @@ static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
 
 extern const char* LibraryName = "__RAWcooked__";
-extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 1__";
+extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 2__";
 
 //---------------------------------------------------------------------------
 static size_t Size_EB(uint32_t Name, uint64_t Size)
@@ -46,6 +49,15 @@ static size_t Size_EB(uint32_t Name, uint64_t Size)
         S_l++;
 
     return N_l + S_l + Size;
+}
+
+//---------------------------------------------------------------------------
+static size_t Size_EB(uint64_t Size)
+{
+    size_t S_l = 1;
+    while (Size >> (S_l * 7))
+        S_l++;
+    return S_l;
 }
 
 //---------------------------------------------------------------------------
@@ -75,6 +87,21 @@ static void Put_EB(unsigned char* Buffer, size_t& Offset, uint32_t Name, uint64_
 }
 
 //---------------------------------------------------------------------------
+static void Put_EB(unsigned char* Buffer, size_t& Offset, uint64_t Size)
+{
+    size_t S_l = 1;
+    while (Size >> (S_l * 7))
+        S_l++;
+    uint64_t S2 = Size | (((uint64_t)1) << (S_l * 7));
+    while (S_l)
+    {
+        Buffer[Offset] = (uint8_t)(S2 >> ((S_l - 1) * 8));
+        Offset++;
+        S_l--;
+    }
+}
+
+//---------------------------------------------------------------------------
 rawcooked::rawcooked() :
     Unique(false),
     WriteFileCall(NULL),
@@ -86,6 +113,138 @@ rawcooked::rawcooked() :
 void rawcooked::Parse()
 {
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFileCall_Opaque;
+
+    // Create or Use mask
+    uint8_t* FileName = (uint8_t*)WriteToDisk_Data->FileNameDPX.c_str();
+    size_t FileName_Size = WriteToDisk_Data->FileNameDPX.size();
+    uint8_t* ToStore_FileName = FileName;
+    uint8_t* ToStore_Before = Before;
+    uint8_t* ToStore_After = After;
+    bool IsUsingMask_FileName = false;
+    bool IsUsingMask_Before = false;
+    bool IsUsingMask_After = false;
+    if (!Unique)
+    {
+        if (WriteToDisk_Data->IsFirstFrame)
+        {
+            if (FileName && FileName_Size)
+            {
+                WriteToDisk_Data->FirstFrame_FileName = new uint8_t[FileName_Size];
+                memcpy(WriteToDisk_Data->FirstFrame_FileName, FileName, FileName_Size);
+                WriteToDisk_Data->FirstFrame_FileName_Size = FileName_Size;
+            }
+            else
+            {
+                WriteToDisk_Data->FirstFrame_FileName = NULL;
+                WriteToDisk_Data->FirstFrame_FileName_Size = 0;
+            }
+            if (Before && Before_Size)
+            {
+                WriteToDisk_Data->FirstFrame_Before = new uint8_t[Before_Size];
+                memcpy(WriteToDisk_Data->FirstFrame_Before, Before, Before_Size);
+                WriteToDisk_Data->FirstFrame_Before_Size = Before_Size;
+            }
+            else
+            {
+                WriteToDisk_Data->FirstFrame_Before = NULL;
+                WriteToDisk_Data->FirstFrame_Before_Size = 0;
+            }
+            if (After && After_Size)
+            {
+                WriteToDisk_Data->FirstFrame_After = new uint8_t[After_Size];
+                memcpy(WriteToDisk_Data->FirstFrame_After, After, After_Size);
+                WriteToDisk_Data->FirstFrame_After_Size = After_Size;
+            }
+            else
+            {
+                WriteToDisk_Data->FirstFrame_After = NULL;
+                WriteToDisk_Data->FirstFrame_After_Size = 0;
+            }
+        }
+        if (FileName && WriteToDisk_Data->FileName)
+        {
+            ToStore_FileName = new uint8_t[FileName_Size];
+            memcpy(ToStore_FileName, FileName, FileName_Size);
+            for (size_t i = 0; i < FileName_Size || i < WriteToDisk_Data->FirstFrame_FileName_Size; i++)
+                ToStore_FileName[i] -= WriteToDisk_Data->FirstFrame_FileName[i];
+            IsUsingMask_FileName = true;
+        }
+        if (Before && WriteToDisk_Data->FirstFrame_Before)
+        {
+            ToStore_Before = new uint8_t[Before_Size];
+            memcpy(ToStore_Before, Before, Before_Size);
+            for (size_t i = 0; i < Before_Size || i < WriteToDisk_Data->FirstFrame_Before_Size; i++)
+                ToStore_Before[i] -= WriteToDisk_Data->FirstFrame_Before[i];
+            IsUsingMask_Before = true;
+        }
+        if (After && WriteToDisk_Data->FirstFrame_After)
+        {
+            ToStore_After = new uint8_t[After_Size];
+            memcpy(ToStore_After, After, After_Size);
+            for (size_t i = 0; i < After_Size || i < WriteToDisk_Data->FirstFrame_After_Size; i++)
+                ToStore_After[i] -= WriteToDisk_Data->FirstFrame_After[i];
+            IsUsingMask_After = true;
+        }
+    }
+
+    // Test if it can be compressed
+    uint8_t* Compressed_MaskFileName = NULL;
+    uLongf Compressed_MaskFileName_Size = 0;
+    if (!Unique && WriteToDisk_Data->FirstFrame_FileName)
+    {
+        Compressed_MaskFileName = new uint8_t[WriteToDisk_Data->FirstFrame_FileName_Size];
+        Compressed_MaskFileName_Size = (uLongf)WriteToDisk_Data->FirstFrame_FileName_Size;
+        if (compress((Bytef*)Compressed_MaskFileName, &Compressed_MaskFileName_Size, (const Bytef*)WriteToDisk_Data->FirstFrame_FileName, (uLong)WriteToDisk_Data->FirstFrame_FileName_Size) < 0)
+        {
+            Compressed_MaskFileName = WriteToDisk_Data->FirstFrame_FileName;
+            Compressed_MaskFileName_Size = 0;
+        }
+    }
+    uint8_t* Compressed_FileName = new uint8_t[FileName_Size];
+    uLongf Compressed_FileName_Size = (uLongf)FileName_Size;
+    if (compress((Bytef*)Compressed_FileName, &Compressed_FileName_Size, (const Bytef*)ToStore_FileName, (uLong)FileName_Size) < 0)
+    {
+        Compressed_FileName = ToStore_FileName;
+        Compressed_FileName_Size = 0;
+    }
+    uint8_t* Compressed_MaskBefore = NULL;
+    uLongf Compressed_MaskBefore_Size = 0;
+    if (!Unique && WriteToDisk_Data->FirstFrame_Before)
+    {
+        Compressed_MaskBefore = new uint8_t[WriteToDisk_Data->FirstFrame_Before_Size];
+        Compressed_MaskBefore_Size = (uLongf)WriteToDisk_Data->FirstFrame_Before_Size;
+        if (compress((Bytef*)Compressed_MaskBefore, &Compressed_MaskBefore_Size, (const Bytef*)WriteToDisk_Data->FirstFrame_Before, (uLong)WriteToDisk_Data->FirstFrame_Before_Size) < 0)
+        {
+            Compressed_MaskBefore = WriteToDisk_Data->FirstFrame_Before;
+            Compressed_MaskBefore_Size = 0;
+        }
+    }
+    uint8_t* Compressed_Before = new uint8_t[Before_Size];
+    uLongf Compressed_Before_Size = (uLongf)Before_Size;
+    if (compress((Bytef*)Compressed_Before, &Compressed_Before_Size, (const Bytef*)ToStore_Before, (uLong)Before_Size) < 0)
+    {
+        Compressed_Before = ToStore_Before;
+        Compressed_Before_Size = 0;
+    }
+    uint8_t* Compressed_MaskAfter = NULL;
+    uLongf Compressed_MaskAfter_Size = 0;
+    if (!Unique && WriteToDisk_Data->FirstFrame_After)
+    {
+        Compressed_MaskAfter = new uint8_t[WriteToDisk_Data->FirstFrame_After_Size];
+        Compressed_MaskAfter_Size = (uLongf)WriteToDisk_Data->FirstFrame_After_Size;
+        if (compress((Bytef*)Compressed_MaskAfter, &Compressed_MaskAfter_Size, (const Bytef*)WriteToDisk_Data->FirstFrame_After, (uLong)WriteToDisk_Data->FirstFrame_After_Size) < 0)
+        {
+            Compressed_MaskAfter = WriteToDisk_Data->FirstFrame_After;
+            Compressed_MaskAfter_Size = 0;
+        }
+    }
+    uint8_t* Compressed_After = new uint8_t[After_Size];
+    uLongf Compressed_After_Size = (uLongf)After_Size;
+    if (compress((Bytef*)Compressed_After, &Compressed_After_Size, (const Bytef*)ToStore_After, (uLong)After_Size) < 0)
+    {
+        Compressed_After = ToStore_After;
+        Compressed_After_Size = 0;
+    }
 
     uint64_t Out_Size = 0;
 
@@ -99,16 +258,34 @@ void rawcooked::Parse()
         Track_Size += Size_EB(Name_RawCooked_LibraryName, LibraryName_Size);
         LibraryVersion_Size = strlen(LibraryVersion);
         Track_Size += Size_EB(Name_RawCooked_LibraryVersion, LibraryVersion_Size);
+        if (!Unique && WriteToDisk_Data->FirstFrame_FileName)
+            Track_Size += Size_EB(Name_RawCooked_MaskBaseFileName, Size_EB(Compressed_MaskFileName_Size ? WriteToDisk_Data->FirstFrame_FileName_Size : 0) + (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size));
+        if (!Unique && WriteToDisk_Data->FirstFrame_Before)
+            Track_Size += Size_EB(Name_RawCooked_MaskBaseBeforeData, Size_EB(Compressed_MaskBefore_Size ? WriteToDisk_Data->FirstFrame_Before_Size : 0) + (Compressed_MaskBefore_Size ? Compressed_MaskBefore_Size : WriteToDisk_Data->FirstFrame_Before_Size));
+        if (!Unique && WriteToDisk_Data->FirstFrame_After)
+            Track_Size += Size_EB(Name_RawCooked_MaskBaseAfterData, Size_EB(Compressed_MaskAfter_Size ? WriteToDisk_Data->FirstFrame_After_Size : 0) + (Compressed_MaskAfter_Size ? Compressed_MaskAfter_Size : WriteToDisk_Data->FirstFrame_After_Size));
     }
 
     // Size computing - Block part
     uint64_t Block_Size = 0;
-    uint64_t FileName_Size = strlen(WriteToDisk_Data->FileNameDPX);
-    Block_Size += Size_EB(Name_RawCooked_FileName, FileName_Size);
-    uint64_t BeforeData_Size = 4 + Before_Size; // uncompressed size then data
-    Block_Size += Size_EB(Name_RawCooked_BeforeData, BeforeData_Size);
-    uint64_t AfterData_Size = 4 + After_Size; // uncompressed size then data
-    Block_Size += Size_EB(Name_RawCooked_AfterData, AfterData_Size);
+    uint64_t BeforeData_Size = 0;
+    uint64_t FileNameData_Size = 0;
+    if (Compressed_FileName_Size || FileName_Size)
+    {
+        FileNameData_Size = Size_EB(Compressed_FileName_Size ? FileName_Size : 0) + (Compressed_FileName_Size ? Compressed_FileName_Size : FileName_Size); // size then data
+        Block_Size += Size_EB(Name_RawCooked_FileName, FileNameData_Size);
+    }
+    if (Compressed_Before_Size || Before_Size)
+    {
+        BeforeData_Size = Size_EB(Compressed_Before_Size ? Before_Size : 0) + (Compressed_Before_Size ? Compressed_Before_Size : Before_Size); // size then data
+        Block_Size += Size_EB(Name_RawCooked_BeforeData, BeforeData_Size);
+    }
+    uint64_t AfterData_Size = 0;
+    if (Compressed_After_Size || After_Size)
+    {
+        AfterData_Size = Size_EB(Compressed_After_Size ? After_Size : 0) + (Compressed_After_Size ? Compressed_After_Size : After_Size); // size then data
+        Block_Size += Size_EB(Name_RawCooked_AfterData, AfterData_Size);
+    }
 
     // Case if the file is unique
     if (Unique)
@@ -137,32 +314,69 @@ void rawcooked::Parse()
         Put_EB(Out, Out_Offset, Name_RawCooked_LibraryVersion, LibraryVersion_Size);
         memcpy(Out + Out_Offset, LibraryVersion, LibraryVersion_Size);
         Out_Offset += LibraryVersion_Size;
+        if (!Unique && WriteToDisk_Data->FirstFrame_FileName)
+        {
+            Put_EB(Out, Out_Offset, Name_RawCooked_MaskBaseFileName, Size_EB(Compressed_MaskFileName_Size ? WriteToDisk_Data->FirstFrame_FileName_Size : 0) + (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size));
+            Put_EB(Out, Out_Offset, Compressed_MaskFileName_Size ? WriteToDisk_Data->FirstFrame_FileName_Size : 0);
+            memcpy(Out + Out_Offset, Compressed_MaskFileName, (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size));
+            Out_Offset += (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size);
+        }
+        if (!Unique && WriteToDisk_Data->FirstFrame_Before)
+        {
+            Put_EB(Out, Out_Offset, Name_RawCooked_MaskBaseBeforeData, Size_EB(Compressed_MaskBefore_Size ? WriteToDisk_Data->FirstFrame_Before_Size : 0) + (Compressed_MaskBefore_Size ? Compressed_MaskBefore_Size : WriteToDisk_Data->FirstFrame_Before_Size));
+            Put_EB(Out, Out_Offset, Compressed_MaskBefore_Size ? WriteToDisk_Data->FirstFrame_Before_Size : 0);
+            memcpy(Out + Out_Offset, Compressed_MaskBefore, (Compressed_MaskBefore_Size ? Compressed_MaskBefore_Size : WriteToDisk_Data->FirstFrame_Before_Size));
+            Out_Offset += (Compressed_MaskBefore_Size ? Compressed_MaskBefore_Size : WriteToDisk_Data->FirstFrame_Before_Size);
+        }
+        if (!Unique && WriteToDisk_Data->FirstFrame_After)
+        {
+            Put_EB(Out, Out_Offset, Name_RawCooked_MaskBaseAfterData, Size_EB(Compressed_MaskAfter_Size ? WriteToDisk_Data->FirstFrame_After_Size : 0) + (Compressed_MaskAfter_Size ? Compressed_MaskAfter_Size : WriteToDisk_Data->FirstFrame_After_Size));
+            Put_EB(Out, Out_Offset, Compressed_MaskAfter_Size ? WriteToDisk_Data->FirstFrame_After_Size : 0);
+            memcpy(Out + Out_Offset, Compressed_MaskAfter, (Compressed_MaskAfter_Size ? Compressed_MaskAfter_Size : WriteToDisk_Data->FirstFrame_After_Size));
+            Out_Offset += (Compressed_MaskAfter_Size ? Compressed_MaskAfter_Size : WriteToDisk_Data->FirstFrame_After_Size);
+        }
     }
 
     // Fill - Block part
     if (Block_Size)
         Put_EB(Out, Out_Offset, Name_RawCookedBlock, Block_Size);
-    Put_EB(Out, Out_Offset, Name_RawCooked_FileName, FileName_Size);
-    memcpy(Out + Out_Offset, WriteToDisk_Data->FileNameDPX, FileName_Size);
-    Out_Offset += FileName_Size;
+    if (FileNameData_Size)
+    {
+        Put_EB(Out, Out_Offset, IsUsingMask_FileName ? Name_RawCooked_MaskAdditionFileName : Name_RawCooked_FileName, FileNameData_Size);
+        Put_EB(Out, Out_Offset, Compressed_FileName_Size ? FileName_Size : 0);
+        memcpy(Out + Out_Offset, Compressed_FileName, (Compressed_FileName_Size ? Compressed_FileName_Size : FileName_Size));
+        Out_Offset += (Compressed_FileName_Size ? Compressed_FileName_Size : FileName_Size);
+    }
     if (BeforeData_Size)
     {
-        Put_EB(Out, Out_Offset, Name_RawCooked_BeforeData, BeforeData_Size);
-        memset(Out + Out_Offset, 0, 4);
-        Out_Offset += 4;
-        memcpy(Out + Out_Offset, Before, Before_Size);
-        Out_Offset += Before_Size;
+        Put_EB(Out, Out_Offset, IsUsingMask_Before? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, BeforeData_Size);
+        Put_EB(Out, Out_Offset, Compressed_Before_Size ? Before_Size : 0);
+        memcpy(Out + Out_Offset, Compressed_Before, (Compressed_Before_Size ? Compressed_Before_Size : Before_Size));
+        Out_Offset += (Compressed_Before_Size ? Compressed_Before_Size : Before_Size);
     }
     if (AfterData_Size)
     {
-        Put_EB(Out, Out_Offset, Name_RawCooked_AfterData, AfterData_Size);
-        memset(Out + Out_Offset, 0, 4);
-        Out_Offset += 4;
-        memcpy(Out + Out_Offset, After, After_Size);
-        Out_Offset += After_Size;
+        Put_EB(Out, Out_Offset, IsUsingMask_After ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, AfterData_Size);
+        Put_EB(Out, Out_Offset, Compressed_After_Size ? After_Size : 0);
+        memcpy(Out + Out_Offset, Compressed_After, (Compressed_After_Size ? Compressed_After_Size : After_Size));
+        Out_Offset += (Compressed_After_Size ? Compressed_After_Size : After_Size);
     }
 
     // Write
     if (WriteFileCall)
         WriteFileCall(Out, Out_Size, WriteFileCall_Opaque);
+
+    // Clean up
+    if (Compressed_FileName_Size)
+        delete[] Compressed_FileName;
+    if (Compressed_Before_Size)
+        delete[] Compressed_Before;
+    if (Compressed_After_Size)
+        delete[] Compressed_After;
+    if (IsUsingMask_FileName)
+        delete[] ToStore_FileName;
+    if (IsUsingMask_Before)
+        delete[] ToStore_Before;
+    if (IsUsingMask_After)
+        delete[] ToStore_After;
 }
