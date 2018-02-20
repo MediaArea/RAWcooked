@@ -90,7 +90,7 @@
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
       <Filter>Header Files\BitStream</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\CRC32\CRC32.h">
+    <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h">
       <Filter>Header Files\CRC32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.h">
@@ -149,7 +149,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\Lib\CRC32\CRC32.cpp">
+    <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
       <Filter>Source Files\CRC32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp">

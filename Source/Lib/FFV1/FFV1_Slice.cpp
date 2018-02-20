@@ -8,7 +8,7 @@
 #include "Lib/FFV1/FFV1_Slice.h"
 #include "Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.h"
 #include "Lib/RawFrame/RawFrame.h"
-#include "Lib/CRC32/CRC32.h"
+#include "Lib/CRC32/ZenCRC32.h"
 #include <algorithm>
 using namespace std;
 //---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ void slice::Parse()
     }
 
     // CRC check
-    if (P->ec == 1 && CRC32(Buffer, Buffer_Size))
+    if (P->ec == 1 && ZenCRC32(Buffer, Buffer_Size))
         P->Error("FFV1-SLICE-slice_crc_parity:1");
 
     // RangeCoder reset

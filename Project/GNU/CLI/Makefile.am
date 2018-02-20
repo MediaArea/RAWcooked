@@ -4,7 +4,7 @@ bin_PROGRAMS = rawcooked
 rawcooked_SOURCES = \
     ../../../Source/CLI/Help.cpp \
     ../../../Source/CLI/Main.cpp \
-    ../../../Source/Lib/CRC32/CRC32.cpp \
+    ../../../Source/Lib/CRC32/ZenCRC32.cpp \
     ../../../Source/Lib/DPX/DPX.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \

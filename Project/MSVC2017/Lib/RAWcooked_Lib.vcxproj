@@ -21,7 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h" />
     <ClInclude Include="..\..\..\Source\Lib\Config.h" />
-    <ClInclude Include="..\..\..\Source\Lib\CRC32\CRC32.h" />
+    <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h" />
     <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h" />
@@ -41,7 +41,7 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\Lib\CRC32\CRC32.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.cpp" />
@@ -136,7 +136,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -152,7 +152,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -170,7 +170,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -189,7 +189,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
