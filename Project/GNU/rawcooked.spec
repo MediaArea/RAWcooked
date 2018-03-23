@@ -11,7 +11,7 @@ Version:		%rawcooked_version
 Release:		1
 Summary:		(To be filled) (CLI)
 Group:			Productivity/Multimedia/Other
-License:		MIT
+License:		BSD-2-Clause
 URL:			https://mediaarea.net/RAWcooked
 Packager:		Jerome Martinez <info@mediaarea.net>
 Source0:		rawcooked_%{version}-1.tar.gz
