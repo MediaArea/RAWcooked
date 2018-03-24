@@ -8,4 +8,5 @@ The current alpha is not ready for production use. It's released for testing pur
 
 ## License
 
-[MIT License](LICENSE)
+[BSD 2-Clause License](LICENSE).  
+Some [alternate open source licenses](License.html) are also available.
