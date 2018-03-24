@@ -283,31 +283,49 @@ void matroska::Segment_Attachments()
 void matroska::Segment_Attachments_AttachedFile()
 {
     IsList = true;
+
+    AttachedFile_FileName.clear();
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileName()
 {
+    AttachedFile_FileName.assign((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData()
 {
     bool IsAlpha2, IsEBML;
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 3 || Buffer[Buffer_Offset + 0] != 0x20 || Buffer[Buffer_Offset + 1] != 0x72 || (Buffer[Buffer_Offset + 2] != 0x62 && Buffer[Buffer_Offset + 2] != 0x74))
+    if (Levels[Level].Offset_End - Buffer_Offset < 3 || Buffer[Buffer_Offset + 0] != 0x20 || Buffer[Buffer_Offset + 1] != 0x72 || (Buffer[Buffer_Offset + 2] != 0x62 && Buffer[Buffer_Offset + 2] != 0x74))
         IsAlpha2 = false;
     else
         IsAlpha2 = true;
-    if (Levels[Level - 1].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x1A || Buffer[Buffer_Offset + 1] != 0x45 || Buffer[Buffer_Offset + 2] != 0xDF || Buffer[Buffer_Offset + 3] != 0xA3)
+    if (Levels[Level].Offset_End - Buffer_Offset < 4 || Buffer[Buffer_Offset + 0] != 0x1A || Buffer[Buffer_Offset + 1] != 0x45 || Buffer[Buffer_Offset + 2] != 0xDF || Buffer[Buffer_Offset + 3] != 0xA3)
         IsEBML = false;
     else
         IsEBML = true;
-    if (!IsAlpha2 && !IsEBML)
+    if (IsAlpha2 || IsEBML)
+    {
+        // This is a RAWcooked file, not intended to be demuxed
+        IsList = true;
+        TrackInfo_Pos = (size_t)-1;
         return;
+    }
 
-    IsList = true;
+    if (WriteFrameCall)
+    {
+        write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
+        WriteToDisk_Data->FileNameDPX = AttachedFile_FileName;
 
-    TrackInfo_Pos = (size_t)-1;
+        raw_frame RawFrame;
+        RawFrame.Pre = Buffer + Buffer_Offset;
+        RawFrame.Pre_Size = Levels[Level].Offset_End - Buffer_Offset;
+
+        //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
+        WriteFrameCall(0, &RawFrame, WriteFrameCall_Opaque);
+    }
+
 }
 
 //---------------------------------------------------------------------------

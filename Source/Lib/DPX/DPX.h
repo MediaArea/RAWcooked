@@ -33,6 +33,7 @@ public:
     void*                       WriteFileCall_Opaque;
 
     // Info
+    bool                        IsDetected;
     uint64_t                    Style;
     size_t                      slice_x;
 
