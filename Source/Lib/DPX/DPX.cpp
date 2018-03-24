@@ -101,6 +101,7 @@ const char* dpx::ErrorMessage()
 dpx::dpx() :
     WriteFileCall(NULL),
     WriteFileCall_Opaque(NULL),
+    IsDetected(false),
     Style(DPX_Style_Max),
     error_message(NULL)
 {
@@ -142,7 +143,7 @@ uint32_t dpx::Get_B4()
 bool dpx::Parse()
 {
     if (Buffer_Size < 1664)
-        return Error("DPX file size");
+        return Error(NULL);
 
     Buffer_Offset = 0;
     uint32_t Magic = Get_B4();
@@ -155,8 +156,9 @@ bool dpx::Parse()
             IsBigEndian = true;
             break;
         default:
-            return Error("DPX header");
+            return Error(NULL);
     }
+    IsDetected = true;
     uint32_t OffsetToImage = Get_X4();
     if (OffsetToImage > Buffer_Size)
         return Error("Offset to image data in bytes");

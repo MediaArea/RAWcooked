@@ -155,6 +155,7 @@ private:
     vector<trackinfo*>          TrackInfo;
     size_t                      TrackInfo_Pos;
     vector<uint8_t>             ID_to_TrackOrder;
+    string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
 
     //Utils

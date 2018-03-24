@@ -41,6 +41,12 @@ struct ffmpeg_info_struct
     string Slices;
 };
 std::vector<ffmpeg_info_struct> FFmpeg_Info;
+struct ffmpeg_attachment_struct
+{
+    string FileName_In; // Complete path
+    string FileName_Out; // Relative path
+};
+std::vector<ffmpeg_attachment_struct> FFmpeg_Attachments;
 
 //---------------------------------------------------------------------------
 void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
@@ -243,6 +249,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
             Files.push_back(Name);
     }
 
+    dpx DPX;
     if (!M.IsDetected && !RIFF.IsDetected)
     {
         DetectSequence(Name, Files, Path_Pos, FileName_Template, FileName_StartNumber);
@@ -253,7 +260,6 @@ int ParseFile(const char* Name, bool IsFirstFile)
         {
             WriteToDisk_Data.FileNameDPX=Name+Path_Pos;
             
-            dpx DPX;
             DPX.WriteFileCall = &WriteToDisk;
             DPX.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
             DPX.Buffer = Buffer;
@@ -264,6 +270,8 @@ int ParseFile(const char* Name, bool IsFirstFile)
                 cerr << "Untested " << DPX.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
                 return 1;
             }
+            if (!DPX.IsDetected)
+                break;
             i++;
             if (WriteToDisk_Data.IsFirstFrame)
             {
@@ -317,6 +325,21 @@ int ParseFile(const char* Name, bool IsFirstFile)
     // Processing DPX to MKV/FFV1
     if (!M.IsDetected)
     {
+        if (!M.IsDetected && !RIFF.IsDetected && !DPX.IsDetected)
+        {
+            if (Buffer_Size >= 1024 * 1024) // Arbitrary choosen, temporary
+            {
+                cout << Name << " is not small, expected to be an attachment? please contact info@mediaarea.net if you want support of such file\n";
+                exit(1);
+            }
+            
+            ffmpeg_attachment_struct Attachment;
+            Attachment.FileName_In = Name;
+            Attachment.FileName_Out = Name + Path_Pos;
+            FFmpeg_Attachments.push_back(Attachment);
+        }
+        else
+        {
         ffmpeg_info_struct info;
 
         info.FileName = Files[0];
@@ -329,6 +352,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
         info.Slices = slices;
 
         FFmpeg_Info.push_back(info);
+        }
 
     }
     else
@@ -370,20 +394,33 @@ int FFmpeg_Command(const char* FileName)
     }
 
     // Map when there are several streams
+    size_t MapPos = 0;
     if (FFmpeg_Info.size()>1)
+    {
         for (size_t i = 0; i < FFmpeg_Info.size(); i++)
         {
             stringstream t;
-            t << i;
+            t << MapPos++;
             Command += " -map ";
             Command += t.str();
         }
+    }
+    else
+        MapPos++;
 
     // Output
     if (!FFmpeg_Info[0].Slices.empty())
         Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices;
     Command += " -c:a copy";
-    Command += " -attach \"" + OutFileName + "\" -metadata:s:t mimetype=application/octet-stream -metadata:s:t \"filename=RAWcooked reversibility data\" \"";
+    for (size_t i = 0; i < FFmpeg_Attachments.size(); i++)
+    {
+        stringstream t;
+        t << MapPos++;
+        Command += " -attach \"" + FFmpeg_Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + FFmpeg_Attachments[i].FileName_Out + "\"";
+    }
+    stringstream t;
+    t << MapPos++;
+    Command += " -attach \"" + OutFileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" \"";
     Command += FileName;
     Command += ".mkv\"";
 
