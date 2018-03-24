@@ -89,7 +89,7 @@ void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, void* Opaque)
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
 
     string OutFileName(FFmpeg_Info.empty()?WriteToDisk_Data->FileName:FFmpeg_Info[0].FileName);
-    OutFileName += ".rawcookedattachment";
+    OutFileName += ".rawcooked_reversibility_data";
     FILE* F = fopen(OutFileName.c_str(), (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)?"wb":"ab");
     fwrite(Buffer, Buffer_Size, 1, F);
     fclose(F);
@@ -348,7 +348,7 @@ int FFmpeg_Command(const char* FileName)
         }
     
     string OutFileName(FFmpeg_Info[0].FileName); //TODO: remove duplicated code
-    OutFileName += ".rawcookedattachment";
+    OutFileName += ".rawcooked_reversibility_data";
 
     string Command;
     Command += "ffmpeg";
