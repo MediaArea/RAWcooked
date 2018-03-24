@@ -12,7 +12,14 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+// EBML
+static const uint32_t Name_EBML = 0x0A45DFA3;
+static const uint32_t Name_EBML_Doctype = 0x0282;
+static const uint32_t Name_EBML_DoctypeVersion = 0x0287;
+static const uint32_t Name_EBML_DoctypeReadVersion = 0x0285;
+
 // Top level
+static const uint32_t Name_RawCookedSegment = 0x7273; // " rs", RAWcooked Segment part
 static const uint32_t Name_RawCookedTrack = 0x7274; // " rt", RAWcooked Track part
 static const uint32_t Name_RawCookedBlock = 0x7262; // " rb", RAWcooked BlockGroup part
 // File data
@@ -34,8 +41,12 @@ static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
 
+static const char* DocType = "rawcooked";
+static const uint8_t DocTypeVersion = 1;
+static const uint8_t DocTypeReadVersion = 1;
 extern const char* LibraryName = "__RAWcooked__";
-extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 2__";
+extern const char* LibraryVersionPreviousandSupported = "__NOT FOR PRODUCTION Alpha 2__";
+extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 3__";
 
 //---------------------------------------------------------------------------
 static size_t Size_EB(uint32_t Name, uint64_t Size)
@@ -248,16 +259,33 @@ void rawcooked::Parse()
 
     uint64_t Out_Size = 0;
 
-    // Size computing - Track part
-    uint64_t Track_Size = 0;
+    // Size computing - EBML header
+    uint64_t EBML_Size = 0;
+    uint64_t EBML_DocType_Size;
+    if (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)
+    {
+        EBML_DocType_Size = strlen(DocType);
+        EBML_Size += Size_EB(Name_EBML_Doctype, EBML_DocType_Size);
+        EBML_Size += Size_EB(Name_EBML_DoctypeVersion, 1);
+        EBML_Size += Size_EB(Name_EBML_DoctypeReadVersion, 1);
+    }
+
+    // Size computing - Library name/version
+    uint64_t Segment_Size = 0;
     uint64_t LibraryName_Size;
     uint64_t LibraryVersion_Size;
-    if (WriteToDisk_Data->IsFirstFrame)
+    if (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)
     {
         LibraryName_Size = strlen(LibraryName);
-        Track_Size += Size_EB(Name_RawCooked_LibraryName, LibraryName_Size);
+        Segment_Size += Size_EB(Name_RawCooked_LibraryName, LibraryName_Size);
         LibraryVersion_Size = strlen(LibraryVersion);
-        Track_Size += Size_EB(Name_RawCooked_LibraryVersion, LibraryVersion_Size);
+        Segment_Size += Size_EB(Name_RawCooked_LibraryVersion, LibraryVersion_Size);
+    }
+
+    // Size computing - Track part
+    uint64_t Track_Size = 0;
+    if (WriteToDisk_Data->IsFirstFrame)
+    {
         if (!Unique && WriteToDisk_Data->FirstFrame_FileName)
             Track_Size += Size_EB(Name_RawCooked_MaskBaseFileName, Size_EB(Compressed_MaskFileName_Size ? WriteToDisk_Data->FirstFrame_FileName_Size : 0) + (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size));
         if (!Unique && WriteToDisk_Data->FirstFrame_Before)
@@ -295,6 +323,10 @@ void rawcooked::Parse()
     }
 
     // Size computing - Headers
+    if (EBML_Size)
+        Out_Size += Size_EB(Name_EBML, EBML_Size);
+    if (Segment_Size)
+        Out_Size += Size_EB(Name_RawCookedSegment, Segment_Size);
     if (Track_Size)
         Out_Size += Size_EB(Name_RawCookedTrack, Track_Size);
     if (Block_Size)
@@ -304,16 +336,37 @@ void rawcooked::Parse()
     uint8_t* Out = new uint8_t[Out_Size];
     size_t Out_Offset = 0;
 
-    // Fill - Track part
-    if (Track_Size)
+    // Fill - EBML part
+    if (EBML_Size)
     {
-        Put_EB(Out, Out_Offset, Name_RawCookedTrack, Track_Size);
+        Put_EB(Out, Out_Offset, Name_EBML, EBML_Size);
+        Put_EB(Out, Out_Offset, Name_EBML_Doctype, EBML_DocType_Size);
+        memcpy(Out + Out_Offset, DocType, EBML_DocType_Size);
+        Out_Offset += EBML_DocType_Size;
+        Put_EB(Out, Out_Offset, Name_EBML_DoctypeVersion, 1);
+        Out[Out_Offset]=DocTypeVersion;
+        Out_Offset += 1;
+        Put_EB(Out, Out_Offset, Name_EBML_DoctypeReadVersion, 1);
+        Out[Out_Offset] = DocTypeReadVersion;
+        Out_Offset += 1;
+    }
+
+    // Fill - Segment part
+    if (Segment_Size)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCookedSegment, Segment_Size);
         Put_EB(Out, Out_Offset, Name_RawCooked_LibraryName, LibraryName_Size);
         memcpy(Out + Out_Offset, LibraryName, LibraryName_Size);
         Out_Offset += LibraryName_Size;
         Put_EB(Out, Out_Offset, Name_RawCooked_LibraryVersion, LibraryVersion_Size);
         memcpy(Out + Out_Offset, LibraryVersion, LibraryVersion_Size);
         Out_Offset += LibraryVersion_Size;
+    }
+
+    // Fill - Track part
+    if (Track_Size)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCookedTrack, Track_Size);
         if (!Unique && WriteToDisk_Data->FirstFrame_FileName)
         {
             Put_EB(Out, Out_Offset, Name_RawCooked_MaskBaseFileName, Size_EB(Compressed_MaskFileName_Size ? WriteToDisk_Data->FirstFrame_FileName_Size : 0) + (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : WriteToDisk_Data->FirstFrame_FileName_Size));

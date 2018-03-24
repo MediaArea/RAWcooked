@@ -61,7 +61,7 @@ while read line ; do
                 rcode=1
                 continue
             fi
-            rm -f "${file}.rawcookedattachment"
+            rm -f "${file}.rawcooked_reversibility_data"
 
             ${valgrind} rawcooked "${file}.mkv" >/dev/null 2>&1
             result=$?
