@@ -329,7 +329,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
         {
             if (Buffer_Size >= 1024 * 1024) // Arbitrary choosen, temporary
             {
-                cout << Name << " is not small, expected to be an attachment? please contact info@mediaarea.net if you want support of such file\n";
+                cout << Name << " is not small, expected to be an attachment? Please contact info@mediaarea.net if you want support of such file.\n";
                 exit(1);
             }
             
