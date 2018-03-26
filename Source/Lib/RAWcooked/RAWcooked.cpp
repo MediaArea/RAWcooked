@@ -32,7 +32,7 @@ static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04; // In Track o
 // File metadata
 static const uint32_t Name_RawCooked_FileName = 0x10;
 static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11; // In BlockGroup only
-static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track only
+static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x12; // In Track only
 // File stats
 static const uint32_t Name_RawCooked_FileMD5 = 0x20;
 static const uint32_t Name_RawCooked_FileSHA1 = 0x21;
