@@ -16,11 +16,11 @@
 #include <cstdlib>
 #include <iostream>
 #if defined(_WIN32) || defined(_WINDOWS)
-   #include "windows.h"
-   #include <io.h>  // Quick and dirty for file existence
+    #include "windows.h"
+    #include <io.h> // Quick and dirty for file existence
     #include <direct.h> // Quick and dirty for directory creation
-    #define access    _access_s
-    #define mkdir    _mkdir
+    #define access _access_s
+    #define mkdir _mkdir
     const char PathSeparator = '\\';
 #else
     #include <fcntl.h>
@@ -137,7 +137,7 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
     string Path;
     string After;
     string Before;
-    
+
     DetectPathPos(Name, Files, Path_Pos);
 
     size_t After_Pos = FN.find_last_of("0123456789");
@@ -190,7 +190,7 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
         char Size = '0' + (char)FN.size();
         FileName_Template = Path + Before + "%0" + Size + "d" + After;
     }
-    
+
 }
 
 //---------------------------------------------------------------------------
@@ -199,7 +199,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
     write_to_disk_struct WriteToDisk_Data;
     WriteToDisk_Data.IsFirstFile = IsFirstFile;
     WriteToDisk_Data.FileName = Name;
-    
+
     #if defined(_WIN32) || defined(_WINDOWS)
         HANDLE file = CreateFileA(Name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         size_t Buffer_Size = GetFileSize(file, 0);
@@ -253,13 +253,13 @@ int ParseFile(const char* Name, bool IsFirstFile)
     if (!M.IsDetected && !RIFF.IsDetected)
     {
         DetectSequence(Name, Files, Path_Pos, FileName_Template, FileName_StartNumber);
-        
+
         size_t i = 0;
         WriteToDisk_Data.IsFirstFrame = true;
         for (;;)
         {
             WriteToDisk_Data.FileNameDPX=Name+Path_Pos;
-            
+
             DPX.WriteFileCall = &WriteToDisk;
             DPX.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
             DPX.Buffer = Buffer;
@@ -332,7 +332,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
                 cout << Name << " is not small, expected to be an attachment? Please contact info@mediaarea.net if you want support of such file.\n";
                 exit(1);
             }
-            
+
             ffmpeg_attachment_struct Attachment;
             Attachment.FileName_In = Name;
             Attachment.FileName_Out = Name + Path_Pos;
@@ -370,13 +370,13 @@ int FFmpeg_Command(const char* FileName)
             cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
             return 1;
         }
-    
+
     string OutFileName(FFmpeg_Info[0].FileName); //TODO: remove duplicated code
     OutFileName += ".rawcooked_reversibility_data";
 
     string Command;
     Command += "ffmpeg";
-    
+
     // Input
     for (size_t i = 0; i < FFmpeg_Info.size(); i++)
     {
@@ -446,4 +446,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
