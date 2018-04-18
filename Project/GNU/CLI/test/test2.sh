@@ -30,6 +30,8 @@ while read line ; do
     files="$(echo "${line}" | cut -d' ' -f2-)"
     test=$(basename "${path}")
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
+        echo "NOK: ${test}/${file}, file not found" >&${fd}
+        rcode=1
         continue
     fi
 
