@@ -59,7 +59,7 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { RGB       ,  8, MethodA, LE, dpx::RGB_8 },
     { RGB       , 10, MethodA, LE, dpx::RGB_10_FilledA_LE },
     { RGB       , 10, MethodA, BE, dpx::RGB_10_FilledA_BE },
-    { RGB       , 12, Packed , BE, dpx::RGB_12_Packed_BE }
+    { RGB       , 12, Packed , BE, dpx::RGB_12_Packed_BE },
     { RGB       , 12, MethodA, BE, dpx::RGB_12_FilledA_BE },
     { RGB       , 12, MethodA, LE, dpx::RGB_12_FilledA_LE },
     { RGB       , 16, Packed , BE, dpx::RGB_16_BE },
