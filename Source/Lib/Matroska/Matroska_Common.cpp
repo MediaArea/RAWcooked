@@ -231,7 +231,6 @@ void matroska::Parse()
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
         return;
 
-    IsDetected = true;
     Buffer_Offset = 0;
     Level = 0;
 
@@ -270,6 +269,7 @@ void matroska::Void()
 //---------------------------------------------------------------------------
 void matroska::Segment()
 {
+    IsDetected = true;
     IsList = true;
 }
 
