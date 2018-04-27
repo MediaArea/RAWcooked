@@ -22,6 +22,7 @@
     #define access _access_s
     #define mkdir _mkdir
     #define stat _stat
+    #define getcwd _getcwd
     #define	S_ISDIR(m)	((m & 0170000) == 0040000)
     const char PathSeparator = '\\';
 #else
@@ -529,17 +530,35 @@ int main(int argc, char* argv[])
     if ((strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "-h") == 0))
         return Help(argv[0]);
 
+    vector<string> Args;
+    for (int i = 0; i < argc; i++)
+    {
+        if ((argv[i][0] == '.' && argv[i][1] == '\0')
+         || (argv[i][0] == '.' && (argv[i][1] == '/' || argv[i][1] == '\\') && argv[i][2] == '\0'))
+        {
+            //translate to "../xxx" in order to get the top level directory name
+            char buff[FILENAME_MAX];
+            getcwd(buff, FILENAME_MAX);
+            string Arg = buff;
+            size_t Path_Pos = Arg.find_last_of("/\\");
+            Arg = ".." + Arg.substr(Path_Pos);
+            Args.push_back(Arg);
+        }
+        else
+            Args.push_back(argv[i]);
+    }
+
     vector<string> Files;
     for (int i = 1; i < argc; i++)
     {
-        if (IsDir(argv[i]))
-            DetectSequence_FromDir(argv[i], Files);
+        if (IsDir(Args[i].c_str()))
+            DetectSequence_FromDir(Args[i].c_str(), Files);
         else
-            Files.push_back(argv[i]);
+            Files.push_back(Args[i]);
     }
 
     // RAWcooked file name
-    rawcooked_reversibility_data_FileName = string(argv[1]);
+    rawcooked_reversibility_data_FileName = string(Args[1]);
     if (rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '/' || rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '\\')
         rawcooked_reversibility_data_FileName.pop_back();
     rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
@@ -562,7 +581,7 @@ int main(int argc, char* argv[])
 
     // FFmpeg
     if (!FFmpeg_Info.empty())
-        return FFmpeg_Command(argv[1]);
+        return FFmpeg_Command(Args[1].c_str());
 
     return 0;
 }
