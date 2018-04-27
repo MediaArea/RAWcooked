@@ -45,6 +45,14 @@ while read line ; do
             cmdline=$(${valgrind} rawcooked ${files} 2>/dev/null)
             result=$?
 
+            if [ "${file: -1}" == "/" ] ; then
+                file="${file:: -1}"
+            fi
+
+            if [ "${file}" == "." ] ; then
+                file="../$(basename $(pwd))"
+            fi
+
             # check valgrind
             if [ -n "${valgrind}" ] && [ -s "valgrind.log" ] ; then
                 cat valgrind.log >&${fd}
