@@ -26,9 +26,15 @@ valgrind=""
 
 while read line ; do
     path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -d' ' -f2)"
-    files="$(echo "${line}" | cut -d' ' -f2-)"
+    file="$(echo "${line}" | cut -s -d' ' -f2)"
+    files="$(echo "${line}" | cut -s -d' ' -f2-)"
     test=$(basename "${path}")
+
+    if [ -z "${file}" ] ; then
+        file="../$(basename ${path})"
+        files="../$(basename ${path})"
+    fi
+
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
         echo "NOK: ${test}/${file}, file not found" >&${fd}
         rcode=1
@@ -76,7 +82,11 @@ while read line ; do
             rm -f "${file}.mkv"
 
             # check result files
-            for f in $(find * -path ${file}.mkv.RAWcooked -prune -o -type f -print) ; do
+            if [ -d "${file}" ] ; then
+                files=$(find "${file}" -type f -print)
+            fi
+
+            for f in ${files} ; do
                 if [ ! -e  "${file}.mkv.RAWcooked/${f}" ] ; then
                     echo "NOK: ${test}/${f} is missing" >&${fd}
                     rcode=1
@@ -94,6 +104,7 @@ while read line ; do
                     rcode=1
                 fi
             done
+            rm -fr "${file}.mkv.RAWcooked"
 
     popd >/dev/null 2>&1
 done < "${script_path}/test2.txt"
