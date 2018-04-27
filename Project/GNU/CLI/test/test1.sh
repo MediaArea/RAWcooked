@@ -73,10 +73,12 @@ while read line ; do
 
         framemd5_a="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.framemd5")"
         framemd5_b="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.mkv.framemd5")"
+        rm -f "${file}.framemd5" "${file}.mkv.framemd5"
 
         if [ -z "${framemd5_a}" ] || [ -z "${framemd5_b}" ] || [ "${framemd5_a}" != "${framemd5_b}" ] ; then
             echo "NOK: ${test}/${file}, framemd5 mismatch" >&${fd}
             rcode=1
+            rm -f "${file}.mkv"
             continue
         fi
 
@@ -91,6 +93,7 @@ while read line ; do
 
         md5_a="$(${md5cmd} "${file}" | cut -d' ' -f1)" 2>/dev/null
         md5_b="$(${md5cmd} "${file}.mkv.RAWcooked/${file}" | cut -d' ' -f1)" 2>/dev/null
+        rm -fr "${file}.mkv.RAWcooked"
 
         # check result file
         if [ -n "${md5_a}" ] && [ -n "${md5_b}" ] && [ "${md5_a}" == "${md5_b}" ] ; then
