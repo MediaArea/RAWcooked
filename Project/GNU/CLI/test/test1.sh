@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PATH="${PWD}:$PATH"
 script_path="${PWD}/test"
@@ -6,9 +6,9 @@ files_path="${script_path}/TestingFiles"
 
 rcode=0
 
-if which md5sum ; then
+if type -p md5sum ; then
     md5cmd="md5sum"
-elif which md5 ; then
+elif type -p md5 ; then
     md5cmd="md5 -r"
 else
     exit 1
