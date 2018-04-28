@@ -21,9 +21,14 @@
     #include <direct.h> // Quick and dirty for directory creation
     #define access _access_s
     #define mkdir _mkdir
+    #define stat _stat
+    #define getcwd _getcwd
+    #define	S_ISDIR(m)	((m & 0170000) == 0040000)
     const char PathSeparator = '\\';
 #else
+    #include <dirent.h>
     #include <fcntl.h>
+    #include <glob.h>
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
@@ -47,6 +52,76 @@ struct ffmpeg_attachment_struct
     string FileName_Out; // Relative path
 };
 std::vector<ffmpeg_attachment_struct> FFmpeg_Attachments;
+bool IsFirstFile;
+size_t Path_Pos_Global;
+string rawcooked_reversibility_data_FileName;
+
+//---------------------------------------------------------------------------
+bool IsDir(const char* Name)
+{
+    struct stat buffer;
+    int status=stat(Name, &buffer);
+    return (status==0 && S_ISDIR(buffer.st_mode));
+}
+
+//---------------------------------------------------------------------------
+void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files);
+void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<string>& Files)
+{
+    if (File_Name != "." && File_Name != "..") //Avoid . an ..
+    {
+        if (Dir_Name[Dir_Name.size() - 1] != '/' && Dir_Name[Dir_Name.size() - 1] != '\\')
+            Dir_Name += PathSeparator;
+        string File_Name_Complete = Dir_Name;
+        if (Dir_Name[Dir_Name.size() - 1] != PathSeparator)
+            Dir_Name += PathSeparator;
+        File_Name_Complete += File_Name;
+        if (IsDir(File_Name_Complete.c_str()))
+            DetectSequence_FromDir(File_Name_Complete.c_str(), Files);
+        else if (!IsHidden && File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29)
+            Files.push_back(File_Name_Complete);
+    }
+}
+
+//---------------------------------------------------------------------------
+void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files)
+{
+    string Dir_Name2 = Dir_Name;
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+        if (Dir_Name2[Dir_Name2.size() - 1] != '/' && Dir_Name2[Dir_Name2.size() - 1] != '\\')
+            Dir_Name2 += PathSeparator;
+        WIN32_FIND_DATAA FindFileData;
+        HANDLE hFind = FindFirstFileA((Dir_Name2 + '*').c_str() , &FindFileData);
+        if (hFind == INVALID_HANDLE_VALUE)
+            return;
+        bool ReturnValue;
+
+        do
+        {
+            string File_Name(FindFileData.cFileName);
+            DetectSequence_FromDir_Sub(Dir_Name2, File_Name, FindFileData.dwFileAttributes&FILE_ATTRIBUTE_HIDDEN, Files);
+            ReturnValue = FindNextFileA(hFind, &FindFileData);
+        }
+        while (ReturnValue);
+
+        FindClose(hFind);
+    #else //WINDOWS
+        DIR* Dir = opendir(Dir_Name2.c_str());
+        if (!Dir)
+            return;
+        struct dirent *DirEnt;
+
+        while ((DirEnt = readdir(Dir)) != NULL)
+        {
+            //A file
+            string File_Name(DirEnt->d_name);
+            DetectSequence_FromDir_Sub(Dir_Name2, File_Name, DirEnt->d_name[0]=='.', Files);
+        }
+
+        closedir(Dir);
+    #endif
+}
 
 //---------------------------------------------------------------------------
 void WriteToDisk(uint64_t ID, raw_frame* RawFrame, void* Opaque)
@@ -94,14 +169,12 @@ void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, void* Opaque)
 {
     write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)Opaque;
 
-    string OutFileName(FFmpeg_Info.empty()?WriteToDisk_Data->FileName:FFmpeg_Info[0].FileName);
-    OutFileName += ".rawcooked_reversibility_data";
-    FILE* F = fopen(OutFileName.c_str(), (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)?"wb":"ab");
+    FILE* F = fopen(rawcooked_reversibility_data_FileName.c_str(), (WriteToDisk_Data->IsFirstFile && WriteToDisk_Data->IsFirstFrame)?"wb":"ab");
     fwrite(Buffer, Buffer_Size, 1, F);
     fclose(F);
 }
 
-void DetectPathPos(const char* Name, vector<string>& Files, size_t& Path_Pos)
+void DetectPathPos(const string &Name, size_t& Path_Pos)
 {
     string FN(Name);
     string Path;
@@ -131,14 +204,12 @@ void DetectPathPos(const char* Name, vector<string>& Files, size_t& Path_Pos)
         Path_Pos = 0;
 }
 
-void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber)
+void DetectSequence(vector<string>& AllFiles, size_t AllFiles_Pos, vector<string>& Files, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber)
 {
-    string FN(Name);
+    string FN(AllFiles[AllFiles_Pos]);
     string Path;
     string After;
     string Before;
-
-    DetectPathPos(Name, Files, Path_Pos);
 
     size_t After_Pos = FN.find_last_of("0123456789");
     if (After_Pos != (size_t)-1)
@@ -156,6 +227,7 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
         FN.erase(0, Before_Pos + 1);
     }
 
+    size_t AllFiles_PosToDelete = AllFiles_Pos;
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
@@ -175,15 +247,32 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
                     break;
                 i--;
             }
-            if (access((Path + Before + FN + After).c_str(), 0)) // Dirty way to test file exitence. TODO: better way
-                break;
+            string FullPath = Path + Before + FN + After;
+            if (AllFiles_PosToDelete + 1 < AllFiles.size())
+            {
+                // Test from allready created file list
+                if (FullPath == AllFiles[AllFiles_PosToDelete + 1])
+                    AllFiles_PosToDelete++;
+                //Checking directly if file exists
+                else if (access(FullPath.c_str(), 0))
+                    break;
+            }
+            else
+            {
+                // File list not avalable, checking directly if file exists
+                if (access(FullPath.c_str(), 0))
+                    break;
+            }
         }
+
+        if (AllFiles_PosToDelete != AllFiles_Pos)
+            AllFiles.erase(AllFiles.begin() + AllFiles_Pos, AllFiles.begin() + AllFiles_PosToDelete);
     }
 
     if (Files.empty())
     {
-        Files.push_back(Name);
-        FileName_Template = Name;
+        Files.push_back(AllFiles[AllFiles_Pos]);
+        FileName_Template = AllFiles[AllFiles_Pos];
     }
     else
     {
@@ -194,22 +283,24 @@ void DetectSequence(const char* Name, vector<string>& Files, size_t& Path_Pos, s
 }
 
 //---------------------------------------------------------------------------
-int ParseFile(const char* Name, bool IsFirstFile)
+int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
 {
+    string Name = AllFiles[AllFiles_Pos];
+    
     write_to_disk_struct WriteToDisk_Data;
     WriteToDisk_Data.IsFirstFile = IsFirstFile;
     WriteToDisk_Data.FileName = Name;
 
     #if defined(_WIN32) || defined(_WINDOWS)
-        HANDLE file = CreateFileA(Name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        HANDLE file = CreateFileA(Name.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         size_t Buffer_Size = GetFileSize(file, 0);
         HANDLE mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, 0, 0);
         unsigned char* Buffer = (unsigned char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
     #else
         struct stat Fstat;
-        stat(Name, &Fstat);
+        stat(Name.c_str(), &Fstat);
         size_t Buffer_Size = Fstat.st_size;
-        int F = open(Name, O_RDONLY, 0);
+        int F = open(Name.c_str(), O_RDONLY, 0);
         unsigned char* Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE|MAP_PRIVATE, F, 0);
     #endif
 
@@ -223,16 +314,13 @@ int ParseFile(const char* Name, bool IsFirstFile)
     vector<string> Files;
     string FileName_Template;
     string FileName_StartNumber;
-    size_t Path_Pos=0;
     string slices;
 
     riff RIFF;
     if (!M.IsDetected)
     {
-        DetectPathPos(Name, Files, Path_Pos);
-
         WriteToDisk_Data.IsFirstFrame = true;
-        WriteToDisk_Data.FileNameDPX = Name + Path_Pos;
+        WriteToDisk_Data.FileNameDPX = Name.substr(Path_Pos_Global);
 
         RIFF.WriteFileCall = &WriteToDisk;
         RIFF.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
@@ -246,19 +334,22 @@ int ParseFile(const char* Name, bool IsFirstFile)
         }
 
         if (RIFF.IsDetected)
+        {
+            IsFirstFile = false;
             Files.push_back(Name);
+        }
     }
 
     dpx DPX;
     if (!M.IsDetected && !RIFF.IsDetected)
     {
-        DetectSequence(Name, Files, Path_Pos, FileName_Template, FileName_StartNumber);
+        DetectSequence(AllFiles, AllFiles_Pos, Files, Path_Pos_Global, FileName_Template, FileName_StartNumber);
 
         size_t i = 0;
         WriteToDisk_Data.IsFirstFrame = true;
         for (;;)
         {
-            WriteToDisk_Data.FileNameDPX=Name+Path_Pos;
+            WriteToDisk_Data.FileNameDPX = Name.substr(Path_Pos_Global);
 
             DPX.WriteFileCall = &WriteToDisk;
             DPX.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
@@ -283,26 +374,29 @@ int ParseFile(const char* Name, bool IsFirstFile)
 
             if (i >= Files.size())
                 break;
-            Name = Files[i].c_str();
+            Name = Files[i];
 
             //TODO: remove duplicated code
             #if defined(_WIN32) || defined(_WINDOWS)
                 UnmapViewOfFile(Buffer);
                 CloseHandle(mapping);
                 CloseHandle(file);
-                file = CreateFileA(Name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+                file = CreateFileA(Name.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
                 Buffer_Size = GetFileSize(file, 0);
                 mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, 0, 0);
                 Buffer = (unsigned char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
             #else
                 munmap(Buffer, Buffer_Size);
                 close(F);
-                stat(Name, &Fstat);
+                stat(Name.c_str(), &Fstat);
                 size_t Buffer_Size = Fstat.st_size;
-                F = open(Name, O_RDONLY, 0);
+                F = open(Name.c_str(), O_RDONLY, 0);
                 Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE|MAP_PRIVATE, F, 0);
             #endif
         }
+
+        if (DPX.IsDetected)
+            IsFirstFile = false;
     }
 
     M.Shutdown();
@@ -335,7 +429,7 @@ int ParseFile(const char* Name, bool IsFirstFile)
 
             ffmpeg_attachment_struct Attachment;
             Attachment.FileName_In = Name;
-            Attachment.FileName_Out = Name + Path_Pos;
+            Attachment.FileName_Out = Name.substr(Path_Pos_Global);
             FFmpeg_Attachments.push_back(Attachment);
         }
         else
@@ -370,9 +464,6 @@ int FFmpeg_Command(const char* FileName)
             cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
             return 1;
         }
-
-    string OutFileName(FFmpeg_Info[0].FileName); //TODO: remove duplicated code
-    OutFileName += ".rawcooked_reversibility_data";
 
     string Command;
     Command += "ffmpeg";
@@ -420,8 +511,10 @@ int FFmpeg_Command(const char* FileName)
     }
     stringstream t;
     t << MapPos++;
-    Command += " -attach \"" + OutFileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" \"";
+    Command += " -attach \"" + rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" \"";
     Command += FileName;
+    if (Command[Command.size() - 1] == '/' || Command[Command.size() - 1] == '\\')
+        Command.pop_back();
     Command += ".mkv\"";
 
     cout << Command << endl;
@@ -437,12 +530,58 @@ int main(int argc, char* argv[])
     if ((strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "-h") == 0))
         return Help(argv[0]);
 
+    vector<string> Args;
+    for (int i = 0; i < argc; i++)
+    {
+        if ((argv[i][0] == '.' && argv[i][1] == '\0')
+         || (argv[i][0] == '.' && (argv[i][1] == '/' || argv[i][1] == '\\') && argv[i][2] == '\0'))
+        {
+            //translate to "../xxx" in order to get the top level directory name
+            char buff[FILENAME_MAX];
+            getcwd(buff, FILENAME_MAX);
+            string Arg = buff;
+            size_t Path_Pos = Arg.find_last_of("/\\");
+            Arg = ".." + Arg.substr(Path_Pos);
+            Args.push_back(Arg);
+        }
+        else
+            Args.push_back(argv[i]);
+    }
+
+    vector<string> Files;
     for (int i = 1; i < argc; i++)
-        if (ParseFile(argv[i], i == 1))
+    {
+        if (IsDir(Args[i].c_str()))
+            DetectSequence_FromDir(Args[i].c_str(), Files);
+        else
+            Files.push_back(Args[i]);
+    }
+
+    // RAWcooked file name
+    rawcooked_reversibility_data_FileName = string(Args[1]);
+    if (rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '/' || rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '\\')
+        rawcooked_reversibility_data_FileName.pop_back();
+    rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
+
+    // Global path position
+    Path_Pos_Global = (size_t)-1;
+    for (int i = 0; i < Files.size(); i++)
+    {
+        size_t Path_Pos;
+        DetectPathPos(Files[i], Path_Pos);
+        if (Path_Pos_Global > Path_Pos)
+            Path_Pos_Global = Path_Pos;
+    }
+
+    // Parsing files
+    IsFirstFile = true;
+    for (int i = 0; i < Files.size(); i++)
+        if (ParseFile(Files, i))
             return 1;
 
+    // FFmpeg
     if (!FFmpeg_Info.empty())
-        return FFmpeg_Command(argv[1]);
+        return FFmpeg_Command(Args[1].c_str());
 
     return 0;
 }

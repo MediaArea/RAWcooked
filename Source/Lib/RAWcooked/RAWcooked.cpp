@@ -172,7 +172,7 @@ void rawcooked::Parse()
                 WriteToDisk_Data->FirstFrame_After_Size = 0;
             }
         }
-        if (FileName && WriteToDisk_Data->FileName)
+        if (FileName && !WriteToDisk_Data->FileName.empty())
         {
             ToStore_FileName = new uint8_t[FileName_Size];
             memcpy(ToStore_FileName, FileName, FileName_Size);

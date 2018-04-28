@@ -22,10 +22,10 @@ typedef int32_t pixel_t;
 //---------------------------------------------------------------------------
 struct write_to_disk_struct
 {
-    const char* FileName;
+    string      FileName;
+    string      FileNameDPX;
     bool        IsFirstFile;
     bool        IsFirstFrame;
-    string      FileNameDPX;
 
     // Actually RAWcooked data. TODO: move it in a specific structure
     uint8_t*    FirstFrame_Before;
