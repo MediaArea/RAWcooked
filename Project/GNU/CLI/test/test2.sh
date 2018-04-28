@@ -92,6 +92,8 @@ while read line ; do
             # check result files
             if [ -d "${file}" ] ; then
                 files=$(find "${file}" -type f -print)
+            else
+               files="$(find * -path ${file}.mkv.RAWcooked -prune -o -type f -print)"
             fi
 
             for f in ${files} ; do
@@ -112,6 +114,12 @@ while read line ; do
                     rcode=1
                 fi
             done
+
+            if [ "$(echo ${files} | wc -w)" != "$(find ${file}.mkv.RAWcooked -type f | wc -l)" ] ; then
+                echo "NOK: ${test} unwanted files in ${file}.mkv.RAWcooked directory" >&${fd}
+                rcode=1
+            fi
+
             rm -fr "${file}.mkv.RAWcooked"
 
     popd >/dev/null 2>&1
