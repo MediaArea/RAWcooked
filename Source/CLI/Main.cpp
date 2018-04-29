@@ -458,12 +458,17 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
 int FFmpeg_Command(const char* FileName)
 {
     // Multiple slices number currently not supported
-    for (size_t i = 1; i < FFmpeg_Info.size(); i++)
-        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != FFmpeg_Info[0].Slices)
+    string Slices;
+    for (size_t i = 0; i < FFmpeg_Info.size(); i++)
+    {
+        if (Slices.empty() && !FFmpeg_Info[i].Slices.empty())
+            Slices = FFmpeg_Info[i].Slices;
+        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != Slices)
         {
             cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
             return 1;
         }
+    }
 
     string Command;
     Command += "ffmpeg";
@@ -500,8 +505,8 @@ int FFmpeg_Command(const char* FileName)
         MapPos++;
 
     // Output
-    if (!FFmpeg_Info[0].Slices.empty())
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices;
+    if (!Slices.empty())
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + Slices;
     Command += " -c:a copy";
     for (size_t i = 0; i < FFmpeg_Attachments.size(); i++)
     {
