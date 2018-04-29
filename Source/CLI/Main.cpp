@@ -554,12 +554,32 @@ int main(int argc, char* argv[])
     }
 
     vector<string> Files;
+    bool HasAtLeastOneDir = false;
+    bool HasAtLeastOneFile = false;
     for (int i = 1; i < argc; i++)
     {
         if (IsDir(Args[i].c_str()))
+        {
+            if (HasAtLeastOneDir)
+            {
+                cout << "Input contains several directories, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+                return 1;
+            }
+            HasAtLeastOneDir = true;
+
             DetectSequence_FromDir(Args[i].c_str(), Files);
+        }
         else
+        {
+            HasAtLeastOneFile = true;
+
             Files.push_back(Args[i]);
+        }
+    }
+    if (HasAtLeastOneDir && HasAtLeastOneFile)
+    {
+        cout << "Input contains a mix of directories and files, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+        return 1;
     }
 
     // RAWcooked file name
@@ -574,6 +594,21 @@ int main(int argc, char* argv[])
     {
         size_t Path_Pos;
         DetectPathPos(Files[i], Path_Pos);
+        if (Path_Pos_Global > Path_Pos)
+            Path_Pos_Global = Path_Pos;
+    }
+
+    // Keeping directory name if a directory is used even if there are subdirs
+    if (HasAtLeastOneDir)
+    {
+        size_t Path_Pos = Args[1].size();
+        if (Args[1][Args[1].size() - 1] == '/' || Args[1][Args[1].size() - 1] == '\\')
+            Path_Pos--;
+        if (Path_Pos)
+            Path_Pos = Args[1].find_last_of("/\\", Path_Pos - 1);
+        if (Path_Pos == string::npos)
+            Path_Pos = 0;
+
         if (Path_Pos_Global > Path_Pos)
             Path_Pos_Global = Path_Pos;
     }
