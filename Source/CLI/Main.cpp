@@ -427,10 +427,13 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
                 exit(1);
             }
 
-            ffmpeg_attachment_struct Attachment;
-            Attachment.FileName_In = Name;
-            Attachment.FileName_Out = Name.substr(Path_Pos_Global);
-            FFmpeg_Attachments.push_back(Attachment);
+            if (Buffer_Size) // Ignoring file with size of 0
+            {
+                ffmpeg_attachment_struct Attachment;
+                Attachment.FileName_In = Name;
+                Attachment.FileName_Out = Name.substr(Path_Pos_Global);
+                FFmpeg_Attachments.push_back(Attachment);
+            }
         }
         else
         {
