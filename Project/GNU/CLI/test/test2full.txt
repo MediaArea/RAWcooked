@@ -1,0 +1,21 @@
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 818_OV/818_OV_0086945.dpx 818_OV_FR_ST/818_OV_FR_ST_0086945.dpx 818_TextlessBGD/818_TextlessBGD_0086160.dpx audio/818_DCP_5point1_20170221.500ms.wav audio/818_Stereo_LtRt_20170329.500ms.wav md5deep.md5 audio/md5sum.md5
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 818_OV
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 ../818_DCDM_P3_IA_FIC_000918/
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 ../818_DCDM_P3_IA_FIC_000918
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 ./
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918 .
+Features/AV_Package 818_DCDM_P3_IA_FIC_000918/
+Features/AV_Package 818_DCDM_P3_IA_FIC_000918
+Features/AV_Package HavingReels01-02/
+Features/AV_Package HavingReels01-02
+Features/AV_Package/HavingReels01-02 SubDirHavingReels01-02/
+Features/AV_Package/HavingReels01-02 SubDirHavingReels01-02
+Features/AV_Package/HavingReels01-02 ../HavingReels01-02/
+Features/AV_Package/HavingReels01-02 ../HavingReels01-02
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02 FILM/
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02 FILM
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02/FILM FILM_REEL_02/
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02/FILM FILM_REEL_02
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02/FILM/FILM_REEL_02 FILM_REEL_02_DPX/
+Features/AV_Package/HavingReels01-02/SubDirHavingReels01-02/FILM/FILM_REEL_02 FILM_REEL_02_DPX
+Features/AV_Package HavingReels1-10/

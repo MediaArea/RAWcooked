@@ -458,12 +458,17 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
 int FFmpeg_Command(const char* FileName)
 {
     // Multiple slices number currently not supported
-    for (size_t i = 1; i < FFmpeg_Info.size(); i++)
-        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != FFmpeg_Info[0].Slices)
+    string Slices;
+    for (size_t i = 0; i < FFmpeg_Info.size(); i++)
+    {
+        if (Slices.empty() && !FFmpeg_Info[i].Slices.empty())
+            Slices = FFmpeg_Info[i].Slices;
+        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != Slices)
         {
             cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
             return 1;
         }
+    }
 
     string Command;
     Command += "ffmpeg";
@@ -500,8 +505,8 @@ int FFmpeg_Command(const char* FileName)
         MapPos++;
 
     // Output
-    if (!FFmpeg_Info[0].Slices.empty())
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + FFmpeg_Info[0].Slices;
+    if (!Slices.empty())
+        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + Slices;
     Command += " -c:a copy";
     for (size_t i = 0; i < FFmpeg_Attachments.size(); i++)
     {
@@ -549,12 +554,32 @@ int main(int argc, char* argv[])
     }
 
     vector<string> Files;
+    bool HasAtLeastOneDir = false;
+    bool HasAtLeastOneFile = false;
     for (int i = 1; i < argc; i++)
     {
         if (IsDir(Args[i].c_str()))
+        {
+            if (HasAtLeastOneDir)
+            {
+                cout << "Input contains several directories, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+                return 1;
+            }
+            HasAtLeastOneDir = true;
+
             DetectSequence_FromDir(Args[i].c_str(), Files);
+        }
         else
+        {
+            HasAtLeastOneFile = true;
+
             Files.push_back(Args[i]);
+        }
+    }
+    if (HasAtLeastOneDir && HasAtLeastOneFile)
+    {
+        cout << "Input contains a mix of directories and files, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+        return 1;
     }
 
     // RAWcooked file name
@@ -569,6 +594,21 @@ int main(int argc, char* argv[])
     {
         size_t Path_Pos;
         DetectPathPos(Files[i], Path_Pos);
+        if (Path_Pos_Global > Path_Pos)
+            Path_Pos_Global = Path_Pos;
+    }
+
+    // Keeping directory name if a directory is used even if there are subdirs
+    if (HasAtLeastOneDir)
+    {
+        size_t Path_Pos = Args[1].size();
+        if (Args[1][Args[1].size() - 1] == '/' || Args[1][Args[1].size() - 1] == '\\')
+            Path_Pos--;
+        if (Path_Pos)
+            Path_Pos = Args[1].find_last_of("/\\", Path_Pos - 1);
+        if (Path_Pos == string::npos)
+            Path_Pos = 0;
+
         if (Path_Pos_Global > Path_Pos)
             Path_Pos_Global = Path_Pos;
     }
