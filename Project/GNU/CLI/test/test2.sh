@@ -115,7 +115,7 @@ while read line ; do
                 fi
             done
 
-            if [ "$(echo ${files} | wc -w)" != "$(find ${file}.mkv.RAWcooked -type f | wc -l)" ] ; then
+            if [ "$(find ${file}.mkv.RAWcooked -type f | wc -l)" -gt "$(echo ${files} | wc -w)" ] ; then
                 echo "NOK: ${test} unwanted files in ${file}.mkv.RAWcooked directory" >&${fd}
                 rcode=1
             fi
