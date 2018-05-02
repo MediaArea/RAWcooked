@@ -91,9 +91,9 @@ while read line ; do
 
             # check result files
             if [ -d "${file}" ] ; then
-                files=$(find "${file}" -type f -print)
+                files=$(find "${file}" -type f  ! -empty -print)
             else
-               files="$(find * -path ${file}.mkv.RAWcooked -prune -o -type f -print)"
+                files="$(find * -path ${file}.mkv.RAWcooked -prune -o -type f ! -empty -print)"
             fi
 
             for f in ${files} ; do
