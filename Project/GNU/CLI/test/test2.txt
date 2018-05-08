@@ -5,3 +5,5 @@ Features/AV_Package/818_DCDM_P3_IA_FIC_000918 .
 Features/AV_Package 818_DCDM_P3_IA_FIC_000918/
 Features/AV_Package HavingReels01-02/
 Features/AV_Package HavingReels1-10/
+Features/EmptyContent EmptyFiles/
+Features/EmptyContent EmptyFolders/
