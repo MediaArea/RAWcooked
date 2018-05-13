@@ -106,8 +106,8 @@ private:
         Format_Max,
     };
 
-    bool                        RAWcooked_LibraryName_OK;
-    bool                        RAWcooked_LibraryVersion_OK;
+    string                      RAWcooked_LibraryName;
+    string                      RAWcooked_LibraryVersion;
     struct trackinfo
     {
         uint8_t*                Mask_FileName;
@@ -160,6 +160,7 @@ private:
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);
+    void RejectIncompatibleVersions();
 };
 
 //---------------------------------------------------------------------------

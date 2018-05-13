@@ -16,5 +16,6 @@
 //---------------------------------------------------------------------------
 ReturnValue Help(const char* Name);
 ReturnValue Usage(const char* Name);
+ReturnValue Version();
 
 #endif

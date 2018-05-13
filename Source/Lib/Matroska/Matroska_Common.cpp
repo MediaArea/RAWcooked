@@ -17,10 +17,6 @@
 #include "zlib.h"
 //---------------------------------------------------------------------------
 
-extern const char* LibraryName;
-extern const char* LibraryVersionPreviousandSupported;
-extern const char* LibraryVersion;
-
 //---------------------------------------------------------------------------
 static int Get_EB(unsigned char* Buffer, uint64_t& Offset, uint64_t& Name, uint64_t& Size)
 {
@@ -166,9 +162,7 @@ ELEMENT_END()
 matroska::matroska() :
     WriteFrameCall(NULL),
     WriteFrameCall_Opaque(NULL),
-    IsDetected(false),
-    RAWcooked_LibraryName_OK(false),
-    RAWcooked_LibraryVersion_OK(false)
+    IsDetected(false)
 {
     FramesPool = new ThreadPool(1);
     FramesPool->init();
@@ -475,29 +469,15 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryName()
 {
-    string LibraryName_Software(LibraryName);
-    string LibraryName_File((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
-
-    if (LibraryName_Software != LibraryName_File)
-    {
-        std::cout << LibraryName_File << " was not tested, exiting" << std::endl;
-        exit(1);
-    }
-    RAWcooked_LibraryName_OK = true;
+    RAWcooked_LibraryName = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    RejectIncompatibleVersions();
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryVersion()
 {
-    string LibraryVersion_Software(LibraryVersion);
-    string LibraryVersion_File((const char*)Buffer+Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
-
-    if (LibraryVersion_Software != LibraryVersion_File)
-    {
-        std::cout << "version " << LibraryVersion_File << " of the software was not tested, exiting" << std::endl;
-        exit(1);
-    }
-    RAWcooked_LibraryVersion_OK = true;
+    RAWcooked_LibraryVersion = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    RejectIncompatibleVersions();
 }
 
 //---------------------------------------------------------------------------
@@ -591,29 +571,17 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBase
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName()
 {
-    string LibraryName_Software(LibraryName);
-    string LibraryName_File((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
-
-    if (LibraryName_Software != LibraryName_File)
-    {
-        std::cout << LibraryName_File << " was not tested, exiting" << std::endl;
-        exit(1);
-    }
-    RAWcooked_LibraryName_OK = true;
+    // Note: LibraryName in RawCookedTrack is out of spec (alpha 1&2)
+    RAWcooked_LibraryName = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    RejectIncompatibleVersions();
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion()
 {
-    string LibraryVersion_Software(LibraryVersionPreviousandSupported);
-    string LibraryVersion_File((const char*)Buffer+Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
-
-    if (LibraryVersion_Software != LibraryVersion_File)
-    {
-        std::cout << "version " << LibraryVersion_File << " of the software was not tested, exiting" << std::endl;
-        exit(1);
-    }
-    RAWcooked_LibraryVersion_OK = true;
+    // Note: LibraryVersion in RawCookedTrack is out of spec (alpha 1&2)
+    RAWcooked_LibraryVersion = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    RejectIncompatibleVersions();
 }
 
 //---------------------------------------------------------------------------
@@ -635,11 +603,6 @@ void matroska::Segment_Cluster_SimpleBlock()
         // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
         if (!TrackInfo_Current->R_A)
         {
-            if (!RAWcooked_LibraryName_OK || !RAWcooked_LibraryVersion_OK)
-            {
-                std::cout << "Library name or version was not detected, exiting" << std::endl;
-                exit(1);
-            }
             TrackInfo_Current->R_A = new raw_frame;
             TrackInfo_Current->R_B = new raw_frame;
         }
@@ -838,5 +801,15 @@ void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
         Output_Size = Levels[Level].Offset_End - Buffer_Offset;
         Output = new uint8_t[Output_Size];
         memcpy(Output, Buffer + Buffer_Offset, Output_Size);
+    }
+}
+
+//---------------------------------------------------------------------------
+void matroska::RejectIncompatibleVersions()
+{
+    if ((RAWcooked_LibraryName == "__RAWCooked__" || RAWcooked_LibraryName == "__RAWcooked__")  && RAWcooked_LibraryVersion == "__NOT FOR PRODUCTION Alpha 1__") // RAWcooked Alpha 1 is not supported
+    {
+        std::cout << RAWcooked_LibraryName << "version " << RAWcooked_LibraryVersion << " is not supported, exiting" << std::endl;
+        exit(1);
     }
 }

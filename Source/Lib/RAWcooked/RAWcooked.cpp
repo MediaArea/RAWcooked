@@ -12,6 +12,10 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+// Library name and version
+const char* LibraryName = "__RAWcooked__";
+const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 3__";
+
 // EBML
 static const uint32_t Name_EBML = 0x0A45DFA3;
 static const uint32_t Name_EBML_Doctype = 0x0282;
@@ -40,13 +44,10 @@ static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
 // Global information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
-
+// Parameters
 static const char* DocType = "rawcooked";
 static const uint8_t DocTypeVersion = 1;
 static const uint8_t DocTypeReadVersion = 1;
-extern const char* LibraryName = "__RAWcooked__";
-extern const char* LibraryVersionPreviousandSupported = "__NOT FOR PRODUCTION Alpha 2__";
-extern const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 3__";
 
 //---------------------------------------------------------------------------
 static size_t Size_EB(uint32_t Name, uint64_t Size)
