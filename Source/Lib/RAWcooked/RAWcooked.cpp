@@ -13,8 +13,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 // Library name and version
-const char* LibraryName = "__RAWcooked__";
-const char* LibraryVersion = "__NOT FOR PRODUCTION Alpha 3__";
+const char* LibraryName = "RAWcooked";
+const char* LibraryVersion = "18.01";
 
 // EBML
 static const uint32_t Name_EBML = 0x0A45DFA3;
