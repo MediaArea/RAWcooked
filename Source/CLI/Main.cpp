@@ -535,8 +535,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
         return Usage(argv[0]);
-    if ((strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "-h") == 0))
-        return Help(argv[0]);
+    
 
     vector<string> Args;
     for (int i = 0; i < argc; i++)
@@ -552,6 +551,10 @@ int main(int argc, char* argv[])
             Arg = ".." + Arg.substr(Path_Pos);
             Args.push_back(Arg);
         }
+        else if ((strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "-h") == 0))
+            return Help(argv[0]);
+        else if (strcmp(argv[1], "--version") == 0)
+            return Version();
         else
             Args.push_back(argv[i]);
     }
