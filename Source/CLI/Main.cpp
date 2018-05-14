@@ -291,18 +291,45 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
     WriteToDisk_Data.IsFirstFile = IsFirstFile;
     WriteToDisk_Data.FileName = Name;
 
+    unsigned char* Buffer;
+    size_t Buffer_Size;
+    bool FileIsOpen;
     #if defined(_WIN32) || defined(_WINDOWS)
         HANDLE file = CreateFileA(Name.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        size_t Buffer_Size = GetFileSize(file, 0);
-        HANDLE mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, 0, 0);
-        unsigned char* Buffer = (unsigned char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+        HANDLE mapping;
+        if (file != INVALID_HANDLE_VALUE)
+        {
+            DWORD FileSizeHigh;
+            mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, 0, 0);
+            Buffer = (unsigned char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+            Buffer_Size = GetFileSize(file, &FileSizeHigh);
+            if (Buffer_Size != INVALID_FILE_SIZE || GetLastError() == NO_ERROR)
+                Buffer_Size |= ((size_t)FileSizeHigh) << 32;
+            FileIsOpen = true;
+        }
+        else
+            FileIsOpen = false;
     #else
         struct stat Fstat;
         stat(Name.c_str(), &Fstat);
-        size_t Buffer_Size = Fstat.st_size;
+        Buffer_Size = Fstat.st_size;
         int F = open(Name.c_str(), O_RDONLY, 0);
-        unsigned char* Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE|MAP_PRIVATE, F, 0);
+        if (F != -1)
+        {
+            Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, F, 0);
+            if (Buffer != MAP_FAILED || Buffer_Size == 0)
+                FileIsOpen = true;
+            else
+                FileIsOpen = false;
+        }
+        else
+            FileIsOpen = false;
     #endif
+    if (!FileIsOpen)
+    {
+        cerr << "Can not open " << Name << endl;
+        return 1;
+    }
 
     matroska M;
     M.WriteFrameCall = &WriteToDisk;
@@ -628,6 +655,11 @@ int main(int argc, char* argv[])
     // FFmpeg
     if (!FFmpeg_Info.empty())
         return FFmpeg_Command(Args[1].c_str());
+    else if (!FFmpeg_Attachments.empty())
+    {
+        cerr << "No A/V content detected, please contact info@mediaarea.net if you want support of such content\n";
+        return 1;
+    }
 
     return 0;
 }

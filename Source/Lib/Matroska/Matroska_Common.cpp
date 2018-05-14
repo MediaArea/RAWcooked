@@ -177,6 +177,9 @@ matroska::~matroska()
 //---------------------------------------------------------------------------
 void matroska::Shutdown()
 {
+    if (!FramesPool)
+        return;
+
     for (size_t i = 0; i < TrackInfo.size(); i++)
     {
         trackinfo* TrackInfo_Current = TrackInfo[i];
@@ -203,14 +206,10 @@ void matroska::Shutdown()
             }
         }
     }
-    TrackInfo.clear();
 
-    if (FramesPool)
-    {
-        FramesPool->shutdown();
-        delete FramesPool;
-        FramesPool = NULL;
-    }
+    FramesPool->shutdown();
+    delete FramesPool;
+    FramesPool = NULL;
 }
 
 //---------------------------------------------------------------------------
@@ -618,34 +617,46 @@ void matroska::Segment_Cluster_SimpleBlock()
                             {
                                 TrackInfo_Current->Frame.RawFrame->Pre = TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Pos];
                                 TrackInfo_Current->Frame.RawFrame->Pre_Size = TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Pos];
-                                if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                            }
+                            if (TrackInfo_Current->DPX_After && TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos])
+                            {
+                                TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Pos];
+                                TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos];
+                            }
+                            if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                            {
+                                dpx DPX;
+                                DPX.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                DPX.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                if (DPX.Parse())
                                 {
-                                    dpx DPX;
-                                    DPX.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                    DPX.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                    if (DPX.Parse())
-                                        return;
-                                    TrackInfo_Current->R_A->Style_Private = DPX.Style;
-                                    TrackInfo_Current->R_B->Style_Private = DPX.Style;
+                                    if (TrackInfo_Current->ErrorMessage.empty())
+                                    {
+                                        TrackInfo_Current->ErrorMessage = "Unreadable frame header in reversibility data";
+                                    }
+                                    return;
                                 }
-
-                                if (TrackInfo_Current->DPX_After && TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos])
-                                {
-                                    TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Pos];
-                                    TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos];
-                                }
-
-                                TrackInfo_Current->DPX_Buffer_Pos++;
+                                TrackInfo_Current->R_A->Style_Private = DPX.Style;
+                                TrackInfo_Current->R_B->Style_Private = DPX.Style;
                             }
                             TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
                             if (WriteFrameCall)
                             {
-                                write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                                WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos - 1], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos - 1]);
+                                if (TrackInfo_Current->DPX_FileName && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count)
+                                {
+                                    write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
 
-                                //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
+                                    WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
+
+                                    //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
+                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
+                                }
+                                else if (TrackInfo_Current->ErrorMessage.empty())
+                                {
+                                    TrackInfo_Current->ErrorMessage = "More video frames in source content than saved frame headers in reversibility data";
+                                }
                             }
+                            TrackInfo_Current->DPX_Buffer_Pos++;
                             break;
             case Format_PCM:
                             if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[0])
@@ -762,8 +773,12 @@ void matroska::Segment_Tracks_TrackEntry_Video_PixelHeight()
 const char* matroska::ErrorMessage()
 {
     for (size_t i = 0; i < TrackInfo.size(); i++)
+    {
         if (TrackInfo[i]->Frame.ErrorMessage())
             return TrackInfo[i]->Frame.ErrorMessage();
+        if (!TrackInfo[i]->ErrorMessage.empty())
+            return TrackInfo[i]->ErrorMessage.c_str();
+    }
 
     return NULL;
 }

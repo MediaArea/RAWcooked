@@ -128,6 +128,7 @@ private:
         raw_frame*              R_B;
         frame                   Frame;
         bool                    Unique;
+        string                  ErrorMessage;
         format                  Format;
 
         trackinfo() :
