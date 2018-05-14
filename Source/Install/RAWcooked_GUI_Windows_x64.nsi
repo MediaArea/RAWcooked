@@ -48,11 +48,11 @@ SetCompressor /FINAL /SOLID lzma
 ; Info
 VIProductVersion "${PRODUCT_VERSION4}"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}" 
-VIAddVersionKey "Comments" "All about editing your MOV files"
+VIAddVersionKey "Comments" "Encodes RAW audio-visual data while permiting reversability"
 VIAddVersionKey "CompanyName" "MediaArea"
 VIAddVersionKey "LegalTrademarks" "BSD license" 
 VIAddVersionKey "LegalCopyright" "" 
-VIAddVersionKey "FileDescription" "All about editing your MOV files"
+VIAddVersionKey "FileDescription" "Encodes RAW audio-visual data while permiting reversability"
 VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
 BrandingText " "
 
