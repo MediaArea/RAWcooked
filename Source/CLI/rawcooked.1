@@ -1,4 +1,4 @@
-.TH "RAWcooked" "1" "https://mediaarea\.net/RAWcooked" "2018\-02\-04" "Bit\-by\-bit fidelity"
+.TH "RAWcooked" "1" "https://mediaarea\.net/RAWcooked" "18\.01" "Bit\-by\-bit fidelity"
 .SH NAME
 \fBRAWcooked\fR \- encode and decode audio\-visual RAW data with Matroska, FFV1 and FLAC
 .SH SYNOPSIS
@@ -36,10 +36,16 @@ Encodes the \fIfile\fRs in the \fIfolder\fR as above\.
 Decodes the Matroska \fIfile\fR back to the original data as above\.
 .
 .SS
-\fBrawcooked \-h
+\fBrawcooked \-h | \-\-help
 .TP
-.B \-h
+.B \-h | \-\-help
 Displays a help message\.
+.
+.SS
+\fBrawcooked \-\-version
+.TP
+.B \-\-version
+Displays the installed version\.
 .SH DESCRIPTION
 .TP
 \fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up the back\-up process on LTO cartridges\.
