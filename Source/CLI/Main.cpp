@@ -394,7 +394,7 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
             if (WriteToDisk_Data.IsFirstFrame)
             {
                 stringstream t;
-                t << DPX.slice_x * DPX.slice_x;
+                t << DPX.slice_x * DPX.slice_y;
                 slices = t.str();
             }
             WriteToDisk_Data.IsFirstFrame = false;
