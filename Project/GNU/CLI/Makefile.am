@@ -38,7 +38,7 @@ man1_MANS = ../../../Source/CLI/rawcooked.1
 
 AM_TESTS_FD_REDIRECT = 9>&2
 
-TESTS = test/test1.sh test/test2.sh
+TESTS = test/test1.sh test/test2.sh test/test3.sh test/notfound.sh test/version.sh
 
 TESTING_DIR = test/TestingFiles
 
