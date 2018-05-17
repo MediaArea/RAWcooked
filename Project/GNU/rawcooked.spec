@@ -15,6 +15,7 @@ License:		BSD-2-Clause
 URL:			https://mediaarea.net/RAWcooked
 Packager:		Jerome Martinez <info@mediaarea.net>
 Source0:		rawcooked_%{version}-1.tar.gz
+Prefix:		%{_prefix}
 BuildRoot:		%{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: 	gcc-c++
 BuildRequires:	pkgconfig
