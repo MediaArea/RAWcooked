@@ -36,8 +36,10 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        cmdline=$(${valgrind} rawcooked "${file}" 2>/dev/null)
+        cmdline=$(${valgrind} rawcooked "${file}" 2>stderr)
         result=$?
+        stderr="$(<stderr)"
+        rm -f stderr
 
         # check valgrind
         if [ -n "${valgrind}" ] && [ -s "valgrind.log" ] ; then
@@ -47,7 +49,12 @@ while read line ; do
 
         # check expected result
         if [ "${want}" == "fail" ] && [ "${result}" -ne "0" ] ; then
-            echo "OK: ${test}/${file}, file rejected at input" >&${fd}
+            if [ -n "${stderr}" ] ; then
+                echo "OK: ${test}/${file}, file rejected at input" >&${fd}
+            else
+                echo "NOK: ${test}/${file}, file rejected at input without message" >&${fd}
+                rcode=1
+            fi
             continue
         elif [ "${want}" == "fail" ] || [ "${result}" -ne "0" ] ; then
             echo "NOK: ${test}/${file}, file rejected at input" >&${fd}
