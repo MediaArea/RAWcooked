@@ -20,13 +20,13 @@ Elements with the type "Compressed" have the following structure:
 
 ### Generic reconstructed file related elements
 
-Several elements may be found in "RawCookedTrack" or "RawCookedBlock", .  
+Several elements may be found in "RawCookedTrack" or "RawCookedBlock".  
 
 #### FileName
 
 File name of the resulting file.  
 
-This element is a marker, indicating that any element after this element and before the next FileName element are releted to this file.  
+This element is a marker, indicating that any element after this element and before the next FileName element are related to this file.  
 
 #### DataSize
 
@@ -135,5 +135,3 @@ RAWcooked reversibility data can be in a container atom/chunk/element (or whatev
 ### As atom/chunk/element defined by a 4CC
 
 RAWcooked reversibility data can be in a container atom/chunk/element (or whatever is the name of a sub-element inside another element) defined by a 4CC. In that case, UUID should be "RAWc".  
-
-
