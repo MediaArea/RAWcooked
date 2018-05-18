@@ -11,6 +11,7 @@
 #include "Lib/RIFF/RIFF.h"
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
+#include <map>
 #include <sstream>
 #include <cstdio>
 #include <cstdlib>
@@ -55,6 +56,7 @@ std::vector<ffmpeg_attachment_struct> FFmpeg_Attachments;
 bool IsFirstFile;
 size_t Path_Pos_Global;
 string rawcooked_reversibility_data_FileName;
+map<string, string> Options;
 
 //---------------------------------------------------------------------------
 bool IsDir(const char* Name)
@@ -487,17 +489,38 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
 
 int FFmpeg_Command(const char* FileName)
 {
-    // Multiple slices number currently not supported
-    string Slices;
-    for (size_t i = 0; i < FFmpeg_Info.size(); i++)
+    // Defaults
+    if (Options.find("c:a") == Options.end())
+        Options["c:a"] = "copy"; // Audio is copied
+    if (Options.find("c:v") == Options.end())
+        Options["c:v"] = "ffv1"; // Video format FFV1
+    if (Options.find("coder") == Options.end())
+        Options["coder"] = "1"; // Range Coder
+    if (Options.find("context") == Options.end())
+        Options["context"] = "1"; // small context
+    if (Options.find("f") == Options.end())
+        Options["f"] = "matroska"; // Container format Matroska
+    if (Options.find("g") == Options.end())
+        Options["g"] = "1"; // Intra
+    if (Options.find("level") == Options.end())
+        Options["level"] = "3"; // FFV1 v3
+    if (Options.find("slicecrc") == Options.end())
+        Options["slicecrc"] = "1"; // slice CRC on
+    if (Options.find("slices") == Options.end())
     {
-        if (Slices.empty() && !FFmpeg_Info[i].Slices.empty())
-            Slices = FFmpeg_Info[i].Slices;
-        if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != Slices)
+        // Slice count depends on frame size
+        string Slices;
+        for (size_t i = 0; i < FFmpeg_Info.size(); i++)
         {
-            cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
-            return 1;
+            if (Slices.empty() && !FFmpeg_Info[i].Slices.empty())
+                Slices = FFmpeg_Info[i].Slices;
+            if (!FFmpeg_Info[i].Slices.empty() && FFmpeg_Info[i].Slices != Slices)
+            {
+                cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
+                return 1;
+            }
         }
+        Options["slices"] = Slices;
     }
 
     string Command;
@@ -535,9 +558,8 @@ int FFmpeg_Command(const char* FileName)
         MapPos++;
 
     // Output
-    if (!Slices.empty())
-        Command += " -c:v ffv1 -level 3 -coder 1 -context 0 -g 1 -slices " + Slices;
-    Command += " -c:a copy";
+    for (map<string, string>::iterator Option = Options.begin(); Option != Options.end(); Option++)
+        Command += " -" + Option->first + ' ' + Option->second;
     for (size_t i = 0; i < FFmpeg_Attachments.size(); i++)
     {
         stringstream t;
@@ -558,7 +580,138 @@ int FFmpeg_Command(const char* FileName)
 }
 
 //---------------------------------------------------------------------------
-int main(int argc, char* argv[])
+int Error_NotTested(const char* Option1, const char* Option2 = NULL)
+{
+    cerr << "Option " << Option1;
+    if (Option2)
+        cerr << ' ' << Option2;
+    cerr << " not yet tested, please contact info@mediaarea.net if you want support of such option\n";
+    return 1;
+}
+
+int SetOption(const char* argv[], int& i, int argc)
+{
+    if (strcmp(argv[i], "-c:a") == 0)
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (strcmp(argv[i], "copy") == 0)
+        {
+            Options["c:a"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-c:v"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "ffv1"))
+        {
+            Options["c:v"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-coder"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "0")
+         || !strcmp(argv[i], "1")
+         || !strcmp(argv[i], "2"))
+        {
+            Options["coder"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-context"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "0")
+         || !strcmp(argv[i], "1"))
+        {
+            Options["context"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-f"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "matroska"))
+        {
+            Options["f"] = argv[i];
+            return 0;
+        }
+        return 0;
+    }
+    if (!strcmp(argv[i], "-g"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "0")
+         || !strcmp(argv[i], "1"))
+        {
+            Options["g"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-level"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "0")
+            || !strcmp(argv[i], "1")
+            || !strcmp(argv[i], "3"))
+        {
+            Options["level"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-slicecrc"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        int SliceCount = atoi(argv[i]);
+        if (!strcmp(argv[i], "0")
+         || !strcmp(argv[i], "1"))
+        {
+            Options["slicecrc"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-slices"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        int SliceCount = atoi(argv[i]);
+        if (SliceCount) //TODO: not all slice counts are accepted by FFmpeg, we should filter
+        {
+            Options["slices"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
+    if (!strcmp(argv[i], "-threads"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        Options["threads"] = argv[i];
+        return 0;
+    }
+
+    return Error_NotTested(argv[i]);
+}
+
+//---------------------------------------------------------------------------
+int main(int argc, const char* argv[])
 {
     if (argc < 2)
         return Usage(argv[0]);
@@ -578,10 +731,16 @@ int main(int argc, char* argv[])
             Arg = ".." + Arg.substr(Path_Pos);
             Args.push_back(Arg);
         }
-        else if ((strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "-h") == 0))
+        else if (strcmp(argv[i], "--help") == 0 || (strcmp(argv[i], "-h") == 0))
             return Help(argv[0]);
-        else if (strcmp(argv[1], "--version") == 0)
+        else if (strcmp(argv[i], "--version") == 0)
             return Version();
+        else if (argv[i][0] == '-' && argv[i][1] != '\0')
+        {
+            int Value = SetOption(argv, i, argc);
+            if (Value)
+                return Value;
+        }
         else
             Args.push_back(argv[i]);
     }
@@ -589,7 +748,7 @@ int main(int argc, char* argv[])
     vector<string> Files;
     bool HasAtLeastOneDir = false;
     bool HasAtLeastOneFile = false;
-    for (int i = 1; i < argc; i++)
+    for (int i = 1; i < Args.size(); i++)
     {
         if (IsDir(Args[i].c_str()))
         {
