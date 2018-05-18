@@ -140,6 +140,8 @@ bool riff::Parse()
         if (Name == 0x52494646) // "RIFF"
             Name = Get_B4();
         Levels[Level].Offset_End = Buffer_Offset + Size;
+        if (Level && Levels[Level].Offset_End > Levels[Level - 1].Offset_End)
+            Levels[Level].Offset_End = Levels[Level - 1].Offset_End; // Truncated
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
         IsList = false;
         (this->*Call)();
