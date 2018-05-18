@@ -213,11 +213,30 @@ bool dpx::Parse()
         return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
     Style = DPX_Tested[Tested].Style;
 
+    // Slices count
+    // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
+    // Current idea:
+    // - have some SIMD compatible slice count (e.g. AVX-512 has 16 32-bit blocks, let's take multiples of 16)
+    // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 524288 in the example)
+    // This leads to:
+    // SD: 16 slices (10-bit) or 24 slices (16-bit)
+    // HD/2K: 64 slices (10-bit) or 96 slices (16-bit)
+    // UHD/4K: 256 slices (10-bit) or 384 slices (16-bit)
+    // 
+    slice_x = 4;
+    if (Width >= 1440) // more than 2/3 of 1920, so e.g. DV100 is included
+        slice_x <<= 1;
+    if (Width >= 2880) // more than 3/2 of 1920, oversampled HD is not included
+        slice_x <<= 1;
+    slice_y = slice_x;
+    if (BitDepth > 10)
+        slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
+
     // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
     size_t Slice_Multiplier = PixelsPerBlock((style)Style);
     if (Slice_Multiplier == 0)
         return Error("(Internal error)");
-    for (slice_x = 8; slice_x; slice_x--)
+    for (; slice_x; slice_x--)
     {
         if (Width % (slice_x * Slice_Multiplier) == 0)
             break;

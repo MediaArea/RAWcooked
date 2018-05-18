@@ -36,6 +36,7 @@ public:
     bool                        IsDetected;
     uint64_t                    Style;
     size_t                      slice_x;
+    size_t                      slice_y;
 
     // Error message
     const char*                 ErrorMessage();
