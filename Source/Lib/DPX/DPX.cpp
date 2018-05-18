@@ -217,7 +217,7 @@ bool dpx::Parse()
     // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
     // Current idea:
     // - have some SIMD compatible slice count (e.g. AVX-512 has 16 32-bit blocks, let's take multiples of 16)
-    // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 524288 in the example)
+    // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 512 KiB in the example)
     // This leads to:
     // SD: 16 slices (10-bit) or 24 slices (16-bit)
     // HD/2K: 64 slices (10-bit) or 96 slices (16-bit)
