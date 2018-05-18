@@ -733,9 +733,16 @@ void matroska::Segment_Tracks_TrackEntry_CodecPrivate()
 {
     if (Levels[Level].Offset_End - Buffer_Offset > 0x28)
     {
+        uint32_t Size = ((uint32_t)Buffer[Buffer_Offset]) | (((uint32_t)Buffer[Buffer_Offset + 1]) << 8) | (((uint32_t)Buffer[Buffer_Offset + 2]) << 16) | (((uint32_t)Buffer[Buffer_Offset + 3]) << 24);
+        if (Size > Levels[Level].Offset_End - Buffer_Offset)
+            return; // integrity issue
+
+        if (Buffer[Buffer_Offset + 0x10] != 'F' || Buffer[Buffer_Offset + 0x11] != 'F' || Buffer[Buffer_Offset + 0x12] != 'V' || Buffer[Buffer_Offset + 0x13] != '1')
+            return; // Not FFV1
+
         trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
-        TrackInfo_Current->Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Levels[Level].Offset_End - Buffer_Offset - 0x28);
+        TrackInfo_Current->Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Size - 0x28);
     }
 }
 
