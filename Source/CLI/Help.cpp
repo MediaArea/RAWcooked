@@ -17,10 +17,11 @@ extern const char* LibraryVersion;
 //---------------------------------------------------------------------------
 ReturnValue Help(const char* Name)
 {
-    printf("Usage: \"%s [options] DirectoryName [options]\"\n", Name);
-    printf("Alternative usage: \"%s [options] FileNames [options]\"\n", Name);
+    printf("Usage:\n");
+    printf("  %s [options] [DirectoryName|FileNames] [options]\n", Name);
+    printf("  The use of a directory is preferred.\n");
     printf("\n");
-    printf("Help:\n");
+    printf("Options:\n");
     printf("  --help, -h\n");
     printf("      Display this help and exit\n");
     printf("  --version\n");
