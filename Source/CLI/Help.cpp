@@ -19,6 +19,7 @@ ReturnValue Help(const char* Name)
 {
     printf("Usage:\n");
     printf("  %s [options] [DirectoryName|FileNames] [options]\n", Name);
+    printf("  The use of a directory is preferred.\n");
     printf("\n");
     printf("Options:\n");
     printf("  --help, -h\n");
