@@ -45,6 +45,7 @@ struct ffmpeg_info_struct
     string FileName_StartNumber;
     string FileName_Template;
     string Slices;
+    string FrameRate;
 };
 std::vector<ffmpeg_info_struct> FFmpeg_Info;
 struct ffmpeg_attachment_struct
@@ -57,6 +58,7 @@ bool IsFirstFile;
 size_t Path_Pos_Global;
 string rawcooked_reversibility_data_FileName;
 map<string, string> Options;
+map<string, string> VideoInputOptions;
 size_t AttachementSize;
 string OutputFileName;
 string RawcookedFileName;
@@ -343,6 +345,11 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
     string FileName_Template;
     string FileName_StartNumber;
     string slices;
+    string FrameRate;
+
+    map<string, string>::iterator FrameRateFromOptions = VideoInputOptions.find("framerate");
+    if (FrameRateFromOptions != VideoInputOptions.end())
+        FrameRate = FrameRateFromOptions->second;
 
     riff RIFF;
     if (!M.IsDetected)
@@ -383,6 +390,7 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
             DPX.WriteFileCall_Opaque = (void*)&WriteToDisk_Data;
             DPX.Buffer = Buffer;
             DPX.Buffer_Size = Buffer_Size;
+            DPX.FrameRate = FrameRate.empty() ? &FrameRate : NULL;
             DPX.Parse();
             if (DPX.ErrorMessage())
             {
@@ -476,6 +484,8 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
             }
 
             info.Slices = slices;
+        if (FrameRateFromOptions == VideoInputOptions.end())
+            info.FrameRate = FrameRate;
 
             FFmpeg_Info.push_back(info);
         }
@@ -529,9 +539,20 @@ int FFmpeg_Command(const char* FileName)
     // Input
     for (size_t i = 0; i < FFmpeg_Info.size(); i++)
     {
+        if (!FFmpeg_Info[i].Slices.empty())
+        {
+            for (map<string, string>::iterator Option = VideoInputOptions.begin(); Option != VideoInputOptions.end(); Option++)
+                Command += " -" + Option->first + ' ' + Option->second;
+        }
+
         // FileName_StartNumber (if needed)
         if (!FFmpeg_Info[i].FileName_StartNumber.empty())
         {
+            if (!FFmpeg_Info[i].FrameRate.empty())
+            {
+                Command += " -framerate ";
+                Command += FFmpeg_Info[i].FrameRate;
+            }
             Command += " -start_number ";
             Command += FFmpeg_Info[i].FileName_StartNumber;
         }
@@ -652,6 +673,17 @@ int SetOption(const char* argv[], int& i, int argc)
         if (!strcmp(argv[i], "matroska"))
         {
             Options["f"] = argv[i];
+            return 0;
+        }
+        return 0;
+    }
+    if (!strcmp(argv[i], "-framerate"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (atof(argv[i]))
+        {
+            VideoInputOptions["framerate"] = argv[i];
             return 0;
         }
         return 0;

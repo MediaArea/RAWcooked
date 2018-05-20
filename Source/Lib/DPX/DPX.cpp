@@ -7,6 +7,10 @@
 //---------------------------------------------------------------------------
 #include "Lib/DPX/DPX.h"
 #include "Lib/RAWcooked/RAWcooked.h"
+#include <sstream>
+#include <ios>
+#include <cmath>
+using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -103,6 +107,7 @@ dpx::dpx() :
     WriteFileCall_Opaque(NULL),
     IsDetected(false),
     Style(DPX_Style_Max),
+    FrameRate(NULL),
     error_message(NULL)
 {
 }
@@ -140,6 +145,32 @@ uint32_t dpx::Get_B4()
 }
 
 //---------------------------------------------------------------------------
+double dpx::Get_XF4()
+{
+    // sign          1 bit
+    // exponent      8 bit
+    // significand  23 bit
+
+    // Retrieving data
+    uint32_t Integer = Get_X4();
+
+    // Retrieving elements
+    bool     Sign     = (Integer >> 31) ? true : false;
+    uint32_t Exponent = (Integer >> 23) & 0xFF;
+    uint32_t Mantissa =  Integer        & 0x007FFFFF;
+
+    // Some computing
+    if (Exponent == 0 || Exponent == 0xFF)
+        return 0; // These are denormalised numbers, NANs, and other horrible things
+    Exponent -= 0x7F; // Bias
+    double Answer = (((double)Mantissa) / 8388608 + 1.0)*std::pow((double)2, (int)Exponent); // (1+Mantissa) * 2^Exponent
+    if (Sign)
+        Answer = -Answer;
+
+    return Answer;
+}
+
+//---------------------------------------------------------------------------
 bool dpx::Parse()
 {
     if (Buffer_Size < 1664)
@@ -170,6 +201,10 @@ bool dpx::Parse()
                         break;
         default:        return Error("Version number of header format");
     }
+    Buffer_Offset = 28;
+    uint32_t IndustryHeaderSize = Get_X4();
+    if (IndustryHeaderSize == (uint32_t)-1)
+        IndustryHeaderSize = 0;
     Buffer_Offset = 660;
     uint32_t Encryption = Get_X4();
     if (Encryption != 0xFFFFFFFF && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
@@ -197,6 +232,32 @@ bool dpx::Parse()
     if (Get_X4() != 0)
         return Error("End-of-line padding");
     //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
+    
+    if (IndustryHeaderSize && FrameRate)
+    {
+        Buffer_Offset = 1724;
+        double FrameRate_Film = Get_XF4(); // Frame rate of original (frames/s) 
+        Buffer_Offset = 1940;
+        double FrameRate_Television = Get_XF4(); // Temporal sampling rate or frame rate (Hz)
+
+        // Integrity of frame rate
+        if (FrameRate_Film && FrameRate_Television && FrameRate_Film != FrameRate_Television)
+            return Error("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
+
+        // Availability of frame rate
+        // We have lot of DPX files without frame rate info, using FFmpeg default (25 at the moment of writing)
+        //if (!FrameRate_Film && !FrameRate_Television)
+        //    return Error("Frame rate not available in DPX header");
+
+        double FrameRateD = FrameRate_Film ? FrameRate_Film : FrameRate_Television;
+        if (FrameRateD)
+        {
+            stringstream ss;
+            ss.precision(11);
+            ss << FrameRateD;
+            *FrameRate = ss.str();
+        }
+    }
 
     // Supported?
     size_t Tested = 0;
