@@ -24,16 +24,20 @@ The filenames usually end with a numbered sequence\. Enter one frame and the too
 Decodes back the video and the audio of \fIfile\fR to its original formats\. All metadata accompanying the original data are preserved bit\-by\-bit\.
 .
 .SS
-\fBrawcooked \-e \fIfolder\fR | \fB\-e \fIfile
+\fBrawcooked \-e \fR(\fIfolder\fR | \fIfile\fR)
 .TP
 .B \-e
-Encodes the \fIfile\fRs in the \fIfolder\fR as above\.
+Encodes the \fIfile\fRs in the \fIfolder\fR or the \fIfile\fR as above\.
+.LP
+Caveat: The \-e parameter has not been implemented yet.
 .
 .SS
 \fBrawcooked \-d \fIfile
 .TP
 .B \-d
 Decodes the Matroska \fIfile\fR back to the original data as above\.
+.LP
+Caveat: The \-d parameter has not been implemented yet.
 .
 .SS
 \fBrawcooked \-h | \-\-help
@@ -42,9 +46,9 @@ Decodes the Matroska \fIfile\fR back to the original data as above\.
 Displays a help message\.
 .
 .SS
-\fBrawcooked \-\-version
+\fBrawcooked \-v | \-\-version
 .TP
-.B \-\-version
+.B \-v | \-\-version
 Displays the installed version\.
 .SH DESCRIPTION
 .TP
