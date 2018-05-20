@@ -70,7 +70,7 @@ bool IsDir(const char* Name)
 void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files);
 void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<string>& Files)
 {
-    if (File_Name != "." && File_Name != "..") //Avoid . an ..
+    if (File_Name != "." && File_Name != "..") // Avoid . and ..
     {
         if (Dir_Name[Dir_Name.size() - 1] != '/' && Dir_Name[Dir_Name.size() - 1] != '\\')
             Dir_Name += PathSeparator;
@@ -193,13 +193,9 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
             FN.erase(0, Path_Pos);
 
             if (Path_Pos2 != (size_t)-1)
-            {
                 Path_Pos = Path_Pos2 + 1;
-            }
             else
-            {
                 Path_Pos = 0;
-            }
         }
     }
     else
