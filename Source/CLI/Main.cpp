@@ -329,7 +329,7 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
     #endif
     if (!FileIsOpen)
     {
-        cerr << "Can not open " << Name << endl;
+        cerr << "Cannot open " << Name << endl;
         return 1;
     }
 
