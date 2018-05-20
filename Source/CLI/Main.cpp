@@ -57,6 +57,9 @@ bool IsFirstFile;
 size_t Path_Pos_Global;
 string rawcooked_reversibility_data_FileName;
 map<string, string> Options;
+size_t AttachementSize;
+string OutputFileName;
+string RawcookedFileName;
 
 //---------------------------------------------------------------------------
 bool IsDir(const char* Name)
@@ -446,7 +449,8 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
     {
         if (!M.IsDetected && !RIFF.IsDetected && !DPX.IsDetected)
         {
-            if (Buffer_Size >= 1024 * 1024) // Arbitrary choosen, temporary
+            size_t AttachementSizeFinal = (AttachementSize != (size_t)-1) ? AttachementSize : (1024 * 1024); // Default value arbitrary choosen
+            if (Buffer_Size >= AttachementSizeFinal)
             {
                 cout << Name << " is not small, expected to be an attachment? Please contact info@mediaarea.net if you want support of such file.\n";
                 exit(1);
@@ -565,11 +569,18 @@ int FFmpeg_Command(const char* FileName)
     stringstream t;
     t << MapPos++;
     Command += " -attach \"" + rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" \"";
-    Command += FileName;
-    if (Command[Command.size() - 1] == '/' || Command[Command.size() - 1] == '\\')
-        Command.pop_back();
-    Command += ".mkv\"";
-
+    if (OutputFileName.empty())
+    {
+        Command += FileName;
+        if (Command[Command.size() - 1] == '/' || Command[Command.size() - 1] == '\\')
+            Command.pop_back();
+        Command += ".mkv";
+    }
+    else
+    {
+        Command += OutputFileName;
+    }
+    Command += '\"';
     cout << Command << endl;
 
     return 0;
@@ -712,12 +723,13 @@ int main(int argc, const char* argv[])
     if (argc < 2)
         return Usage(argv[0]);
     
+    AttachementSize = (size_t)-1;
 
     vector<string> Args;
     for (int i = 0; i < argc; i++)
     {
         if ((argv[i][0] == '.' && argv[i][1] == '\0')
-         || (argv[i][0] == '.' && (argv[i][1] == '/' || argv[i][1] == '\\') && argv[i][2] == '\0'))
+            || (argv[i][0] == '.' && (argv[i][1] == '/' || argv[i][1] == '\\') && argv[i][2] == '\0'))
         {
             //translate to "../xxx" in order to get the top level directory name
             char buff[FILENAME_MAX];
@@ -727,10 +739,16 @@ int main(int argc, const char* argv[])
             Arg = ".." + Arg.substr(Path_Pos);
             Args.push_back(Arg);
         }
+        else if ((strcmp(argv[i], "--attachment-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
+            AttachementSize = atoi(argv[++i]);
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
             return Help(argv[0]);
         else if (strcmp(argv[i], "--version") == 0)
             return Version();
+        else if ((strcmp(argv[i], "--output-file-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
+            OutputFileName = argv[++i];
+        else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0) && i + 1 < argc)
+            RawcookedFileName = argv[++i];
         else if (argv[i][0] == '-' && argv[i][1] != '\0')
         {
             int Value = SetOption(argv, i, argc);
@@ -771,10 +789,15 @@ int main(int argc, const char* argv[])
     }
 
     // RAWcooked file name
-    rawcooked_reversibility_data_FileName = string(Args[1]);
-    if (rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '/' || rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '\\')
-        rawcooked_reversibility_data_FileName.pop_back();
-    rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
+    if (RawcookedFileName.empty())
+    {
+        rawcooked_reversibility_data_FileName = string(Args[1]);
+        if (rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '/' || rawcooked_reversibility_data_FileName[rawcooked_reversibility_data_FileName.size() - 1] == '\\')
+            rawcooked_reversibility_data_FileName.pop_back();
+        rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
+    }
+    else
+        rawcooked_reversibility_data_FileName = RawcookedFileName;
 
     // Global path position
     Path_Pos_Global = (size_t)-1;
