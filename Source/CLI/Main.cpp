@@ -733,7 +733,7 @@ int main(int argc, const char* argv[])
         }
         else if (strcmp(argv[i], "--help") == 0 || (strcmp(argv[i], "-h") == 0))
             return Help(argv[0]);
-        else if (strcmp(argv[i], "--version") == 0)
+        else if (strcmp(argv[i], "--version") == 0 || (strcmp(argv[i], "-v") == 0))
             return Version();
         else if (argv[i][0] == '-' && argv[i][1] != '\0')
         {
