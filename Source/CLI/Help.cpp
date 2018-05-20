@@ -23,7 +23,7 @@ ReturnValue Help(const char* Name)
     printf("Options:\n");
     printf("  --help, -h\n");
     printf("      Display this help and exit\n");
-    printf("  --version, -v\n");
+    printf("  --version\n");
     printf("      Display version and exit\n");
 
     return ReturnValue_OK;
