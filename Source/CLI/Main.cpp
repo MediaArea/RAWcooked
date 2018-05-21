@@ -718,6 +718,22 @@ int SetOption(const char* argv[], int& i, int argc)
 }
 
 //---------------------------------------------------------------------------
+int SetOutputFileName(const char* FileName)
+{
+    const char* AfterDot = strrchr(FileName, '.');
+    if (AfterDot)
+        AfterDot++;
+    if (!AfterDot || (strcmp(AfterDot, "mkv") && strcmp(AfterDot, "MKV")))
+    {
+        cout << "Unsupported output file extension. Please contact info@mediaarea.net if you want support of such output format.\n";
+        return 1;
+    }
+
+    OutputFileName = FileName;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int main(int argc, const char* argv[])
 {
     if (argc < 2)
@@ -746,7 +762,11 @@ int main(int argc, const char* argv[])
         else if (strcmp(argv[i], "--version") == 0)
             return Version();
         else if ((strcmp(argv[i], "--output-file-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
-            OutputFileName = argv[++i];
+        {
+            int Value = SetOutputFileName(argv[++i]);
+            if (Value)
+                return Value;
+        }
         else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0) && i + 1 < argc)
             RawcookedFileName = argv[++i];
         else if (argv[i][0] == '-' && argv[i][1] != '\0')
