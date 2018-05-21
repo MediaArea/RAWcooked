@@ -462,18 +462,18 @@ int ParseFile(vector<string>& AllFiles, size_t AllFiles_Pos)
         }
         else
         {
-        ffmpeg_info_struct info;
+            ffmpeg_info_struct info;
 
-        info.FileName = Files[0];
-        if (!FileName_StartNumber.empty() && !FileName_Template.empty())
-        {
-            info.FileName_StartNumber = FileName_StartNumber;
-            info.FileName_Template = FileName_Template;
-        }
+            info.FileName = Files[0];
+            if (!FileName_StartNumber.empty() && !FileName_Template.empty())
+            {
+                info.FileName_StartNumber = FileName_StartNumber;
+                info.FileName_Template = FileName_Template;
+            }
 
-        info.Slices = slices;
+            info.Slices = slices;
 
-        FFmpeg_Info.push_back(info);
+            FFmpeg_Info.push_back(info);
         }
 
     }
