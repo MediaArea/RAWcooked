@@ -37,6 +37,7 @@ public:
     uint64_t                    Style;
     size_t                      slice_x;
     size_t                      slice_y;
+    string*                     FrameRate;
 
     // Error message
     const char*                 ErrorMessage();
@@ -76,6 +77,7 @@ private:
     uint32_t                    Get_L4();
     uint32_t                    Get_B4();
     uint32_t                    Get_X4() { return IsBigEndian ? Get_B4() : Get_L4(); }
+    double                      Get_XF4();
 
     // Error message
     const char*                 error_message;
