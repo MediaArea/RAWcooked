@@ -1,6 +1,6 @@
 # RAWcooked User Manual
 
-## Encode Files
+## Encode
 
 ### Folder
 
@@ -30,6 +30,6 @@ The file contains RAW data (e.g. it is a .dpx or .wav file). The `RAWcooked` too
 
 The filenames usually end with a numbered sequence. Enter one frame and the tool will generate the regex to parse all the frames in the folder.
 
-## Decode Files
+## Decode
 
 The file is a Matroska container (.mkv). The `RAWcooked` tool decodes back the video and the audio of file to its original formats.  All metadata accompanying the original data are preserved **bit-by-bit**.
