@@ -4,7 +4,7 @@
 
 ### Folder
 
-```sh
+```
 rawcooked <folder>
 ```
 
@@ -18,7 +18,7 @@ The filenames of the single-image files must end with a numbered sequence. `RAWc
 
 ### File
 
-```sh
+```
 rawcooked <file>
 ```
 
@@ -32,7 +32,7 @@ The filenames usually end with a numbered sequence. Enter one frame and the tool
 
 ## Decode
 
-```sh
+```
 rawcooked <file>
 ```
 
