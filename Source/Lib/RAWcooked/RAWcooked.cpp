@@ -23,19 +23,19 @@ static const uint32_t Name_EBML_DoctypeVersion = 0x0287;
 static const uint32_t Name_EBML_DoctypeReadVersion = 0x0285;
 
 // Top level
-static const uint32_t Name_RawCookedSegment = 0x7273; // " rs", RAWcooked Segment part
-static const uint32_t Name_RawCookedTrack = 0x7274; // " rt", RAWcooked Track part
-static const uint32_t Name_RawCookedBlock = 0x7262; // " rb", RAWcooked BlockGroup part
+static const uint32_t Name_RawCookedSegment = 0x7273; // "rs", RAWcooked Segment part
+static const uint32_t Name_RawCookedTrack = 0x7274;   // "rt", RAWcooked Track part
+static const uint32_t Name_RawCookedBlock = 0x7262;   // "rb", RAWcooked BlockGroup part
 // File data
 static const uint32_t Name_RawCooked_BeforeData = 0x01;
 static const uint32_t Name_RawCooked_AfterData = 0x02;
-static const uint32_t Name_RawCooked_MaskBaseBeforeData = 0x03; // In BlockGroup only
-static const uint32_t Name_RawCooked_MaskBaseAfterData = 0x04; // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskBaseBeforeData = 0x03;     // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskBaseAfterData = 0x04;      // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionBeforeData = 0x03; // In Track only
-static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04; // In Track only
+static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04;  // In Track only
 // File metadata
 static const uint32_t Name_RawCooked_FileName = 0x10;
-static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11; // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11;     // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track only
 // File stats
 static const uint32_t Name_RawCooked_FileMD5 = 0x20;
