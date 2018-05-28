@@ -8,4 +8,5 @@ When needed, the uncompressed source is retrieved **bit-by-bit**, in a manner fa
 
 ## Table of Contents
 
+- [RAWcooked User Manual](User_Manual.md)
 - [Structure of RAWcooked reversibility data](File_Stucture.md)
