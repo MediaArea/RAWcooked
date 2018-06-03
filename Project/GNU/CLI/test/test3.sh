@@ -23,7 +23,7 @@ while read line ; do
     test=$(basename "${path}")
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        cmdline=$(${valgrind} rawcooked "${file}" 2>stderr)
+        cmdline=$(${valgrind} rawcooked -d "${file}" 2>stderr)
         result=$?
         stderr="$(<stderr)"
         rm -f stderr
