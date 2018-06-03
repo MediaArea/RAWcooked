@@ -622,6 +622,11 @@ int FFmpeg_Command(const char* FileName)
             #endif
             return Value;
         }
+
+        // Delete the temporary file
+        int Result = remove(rawcooked_reversibility_data_FileName.c_str());
+        if (Result)
+            cerr << "Error: can not remove temporary file " << rawcooked_reversibility_data_FileName << endl;
     }
 
     return 0;
