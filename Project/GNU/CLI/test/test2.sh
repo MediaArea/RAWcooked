@@ -42,7 +42,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-            cmdline=$(${valgrind} rawcooked ${files} 2>/dev/null)
+            cmdline=$(${valgrind} rawcooked -d ${files} 2>/dev/null)
             result=$?
 
             if [ "${file: -1}" == "/" ] ; then

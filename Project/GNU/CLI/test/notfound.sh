@@ -4,7 +4,7 @@ PATH="${PWD}:$PATH"
 
 rcode=0
 
-stderr=$(${valgrind} rawcooked DoesNotExist/NotFound.dpx 2>&1 >/dev/null)
+stderr=$(${valgrind} rawcooked -d DoesNotExist/NotFound.dpx 2>&1 >/dev/null)
 result=$?
 
 # check valgrind

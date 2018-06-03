@@ -62,6 +62,8 @@ map<string, string> VideoInputOptions;
 size_t AttachementSize;
 string OutputFileName;
 string RawcookedFileName;
+string BinName;
+bool   DisplayCommand;
 
 //---------------------------------------------------------------------------
 bool IsDir(const char* Name)
@@ -534,7 +536,10 @@ int FFmpeg_Command(const char* FileName)
     }
 
     string Command;
-    Command += "ffmpeg";
+    if (BinName.empty())
+        Command += "ffmpeg";
+    else
+        Command += BinName;
 
     // Input
     for (size_t i = 0; i < FFmpeg_Info.size(); i++)
@@ -602,7 +607,22 @@ int FFmpeg_Command(const char* FileName)
         Command += OutputFileName;
     }
     Command += '\"';
-    cout << Command << endl;
+
+
+    if (DisplayCommand)
+        cout << Command << endl;
+    else
+    {
+        if (int Value = system(Command.c_str()))
+        {
+            cout << Value << endl;
+            #if !(defined(_WIN32) || defined(_WINDOWS))
+                if (Value > 0xFF && !(Value & 0xFF))
+                    Value++; // On Unix-like systems, exit status code is sometimes casted to 8-bit long, and system() returns a value multiple of 0x100 when e.g. the command does not exist. We increment the value by 1 in order to have cast to 8-bit not 0 (which can be considered as "OK" by some commands e.g. appending " && echo OK")
+            #endif
+            return Value;
+        }
+    }
 
     return 0;
 }
@@ -766,12 +786,27 @@ int SetOutputFileName(const char* FileName)
 }
 
 //---------------------------------------------------------------------------
+int SetBinName(const char* FileName)
+{
+    BinName = FileName;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int SetDisplayCommand()
+{
+    DisplayCommand = true;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int main(int argc, const char* argv[])
 {
     if (argc < 2)
         return Usage(argv[0]);
     
     AttachementSize = (size_t)-1;
+    DisplayCommand = false;
 
     vector<string> Args;
     for (int i = 0; i < argc; i++)
@@ -789,6 +824,18 @@ int main(int argc, const char* argv[])
         }
         else if ((strcmp(argv[i], "--attachment-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
             AttachementSize = atoi(argv[++i]);
+        else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0) && i + 1 < argc)
+        {
+            int Value = SetBinName(argv[++i]);
+            if (Value)
+                return Value;
+        }
+        else if ((strcmp(argv[i], "--display-command") == 0 || strcmp(argv[i], "-d") == 0))
+        {
+            int Value = SetDisplayCommand();
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
             return Help(argv[0]);
         else if (strcmp(argv[i], "--version") == 0)
