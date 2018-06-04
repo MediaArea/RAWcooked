@@ -183,6 +183,9 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.h">
       <Filter>ThirdParty\zlib</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FileIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -262,6 +265,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.c">
       <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -103,8 +103,7 @@ const char* dpx::ErrorMessage()
 
 //---------------------------------------------------------------------------
 dpx::dpx() :
-    WriteFileCall(NULL),
-    WriteFileCall_Opaque(NULL),
+    RAWcooked(NULL),
     IsDetected(false),
     Style(DPX_Style_Max),
     FrameRate(NULL),
@@ -312,16 +311,14 @@ bool dpx::Parse()
     size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8);
 
     // Write RAWcooked file
-    if (WriteFileCall)
+    if (RAWcooked)
     {
-        rawcooked RAWcooked;
-        RAWcooked.WriteFileCall = WriteFileCall;
-        RAWcooked.WriteFileCall_Opaque = WriteFileCall_Opaque;
-        RAWcooked.Before = Buffer;
-        RAWcooked.Before_Size = OffsetToImage;
-        RAWcooked.After = Buffer + Buffer_Size - EndOfImagePadding;
-        RAWcooked.After_Size = EndOfImagePadding;
-        RAWcooked.Parse();
+        RAWcooked->Unique = false;
+        RAWcooked->Before = Buffer;
+        RAWcooked->Before_Size = OffsetToImage;
+        RAWcooked->After = Buffer + Buffer_Size - EndOfImagePadding;
+        RAWcooked->After_Size = EndOfImagePadding;
+        RAWcooked->Parse();
     }
 
     return 0;

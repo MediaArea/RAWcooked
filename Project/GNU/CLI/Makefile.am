@@ -2,10 +2,14 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 
 bin_PROGRAMS = rawcooked
 rawcooked_SOURCES = \
+    ../../../Source/CLI/Global.cpp \
     ../../../Source/CLI/Help.cpp \
+    ../../../Source/CLI/Input.cpp \
     ../../../Source/CLI/Main.cpp \
+    ../../../Source/CLI/Output.cpp \
     ../../../Source/Lib/CRC32/ZenCRC32.cpp \
     ../../../Source/Lib/DPX/DPX.cpp \
+    ../../../Source/Lib/FileIO.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
     ../../../Source/Lib/FFV1/FFV1_Frame.cpp \

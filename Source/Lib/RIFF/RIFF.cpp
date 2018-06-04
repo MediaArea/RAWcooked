@@ -87,8 +87,7 @@ const char* riff::ErrorMessage()
 
 //---------------------------------------------------------------------------
 riff::riff() :
-    WriteFileCall(NULL),
-    WriteFileCall_Opaque(NULL),
+    RAWcooked(NULL),
     IsDetected(false),
     Style(PCM_Style_Max),
     error_message(NULL)
@@ -195,17 +194,14 @@ void riff::WAVE()
 void riff::WAVE_data()
 {
     // Write RAWcooked file
-    if (WriteFileCall)
+    if (RAWcooked)
     {
-        rawcooked RAWcooked;
-        RAWcooked.Unique = true;
-        RAWcooked.WriteFileCall = WriteFileCall;
-        RAWcooked.WriteFileCall_Opaque = WriteFileCall_Opaque;
-        RAWcooked.Before = Buffer;
-        RAWcooked.Before_Size = Buffer_Offset;
-        RAWcooked.After = Buffer + Levels[Level].Offset_End;
-        RAWcooked.After_Size = Buffer_Size - Levels[Level].Offset_End;
-        RAWcooked.Parse();
+        RAWcooked->Unique = true;
+        RAWcooked->Before = Buffer;
+        RAWcooked->Before_Size = Buffer_Offset;
+        RAWcooked->After = Buffer + Levels[Level].Offset_End;
+        RAWcooked->After_Size = Buffer_Size - Levels[Level].Offset_End;
+        RAWcooked->Parse();
     }
 }
 
