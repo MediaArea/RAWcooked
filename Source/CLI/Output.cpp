@@ -43,7 +43,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 return 1;
             }
         }
-        Global.OutputOptions["slices"] = Slices;
+        if (!Slices.empty())
+            Global.OutputOptions["slices"] = Slices;
     }
 
     string Command;

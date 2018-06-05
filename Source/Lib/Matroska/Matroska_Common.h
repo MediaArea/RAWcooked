@@ -127,7 +127,6 @@ private:
         bool                    Unique;
         string                  ErrorMessage;
         format                  Format;
-        FILE*                   F;
 
         trackinfo() :
             Mask_FileName(NULL),
