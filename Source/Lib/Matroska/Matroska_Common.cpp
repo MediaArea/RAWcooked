@@ -679,7 +679,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Pos];
                                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos];
                             }
-                            if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                            if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                             {
                                 dpx DPX;
                                 DPX.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
