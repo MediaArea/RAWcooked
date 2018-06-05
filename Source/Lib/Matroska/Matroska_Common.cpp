@@ -190,6 +190,7 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedSegment)
 ELEMENT_VOID(      70, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryName)
 ELEMENT_VOID(      71, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryVersion)
+ELEMENT_VOID(      72, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_PathSeparator)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
@@ -533,6 +534,17 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_Librar
 {
     RAWcooked_LibraryVersion = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
     RejectIncompatibleVersions();
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_PathSeparator()
+{
+    string RAWcooked_PathSeparator = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    if (RAWcooked_PathSeparator != "/")
+    {
+        std::cerr << "Path separator not / is not supported, exiting" << std::endl;
+        exit(1);
+    }
 }
 
 //---------------------------------------------------------------------------
