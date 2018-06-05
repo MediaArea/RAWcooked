@@ -265,9 +265,6 @@ void matroska::Shutdown()
                 }
             }
         }
-
-        if (TrackInfo_Current->F)
-            fclose(TrackInfo_Current->F);
     }
 
     FramesPool->shutdown();
