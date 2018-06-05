@@ -68,6 +68,11 @@ It may contain information about the RAWcooked reversibility data writing librar
 
 #### LibraryVersion
 
+#### PathSeparator
+
+Indicate the path separator of file names.  
+If not present, considered as "/".  
+
 ### RawCookedTrack
 
 A "RawCookedTrack" element contains information about a track.  

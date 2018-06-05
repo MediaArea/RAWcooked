@@ -44,6 +44,7 @@ static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
 // Global information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
+static const uint32_t Name_RawCooked_PathSeparator = 0x72;
 // Parameters
 static const char* DocType = "rawcooked";
 static const uint8_t DocTypeVersion = 1;
@@ -130,6 +131,17 @@ rawcooked::~rawcooked()
 //---------------------------------------------------------------------------
 void rawcooked::Parse()
 {
+    // Cross-platform support
+    // RAWcooked file format supports setting of the path separator but
+    // we currently set all to "/", which is supported by both Windows and Unix based platforms
+    // On Windows, we convert "\" to "/" as both are considered as path separators and Unix-based  systems don't consider "\" as a path separator
+    // If not doing this, files are not considered as in a sub-directory when encoded with a Windows platform then decoded with a Unix-based platform.
+    #if defined(_WIN32) || defined(_WINDOWS)
+        string::size_type i = 0;
+        while ((i = FileNameDPX.find('\\', i)) != string::npos)
+            FileNameDPX[i++] = '/';
+    #endif
+
     // Create or Use mask
     uint8_t* FileName = (uint8_t*)FileNameDPX.c_str();
     size_t FileName_Size = FileNameDPX.size();
