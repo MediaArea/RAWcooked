@@ -260,8 +260,7 @@ int input::AnalyzeInputs(global& Global)
             Path_Pos--;
         if (Path_Pos)
             Path_Pos = Global.Inputs[0].find_last_of("/\\", Path_Pos - 1);
-        if (Path_Pos == string::npos)
-            Path_Pos = 0;
+        Path_Pos++;
 
         if (Global.Path_Pos_Global > Path_Pos)
             Global.Path_Pos_Global = Path_Pos;
