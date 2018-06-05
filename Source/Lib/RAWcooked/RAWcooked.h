@@ -12,14 +12,15 @@
 //---------------------------------------------------------------------------
 #include <cstdint>
 #include <cstddef>
+#include <string>
+using namespace std;
 //---------------------------------------------------------------------------
-
-typedef void(*write_file_call)(uint8_t*, size_t, void*);
 
 class rawcooked
 {
 public:
-    rawcooked();
+                                rawcooked();
+                                ~rawcooked();
 
     bool                        Unique; // If set, data is for the whole stream (unique file)
 
@@ -29,13 +30,28 @@ public:
     uint8_t*                    After;
     uint64_t                    After_Size;
 
-    void Parse();
+    void                        Parse();
+    void                        ResetTrack();
+    void                        Close();
 
-    write_file_call             WriteFileCall;
-    void*                       WriteFileCall_Opaque;
+    string                      FileName;
+    string                      FileNameDPX;
 
 private:
     uint64_t                    Buffer_Offset;
+
+    // File IO
+    FILE*                       F;
+    size_t                      BlockCount;
+    void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size);
+
+    // First frame info
+    uint8_t*                    FirstFrame_Before;
+    size_t                      FirstFrame_Before_Size;
+    uint8_t*                    FirstFrame_After;
+    size_t                      FirstFrame_After_Size;
+    uint8_t*                    FirstFrame_FileName;
+    size_t                      FirstFrame_FileName_Size;
 };
 
 //---------------------------------------------------------------------------

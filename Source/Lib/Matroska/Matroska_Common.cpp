@@ -13,9 +13,73 @@
 #include <cstdio>
 #include <thread>
 #include <iostream>
+#include <sstream>
 #include "ThreadPool.h"
 #include "zlib.h"
+#if defined(_WIN32) || defined(_WINDOWS)
+    #include <io.h> // File existence
+    #include <direct.h> // Directory creation
+    #define access _access_s
+    #define mkdir _mkdir
+    static const char PathSeparator = '\\';
+#else
+    #include <sys/stat.h>
+    #include <dirent.h>
+    #include <unistd.h>
+    static const char PathSeparator = '/';
+#endif
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const string& FileNameDPX)
+{
+    stringstream OutFileName;
+    OutFileName << FileName << ".RAWcooked" << PathSeparator << FileNameDPX;
+    string OutFileNameS = OutFileName.str().c_str();
+    #ifdef _MSC_VER
+        #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
+    #endif
+    FILE* F = fopen(OutFileNameS.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb");
+    #ifdef _MSC_VER
+        #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
+    #endif
+    if (!F)
+    {
+        size_t i = 0;
+        for (;;)
+        {
+            i = OutFileNameS.find_first_of("/\\", i+1);
+            if (i == (size_t)-1)
+                break;
+            string t = OutFileNameS.substr(0, i);
+            if (access(t.c_str(), 0))
+            {
+                #if defined(_WIN32) || defined(_WINDOWS)
+                if (mkdir(t.c_str()))
+                #else
+                if (mkdir(t.c_str(), 0755))
+                #endif
+                    exit(0);
+            }
+        }
+        #ifdef _MSC_VER
+            #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
+        #endif
+        F = fopen(OutFileName.str().c_str(), (RawFrame->Buffer && !RawFrame->Pre) ?"ab":"wb");
+        #ifdef _MSC_VER
+            #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
+        #endif
+    }
+    if (RawFrame->Pre)
+        fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
+    if (RawFrame->Buffer)
+        fwrite(RawFrame->Buffer, RawFrame->Buffer_Size, 1, F);
+    for (size_t p = 0; p<RawFrame->Planes.size(); p++)
+        fwrite(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size, 1, F);
+    if (RawFrame->Post)
+        fwrite(RawFrame->Post, RawFrame->Post_Size, 1, F);
+    fclose(F);
+}
 
 //---------------------------------------------------------------------------
 static int Get_EB(unsigned char* Buffer, uint64_t& Offset, uint64_t& Name, uint64_t& Size)
@@ -160,8 +224,6 @@ ELEMENT_END()
 
 //---------------------------------------------------------------------------
 matroska::matroska() :
-    WriteFrameCall(NULL),
-    WriteFrameCall_Opaque(NULL),
     IsDetected(false)
 {
     FramesPool = new ThreadPool(1);
@@ -195,16 +257,17 @@ void matroska::Shutdown()
                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[0];
                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[0];
 
-                if (WriteFrameCall)
                 {
-                    write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                    WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+                    string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                    WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
+                    WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
                 }
             }
         }
+
+        if (TrackInfo_Current->F)
+            fclose(TrackInfo_Current->F);
     }
 
     FramesPool->shutdown();
@@ -306,17 +369,13 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         return;
     }
 
-    if (WriteFrameCall)
     {
-        write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-        WriteToDisk_Data->FileNameDPX = AttachedFile_FileName;
-
         raw_frame RawFrame;
         RawFrame.Pre = Buffer + Buffer_Offset;
         RawFrame.Pre_Size = Levels[Level].Offset_End - Buffer_Offset;
 
         //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-        WriteFrameCall(0, &RawFrame, WriteFrameCall_Opaque);
+        WriteFrameCall(0, &RawFrame, FileName, AttachedFile_FileName);
     }
 
 }
@@ -640,16 +699,14 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 TrackInfo_Current->R_B->Style_Private = DPX.Style;
                             }
                             TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
-                            if (WriteFrameCall)
                             {
                                 if (TrackInfo_Current->DPX_FileName && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count)
                                 {
-                                    write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
 
-                                    WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
+                                    string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
 
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
+                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
                                 }
                                 else if (TrackInfo_Current->ErrorMessage.empty())
                                 {
@@ -678,13 +735,11 @@ void matroska::Segment_Cluster_SimpleBlock()
                             TrackInfo_Current->Frame.RawFrame->Buffer_Size = Levels[Level].Offset_End - Buffer_Offset - 4;
                             TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = false;
 
-                            if (WriteFrameCall)
                             {
-                                write_to_disk_struct* WriteToDisk_Data = (write_to_disk_struct*)WriteFrameCall_Opaque;
-                                WriteToDisk_Data->FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+                                string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque);
+                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
                             }
                             break;
                 default:;

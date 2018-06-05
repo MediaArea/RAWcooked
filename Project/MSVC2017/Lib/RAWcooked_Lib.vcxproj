@@ -31,6 +31,7 @@
     <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FileIO.h" />
     <ClInclude Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.h" />
     <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
@@ -61,6 +62,7 @@
     <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp" />

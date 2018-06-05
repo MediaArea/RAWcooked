@@ -19,8 +19,6 @@
 class matroska_mapping;
 class ThreadPool;
 
-typedef void (*write_frame_call)(uint64_t, raw_frame*, void*);
-
 class matroska
 {
 public:
@@ -33,8 +31,7 @@ public:
     void                        Parse();
     void                        Shutdown();
 
-    write_frame_call            WriteFrameCall;
-    void*                       WriteFrameCall_Opaque;
+    string                      FileName;
 
     // Info
     bool                        IsDetected;
@@ -130,6 +127,7 @@ private:
         bool                    Unique;
         string                  ErrorMessage;
         format                  Format;
+        FILE*                   F;
 
         trackinfo() :
             Mask_FileName(NULL),

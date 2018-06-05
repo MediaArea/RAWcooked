@@ -15,7 +15,7 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
-typedef void(*write_file_call)(uint8_t*, size_t, void*);
+class rawcooked;
 
 class dpx
 {
@@ -29,8 +29,7 @@ public:
 
     frame                       Frame;
 
-    write_file_call             WriteFileCall;
-    void*                       WriteFileCall_Opaque;
+    rawcooked*                  RAWcooked;
 
     // Info
     bool                        IsDetected;

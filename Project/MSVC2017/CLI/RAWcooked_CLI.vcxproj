@@ -25,11 +25,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\CLI\Config.h" />
+    <ClInclude Include="..\..\..\Source\CLI\Input.h" />
     <ClInclude Include="..\..\..\Source\CLI\Help.h" />
+    <ClInclude Include="..\..\..\Source\CLI\Global.h" />
+    <ClInclude Include="..\..\..\Source\CLI\Output.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Source\CLI\Input.cpp" />
     <ClCompile Include="..\..\..\Source\CLI\Help.cpp" />
     <ClCompile Include="..\..\..\Source\CLI\Main.cpp" />
+    <ClCompile Include="..\..\..\Source\CLI\Global.cpp" />
+    <ClCompile Include="..\..\..\Source\CLI\Output.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5F56E9D9-9268-49C9-8658-901271E3A23E}</ProjectGuid>
