@@ -17,7 +17,6 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/FFV1/FFV1_Slice.cpp \
     ../../../Source/Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
-    ../../../Source/Lib/FrameHash/FrameHash_MD5.cpp \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
@@ -32,10 +31,12 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/zlib/inftrees.c \
     ../../../Source/Lib/ThirdParty/zlib/trees.c \
     ../../../Source/Lib/ThirdParty/zlib/uncompr.c \
-    ../../../Source/Lib/ThirdParty/zlib/zutil.c \
-    ../../../Source/Lib/ThirdParty/md5/md5.c
+    ../../../Source/Lib/ThirdParty/zlib/zutil.c
 
-AM_CPPFLAGS = -I../../../Source -I../../../Source/Lib/ThirdParty/thread-pool/include -I../../../Source/Lib/ThirdParty/zlib
+AM_CPPFLAGS = -I../../../Source \
+              -I../../../Source/Lib/ThirdParty/thread-pool/include\
+              -I../../../Source/Lib/ThirdParty/zlib
+
 AM_CXXFLAGS = -std=c++0x
 
 man1_MANS = ../../../Source/CLI/rawcooked.1
