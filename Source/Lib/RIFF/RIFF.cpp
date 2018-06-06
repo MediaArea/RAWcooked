@@ -19,18 +19,26 @@ enum endianess
 
 struct riff_tested
 {
-    uint32_t                    SamplingRate;
-    uint8_t                     BitDepth;
-    uint32_t                    ChannelCount;
+    uint32_t                    SamplesPerSec;
+    uint16_t                    BitDepth;
+    uint16_t                    Channels;
     endianess                   Endianess;
     riff::style                 Style;
 };
 
-const size_t RIFF_Tested_Size = 26;
+const size_t RIFF_Tested_Size = 12;
 struct riff_tested RIFF_Tested[RIFF_Tested_Size] =
 {
+    { 44100, 16, 1, LE, riff::PCM_44100_16_1_LE },
+    { 44100, 16, 2, LE, riff::PCM_44100_16_2_LE },
+    { 44100, 16, 6, LE, riff::PCM_44100_16_6_LE },
+    { 44100, 24, 1, LE, riff::PCM_44100_24_1_LE },
+    { 44100, 24, 2, LE, riff::PCM_44100_24_2_LE },
+    { 44100, 24, 6, LE, riff::PCM_44100_24_6_LE },
+    { 48000, 16, 1, LE, riff::PCM_48000_16_1_LE },
     { 48000, 16, 2, LE, riff::PCM_48000_16_2_LE },
     { 48000, 16, 6, LE, riff::PCM_48000_16_6_LE },
+    { 48000, 24, 1, LE, riff::PCM_48000_24_1_LE },
     { 48000, 24, 2, LE, riff::PCM_48000_24_2_LE },
     { 48000, 24, 6, LE, riff::PCM_48000_24_6_LE },
 };
@@ -62,6 +70,7 @@ ELEMENT_END()
 
 ELEMENT_BEGIN(WAVE)
 ELEMENT_VOID(64617461, WAVE_data)
+ELEMENT_VOID(666D7420, WAVE_fmt_)
 ELEMENT_END()
 
 
@@ -82,7 +91,7 @@ const char* riff::ErrorMessage()
 }
 
 //***************************************************************************
-// DPX
+// RIFF
 //***************************************************************************
 
 //---------------------------------------------------------------------------
@@ -123,6 +132,12 @@ bool riff::Parse()
 {
     if (Buffer_Size < 4 || Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
         return false;
+
+    if (Buffer_Size >= 0xFFFFFFFF)
+    {
+        Error("RF64 (4GB+ WAV) is not yet supported");
+        return false;
+    }
 
     IsDetected = true;
     Buffer_Offset = 0;
@@ -166,12 +181,22 @@ size_t riff::BitsPerBlock(riff::style Style)
 {
     switch (Style)
     {
+        case riff::PCM_44100_16_1_LE:
+        case riff::PCM_48000_16_1_LE:   // 1x16-bit content
+                                        return 16;
+        case riff::PCM_44100_16_2_LE:
         case riff::PCM_48000_16_2_LE:   // 2x16-bit content
                                         return 32;
+        case riff::PCM_44100_16_6_LE:
         case riff::PCM_48000_16_6_LE:   // 6x16-bit content
                                         return 96;
+        case riff::PCM_44100_24_1_LE:
+        case riff::PCM_48000_24_1_LE:   // 1x24-bit content
+                                        return 24;
+        case riff::PCM_44100_24_2_LE:
         case riff::PCM_48000_24_2_LE:   // 2x24-bit content
                                         return 48;
+        case riff::PCM_44100_24_6_LE:
         case riff::PCM_48000_24_6_LE:   // 6x24-bit content
                                         return 144;
         default:
@@ -203,5 +228,108 @@ void riff::WAVE_data()
         RAWcooked->After_Size = Buffer_Size - Levels[Level].Offset_End;
         RAWcooked->Parse();
     }
+}
+
+//---------------------------------------------------------------------------
+void riff::WAVE_fmt_()
+{
+    if (Levels[Level].Offset_End - Buffer_Offset < 16)
+    {
+        Error("WAV FormatTag format");
+        return;
+    }
+
+    endianess Endianess;
+    uint16_t FormatTag = Get_L2();
+    if (FormatTag == 1 || FormatTag == 0xFFFE)
+        Endianess = LE;
+    else
+    {
+        Error("WAV FormatTag is not WAVE_FORMAT_PCM 1");
+        return;
+    }
+
+    uint16_t Channels = Get_L2();
+    uint32_t SamplesPerSec = Get_L4();
+    uint32_t AvgBytesPerSec = Get_L4();
+    uint16_t BlockAlign = Get_L2();
+    uint16_t BitDepth = Get_L2();
+    if (Levels[Level].Offset_End > Buffer_Offset)
+
+
+    if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
+    {
+        Error("WAV BlockAlign not supported");
+        return;
+    }
+    if (BlockAlign * 8 != Channels * BitDepth)
+    {
+        Error("WAV BlockAlign not supported");
+        return;
+    }
+    if (FormatTag == 1)
+    {
+        if (Levels[Level].Offset_End - Buffer_Offset)
+        {
+            Error("WAV FormatTag format");
+            return;
+        }
+    }
+    if (FormatTag == 0xFFFE)
+    {
+        if (Levels[Level].Offset_End - Buffer_Offset != 24)
+        {
+            Error("WAV FormatTag format");
+            return;
+        }
+        uint16_t cbSize = Get_L2();
+        if (cbSize != 22)
+        {
+            Error("WAV FormatTag cbSize");
+            return;
+        }
+        uint16_t ValidBitsPerSample = Get_L2();
+        if (ValidBitsPerSample != BitDepth)
+        {
+            Error("WAV FormatTag ValidBitsPerSample");
+            return;
+        }
+        uint32_t ChannelMask = Get_L4();
+        if (Channels != 6 || ChannelMask != 0x3F)
+        {
+            Error("WAV FormatTag ChannelMask");
+            return;
+        }
+        uint32_t SubFormat1 = Get_L4();
+        uint32_t SubFormat2 = Get_L4();
+        uint32_t SubFormat3 = Get_B4();
+        uint64_t SubFormat4 = Get_B4();
+        if (SubFormat1 != 0x0000001
+         || SubFormat2 != 0x00100000
+         || SubFormat3 != 0x800000aa
+         || SubFormat4 != 0x00389b71)
+        {
+            Error("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
+            return;
+        }
+    }
+
+    // Supported?
+    size_t Tested = 0;
+    for (; Tested < RIFF_Tested_Size; Tested++)
+    {
+        riff_tested& RIFF_Tested_Item = RIFF_Tested[Tested];
+        if (RIFF_Tested_Item.SamplesPerSec == SamplesPerSec
+            && RIFF_Tested_Item.BitDepth == BitDepth
+            && RIFF_Tested_Item.Channels == Channels
+            && RIFF_Tested_Item.Endianess == Endianess)
+            break;
+    }
+    if (Tested >= RIFF_Tested_Size)
+    {
+        Error("Style (SamplesPerSec / BitDepth / Channels / Endianess combination)");
+        return;
+    }
+    Style = RIFF_Tested[Tested].Style;
 }
 

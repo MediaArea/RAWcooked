@@ -40,8 +40,16 @@ public:
 
     enum style
     {
+        PCM_44100_16_1_LE,
+        PCM_44100_16_2_LE,
+        PCM_44100_16_6_LE,
+        PCM_44100_24_1_LE,
+        PCM_44100_24_2_LE,
+        PCM_44100_24_6_LE,
+        PCM_48000_16_1_LE,
         PCM_48000_16_2_LE,
         PCM_48000_16_6_LE,
+        PCM_48000_24_1_LE,
         PCM_48000_24_2_LE,
         PCM_48000_24_6_LE,
         PCM_Style_Max,
@@ -76,6 +84,7 @@ private:
     RIFF_ELEMENT(_);
     RIFF_ELEMENT(WAVE);
     RIFF_ELEMENT(WAVE_data);
+    RIFF_ELEMENT(WAVE_fmt_);
     RIFF_ELEMENT(Void);
 
     // Error message
