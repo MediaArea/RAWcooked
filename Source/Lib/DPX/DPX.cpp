@@ -54,7 +54,7 @@ struct dpx_tested
     dpx::style                  Style;
 };
 
-const size_t DPX_Tested_Size = 25;
+const size_t DPX_Tested_Size = 26;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
     { RGB       ,  8, Packed , BE, dpx::RGB_8 },
@@ -76,7 +76,7 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { RGBA      ,  8, MethodA, LE, dpx::RGBA_8 },
     { RGBA      , 10, MethodA, LE, dpx::RGBA_10_FilledA_LE },
     { RGBA      , 10, MethodA, BE, dpx::RGBA_10_FilledA_BE },
-//    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE }, // Not supported by FFmpeg DPX parser
+    { RGBA      , 12, Packed , BE, dpx::RGBA_12_Packed_BE },
     { RGBA      , 12, MethodA, BE, dpx::RGBA_12_FilledA_BE },
     { RGBA      , 12, MethodA, LE, dpx::RGBA_12_FilledA_LE },
     { RGBA      , 16, Packed , BE, dpx::RGBA_16_BE },
