@@ -2,9 +2,12 @@
 .SH NAME
 \fBRAWcooked\fR \- encode and decode audio\-visual RAW data with Matroska, FFV1 and FLAC
 .SH SYNOPSIS
-.
-.SS
-\fBrawcooked \fIfolder\fR | \fIfile
+\fBrawcooked \fR[\fIoption\fR \.\.\.] (\fIfolder\fR | \fIfile\fR \.\.\.) [\fIoption\fR \.\.\.]
+.SH DESCRIPTION
+.TP
+\fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and the audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e\.g\. to/from harddisk, over network or for backup on LTO)\.
+.TP
+When needed, the uncompressed source is retrieved \fBbit\-by\-bit\fR, in a manner faster than uncompressed sources\. 
 .TP
 .I folder
 Encodes with the FFV1 video codec all single\-image video files in the \fIfolder\fR, encodes with the FLAC audio codec all audio files in the \fIfolder\fR, and muxes these into a Matroska container (\.mkv)\.
@@ -23,38 +26,89 @@ The filenames usually end with a numbered sequence\. Enter one frame and the too
 .br
 Decodes back the video and the audio of \fIfile\fR to its original formats\. All metadata accompanying the original data are preserved bit\-by\-bit\.
 .
-.SS
-\fBrawcooked \-e \fR(\fIfolder\fR | \fIfile\fR)
+.SH GENERAL OPTIONS
 .TP
-.B \-e
-Encodes the \fIfile\fRs in the \fIfolder\fR or the \fIfile\fR as above\.
-.LP
-Caveat: The \-e parameter has not been implemented yet.
-.
-.SS
-\fBrawcooked \-d \fIfile
-.TP
-.B \-d
-Decodes the Matroska \fIfile\fR back to the original data as above\.
-.LP
-Caveat: The \-d parameter has not been implemented yet.
-.
-.SS
-\fBrawcooked \-h | \-\-help
-.TP
-.B \-h | \-\-help
+.B \-\-help \fR|\fB \-h
 Displays a help message\.
-.
-.SS
-\fBrawcooked \-\-version
 .TP
 .B \-\-version
 Displays the installed version\.
-.SH DESCRIPTION
 .TP
-\fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up the back\-up process on LTO cartridges\.
+.B \-\-attachment\-max\-size \fIvalue\fR | \fB\-s \fIvalue
+Set maximum size of attachment to \fIvalue\fR (in bytes)\.
+.br
+Default value is \fI1048576\fR\.
 .TP
-When needed, the uncompressed source is retrieved \fBbit\-by\-bit\fR, in a manner faster than uncompressed sources directly stored on LTO cartridges\.
+.B \-\-display\-command \fR|\fB \-d
+When an external encoder/decoder is used, display the command to launch instead of launching it\.
+.TP
+.B \-\-output\-file\-name \fIvalue\fR | \fB\-o \fIvalue
+Set the name of the output file to \fIvalue\fR\.
+.br
+Default value is \fI${Input}.mkv/\fR\.
+.TP
+.B \-\-rawcooked\-file\-name \fIvalue\fR | \fB\-r \fIvalue
+Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR\.
+.br
+Default name is \fI${Input}.rawcooked_reversibility_data\fR
+.br
+\fBNote:\fR If the \fBRAWcooked\fR reversibility data file is included in the output A/V file during the encoding, this file is deleted after encoding\.
+.br
+\fBNote:\fR Not yet implemented for decoding\.
+.
+.SH INPUT RELATED OPTIONS
+.TP
+.B \-framerate \fIvalue
+Force video frame rate to \fIvalue\fR\.
+.br
+Default value is the one found in the image files if available, otherwise \fI24\fR\.
+.
+.SH ENCODING RELATED OPTIONS
+.TP
+.B \-c:a \fIvalue
+Force the audio encoding format to \fIvalue\fR: \fIcopy\fR (copy PCM to PCM, without modification), \fIflac\fR\.
+.br
+Default value is \fIflac\fR\.
+.TP
+.B \-c:v \fIvalue
+Force the video encoding format \fIvalue\fR: only \fIffv1\fR is currently allowed\.
+.br
+Default value is \fIffv1\fR\.
+.TP
+.B \-coder \fIvalue
+If video encoding format is \fIffv1\fR, set the coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table)\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-context \fIvalue
+If video encoding format is \fIffv1\fR, set the context to \fIvalue\fR: \fI0\fR (small), \fI1\fR (large)\.
+.br
+Default value is \fI0\fR\.
+.TP
+.B \-format \fIvalue
+Set the container format to \fIvalue\fR: only \fImatroska\fR is curently allowed\.
+.br
+Default value is \fImatroska\fR\.
+.TP
+.B \-g \fIvalue
+If video encoding format is \fIffv1\fR, set the GOP size to \fIvalue\fR\: any integer >=1\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-level \fIvalue
+If video encoding format is \fIffv1\fR, set the version to \fIvalue\fR: \fI0\fR, \fI1\fR, \fI3\fR\.
+.br
+Default value is \fI3\fR\.
+.TP
+.B \-slicecrc \fIvalue
+If video encoding format is \fIffv1\fR, set the CRC to \fIvalue\fR: \fI0\fR (CRC not present), \fI1\fR (CRC present)\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-slices \fIvalue
+If video encoding format is \fIffv1\fR, set the count of slices to \fIvalue\fR: any integer >=1 and making sense (2, 4, 6, 9, 16, 24\.\.\.)\.
+.br
+Default value is between \fI16\fR and \fI512\fR, depending on video frame size and depth\.
 .
 .SH COPYRIGHT
 Copyright (c) 2018 MediaArea\.net SARL & AV Preservation by reto\.ch
