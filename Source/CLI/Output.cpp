@@ -46,6 +46,25 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         if (!Slices.empty())
             Global.OutputOptions["slices"] = Slices;
     }
+    if (Global.VideoInputOptions.find("framerate") == Global.VideoInputOptions.end())
+    {
+        // Looking if any video stream has a frame rate
+        string FrameRate;
+        for (size_t i = 0; i < Streams.size(); i++)
+        {
+            if (FrameRate.empty() && !Streams[i].FrameRate.empty())
+                FrameRate = Streams[i].FrameRate;
+            if (!Streams[i].Slices.empty() && !Streams[i].FrameRate.empty() && Streams[i].FrameRate != FrameRate) // Note: Slices part is used here for detecting video streams. TODO: more explicit track type flagging
+            {
+                cerr << "Untested multiple frame rates, please contact info@mediaarea.net if you want support of such file\n";
+                return 1;
+            }
+        }
+        if (!FrameRate.empty())
+            Global.VideoInputOptions["framerate"] = FrameRate;
+        else
+            Global.VideoInputOptions["framerate"] = "24"; // Forcing framerate to 24 in case nothing is available in the imput files and command line. TODO: find some autodetect of frame rate based on audio duration
+    }
 
     string Command;
     if (Global.BinName.empty())
@@ -65,11 +84,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         // FileName_StartNumber (if needed)
         if (!Streams[i].FileName_StartNumber.empty())
         {
-            if (!Streams[i].FrameRate.empty())
-            {
-                Command += " -framerate ";
-                Command += Streams[i].FrameRate;
-            }
             Command += " -start_number ";
             Command += Streams[i].FileName_StartNumber;
         }
