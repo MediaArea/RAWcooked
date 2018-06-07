@@ -21,6 +21,20 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/RIFF/RIFF.cpp \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/cpu.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/crc.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/fixed.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/float.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/format.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/lpc.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/md5.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/memory.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/metadata_iterators.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/metadata_object.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/stream_decoder.c \
+    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/window.c \
     ../../../Source/Lib/ThirdParty/zlib/adler32.c \
     ../../../Source/Lib/ThirdParty/zlib/compress.c \
     ../../../Source/Lib/ThirdParty/zlib/crc32.c \
@@ -34,6 +48,8 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/zlib/zutil.c
 
 AM_CPPFLAGS = -I../../../Source \
+              -I../../../Source/Lib/ThirdParty/flac/include \
+              -I../../../Source/Lib/ThirdParty/flac/src/libFLAC/include \
               -I../../../Source/Lib/ThirdParty/thread-pool/include\
               -I../../../Source/Lib/ThirdParty/zlib
 

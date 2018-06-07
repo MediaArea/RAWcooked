@@ -82,6 +82,9 @@
     <Filter Include="ThirdParty\zlib">
       <UniqueIdentifier>{7600ed4d-f620-4716-9226-25d0256084bf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ThirdParty\flac">
+      <UniqueIdentifier>{57b8e003-f051-4de2-904b-ec5d41c0a70d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -177,6 +180,93 @@
     <ClInclude Include="..\..\..\Source\Lib\FileIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\callback.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\export.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\format.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\metadata.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\ordinals.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\stream_decoder.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\alloc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\compat.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\endswap.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\macros.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\safe_str.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\win_utf8_io.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\windows_unicode_filenames.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitmath.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitreader.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitwriter.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\crc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\float.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\format.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\lpc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\macros.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\md5.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\memory.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\metadata.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\window.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -253,6 +343,51 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitreader.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\window.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_object.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_iterators.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\float.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c">
+      <Filter>ThirdParty\flac</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

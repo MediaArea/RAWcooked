@@ -66,7 +66,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        if (strcmp(argv[i], "copy") == 0)
+        if (strcmp(argv[i], "copy") == 0 || strcmp(argv[i], "flac") == 0)
         {
             OutputOptions["c:a"] = argv[i];
             return 0;
@@ -274,7 +274,7 @@ void global::SetDefaults()
 
     // Audio format
     if (OutputOptions.find("c:a") == OutputOptions.end())
-        OutputOptions["c:a"] = "copy"; // Audio is copied
+        OutputOptions["c:a"] = "flac"; // Audio format is FLAC
                                  
     // FFV1 specific
     if (OutputOptions["c:v"] == "ffv1")
