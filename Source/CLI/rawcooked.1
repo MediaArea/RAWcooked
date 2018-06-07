@@ -2,7 +2,7 @@
 .SH NAME
 \fBRAWcooked\fR \- encode and decode audio\-visual RAW data with Matroska, FFV1 and FLAC
 .SH SYNOPSIS
-\fBrawcooked \fIfolder\fR | \fIfile
+\fBrawcooked \fR[\fIoption\fR \.\.\.] (\fIfolder\fR | \fIfile\fR \.\.\.) [\fIoption\fR \.\.\.]
 .SH DESCRIPTION
 .TP
 \fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and the audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e\.g\. to/from harddisk, over network or for backup on LTO)\.
@@ -48,7 +48,13 @@ Set the name of the output file to \fIvalue\fR\.
 Default value is \fI${Input}.mkv/\fR\.
 .TP
 .B \-\-rawcooked\-file\-name \fIvalue\fR | \fB\-r \fIvalue
-Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility\.
+Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR\.
+.br
+Default name is \fI${Input}.rawcooked_reversibility_data\fR
+.br
+\fBNote:\fR If the \fBRAWcooked\fR reversibility data file is included in the output A/V file during the encoding, this file is deleted after encoding\.
+.br
+\fBNote:\fR Not yet implemented for decoding\.
 .
 .SH INPUT RELATED OPTIONS
 .TP
@@ -102,7 +108,7 @@ Default value is \fI1\fR\.
 .B \-slices \fIvalue
 If video encoding format is \fIffv1\fR, set the count of slices to \fIvalue\fR: any integer >=1 and making sense (2, 4, 6, 9, 16, 24\.\.\.)\.
 .br
-Default value is between \fI16\fR and \fI512\fR, depending of video frame size and depth\.
+Default value is between \fI16\fR and \fI512\fR, depending on video frame size and depth\.
 .
 .SH COPYRIGHT
 Copyright (c) 2018 MediaArea\.net SARL & AV Preservation by reto\.ch
