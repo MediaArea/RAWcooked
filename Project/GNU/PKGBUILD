@@ -2,7 +2,7 @@
 # Maintainer: MediaArea.net SARL <info@mediaarea.net>
 
 pkgname=('rawcooked')
-pkgver=18.06alpha1
+pkgver=18.06
 pkgrel=1
 pkgdesc="Encodes RAW audio-visual data while permiting reversability"
 url="http://mediaarea.net"
