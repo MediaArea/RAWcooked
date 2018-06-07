@@ -5,7 +5,7 @@
 \fBrawcooked \fIfolder\fR | \fIfile
 .SH DESCRIPTION
 .TP
-\fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e\.g\. to/from harddisk, over network or for backup on LTO)\.
+\fBRAWcooked\fR encodes audio\-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and the audio codec FLAC for the sound\. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments\. This allows for the management of these audio\-visual file formats in an effective and transparent way (e\.g\. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e\.g\. to/from harddisk, over network or for backup on LTO)\.
 .TP
 When needed, the uncompressed source is retrieved \fBbit\-by\-bit\fR, in a manner faster than uncompressed sources\. 
 .TP
@@ -27,17 +27,28 @@ The filenames usually end with a numbered sequence\. Enter one frame and the too
 Decodes back the video and the audio of \fIfile\fR to its original formats\. All metadata accompanying the original data are preserved bit\-by\-bit\.
 .
 .SH GENERAL OPTIONS
-.SS
-\fBrawcooked \-\-help | \-h
 .TP
-.B \-\-help | \-h
+.B \-\-help \fR|\fB \-h
 Displays a help message\.
-.
-.SS
-\fBrawcooked \-\-version
 .TP
 .B \-\-version
 Displays the installed version\.
+.TP
+.B \-\-attachment\-max\-size \fIvalue\fR | \fB\-s \fIvalue
+Set maximum size of attachment to \fIvalue\fR (in bytes)\.
+.br
+Default value is 1,048,576\.
+.TP
+.B \-\-display\-command \fR|\fB \-d
+When an external encoder/decoder is used, display the command to launch instead of launching it\.
+.TP
+.B \-\-output\-file\-name \fIvalue\fR | \fB\-d \fIvalue
+Set the name of the output file to \fIvalue\fR\.
+.br
+Default \fIvalue\fR is "${Input}.mkv/"\fR\.
+.TP
+.B \-\-rawcooked\-file\-name \fIvalue
+Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility\.
 .
 .SH INPUT RELATED OPTIONS
 .
