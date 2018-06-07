@@ -1,0 +1,5 @@
+Version 18.06alpha1, 2018-06-07
+--------------------
+Input: support of common flavors of DPX and WAV
+Output: MKV/FFV1/FLAC, with option for MKV/FFV1/PCM
+Using FFmpeg for encoding

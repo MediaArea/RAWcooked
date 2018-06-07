@@ -13,7 +13,7 @@ if [ -n "${valgrind}" ] && [ -s "valgrind.log" ] ; then
 fi
 
 # check expected result
-if [[ ! "${output}" =~ ^RAWcooked\ ([0-9]+\.)+[0-9]+$ ]] ; then
+if [[ ! "${output}" =~ ^RAWcooked\ ([0-9A-Za-z]+\.)+[0-9A-Za-z]+$ ]] ; then
     rcode=1
 fi
 
