@@ -37,7 +37,6 @@
     <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h" />
     <ClInclude Include="..\..\..\Source\Lib\RIFF\RIFF.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\md5\md5.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h" />
@@ -63,12 +62,10 @@
     <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp" />
-    <ClCompile Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RIFF\RIFF.cpp" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\md5\md5.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\compress.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.c" />
@@ -163,7 +160,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -179,7 +176,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -197,7 +194,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -216,7 +213,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>

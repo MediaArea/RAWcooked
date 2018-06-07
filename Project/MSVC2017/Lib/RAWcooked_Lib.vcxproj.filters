@@ -43,14 +43,8 @@
     <Filter Include="Header Files\FrameHash">
       <UniqueIdentifier>{30782949-bf6f-4dba-9d1e-0d7f5ac4b1ed}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\FrameHash">
-      <UniqueIdentifier>{d1371acf-899e-46d2-894f-38506f6c4f4f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ThirdParty">
       <UniqueIdentifier>{14d4d37c-77ab-4463-bd6d-2103b8785e2d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ThirdParty\md5">
-      <UniqueIdentifier>{73151e83-5f44-40d2-97c7-9e90458979d6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\DPX">
       <UniqueIdentifier>{a9a17abe-9c4b-48f9-9193-30b60eb38fc0}</UniqueIdentifier>
@@ -119,9 +113,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.h">
       <Filter>Header Files\FrameHash</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\md5\md5.h">
-      <Filter>ThirdParty\md5</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h">
       <Filter>Header Files\DPX</Filter>
@@ -208,12 +199,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp">
       <Filter>Source Files\RawFrame</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.cpp">
-      <Filter>Source Files\FrameHash</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\md5\md5.c">
-      <Filter>ThirdParty\md5</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp">
       <Filter>Source Files\RAWcooked</Filter>
