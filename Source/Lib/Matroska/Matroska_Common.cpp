@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include "ThreadPool.h"
+#include "FLAC/stream_decoder.h"
 #include "zlib.h"
 #if defined(_WIN32) || defined(_WINDOWS)
     #include <io.h> // File existence
@@ -81,6 +82,109 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const
     fclose(F);
 }
 
+//---------------------------------------------------------------------------
+FLAC__StreamDecoderReadStatus flac_read_callback(const FLAC__StreamDecoder*, FLAC__byte buffer[], size_t *bytes, void *client_data)
+{
+    matroska* M = (matroska*)client_data;
+    M->FLAC_Read(buffer, bytes);
+    return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+}
+FLAC__StreamDecoderTellStatus flac_tell_callback(const FLAC__StreamDecoder*, FLAC__uint64 *absolute_byte_offset, void *client_data)
+{
+    matroska* M = (matroska*)client_data;
+    M->FLAC_Tell(absolute_byte_offset);
+    return FLAC__STREAM_DECODER_TELL_STATUS_OK;
+}
+void flac_metadata_callback(const FLAC__StreamDecoder*, const FLAC__StreamMetadata *metadata, void *client_data)
+{
+    matroska* M = (matroska*)client_data;
+    M->FLAC_Metadata(metadata->data.stream_info.channels, metadata->data.stream_info.bits_per_sample);
+}
+FLAC__StreamDecoderWriteStatus flac_write_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
+{
+    matroska* M = (matroska*)client_data;
+    M->FLAC_Write((const uint32_t**)buffer, frame->header.blocksize);
+    return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+}
+void flac_error_callback(const FLAC__StreamDecoder *, FLAC__StreamDecoderErrorStatus status, void *)
+{
+    fprintf(stderr, "Got FLAC error : %s\n", FLAC__StreamDecoderErrorStatusString[status]); // Not expected, should be better handled
+}
+
+//---------------------------------------------------------------------------
+class flac_info
+{
+public:
+    FLAC__uint64 Pos_Current;
+    FLAC__StreamDecoder *Decoder;
+    size_t Buffer_Offset_Temp;
+    uint8_t channels;
+    uint8_t bits_per_sample;
+};
+void matroska::FLAC_Read(uint8_t buffer[], size_t *bytes)
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+    size_t SizeMax = Levels[Level].Offset_End - TrackInfo_Current->FlacInfo->Buffer_Offset_Temp;
+    if (SizeMax < *bytes)
+        *bytes = SizeMax;
+    memcpy(buffer, Buffer + TrackInfo_Current->FlacInfo->Buffer_Offset_Temp, *bytes);
+    TrackInfo_Current->FlacInfo->Buffer_Offset_Temp += *bytes;
+    TrackInfo_Current->FlacInfo->Pos_Current += *bytes;
+}
+void matroska::FLAC_Tell(uint64_t* absolute_byte_offset)
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+    *absolute_byte_offset = TrackInfo_Current->FlacInfo->Pos_Current;
+}
+void matroska::FLAC_Metadata(uint8_t channels, uint8_t bits_per_sample)
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+    TrackInfo_Current->FlacInfo->channels = channels;
+    TrackInfo_Current->FlacInfo->bits_per_sample = bits_per_sample;
+}
+void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->Frame.RawFrame->Buffer)
+    {
+        TrackInfo_Current->Frame.RawFrame->Buffer_Size = 16384 / 8 * TrackInfo_Current->FlacInfo->bits_per_sample*TrackInfo_Current->FlacInfo->channels; // 16384 is the max blocksize in spec
+        TrackInfo_Current->Frame.RawFrame->Buffer = new uint8_t[TrackInfo_Current->Frame.RawFrame->Buffer_Size];
+        TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = true;
+    }
+    uint8_t* Buffer_Current = TrackInfo_Current->Frame.RawFrame->Buffer;
+
+    // Converting libFLAC output to WAV style
+    uint8_t channels = TrackInfo_Current->FlacInfo->channels;
+    switch (TrackInfo_Current->FlacInfo->bits_per_sample)
+    {
+        case 16:
+            for (size_t i = 0; i < blocksize; i++)
+                for (size_t j = 0; j < channels; j++)
+                {
+                    *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                }
+            break;
+        case 24:
+            for (size_t i = 0; i < blocksize; i++)
+                for (size_t j = 0; j < channels; j++)
+                {
+                    *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 16);
+                }
+            break;
+    }
+
+    TrackInfo_Current->Frame.RawFrame->Buffer_Size = Buffer_Current - TrackInfo_Current->Frame.RawFrame->Buffer;
+
+    string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+
+    //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
+    WriteFrameCall(0x00, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
+}
+    
 //---------------------------------------------------------------------------
 static int Get_EB(unsigned char* Buffer, uint64_t& Offset, uint64_t& Name, uint64_t& Size)
 {
@@ -665,6 +769,7 @@ void matroska::Segment_Cluster_SimpleBlock()
         uint8_t TrackID = Buffer[Buffer_Offset] & 0x7F;
         if (!TrackID || TrackID > TrackInfo.size())
             return; // Problem
+        TrackInfo_Pos = TrackID - 1;
         trackinfo* TrackInfo_Current = TrackInfo[TrackID - 1];
 
         // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
@@ -723,6 +828,26 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 }
                             }
                             TrackInfo_Current->DPX_Buffer_Pos++;
+                            break;
+            case Format_FLAC:
+                            if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[0])
+                            {
+                                if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                                {
+                                    TrackInfo_Current->Frame.RawFrame->Pre = TrackInfo_Current->DPX_Before[0];
+                                    TrackInfo_Current->Frame.RawFrame->Pre_Size = TrackInfo_Current->DPX_Before_Size[0];
+                                }
+                                else
+                                {
+                                    TrackInfo_Current->Frame.RawFrame->Pre = NULL;
+                                    TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
+                                }
+
+                                TrackInfo_Current->DPX_Buffer_Pos++;
+                            }
+
+                            TrackInfo_Current->FlacInfo->Buffer_Offset_Temp = Buffer_Offset + 4;
+                            ProcessFrame_FLAC();
                             break;
             case Format_PCM:
                             if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[0])
@@ -788,6 +913,8 @@ void matroska::Segment_Tracks_TrackEntry_CodecID()
     string Value((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
     if (Value == "V_MS/VFW/FOURCC")
         TrackInfo_Current->Format = Format_FFV1; // TODO: check CodecPrivate
+    if (Value == "A_FLAC")
+        TrackInfo_Current->Format = Format_FLAC;
     if (Value == "A_PCM/INT/LIT")
         TrackInfo_Current->Format = Format_PCM;
 }
@@ -795,18 +922,13 @@ void matroska::Segment_Tracks_TrackEntry_CodecID()
 //---------------------------------------------------------------------------
 void matroska::Segment_Tracks_TrackEntry_CodecPrivate()
 {
-    if (Levels[Level].Offset_End - Buffer_Offset > 0x28)
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    switch (TrackInfo_Current->Format)
     {
-        uint32_t Size = ((uint32_t)Buffer[Buffer_Offset]) | (((uint32_t)Buffer[Buffer_Offset + 1]) << 8) | (((uint32_t)Buffer[Buffer_Offset + 2]) << 16) | (((uint32_t)Buffer[Buffer_Offset + 3]) << 24);
-        if (Size > Levels[Level].Offset_End - Buffer_Offset)
-            return; // integrity issue
-
-        if (Buffer[Buffer_Offset + 0x10] != 'F' || Buffer[Buffer_Offset + 0x11] != 'F' || Buffer[Buffer_Offset + 0x12] != 'V' || Buffer[Buffer_Offset + 0x13] != '1')
-            return; // Not FFV1
-
-        trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
-
-        TrackInfo_Current->Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Size - 0x28);
+        case Format_FFV1: return ProcessCodecPrivate_FFV1();
+        case Format_FLAC: return ProcessCodecPrivate_FLAC();
+        default: return;
     }
 }
 
@@ -897,5 +1019,63 @@ void matroska::RejectIncompatibleVersions()
     {
         std::cerr << RAWcooked_LibraryName << "version " << RAWcooked_LibraryVersion << " is not supported, exiting" << std::endl;
         exit(1);
+    }
+}
+
+//---------------------------------------------------------------------------
+void matroska::ProcessCodecPrivate_FFV1()
+{
+    if (Levels[Level].Offset_End - Buffer_Offset > 0x28)
+    {
+        uint32_t Size = ((uint32_t)Buffer[Buffer_Offset]) | (((uint32_t)Buffer[Buffer_Offset + 1]) << 8) | (((uint32_t)Buffer[Buffer_Offset + 2]) << 16) | (((uint32_t)Buffer[Buffer_Offset + 3]) << 24);
+        if (Size > Levels[Level].Offset_End - Buffer_Offset)
+            return; // integrity issue
+
+        if (Buffer[Buffer_Offset + 0x10] != 'F' || Buffer[Buffer_Offset + 0x11] != 'F' || Buffer[Buffer_Offset + 0x12] != 'V' || Buffer[Buffer_Offset + 0x13] != '1')
+            return; // Not FFV1
+
+        trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+        TrackInfo_Current->Frame.Read_Buffer_OutOfBand(Buffer + Buffer_Offset + 0x28, Size - 0x28);
+    }
+}
+
+//---------------------------------------------------------------------------
+void matroska::ProcessCodecPrivate_FLAC()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->FlacInfo)
+    {
+        TrackInfo_Current->FlacInfo = new flac_info;
+        TrackInfo_Current->FlacInfo->Pos_Current = 0;
+        TrackInfo_Current->FlacInfo->Decoder = FLAC__stream_decoder_new();
+        FLAC__stream_decoder_set_md5_checking(TrackInfo_Current->FlacInfo->Decoder, true);
+        if (FLAC__stream_decoder_init_stream(TrackInfo_Current->FlacInfo->Decoder, flac_read_callback, 0, flac_tell_callback, 0, 0, flac_write_callback, flac_metadata_callback, flac_error_callback, this) != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+        {
+            FLAC__stream_decoder_delete(TrackInfo_Current->FlacInfo->Decoder);
+            TrackInfo_Current->FlacInfo->Decoder = NULL;
+            return;
+        }
+    }
+
+    TrackInfo_Current->FlacInfo->Buffer_Offset_Temp = Buffer_Offset;
+    ProcessFrame_FLAC();
+}
+
+//---------------------------------------------------------------------------
+void matroska::ProcessFrame_FLAC()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    for (;;)
+    {
+        if (!FLAC__stream_decoder_process_single(TrackInfo_Current->FlacInfo->Decoder))
+            break;
+        FLAC__uint64 Pos;
+        if (!FLAC__stream_decoder_get_decode_position(TrackInfo_Current->FlacInfo->Decoder, &Pos))
+            break;
+        if (Pos == TrackInfo_Current->FlacInfo->Pos_Current)
+            break;
     }
 }

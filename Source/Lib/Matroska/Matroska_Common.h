@@ -18,6 +18,7 @@
 
 class matroska_mapping;
 class ThreadPool;
+class flac_info;
 
 class matroska
 {
@@ -38,6 +39,12 @@ public:
 
     // Error message
     const char*                 ErrorMessage();
+
+    // libFLAC related helping functions
+    void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
+    void                        FLAC_Tell(uint64_t* absolute_byte_offset);
+    void                        FLAC_Metadata(uint8_t channels, uint8_t bits_per_sample);
+    void                        FLAC_Write(const uint32_t* buffer[], size_t blocksize);
 
 private:
     uint64_t                    Buffer_Offset;
@@ -100,6 +107,7 @@ private:
     {
         Format_None,
         Format_FFV1,
+        Format_FLAC,
         Format_PCM,
         Format_Max,
     };
@@ -124,6 +132,7 @@ private:
         size_t                  DPX_Buffer_Count;
         raw_frame*              R_A;
         raw_frame*              R_B;
+        flac_info*              FlacInfo;
         frame                   Frame;
         bool                    Unique;
         string                  ErrorMessage;
@@ -146,6 +155,7 @@ private:
             DPX_Buffer_Count(0),
             R_A(NULL),
             R_B(NULL),
+            FlacInfo(NULL),
             Unique(false),
             Format(Format_None)
             {
@@ -160,6 +170,9 @@ private:
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);
     void RejectIncompatibleVersions();
+    void ProcessCodecPrivate_FFV1();
+    void ProcessCodecPrivate_FLAC();
+    void ProcessFrame_FLAC();
 };
 
 //---------------------------------------------------------------------------
