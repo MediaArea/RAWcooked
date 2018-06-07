@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -180,6 +181,7 @@ int main(int argc, const char* argv[])
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
+    sort(Input.Files.begin(), Input.Files.end());
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
