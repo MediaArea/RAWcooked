@@ -37,17 +37,17 @@ Displays the installed version\.
 .B \-\-attachment\-max\-size \fIvalue\fR | \fB\-s \fIvalue
 Set maximum size of attachment to \fIvalue\fR (in bytes)\.
 .br
-Default value is 1,048,576\.
+Default value is \fI1048576\fR\.
 .TP
 .B \-\-display\-command \fR|\fB \-d
 When an external encoder/decoder is used, display the command to launch instead of launching it\.
 .TP
-.B \-\-output\-file\-name \fIvalue\fR | \fB\-d \fIvalue
+.B \-\-output\-file\-name \fIvalue\fR | \fB\-o \fIvalue
 Set the name of the output file to \fIvalue\fR\.
 .br
-Default \fIvalue\fR is "${Input}.mkv/"\fR\.
+Default value is \fI${Input}.mkv/\fR\.
 .TP
-.B \-\-rawcooked\-file\-name \fIvalue
+.B \-\-rawcooked\-file\-name \fIvalue\fR | \fB\-r \fIvalue
 Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility\.
 .
 .SH INPUT RELATED OPTIONS
@@ -55,11 +55,54 @@ Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility\.
 .B \-framerate \fIvalue
 Force video frame rate to \fIvalue\fR\.
 .br
-Default \fIvalue\fR is the one found in the image files if available, otherwise \fI24\fR\.
+Default value is the one found in the image files if available, otherwise \fI24\fR\.
 .
 .SH ENCODING RELATED OPTIONS
-.
-.SH
+.TP
+.B \-c:a \fIvalue
+Force the audio encoding format to \fIvalue\fR: \fIcopy\fR (copy PCM to PCM, without modification), \fIflac\fR\.
+.br
+Default value is \fIflac\fR\.
+.TP
+.B \-c:v \fIvalue
+Force the video encoding format \fIvalue\fR: only \fIffv1\fR is currently allowed\.
+.br
+Default value is \fIffv1\fR\.
+.TP
+.B \-coder \fIvalue
+If video encoding format is \fIffv1\fR, set the coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table)\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-context \fIvalue
+If video encoding format is \fIffv1\fR, set the context to \fIvalue\fR: \fI0\fR (small), \fI1\fR (large)\.
+.br
+Default value is \fI0\fR\.
+.TP
+.B \-format \fIvalue
+Set the container format to \fIvalue\fR: only \fImatroska\fR is curently allowed\.
+.br
+Default value is \fImatroska\fR\.
+.TP
+.B \-g \fIvalue
+If video encoding format is \fIffv1\fR, set the GOP size to \fIvalue\fR\: any integer >=1\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-level \fIvalue
+If video encoding format is \fIffv1\fR, set the version to \fIvalue\fR: \fI0\fR, \fI1\fR, \fI3\fR\.
+.br
+Default value is \fI3\fR\.
+.TP
+.B \-slicecrc \fIvalue
+If video encoding format is \fIffv1\fR, set the CRC to \fIvalue\fR: \fI0\fR (CRC not present), \fI1\fR (CRC present)\.
+.br
+Default value is \fI1\fR\.
+.TP
+.B \-slices \fIvalue
+If video encoding format is \fIffv1\fR, set the count of slices to \fIvalue\fR: any integer >=1 and making sense (2, 4, 6, 9, 16, 24\.\.\.)\.
+.br
+Default value is between \fI16\fR and \fI512\fR, depending of video frame size and depth\.
 .
 .SH COPYRIGHT
 Copyright (c) 2018 MediaArea\.net SARL & AV Preservation by reto\.ch
