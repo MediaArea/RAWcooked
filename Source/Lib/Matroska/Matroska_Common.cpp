@@ -328,6 +328,13 @@ ELEMENT_VOID(      3A, Segment_Tracks_TrackEntry_Video_PixelHeight)
 ELEMENT_END()
 
 //---------------------------------------------------------------------------
+// Glue
+void matroska_ProgressIndicator_Show(matroska* M)
+{
+    M->ProgressIndicator_Show();
+}
+
+//---------------------------------------------------------------------------
 matroska::matroska() :
     IsDetected(false)
 {
@@ -391,18 +398,9 @@ void matroska::Parse()
 
     Buffer_Offset = 0;
     Level = 0;
-    ProgressIndicator_Value = (size_t)-1;
-    if (Buffer_Size < 1024*1024) // xx% if < 1 GB, else xx.xx%
-    {
-        ProgressIndicator_Frequency = 100;
-        cerr.precision(0);
-    }
-    else
-    {
-        ProgressIndicator_Frequency = 10000;
-        cerr.precision(2);
-    }
-    cerr.setf(std::ios::fixed, std::ios::floatfield);
+
+    // Progress indicator
+    thread ProgressIndicator_Thread(matroska_ProgressIndicator_Show, this);
 
     Levels[Level].Offset_End = Buffer_Size;
     Levels[Level].SubElements = &matroska::SubElements__;
@@ -410,13 +408,6 @@ void matroska::Parse()
 
     while (Buffer_Offset < Buffer_Size)
     {
-        size_t ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
-        if (ProgressIndicator_New != ProgressIndicator_Value)
-        {
-            cerr << '\r' << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << '%';
-            ProgressIndicator_Value = ProgressIndicator_New;
-        }
-
         uint64_t Name, Size;
         Get_EB(Buffer, Buffer_Offset, Name, Size);
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -437,7 +428,10 @@ void matroska::Parse()
         }
     }
 
-    cerr << '\r';
+    // Progress indicator
+    Buffer_Offset = Buffer_Size;
+    ProgressIndicator_IsEnd.notify_one();
+    ProgressIndicator_Thread.join();
 }
 
 //---------------------------------------------------------------------------
@@ -1000,6 +994,50 @@ const char* matroska::ErrorMessage()
 //***************************************************************************
 // Utils
 //***************************************************************************
+
+//---------------------------------------------------------------------------
+void matroska::ProgressIndicator_Show()
+{
+    // Configure progress indicator precision
+    size_t ProgressIndicator_Value = (size_t)-1;
+    size_t ProgressIndicator_Frequency = 100;
+    cerr.precision(0);
+    cerr.setf(ios::fixed, ios::floatfield);
+
+    // Show progress indicator at a specific frequency
+    const chrono::seconds Frequency = chrono::seconds(1);
+    size_t StallDetection = 0;
+    mutex Mutex;
+    unique_lock<mutex> Lock(Mutex);
+    do
+    {
+        size_t ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
+        if (ProgressIndicator_New == ProgressIndicator_Value)
+        {
+            StallDetection++;
+            if (StallDetection >= 4)
+            {
+                while (ProgressIndicator_New == ProgressIndicator_Value && ProgressIndicator_Frequency < 10000)
+                {
+                    ProgressIndicator_Frequency *= 10;
+                    ProgressIndicator_Value *= 10;
+                    cerr.precision(cerr.precision() + 1);
+                    ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
+                }
+            }
+        }
+        else
+            StallDetection = 0;
+        if (ProgressIndicator_New != ProgressIndicator_Value)
+        {
+            cerr << '\r' << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << '%';
+            ProgressIndicator_Value = ProgressIndicator_New;
+        }
+    }
+    while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, Buffer_Offset != Buffer_Size);
+
+    cerr << '\r';
+}
 
 //---------------------------------------------------------------------------
 void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)

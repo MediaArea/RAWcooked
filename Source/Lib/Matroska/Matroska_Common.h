@@ -14,6 +14,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <condition_variable>
+using namespace std;
 //---------------------------------------------------------------------------
 
 class matroska_mapping;
@@ -39,6 +41,9 @@ public:
 
     // Error message
     const char*                 ErrorMessage();
+
+    // Theading relating functions
+    void                        ProgressIndicator_Show();
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -166,8 +171,7 @@ private:
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
-    size_t                      ProgressIndicator_Value;
-    size_t                      ProgressIndicator_Frequency;
+    condition_variable          ProgressIndicator_IsEnd;
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);
