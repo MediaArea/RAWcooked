@@ -208,11 +208,18 @@ int global::ManageCommandLine(const char* argv[], int argc)
         {
             //translate to "../xxx" in order to get the top level directory name
             char buff[FILENAME_MAX];
-            getcwd(buff, FILENAME_MAX);
-            string Arg = buff;
-            size_t Path_Pos = Arg.find_last_of("/\\");
-            Arg = ".." + Arg.substr(Path_Pos);
-            Inputs.push_back(Arg);
+            if (getcwd(buff, FILENAME_MAX))
+            {
+                string Arg = buff;
+                size_t Path_Pos = Arg.find_last_of("/\\");
+                Arg = ".." + Arg.substr(Path_Pos);
+                Inputs.push_back(Arg);
+            }
+            else
+            {
+                cerr << "Error: " << argv[i] << " can not be transformed to a directory name." << endl;
+                return 1;
+            }
         }
         else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
             AttachementMaxSize = atoi(argv[++i]);
