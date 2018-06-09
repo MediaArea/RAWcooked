@@ -166,6 +166,8 @@ private:
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
+    size_t                      ProgressIndicator_Value;
+    size_t                      ProgressIndicator_Frequency;
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);

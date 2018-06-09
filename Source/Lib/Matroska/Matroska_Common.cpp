@@ -391,6 +391,18 @@ void matroska::Parse()
 
     Buffer_Offset = 0;
     Level = 0;
+    ProgressIndicator_Value = (size_t)-1;
+    if (Buffer_Size < 1024*1024) // xx% if < 1 GB, else xx.xx%
+    {
+        ProgressIndicator_Frequency = 100;
+        cerr.precision(0);
+    }
+    else
+    {
+        ProgressIndicator_Frequency = 10000;
+        cerr.precision(2);
+    }
+    cerr.setf(std::ios::fixed, std::ios::floatfield);
 
     Levels[Level].Offset_End = Buffer_Size;
     Levels[Level].SubElements = &matroska::SubElements__;
@@ -398,6 +410,13 @@ void matroska::Parse()
 
     while (Buffer_Offset < Buffer_Size)
     {
+        size_t ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
+        if (ProgressIndicator_New != ProgressIndicator_Value)
+        {
+            cerr << '\r' << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << '%';
+            ProgressIndicator_Value = ProgressIndicator_New;
+        }
+
         uint64_t Name, Size;
         Get_EB(Buffer, Buffer_Offset, Name, Size);
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -417,6 +436,8 @@ void matroska::Parse()
             }
         }
     }
+
+    cerr << '\r';
 }
 
 //---------------------------------------------------------------------------
