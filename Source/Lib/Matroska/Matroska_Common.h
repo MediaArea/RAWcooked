@@ -99,6 +99,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName);
     MATROSKA_ELEMENT(Segment_Cluster);
     MATROSKA_ELEMENT(Segment_Cluster_SimpleBlock);
+    MATROSKA_ELEMENT(Segment_Cluster_Timestamp);
     MATROSKA_ELEMENT(Segment_Tracks);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_CodecID);
@@ -172,6 +173,9 @@ private:
     string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
     condition_variable          ProgressIndicator_IsEnd;
+    uint64_t                    Timestampscale;
+    uint64_t                    Cluster_Timestamp;
+    int16_t                     Block_Timestamp;
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);

@@ -14,6 +14,8 @@
 #include <thread>
 #include <iostream>
 #include <sstream>
+#include <iomanip>
+#include <chrono>
 #include "ThreadPool.h"
 #include "FLAC/stream_decoder.h"
 #include "zlib.h"
@@ -310,6 +312,7 @@ ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Cluster)
 ELEMENT_VOID(      23, Segment_Cluster_SimpleBlock)
+ELEMENT_VOID(      67, Segment_Cluster_Timestamp)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Tracks)
@@ -400,6 +403,9 @@ void matroska::Parse()
     Level = 0;
 
     // Progress indicator
+    Timestampscale = 1000000;
+    Cluster_Timestamp = 0;
+    Block_Timestamp = 0;
     thread ProgressIndicator_Thread(matroska_ProgressIndicator_Show, this);
 
     Levels[Level].Offset_End = Buffer_Size;
@@ -787,6 +793,9 @@ void matroska::Segment_Cluster_SimpleBlock()
         TrackInfo_Pos = TrackID - 1;
         trackinfo* TrackInfo_Current = TrackInfo[TrackID - 1];
 
+        // Timestamp
+        Block_Timestamp = (Buffer[Buffer_Offset + 1] << 8 || Buffer[Buffer_Offset + 2]);
+
         // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
         if (!TrackInfo_Current->R_A)
         {
@@ -897,6 +906,18 @@ void matroska::Segment_Cluster_SimpleBlock()
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Cluster_Timestamp()
+{
+    Cluster_Timestamp = 0;
+    while (Buffer_Offset < Levels[Level].Offset_End)
+    {
+        Cluster_Timestamp <<= 8;
+        Cluster_Timestamp |= Buffer[Buffer_Offset];
+        Buffer_Offset++;
+    }
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Tracks()
 {
     IsList = true;
@@ -1001,8 +1022,14 @@ void matroska::ProgressIndicator_Show()
     // Configure progress indicator precision
     size_t ProgressIndicator_Value = (size_t)-1;
     size_t ProgressIndicator_Frequency = 100;
-    cerr.precision(0);
+    streamsize Precision = 0;
     cerr.setf(ios::fixed, ios::floatfield);
+    
+    // Configure benches
+    using namespace chrono;
+    steady_clock::time_point Clock_Previous = steady_clock::now();
+    uint64_t Buffer_Offset_Previous = 0;
+    uint64_t Timestamp_Previous = 0;
 
     // Show progress indicator at a specific frequency
     const chrono::seconds Frequency = chrono::seconds(1);
@@ -1021,7 +1048,7 @@ void matroska::ProgressIndicator_Show()
                 {
                     ProgressIndicator_Frequency *= 10;
                     ProgressIndicator_Value *= 10;
-                    cerr.precision(cerr.precision() + 1);
+                    Precision++;
                     ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
                 }
             }
@@ -1030,7 +1057,37 @@ void matroska::ProgressIndicator_Show()
             StallDetection = 0;
         if (ProgressIndicator_New != ProgressIndicator_Value)
         {
-            cerr << '\r' << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << '%';
+            float ByteRate = 0, RealTime = 0;
+            uint64_t Timestamp = (Cluster_Timestamp + Block_Timestamp);
+            if (ProgressIndicator_Value != (size_t)-1)
+            {
+                steady_clock::time_point Clock_Current = steady_clock::now(); 
+                steady_clock::duration Duration = Clock_Current - Clock_Previous;
+                ByteRate = (float)(Buffer_Offset - Buffer_Offset_Previous) * 1000 / duration_cast<milliseconds>(Duration).count();
+                RealTime = (float)(Timestamp - Timestamp_Previous) / duration_cast<milliseconds>(Duration).count();
+                Clock_Previous = Clock_Current;
+                Buffer_Offset_Previous = Buffer_Offset;
+                Timestamp_Previous = Timestamp;
+            }
+            Timestamp /= 1000;
+            cerr << '\r';
+            cerr << "Time=" << (Timestamp / 36000) % 6 << (Timestamp / 3600) % 10 << ':' << (Timestamp / 600) % 6 << (Timestamp / 60) % 10 << ':' << (Timestamp / 10) % 6 << Timestamp % 10;
+            cerr << " (" << setprecision(Precision) << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << "%)";
+            if (ByteRate)
+            {
+                if (ByteRate < 1024)
+                    cerr << ", " << ByteRate << " B/s";
+                else if (ByteRate < 1024 * 1024)
+                    cerr << ", " << setprecision(ByteRate > 10 * 1024 ? 1 : 0) << ByteRate / 1024 << " KiB/s";
+                else if (ByteRate < 1024 * 1024 * 1024)
+                    cerr << ", " << setprecision(ByteRate < 10LL * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 << " MiB/s";
+                else
+                    cerr << ", " << setprecision(ByteRate < 10LL * 1024 * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 / 1024 << " GiB/s";
+            }
+            if (RealTime)
+                cerr << ", " << setprecision(2) << RealTime << "x realtime";
+            cerr << "    "; // Clean up in case there is less content outputed than the previous time
+
             ProgressIndicator_Value = ProgressIndicator_New;
         }
     }
