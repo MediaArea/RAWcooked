@@ -262,7 +262,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
 }
 
 //---------------------------------------------------------------------------
-void global::SetDefaults()
+int global::SetDefaults()
 {
     // Container format
     if (OutputOptions.find("f") == OutputOptions.end())
@@ -289,5 +289,18 @@ void global::SetDefaults()
             OutputOptions["level"] = "3"; // FFV1 v3
         if (OutputOptions.find("slicecrc") == OutputOptions.end())
             OutputOptions["slicecrc"] = "1"; // Slice CRC on
+
+        // Check incompatible options
+        if (OutputOptions["level"] == "0" || OutputOptions["level"] == "1")
+        {
+            map<string, string>::iterator slices = OutputOptions.find("slices");
+            if (slices == OutputOptions.end() || slices->second != "1")
+            {
+                cerr << "\" -level " << OutputOptions["level"] << "\" does not permit slices, is it intended ? if so, add \" -slices 1\" to the command." << endl;
+                return 1;
+            }
+        }
     }
+
+    return 0;
 }
