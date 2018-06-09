@@ -28,7 +28,8 @@ int output::Process(global& Global)
 int output::FFmpeg_Command(const char* FileName, global& Global)
 {
     // Defaults
-    Global.SetDefaults();
+    if (int Value = Global.SetDefaults())
+        return Value;
     if (Global.OutputOptions.find("slices") == Global.OutputOptions.end())
     {
         // Slice count depends on frame size

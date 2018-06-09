@@ -35,7 +35,7 @@ public:
 
     // Options
     int ManageCommandLine(const char* argv[], int argc);
-    void SetDefaults();
+    int SetDefaults();
 
 private:
     int SetOption(const char* argv[], int& i, int argc);
