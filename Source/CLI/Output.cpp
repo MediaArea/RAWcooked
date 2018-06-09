@@ -141,7 +141,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     {
         if (int Value = system(Command.c_str()))
         {
-            cout << Value << endl;
             #if !(defined(_WIN32) || defined(_WINDOWS))
                 if (Value > 0xFF && !(Value & 0xFF))
                    Value++; // On Unix-like systems, exit status code is sometimes casted to 8-bit long, and system() returns a value multiple of 0x100 when e.g. the command does not exist. We increment the value by 1 in order to have cast to 8-bit not 0 (which can be considered as "OK" by some commands e.g. appending " && echo OK")

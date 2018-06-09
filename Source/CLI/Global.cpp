@@ -135,13 +135,13 @@ int global::SetOption(const char* argv[], int& i, int argc)
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        if (!strcmp(argv[i], "0")
-         || !strcmp(argv[i], "1"))
+        if (atoi(argv[i]))
         {
             OutputOptions["g"] = argv[i];
             return 0;
         }
-        return Error_NotTested(argv[i - 1], argv[i]);
+        cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a number\n";
+        return 1;
     }
     if (!strcmp(argv[i], "-level"))
     {
@@ -208,11 +208,18 @@ int global::ManageCommandLine(const char* argv[], int argc)
         {
             //translate to "../xxx" in order to get the top level directory name
             char buff[FILENAME_MAX];
-            getcwd(buff, FILENAME_MAX);
-            string Arg = buff;
-            size_t Path_Pos = Arg.find_last_of("/\\");
-            Arg = ".." + Arg.substr(Path_Pos);
-            Inputs.push_back(Arg);
+            if (getcwd(buff, FILENAME_MAX))
+            {
+                string Arg = buff;
+                size_t Path_Pos = Arg.find_last_of("/\\");
+                Arg = ".." + Arg.substr(Path_Pos);
+                Inputs.push_back(Arg);
+            }
+            else
+            {
+                cerr << "Error: " << argv[i] << " can not be transformed to a directory name." << endl;
+                return 1;
+            }
         }
         else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
             AttachementMaxSize = atoi(argv[++i]);
