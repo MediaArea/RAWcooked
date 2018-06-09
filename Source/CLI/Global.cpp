@@ -135,13 +135,13 @@ int global::SetOption(const char* argv[], int& i, int argc)
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        if (!strcmp(argv[i], "0")
-         || !strcmp(argv[i], "1"))
+        if (atoi(argv[i]))
         {
             OutputOptions["g"] = argv[i];
             return 0;
         }
-        return Error_NotTested(argv[i - 1], argv[i]);
+        cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a number\n";
+        return 1;
     }
     if (!strcmp(argv[i], "-level"))
     {
