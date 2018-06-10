@@ -15,7 +15,7 @@ It contains a sequence of RawCookedSegment, RawCookedTrack or RawCookedBlock ele
 #### Compressed
 
 Elements with the type "Compressed" have the following structure:  
-- 4 Big Endiand encoded bytes indicating the size of the uncompressed content. Is 0 if content is not compressed.  
+- 4 big-endian encoded bytes indicating the size of the uncompressed content. Is 0 if content is not compressed.  
 - Size of element minus 4 bytes of compressed content (if size of the uncompressed content is not 0) or raw content (if size of the uncompressed content is 0).  
 
 ### Generic reconstructed file related elements
