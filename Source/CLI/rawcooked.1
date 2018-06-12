@@ -26,7 +26,8 @@ The filenames usually end with a numbered sequence\. Enter one frame and the too
 .br
 Decodes back the video and the audio of \fIfile\fR to its original formats\. All metadata accompanying the original data are preserved bit\-by\-bit\.
 .
-.SH GENERAL OPTIONS
+.SH OPTIONS
+.SS GENERAL OPTIONS
 .TP
 .B \-\-help \fR|\fB \-h
 Displays a help message\.
@@ -56,14 +57,14 @@ Default name is \fI${Input}.rawcooked_reversibility_data\fR
 .br
 \fBNote:\fR Not yet implemented for decoding\.
 .
-.SH INPUT RELATED OPTIONS
+.SS INPUT RELATED OPTIONS
 .TP
 .B \-framerate \fIvalue
 Force video frame rate to \fIvalue\fR\.
 .br
 Default value is the one found in the image files if available, otherwise \fI24\fR\.
 .
-.SH ENCODING RELATED OPTIONS
+.SS ENCODING RELATED OPTIONS
 .TP
 .B \-c:a \fIvalue
 Force the audio encoding format to \fIvalue\fR: \fIcopy\fR (copy PCM to PCM, without modification), \fIflac\fR\.
