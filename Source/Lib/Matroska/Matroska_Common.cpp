@@ -1144,6 +1144,20 @@ void matroska::SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size)
                 FileName[i] = PathSeparator;
     }
 
+    // Replace illegal characters (on the target platform) by underscore
+    // Note: the outpout is not exactly as the source content and information about the exact source file name is lost, this is a limitation of the target platform impossible to bypass
+    #if defined(_WIN32) || defined(_WINDOWS)
+        for (size_t i = 0; i < FileName_Size; i++)
+            if (FileName[i] == ':'
+             || FileName[i] == '<'
+             || FileName[i] == '>'
+             || FileName[i] == '|'
+             || FileName[i] == '\"'
+             || FileName[i] == '?'
+             || FileName[i] == '*')
+                FileName[i] = '_';
+    #endif
+
     // Trash leading path separator (used for absolute file names) ("///foo/bar" becomes "foo/bar")
     while (FileName_Size && FileName[0] == PathSeparator)
     {
