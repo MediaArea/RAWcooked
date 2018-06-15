@@ -72,6 +72,8 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const
         #ifdef _MSC_VER
             #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
         #endif
+        if (!F)
+            return; // TODO: add a warning message that the file can not be open for writing
     }
     if (RawFrame->Pre)
         fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
