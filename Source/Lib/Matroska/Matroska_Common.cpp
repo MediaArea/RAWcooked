@@ -1149,6 +1149,7 @@ void matroska::SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size)
     #if defined(_WIN32) || defined(_WINDOWS)
         for (size_t i = 0; i < FileName_Size; i++)
             if (FileName[i] == ':'
+             ||(FileName[i] == ' ' && ((i + 1 >= FileName_Size || FileName[i + 1] == '.' || FileName[i + 1] == PathSeparator) || (i == 0 || FileName[i - 1] == PathSeparator)))
              || FileName[i] == '<'
              || FileName[i] == '>'
              || FileName[i] == '|'
