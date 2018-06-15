@@ -72,6 +72,8 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const
         #ifdef _MSC_VER
             #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
         #endif
+        if (!F)
+            return; // TODO: add a warning message that the file can not be open for writing
     }
     if (RawFrame->Pre)
         fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
@@ -586,6 +588,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
             TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_FileName[i];
     }
 
+    SanitizeFileName(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
     TrackInfo_Current->DPX_Buffer_Count++;
 }
 
@@ -698,6 +701,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName
     TrackInfo_Current->Unique = true;
 
     Uncompress(TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+    SanitizeFileName(TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 }
 
 //---------------------------------------------------------------------------
@@ -1126,6 +1130,60 @@ void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
         Output = new uint8_t[Output_Size];
         memcpy(Output, Buffer + Buffer_Offset, Output_Size);
     }
+}
+
+//---------------------------------------------------------------------------
+// Compressed file can holds directory traversal filenames (e.g. ../../evil.sh)
+// Not created by the encoder, but a malevolent person could craft such file
+// https://snyk.io/research/zip-slip-vulnerability
+void matroska::SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size)
+{
+    // Use native path separator if it is not "/"
+    if (PathSeparator != '/')
+    {
+        for (size_t i = 0; i < FileName_Size; i++)
+            if (FileName[i] == '/')
+                FileName[i] = PathSeparator;
+    }
+
+    // Replace illegal characters (on the target platform) by underscore
+    // Note: the outpout is not exactly as the source content and information about the exact source file name is lost, this is a limitation of the target platform impossible to bypass
+    #if defined(_WIN32) || defined(_WINDOWS)
+        for (size_t i = 0; i < FileName_Size; i++)
+            if (FileName[i] == ':'
+             ||(FileName[i] == ' ' && ((i + 1 >= FileName_Size || FileName[i + 1] == '.' || FileName[i + 1] == PathSeparator) || (i == 0 || FileName[i - 1] == PathSeparator)))
+             || FileName[i] == '<'
+             || FileName[i] == '>'
+             || FileName[i] == '|'
+             || FileName[i] == '\"'
+             || FileName[i] == '?'
+             || FileName[i] == '*')
+                FileName[i] = '_';
+    #endif
+
+    // Trash leading path separator (used for absolute file names) ("///foo/bar" becomes "foo/bar")
+    while (FileName_Size && FileName[0] == PathSeparator)
+    {
+        FileName_Size --;
+        memmove(FileName, FileName + 1, FileName_Size);
+    }
+
+    // Trash directory traversals ("../../foo../../ba..r/../.." becomes "foo../ba..r")
+    for (size_t i = 0; FileName_Size > 1 && i < FileName_Size - 1; i++)
+        if ((i == 0 || FileName[i - 1] == PathSeparator) && FileName[i] == '.' && FileName[i+1] == '.' && (i + 2 >= FileName_Size || FileName[i + 2] == PathSeparator))
+        {
+            size_t Count = 2;
+            if (i + 2 < FileName_Size)
+                Count++;
+            else if (i)
+            {
+                Count++;
+                i--;
+            }
+            FileName_Size -= Count;
+            memmove(FileName + i, FileName + i + Count, FileName_Size - i);
+            i--;
+        }
 }
 
 //---------------------------------------------------------------------------

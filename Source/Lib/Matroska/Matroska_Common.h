@@ -179,6 +179,7 @@ private:
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);
+    void SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size);
     void RejectIncompatibleVersions();
     void ProcessCodecPrivate_FFV1();
     void ProcessCodecPrivate_FLAC();
