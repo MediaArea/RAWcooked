@@ -7,7 +7,7 @@ Reversibility data can be stored in e.g. a side car file, a container attachment
 
 ## Base design
 
-RAWcooked reversibility data file is a EBML file, with EBML Doctype "rawcooked", EBMLReadVersion 1.  
+RAWcooked reversibility data file is an EBML file, with EBML Doctype "rawcooked", EBMLReadVersion 1.  
 It contains a sequence of RawCookedSegment, RawCookedTrack or RawCookedBlock elements.  
 
 ### Specific types
@@ -76,7 +76,7 @@ If not present, considered as "/".
 ### RawCookedTrack
 
 A "RawCookedTrack" element contains information about a track.  
-Information in this element can be used by all "RawCookedBlock" element found after this track.  
+Information in this element can be used by all "RawCookedBlock" elements found after this track.  
 
 #### MaskBaseFileName
 
