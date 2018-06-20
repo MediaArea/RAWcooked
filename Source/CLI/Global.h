@@ -23,7 +23,7 @@ public:
     // Options
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
-    size_t                      AttachementMaxSize;
+    size_t                      AttachmentMaxSize;
     string                      rawcooked_reversibility_data_FileName;
     string                      OutputFileName;
     string                      BinName;

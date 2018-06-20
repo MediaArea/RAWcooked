@@ -129,8 +129,8 @@ int ParseFile(size_t Files_Pos)
     {
         if (!M.IsDetected && !RIFF.IsDetected && !DPX.IsDetected)
         {
-            size_t AttachementSizeFinal = (Global.AttachementMaxSize != (size_t)-1) ? Global.AttachementMaxSize : (1024 * 1024); // Default value arbitrary choosen
-            if (FileMap.Buffer_Size >= AttachementSizeFinal)
+            size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
+            if (FileMap.Buffer_Size >= AttachmentSizeFinal)
             {
                 cout << Name << " is not small, expected to be an attachment? Please contact info@mediaarea.net if you want support of such file.\n";
                 exit(1);
