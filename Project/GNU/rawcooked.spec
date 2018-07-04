@@ -4,7 +4,7 @@
 
 # norootforbuild
 
-%define rawcooked_version		18.06
+%global rawcooked_version		18.06
 
 Name:			rawcooked
 Version:		%rawcooked_version
