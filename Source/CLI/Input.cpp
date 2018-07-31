@@ -232,6 +232,11 @@ int input::AnalyzeInputs(global& Global)
         return 1;
     }
 
+    if (Files.empty())
+    {
+        cerr << "Input file names structure is not recognized. Please contact info@mediaarea.net if you want support of such input.\n";
+        return 1;
+    }
 
     // RAWcooked reversibility data file name
     if (Global.rawcooked_reversibility_data_FileName.empty())
