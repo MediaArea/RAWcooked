@@ -198,7 +198,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     if (argc < 2)
         return Usage(argv[0]);
 
-    AttachementMaxSize = (size_t)-1;
+    AttachmentMaxSize = (size_t)-1;
     DisplayCommand = false;
 
     for (int i = 1; i < argc; i++)
@@ -222,7 +222,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             }
         }
         else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
-            AttachementMaxSize = atoi(argv[++i]);
+            AttachmentMaxSize = atoi(argv[++i]);
         else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0) && i + 1 < argc)
         {
             int Value = SetBinName(argv[++i]);
