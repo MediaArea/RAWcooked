@@ -153,7 +153,7 @@ void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden
         File_Name_Complete += File_Name;
         if (IsDir(File_Name_Complete.c_str()))
             DetectSequence_FromDir(File_Name_Complete.c_str(), Files);
-        else if (!IsHidden && File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29)
+        else if (!IsHidden && (File_Name_Complete.size()<29 || File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29))
             Files.push_back(File_Name_Complete);
     }
 }
@@ -232,6 +232,11 @@ int input::AnalyzeInputs(global& Global)
         return 1;
     }
 
+    if (Files.empty())
+    {
+        cerr << "Input file names structure is not recognized. Please contact info@mediaarea.net if you want support of such input.\n";
+        return 1;
+    }
 
     // RAWcooked reversibility data file name
     if (Global.rawcooked_reversibility_data_FileName.empty())
