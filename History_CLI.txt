@@ -1,3 +1,10 @@
+Version 18.07alpha2, 2018-07-31
+--------------------
+Decoding progress indicator
+Security checks against ZipSlip attack: sanitize file name stored in compressed file, replace illegal characters on target platform
+Fix creation of several instances of video stream on platforms not providing an ordered sequence of file names e.g. Ubuntu 16.04
+Fix rejection of some files due to bad file name check algorithm
+
 Version 18.06alpha1, 2018-06-07
 --------------------
 Input: support of common flavors of DPX and WAV
