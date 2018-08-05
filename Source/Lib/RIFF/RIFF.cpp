@@ -130,47 +130,85 @@ uint32_t riff::Get_B4()
 //---------------------------------------------------------------------------
 bool riff::Parse()
 {
-    if (Buffer_Size < 4 || Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
+    if (Buffer_Size < 12)
         return false;
-
-    if (Buffer_Size >= 0xFFFFFFFF)
+    if (Buffer[8] != 'W' || Buffer[9] != 'A' || Buffer[10] != 'V' || Buffer[11] != 'E')
+        return false;
+    if (Buffer[0] == 'R' && Buffer[1] == 'F' && Buffer[2] == '6' && Buffer[3] == '4')
     {
-        Error("RF64 (4GB+ WAV) is not yet supported");
+        IsDetected = true;
+        Error("RF64 (4GB+ WAV)");
         return false;
     }
-
+    if (Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
+        return false;
     IsDetected = true;
-    Buffer_Offset = 0;
-    Level = 0;
 
-    Levels[Level].Offset_End = Buffer_Size;
-    Levels[Level].SubElements = &riff::SubElements__;
-    Level++;
+    Buffer_Offset = 0;
+    Levels[0].Offset_End = Buffer_Size;
+    Levels[0].SubElements = &riff::SubElements__;
+    Level=1;
 
     while (Buffer_Offset < Buffer_Size)
     {
-        uint32_t Name = Get_B4();
-        uint32_t Size = Get_L4();
-        if (Name == 0x52494646) // "RIFF"
+        // Find the current nesting level
+        while (Buffer_Offset >= Levels[Level - 1].Offset_End)
+        {
+            Levels[Level].SubElements = NULL;
+            Level--;
+        }
+
+        // Parse the chunk header
+        uint32_t Name;
+        uint64_t Size;
+        if (Buffer_Offset + 8 <= Levels[Level - 1].Offset_End)
+        {
             Name = Get_B4();
+            Size = Get_L4();
+            if (Name == 0x52494646) // "RIFF"
+            {
+                if (Size < 4)
+                {
+                    Error("Incoherency detected while parsing RIFF");
+                    return false;
+                }
+                Name = Get_B4();
+                Size -= 4;
+            }
+            if (Buffer_Offset + Size > Levels[Level - 1].Offset_End)
+            {
+                // Truncated
+                Error("Truncated RIFF?");
+                return false;
+            }
+        }
+        else
+        {
+            // There is a problem in the chunk
+            Error("Incoherency detected while parsing RIFF");
+            return false;
+        }
+
+        // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
-        if (Level && Levels[Level].Offset_End > Levels[Level - 1].Offset_End)
-            Levels[Level].Offset_End = Levels[Level - 1].Offset_End; // Truncated
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
         IsList = false;
         (this->*Call)();
         if (!IsList)
-            Buffer_Offset = Levels[Level].Offset_End;
-        if (Buffer_Offset < Levels[Level].Offset_End)
-            Level++;
-        else
         {
-            while (Buffer_Offset >= Levels[Level - 1].Offset_End)
+            Buffer_Offset = Levels[Level].Offset_End;
+
+            // Padding byte
+            if (Buffer_Offset % 2 && Buffer_Offset < Buffer_Size && !Buffer[Buffer_Offset])
             {
-                Levels[Level].SubElements = NULL;
-                Level--;
+                Buffer_Offset++;
+                Levels[Level].Offset_End = Buffer_Offset;
             }
         }
+
+        // Next chunk (or sub-chunk)
+        if (Buffer_Offset < Levels[Level].Offset_End)
+            Level++;
     }
 
     return 0;
@@ -304,7 +342,7 @@ void riff::WAVE_fmt_()
         uint32_t SubFormat2 = Get_L4();
         uint32_t SubFormat3 = Get_B4();
         uint64_t SubFormat4 = Get_B4();
-        if (SubFormat1 != 0x0000001
+        if (SubFormat1 != 0x00000001
          || SubFormat2 != 0x00100000
          || SubFormat3 != 0x800000aa
          || SubFormat4 != 0x00389b71)
