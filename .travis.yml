@@ -18,7 +18,9 @@ before_script:
   - >
        if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
          cd Project/GNU/CLI/ &&
-         git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git &&
+         # git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git &&
+         curl -O https://mediaarea.net/temp/FFmpeg-20180801.tar.bz2 &&
+         tar xjf FFmpeg-20180801.tar.bz2 &&
          pushd FFmpeg &&
          ./configure --prefix=.. --disable-doc --disable-x86asm --disable-ffplay --disable-ffprobe --enable-static --disable-everything --enable-protocol=file --enable-filter=scale --enable-demuxer=matroska,ffv1,flac,pcm_*,wav,image2 --enable-muxer=matroska,ffv1,flac,pcm_*,wav,image2,framemd5 --enable-encoder=rawvideo,dpx,ffv1,flac,pcm_* --enable-decoder=rawvideo,dpx,ffv1,flac,pcm_* &&
          make &&
