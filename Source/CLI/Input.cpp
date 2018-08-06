@@ -241,7 +241,10 @@ int input::AnalyzeInputs(global& Global)
     // RAWcooked reversibility data file name
     if (Global.rawcooked_reversibility_data_FileName.empty())
     {
-        Global.rawcooked_reversibility_data_FileName = string(Global.Inputs[0]);
+        if (Global.OutputFileName.empty())
+            Global.rawcooked_reversibility_data_FileName = string(Global.Inputs[0]);
+        else
+            Global.rawcooked_reversibility_data_FileName = Global.OutputFileName;
         if (Global.rawcooked_reversibility_data_FileName[Global.rawcooked_reversibility_data_FileName.size() - 1] == '/' || Global.rawcooked_reversibility_data_FileName[Global.rawcooked_reversibility_data_FileName.size() - 1] == '\\')
             Global.rawcooked_reversibility_data_FileName.pop_back();
         Global.rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
