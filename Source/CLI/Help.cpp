@@ -118,7 +118,7 @@ ReturnValue Help(const char* Name)
     cout << "              Default value is 0." << endl;
     cout << endl;
     cout << "       -format value" << endl;
-    cout << "              Set the container format to value:  only  matroska  is  curently" << endl;
+    cout << "              Set the container format to value:  only  matroska  is  currently" << endl;
     cout << "              allowed." << endl;
     cout << "              Default value is matroska." << endl;
     cout << endl;
