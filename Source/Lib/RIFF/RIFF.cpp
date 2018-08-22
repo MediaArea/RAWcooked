@@ -292,8 +292,6 @@ void riff::WAVE_fmt_()
     uint32_t AvgBytesPerSec = Get_L4();
     uint16_t BlockAlign = Get_L2();
     uint16_t BitDepth = Get_L2();
-    if (Levels[Level].Offset_End > Buffer_Offset)
-
 
     if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
     {
@@ -307,9 +305,19 @@ void riff::WAVE_fmt_()
     }
     if (FormatTag == 1)
     {
+        if (Levels[Level].Offset_End == Buffer_Offset + 4)
+        {
+            uint32_t Padding0 = Get_L4(); // Some files have 4 zeroes, it does not hurt so we accept them
+            if (Padding0)
+            {
+                Error("WAV FormatTag extension");
+                return;
+            }
+        }
+
         if (Levels[Level].Offset_End - Buffer_Offset)
         {
-            Error("WAV FormatTag format");
+            Error("WAV FormatTag extension");
             return;
         }
     }
@@ -317,7 +325,7 @@ void riff::WAVE_fmt_()
     {
         if (Levels[Level].Offset_End - Buffer_Offset != 24)
         {
-            Error("WAV FormatTag format");
+            Error("WAV FormatTag extension");
             return;
         }
         uint16_t cbSize = Get_L2();
