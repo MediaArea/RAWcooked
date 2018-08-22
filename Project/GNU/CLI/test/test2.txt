@@ -7,3 +7,4 @@ Features/AV_Package HavingReels01-02/
 Features/AV_Package HavingReels1-10/
 Features/EmptyContent EmptyFiles/
 Features/EmptyContent EmptyFolders/
+Formats/WAV/Features 4ExtraNullBytesInFmtChunk/4ExtraNullBytesInFmtChunk.wav
