@@ -86,7 +86,8 @@ while read line ; do
             pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:dpx,' | cut -d, -f2)
             ffmpeg -i "${file}.mkv" -pix_fmt ${pixfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
         elif [ "${media}" == "Audio" ] ; then
-            pcmfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Audio:' | grep -o 'pcm_[[:alnum:]]\+')
+            pcmfmt=$(ffmpeg -hide_banner -i "${file}" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Audio:' | grep -o 'pcm_[[:alnum:]]\+')
+            ffmpeg -i "${file}" -c:a ${pcmfmt} -f framemd5 "${file}.framemd5" </dev/null
             ffmpeg -i "${file}.mkv" -c:a ${pcmfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
         else
             echo "NOK: ${test}/${file}, stream format not recognized" >&${fd}
