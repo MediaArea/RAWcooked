@@ -24,6 +24,12 @@ valgrind=""
 #    valgrind="valgrind --quiet --log-file=valgrind.log"
 #fi >/dev/null 2>&1
 
+clean() {
+    rm -fr "${file}.mkv.RAWcooked"
+    rm -f "${file}.rawcooked_reversibility_data"
+    rm -f "${file}.mkv"
+}
+
 while read line ; do
     file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
     path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
@@ -75,8 +81,19 @@ while read line ; do
         fi
 
         # check framemd5
-        pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:dpx,' | cut -d, -f2)
-        ffmpeg -i "${file}.mkv" -pix_fmt ${pixfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
+        media=$(ffmpeg -hide_banner -i "${file}" 2>&1 </dev/null | tr -d ' ' | grep -m1 '^Stream#.\+:.\+' | cut -d ':' -f 3)
+        if [ "${media}" == "Video" ] ; then
+            pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:dpx,' | cut -d, -f2)
+            ffmpeg -i "${file}.mkv" -pix_fmt ${pixfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
+        elif [ "${media}" == "Audio" ] ; then
+            pcmfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Audio:' | grep -o 'pcm_[[:alnum:]]\+')
+            ffmpeg -i "${file}.mkv" -c:a ${pcmfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
+        else
+            echo "NOK: ${test}/${file}, stream format not recognized" >&${fd}
+            clean
+            rcode=1
+            continue
+        fi
 
         framemd5_a="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.framemd5")"
         framemd5_b="$(grep -m1 -o '[0-9a-f]\{32\}' "${file}.mkv.framemd5")"
@@ -84,8 +101,8 @@ while read line ; do
 
         if [ -z "${framemd5_a}" ] || [ -z "${framemd5_b}" ] || [ "${framemd5_a}" != "${framemd5_b}" ] ; then
             echo "NOK: ${test}/${file}, framemd5 mismatch" >&${fd}
+            clean
             rcode=1
-            rm -f "${file}.mkv"
             continue
         fi
 
@@ -100,8 +117,6 @@ while read line ; do
 
         md5_a="$(${md5cmd} "${file}" | cut -d' ' -f1)" 2>/dev/null
         md5_b="$(${md5cmd} "${file}.mkv.RAWcooked/${file}" | cut -d' ' -f1)" 2>/dev/null
-        rm -fr "${file}.mkv.RAWcooked"
-
         # check result file
         if [ -n "${md5_a}" ] && [ -n "${md5_b}" ] && [ "${md5_a}" == "${md5_b}" ] ; then
             echo "OK: ${test}/${file}, checksums match" >&${fd}
@@ -109,6 +124,7 @@ while read line ; do
             echo "NOK: ${path}/${file}, checksums mismatch" >&${fd}
             rcode=1
         fi
+        clean
     popd >/dev/null 2>&1
 done < "${script_path}/test1.txt"
 
