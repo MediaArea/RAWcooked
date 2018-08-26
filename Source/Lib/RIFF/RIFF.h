@@ -25,7 +25,7 @@ public:
     uint8_t*                    Buffer;
     uint64_t                    Buffer_Size;
 
-    bool                        Parse();
+    bool                        Parse(bool AcceptTruncated=false);
 
     frame                       Frame;
 
@@ -40,23 +40,39 @@ public:
 
     enum style
     {
+        PCM_44100_8_1_U,
+        PCM_44100_8_2_U,
+        PCM_44100_8_6_U,
         PCM_44100_16_1_LE,
         PCM_44100_16_2_LE,
         PCM_44100_16_6_LE,
         PCM_44100_24_1_LE,
         PCM_44100_24_2_LE,
         PCM_44100_24_6_LE,
+        PCM_48000_8_1_U,
+        PCM_48000_8_2_U,
+        PCM_48000_8_6_U,
         PCM_48000_16_1_LE,
         PCM_48000_16_2_LE,
         PCM_48000_16_6_LE,
         PCM_48000_24_1_LE,
         PCM_48000_24_2_LE,
         PCM_48000_24_6_LE,
+        PCM_96000_8_1_U,
+        PCM_96000_8_2_U,
+        PCM_96000_8_6_U,
+        PCM_96000_16_1_LE,
+        PCM_96000_16_2_LE,
+        PCM_96000_16_6_LE,
+        PCM_96000_24_1_LE,
+        PCM_96000_24_2_LE,
+        PCM_96000_24_6_LE,
         PCM_Style_Max,
     };
 
     // Info about formats
-    static size_t BitsPerBlock(style Style);
+    uint8_t BitDepth();
+    uint8_t Endianess();
 
 private:
     size_t                      Buffer_Offset;

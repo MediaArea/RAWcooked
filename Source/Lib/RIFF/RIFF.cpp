@@ -13,34 +13,49 @@
 // Tested cases
 enum endianess
 {
-    LE,
-    BE,
+    BE, // Or Signed for 8-bit
+    LE, // Or Unsigned for 8-bit
 };
 
 struct riff_tested
 {
     uint32_t                    SamplesPerSec;
-    uint16_t                    BitDepth;
-    uint16_t                    Channels;
+    uint8_t                     BitDepth;
+    uint8_t                     Channels;
     endianess                   Endianess;
     riff::style                 Style;
 };
 
-const size_t RIFF_Tested_Size = 12;
+const size_t RIFF_Tested_Size = 27;
 struct riff_tested RIFF_Tested[RIFF_Tested_Size] =
 {
+    { 44100,  8, 1, LE, riff::PCM_44100_8_1_U },
+    { 44100,  8, 2, LE, riff::PCM_44100_8_2_U },
+    { 44100,  8, 6, LE, riff::PCM_44100_8_6_U },
     { 44100, 16, 1, LE, riff::PCM_44100_16_1_LE },
     { 44100, 16, 2, LE, riff::PCM_44100_16_2_LE },
     { 44100, 16, 6, LE, riff::PCM_44100_16_6_LE },
     { 44100, 24, 1, LE, riff::PCM_44100_24_1_LE },
     { 44100, 24, 2, LE, riff::PCM_44100_24_2_LE },
     { 44100, 24, 6, LE, riff::PCM_44100_24_6_LE },
+    { 48000,  8, 1, LE, riff::PCM_44100_8_1_U },
+    { 48000,  8, 2, LE, riff::PCM_44100_8_2_U },
+    { 48000,  8, 6, LE, riff::PCM_44100_8_6_U },
     { 48000, 16, 1, LE, riff::PCM_48000_16_1_LE },
     { 48000, 16, 2, LE, riff::PCM_48000_16_2_LE },
     { 48000, 16, 6, LE, riff::PCM_48000_16_6_LE },
     { 48000, 24, 1, LE, riff::PCM_48000_24_1_LE },
     { 48000, 24, 2, LE, riff::PCM_48000_24_2_LE },
     { 48000, 24, 6, LE, riff::PCM_48000_24_6_LE },
+    { 96000,  8, 1, LE, riff::PCM_44100_8_1_U },
+    { 96000,  8, 2, LE, riff::PCM_44100_8_2_U },
+    { 96000,  8, 6, LE, riff::PCM_44100_8_6_U },
+    { 96000, 16, 1, LE, riff::PCM_96000_16_1_LE },
+    { 96000, 16, 2, LE, riff::PCM_96000_16_2_LE },
+    { 96000, 16, 6, LE, riff::PCM_96000_16_6_LE },
+    { 96000, 24, 1, LE, riff::PCM_96000_24_1_LE },
+    { 96000, 24, 2, LE, riff::PCM_96000_24_2_LE },
+    { 96000, 24, 6, LE, riff::PCM_96000_24_6_LE },
 };
 
 //---------------------------------------------------------------------------
@@ -128,7 +143,7 @@ uint32_t riff::Get_B4()
 }
 
 //---------------------------------------------------------------------------
-bool riff::Parse()
+bool riff::Parse(bool AcceptTruncated)
 {
     if (Buffer_Size < 12)
         return false;
@@ -178,8 +193,12 @@ bool riff::Parse()
             if (Buffer_Offset + Size > Levels[Level - 1].Offset_End)
             {
                 // Truncated
-                Error("Truncated RIFF?");
-                return false;
+                if (!AcceptTruncated)
+                {
+                    Error("Truncated RIFF?");
+                    return false;
+                }
+                Size = Levels[Level - 1].Offset_End - Buffer_Offset;
             }
         }
         else
@@ -215,31 +234,15 @@ bool riff::Parse()
 }
 
 //---------------------------------------------------------------------------
-size_t riff::BitsPerBlock(riff::style Style)
+uint8_t riff::BitDepth()
 {
-    switch (Style)
-    {
-        case riff::PCM_44100_16_1_LE:
-        case riff::PCM_48000_16_1_LE:   // 1x16-bit content
-                                        return 16;
-        case riff::PCM_44100_16_2_LE:
-        case riff::PCM_48000_16_2_LE:   // 2x16-bit content
-                                        return 32;
-        case riff::PCM_44100_16_6_LE:
-        case riff::PCM_48000_16_6_LE:   // 6x16-bit content
-                                        return 96;
-        case riff::PCM_44100_24_1_LE:
-        case riff::PCM_48000_24_1_LE:   // 1x24-bit content
-                                        return 24;
-        case riff::PCM_44100_24_2_LE:
-        case riff::PCM_48000_24_2_LE:   // 2x24-bit content
-                                        return 48;
-        case riff::PCM_44100_24_6_LE:
-        case riff::PCM_48000_24_6_LE:   // 6x24-bit content
-                                        return 144;
-        default:
-                                        return 0;
-    }
+    return RIFF_Tested[Style].BitDepth;
+}
+
+//---------------------------------------------------------------------------
+uint8_t riff::Endianess()
+{
+    return RIFF_Tested[Style].Endianess;
 }
 
 //---------------------------------------------------------------------------
@@ -351,7 +354,9 @@ void riff::WAVE_fmt_()
             return;
         }
         uint32_t ChannelMask = Get_L4();
-        if (Channels != 6 || ChannelMask != 0x3F)
+        if ((Channels != 1 || ChannelMask != 0x04)
+         && (Channels != 2 || ChannelMask != 0x03)
+         && (Channels != 6 || (ChannelMask != 0x3F && ChannelMask != 0x60F)))
         {
             Error("WAV FormatTag ChannelMask");
             return;

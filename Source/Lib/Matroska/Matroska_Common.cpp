@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/RIFF/RIFF.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
 #include <stdlib.h>
@@ -124,6 +125,8 @@ public:
     size_t Buffer_Offset_Temp;
     uint8_t channels;
     uint8_t bits_per_sample;
+    uint8_t bits_per_sample_Input;
+    uint8_t Endianess;
 };
 void matroska::FLAC_Read(uint8_t buffer[], size_t *bytes)
 {
@@ -144,7 +147,8 @@ void matroska::FLAC_Metadata(uint8_t channels, uint8_t bits_per_sample)
 {
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
     TrackInfo_Current->FlacInfo->channels = channels;
-    TrackInfo_Current->FlacInfo->bits_per_sample = bits_per_sample;
+    TrackInfo_Current->FlacInfo->bits_per_sample = bits_per_sample; // Value can be modified later by container information
+    TrackInfo_Current->FlacInfo->bits_per_sample_Input = bits_per_sample;
 }
 void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
 {
@@ -162,6 +166,49 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
     uint8_t channels = TrackInfo_Current->FlacInfo->channels;
     switch (TrackInfo_Current->FlacInfo->bits_per_sample)
     {
+        case 8:
+                switch (TrackInfo_Current->FlacInfo->bits_per_sample_Input)
+                {
+                    case 8:
+                        switch (TrackInfo_Current->FlacInfo->Endianess)
+                        {
+                            case 0:
+                                for (size_t i = 0; i < blocksize; i++)
+                                    for (size_t j = 0; j < channels; j++)
+                                    {
+                                        *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                                    }
+                                break;
+                            case 1:
+                                for (size_t i = 0; i < blocksize; i++)
+                                    for (size_t j = 0; j < channels; j++)
+                                    {
+                                        *(Buffer_Current++) = (uint8_t)((buffer[j][i]) + 128);
+                                    }
+                                break;
+                        }
+                        break;
+                    case 16:
+                        switch (TrackInfo_Current->FlacInfo->Endianess)
+                        {
+                            case 0:
+                                for (size_t i = 0; i < blocksize; i++)
+                                    for (size_t j = 0; j < channels; j++)
+                                    {
+                                        *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                                    }
+                                break;
+                            case 1:
+                                for (size_t i = 0; i < blocksize; i++)
+                                    for (size_t j = 0; j < channels; j++)
+                                    {
+                                        *(Buffer_Current++) = (uint8_t)((buffer[j][i] >> 8) + 128);
+                                    }
+                                break;
+                        }
+                        break;
+                }
+            break;
         case 16:
             for (size_t i = 0; i < blocksize; i++)
                 for (size_t j = 0; j < channels; j++)
@@ -370,7 +417,8 @@ void matroska::Shutdown()
                 TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset;
                 TrackInfo_Current->Frame.RawFrame->Buffer_Size = 0;
                 TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = false;
-                TrackInfo_Current->Frame.RawFrame->Post = NULL;
+                TrackInfo_Current->Frame.RawFrame->Pre = NULL;
+                TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[0];
                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[0];
 
@@ -869,6 +917,25 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 {
                                     TrackInfo_Current->Frame.RawFrame->Pre = NULL;
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
+                                }
+
+                                if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
+                                {
+                                    riff RIFF;
+                                    RIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                    RIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                    RIFF.Parse(true);
+                                    if (RIFF.ErrorMessage())
+                                    {
+                                        if (TrackInfo_Current->ErrorMessage.empty())
+                                        {
+                                            TrackInfo_Current->ErrorMessage = "Unreadable frame header in reversibility data";
+                                        }
+                                        return;
+                                    }
+                                    if (RIFF.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                        TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
+                                    TrackInfo_Current->FlacInfo->Endianess = RIFF.Endianess();
                                 }
 
                                 TrackInfo_Current->DPX_Buffer_Pos++;
