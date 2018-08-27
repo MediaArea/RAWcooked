@@ -1087,6 +1087,22 @@ const char* matroska::ErrorMessage()
 // Utils
 //***************************************************************************
 
+static void ShowByteRate(float ByteRate)
+{
+    if (ByteRate < 1024)
+        cerr << ByteRate << " B/s";
+    else if (ByteRate < 1024 * 1024)
+        cerr << setprecision(ByteRate > 10 * 1024 ? 1 : 0) << ByteRate / 1024 << " KiB/s";
+    else if (ByteRate < 1024 * 1024 * 1024)
+        cerr << setprecision(ByteRate < 10LL * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 << " MiB/s";
+    else
+        cerr << setprecision(ByteRate < 10LL * 1024 * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 / 1024 << " GiB/s";
+}
+static void ShowRealTime(float RealTime)
+{
+    cerr << setprecision(2) << RealTime << "x realtime";
+}
+
 //---------------------------------------------------------------------------
 void matroska::ProgressIndicator_Show()
 {
@@ -1098,7 +1114,8 @@ void matroska::ProgressIndicator_Show()
     
     // Configure benches
     using namespace chrono;
-    steady_clock::time_point Clock_Previous = steady_clock::now();
+    steady_clock::time_point Clock_Init = steady_clock::now();
+    steady_clock::time_point Clock_Previous = Clock_Init;
     uint64_t Buffer_Offset_Previous = 0;
     uint64_t Timestamp_Previous = 0;
 
@@ -1128,11 +1145,11 @@ void matroska::ProgressIndicator_Show()
             StallDetection = 0;
         if (ProgressIndicator_New != ProgressIndicator_Value)
         {
-            float ByteRate = 0, RealTime = 0;
             uint64_t Timestamp = (Cluster_Timestamp + Block_Timestamp);
+            float ByteRate = 0, RealTime = 0;
             if (ProgressIndicator_Value != (size_t)-1)
             {
-                steady_clock::time_point Clock_Current = steady_clock::now(); 
+                steady_clock::time_point Clock_Current = steady_clock::now();
                 steady_clock::duration Duration = Clock_Current - Clock_Previous;
                 ByteRate = (float)(Buffer_Offset - Buffer_Offset_Previous) * 1000 / duration_cast<milliseconds>(Duration).count();
                 RealTime = (float)(Timestamp - Timestamp_Previous) / duration_cast<milliseconds>(Duration).count();
@@ -1146,17 +1163,14 @@ void matroska::ProgressIndicator_Show()
             cerr << " (" << setprecision(Precision) << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << "%)";
             if (ByteRate)
             {
-                if (ByteRate < 1024)
-                    cerr << ", " << ByteRate << " B/s";
-                else if (ByteRate < 1024 * 1024)
-                    cerr << ", " << setprecision(ByteRate > 10 * 1024 ? 1 : 0) << ByteRate / 1024 << " KiB/s";
-                else if (ByteRate < 1024 * 1024 * 1024)
-                    cerr << ", " << setprecision(ByteRate < 10LL * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 << " MiB/s";
-                else
-                    cerr << ", " << setprecision(ByteRate < 10LL * 1024 * 1024 * 1024 ? 1 : 0) << ByteRate / 1024 / 1024 / 1024 << " GiB/s";
+                cerr << ", ";
+                ShowByteRate(ByteRate);
             }
             if (RealTime)
-                cerr << ", " << setprecision(2) << RealTime << "x realtime";
+            {
+                cerr << ", ";
+                ShowRealTime(RealTime);
+            }
             cerr << "    "; // Clean up in case there is less content outputed than the previous time
 
             ProgressIndicator_Value = ProgressIndicator_New;
@@ -1164,7 +1178,24 @@ void matroska::ProgressIndicator_Show()
     }
     while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, Buffer_Offset != Buffer_Size);
 
+    // Show summary
+    steady_clock::time_point Clock_Current = steady_clock::now();
+    steady_clock::duration Duration = Clock_Current - Clock_Init;
+    float ByteRate = (float)(Buffer_Size) * 1000 / duration_cast<milliseconds>(Duration).count();
+    uint64_t Timestamp = (Cluster_Timestamp + Block_Timestamp);
+    float RealTime = (float)(Timestamp) / duration_cast<milliseconds>(Duration).count();
     cerr << '\r';
+    if (ByteRate)
+    {
+        ShowByteRate(ByteRate);
+    }
+    if (ByteRate && RealTime)
+        cerr << ", ";
+    if (RealTime)
+    {
+        ShowRealTime(RealTime);
+    }
+    cerr << "                              \n"; // Clean up in case there is less content outputed than the previous time
 }
 
 //---------------------------------------------------------------------------
