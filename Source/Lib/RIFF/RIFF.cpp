@@ -354,9 +354,9 @@ void riff::WAVE_fmt_()
             return;
         }
         uint32_t ChannelMask = Get_L4();
-        if ((Channels != 1 || ChannelMask != 0x04)
-         && (Channels != 2 || ChannelMask != 0x03)
-         && (Channels != 6 || (ChannelMask != 0x3F && ChannelMask != 0x60F)))
+        if ((Channels != 1 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000004))
+         && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
+         && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F)))
         {
             Error("WAV FormatTag ChannelMask");
             return;
