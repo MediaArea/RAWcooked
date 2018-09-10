@@ -231,6 +231,11 @@ int input::AnalyzeInputs(global& Global)
         cerr << "Input contains a mix of directories and files, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
         return 1;
     }
+    if (HasAtLeastOneFile && !Global.AcceptFiles)
+    {
+        cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command.\n";
+        return 1;
+    }
 
     if (Files.empty())
     {

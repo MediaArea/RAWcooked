@@ -28,6 +28,7 @@ public:
     string                      OutputFileName;
     string                      BinName;
     bool                        DisplayCommand;
+    bool                        AcceptFiles;
 
     // Intermediate info
     size_t                      Path_Pos_Global;
@@ -42,6 +43,7 @@ private:
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
     int SetDisplayCommand();
+    int SetAcceptFiles();
 };
 
 #endif

@@ -50,6 +50,13 @@ int global::SetDisplayCommand()
 }
 
 //---------------------------------------------------------------------------
+int global::SetAcceptFiles()
+{
+    AcceptFiles = true;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
     cerr << "Option " << Option1;
@@ -200,6 +207,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     AttachmentMaxSize = (size_t)-1;
     DisplayCommand = false;
+    AcceptFiles = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -232,6 +240,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if ((strcmp(argv[i], "--display-command") == 0 || strcmp(argv[i], "-d") == 0))
         {
             int Value = SetDisplayCommand();
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--file") == 0)
+        {
+            int Value = SetAcceptFiles();
             if (Value)
                 return Value;
         }
