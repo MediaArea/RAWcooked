@@ -42,7 +42,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        cmdline=$(${valgrind} rawcooked -d "${file}" 2>stderr)
+        cmdline=$(${valgrind} rawcooked --file -d "${file}" 2>stderr)
         result=$?
         stderr="$(<stderr)"
         rm -f stderr
@@ -107,7 +107,7 @@ while read line ; do
             continue
         fi
 
-        ${valgrind} rawcooked "${file}.mkv" >/dev/null 2>&1
+        ${valgrind} rawcooked --file "${file}.mkv" >/dev/null 2>&1
         result=$?
 
         # check valgrind

@@ -42,7 +42,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-            cmdline=$(${valgrind} rawcooked -d ${files} 2>/dev/null)
+            cmdline=$(${valgrind} rawcooked --file -d ${files} 2>/dev/null)
             result=$?
 
             if [ "${file: -1}" == "/" ] ; then
@@ -79,7 +79,7 @@ while read line ; do
             fi
             rm -f "${file}.rawcooked_reversibility_data"
 
-            ${valgrind} rawcooked "${file}.mkv" >/dev/null 2>&1
+            ${valgrind} rawcooked --file "${file}.mkv" >/dev/null 2>&1
             result=$?
             echo $result
             # check valgrind

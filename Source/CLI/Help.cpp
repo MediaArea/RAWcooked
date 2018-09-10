@@ -90,6 +90,8 @@ ReturnValue Help(const char* Name)
     cout << "              Note: Not yet implemented for decoding." << endl;
     cout << endl;
     cout << "INPUT RELATED OPTIONS" << endl;
+    cout << "       --file" << endl;
+    cout << "              Unlock compression of files (e.g. a .dpx or .wav)." << endl;
     cout << "       -framerate value" << endl;
     cout << "              Force video frame rate to value." << endl;
     cout << "              Default value is the one found in the image files if  available," << endl;
