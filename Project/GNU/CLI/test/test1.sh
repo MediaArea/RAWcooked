@@ -107,7 +107,7 @@ while read line ; do
             continue
         fi
 
-        ${valgrind} rawcooked --file "${file}.mkv" >/dev/null 2>&1
+        ${valgrind} rawcooked "${file}.mkv" >/dev/null 2>&1
         result=$?
 
         # check valgrind

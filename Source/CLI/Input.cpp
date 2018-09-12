@@ -203,36 +203,31 @@ int input::AnalyzeInputs(global& Global)
     if (Global.Inputs.empty())
         return 0; // Nothing to do
 
-    bool HasAtLeastOneDir = false;
-    bool HasAtLeastOneFile = false;
+    Global.HasAtLeastOneDir = false;
+    Global.HasAtLeastOneFile = false;
     for (int i = 0; i < Global.Inputs.size(); i++)
     {
         if (IsDir(Global.Inputs[i].c_str()))
         {
-            if (HasAtLeastOneDir)
+            if (Global.HasAtLeastOneDir)
             {
                 cerr << "Input contains several directories, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
                 return 1;
             }
-            HasAtLeastOneDir = true;
+            Global.HasAtLeastOneDir = true;
 
             DetectSequence_FromDir(Global.Inputs[i].c_str(), Files);
         }
         else
         {
-            HasAtLeastOneFile = true;
+            Global.HasAtLeastOneFile = true;
 
             Files.push_back(Global.Inputs[i]);
         }
     }
-    if (HasAtLeastOneDir && HasAtLeastOneFile)
+    if (Global.HasAtLeastOneDir && Global.HasAtLeastOneFile)
     {
         cerr << "Input contains a mix of directories and files, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
-        return 1;
-    }
-    if (HasAtLeastOneFile && !Global.AcceptFiles)
-    {
-        cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command.\n";
         return 1;
     }
 
@@ -265,7 +260,7 @@ int input::AnalyzeInputs(global& Global)
     }
 
     // Keeping directory name if a directory is used even if there are subdirs
-    if (HasAtLeastOneDir)
+    if (Global.HasAtLeastOneDir)
     {
         size_t Path_Pos = Global.Inputs[0].size();
         if (Global.Inputs[0][Global.Inputs[0].size() - 1] == '/' || Global.Inputs[0][Global.Inputs[0].size() - 1] == '\\')

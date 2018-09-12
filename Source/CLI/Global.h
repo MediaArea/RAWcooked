@@ -29,6 +29,8 @@ public:
     string                      BinName;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
+    bool                        HasAtLeastOneDir;
+    bool                        HasAtLeastOneFile;
 
     // Intermediate info
     size_t                      Path_Pos_Global;
