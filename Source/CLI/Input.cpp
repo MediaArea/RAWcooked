@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Input.h"
+#include "Lib/Config.h"
 #include <iostream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
@@ -13,7 +14,6 @@
     #define access _access_s
     #define stat _stat
     #define	S_ISDIR(m)	((m & 0170000) == 0040000)
-    static const char PathSeparator = '\\';
 #else
     #include <dirent.h>
     #include <fcntl.h>
@@ -21,7 +21,6 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
-    static const char PathSeparator = '/';
 #endif
 //---------------------------------------------------------------------------
 

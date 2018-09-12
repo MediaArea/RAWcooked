@@ -43,7 +43,14 @@ int ParseFile(size_t Files_Pos)
         return Value;
 
     matroska M;
-    M.FileName = Name;
+    if (Global.OutputFileName.empty())
+        M.OutputDirectoryName = Name + ".RAWcooked" + PathSeparator;
+    else
+    {
+        M.OutputDirectoryName = Global.OutputFileName;
+        if (M.OutputDirectoryName.find_last_of("/\\") != M.OutputDirectoryName.size() - 1)
+            M.OutputDirectoryName += PathSeparator;
+    }
     M.Buffer = FileMap.Buffer;
     M.Buffer_Size = FileMap.Buffer_Size;
     M.Parse();
@@ -164,7 +171,7 @@ int ParseFile(size_t Files_Pos)
 
     }
     else
-        cout << "Files are in " << Name << ".RAWcooked" << endl;
+        cout << "Files are in " << M.OutputDirectoryName << endl;
 
     FileMap.Close();
 

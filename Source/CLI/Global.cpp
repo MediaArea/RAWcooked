@@ -12,10 +12,8 @@
 #if defined(_WIN32) || defined(_WINDOWS)
     #include <direct.h>
     #define getcwd _getcwd
-    static const char PathSeparator = '\\';
 #else
     #include <unistd.h>
-    static const char PathSeparator = '/';
 #endif
 //---------------------------------------------------------------------------
 
@@ -252,7 +250,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
-        else if ((strcmp(argv[i], "--output-file-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--output-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
         {
             int Value = SetOutputFileName(argv[++i]);
             if (Value)

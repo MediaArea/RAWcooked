@@ -34,7 +34,7 @@ public:
     void                        Parse();
     void                        Shutdown();
 
-    string                      FileName;
+    string                      OutputDirectoryName;
 
     // Info
     bool                        IsDetected;

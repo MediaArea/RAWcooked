@@ -25,25 +25,20 @@
     #include <direct.h> // Directory creation
     #define access _access_s
     #define mkdir _mkdir
-    static const char PathSeparator = '\\';
 #else
     #include <sys/stat.h>
     #include <dirent.h>
     #include <unistd.h>
-    static const char PathSeparator = '/';
 #endif
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const string& FileNameDPX)
+void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& OutputFileName)
 {
-    stringstream OutFileName;
-    OutFileName << FileName << ".RAWcooked" << PathSeparator << FileNameDPX;
-    string OutFileNameS = OutFileName.str().c_str();
     #ifdef _MSC_VER
         #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
     #endif
-    FILE* F = fopen(OutFileNameS.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb");
+    FILE* F = fopen(OutputFileName.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb");
     #ifdef _MSC_VER
         #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
     #endif
@@ -52,10 +47,10 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const
         size_t i = 0;
         for (;;)
         {
-            i = OutFileNameS.find_first_of("/\\", i+1);
+            i = OutputFileName.find_first_of("/\\", i+1);
             if (i == (size_t)-1)
                 break;
-            string t = OutFileNameS.substr(0, i);
+            string t = OutputFileName.substr(0, i);
             if (access(t.c_str(), 0))
             {
                 #if defined(_WIN32) || defined(_WINDOWS)
@@ -69,7 +64,7 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& FileName, const
         #ifdef _MSC_VER
             #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
         #endif
-        F = fopen(OutFileName.str().c_str(), (RawFrame->Buffer && !RawFrame->Pre) ?"ab":"wb");
+        F = fopen(OutputFileName.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ?"ab":"wb");
         #ifdef _MSC_VER
             #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
         #endif
@@ -233,7 +228,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
     string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-    WriteFrameCall(0x00, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
+    WriteFrameCall(0x00, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + FileNameDPX);
 }
     
 //---------------------------------------------------------------------------
@@ -426,7 +421,7 @@ void matroska::Shutdown()
                     string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                    WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
+                    WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + FileNameDPX);
                 }
             }
         }
@@ -548,7 +543,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         RawFrame.Pre_Size = Levels[Level].Offset_End - Buffer_Offset;
 
         //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-        WriteFrameCall(0, &RawFrame, FileName, AttachedFile_FileName);
+        WriteFrameCall(0, &RawFrame, OutputDirectoryName + AttachedFile_FileName);
     }
 
 }
@@ -896,7 +891,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
 
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
+                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + FileNameDPX);
                                 }
                                 else if (TrackInfo_Current->ErrorMessage.empty())
                                 {
@@ -968,7 +963,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 string FileNameDPX = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, FileName, FileNameDPX);
+                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + FileNameDPX);
                             }
                             break;
                 default:;

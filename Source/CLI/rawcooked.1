@@ -42,10 +42,10 @@ Default value is \fI1048576\fR.
 .B \-\-display\-command \fR|\fB \-d
 When an external encoder/decoder is used, display the command to launch instead of launching it.
 .TP
-.B \-\-output\-file\-name \fIvalue\fR | \fB\-o \fIvalue
-Set the name of the output file to \fIvalue\fR.
+.B \-\-output\-name \fIvalue\fR | \fB\-o \fIvalue
+Set the name of the output file or folder to \fIvalue\fR.
 .br
-Default value is \fI${Input}.mkv/\fR.
+Default value is \fI${Input}.mkv\fR (if input is a folder) or \fI${Input}.RAWcooked\fR (if input is a file).
 .TP
 .B \-\-rawcooked\-file\-name \fIvalue\fR | \fB\-r \fIvalue
 Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR.
