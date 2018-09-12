@@ -35,6 +35,7 @@ public:
     void                        Shutdown();
 
     string                      OutputDirectoryName;
+    bool                        Quiet;
 
     // Info
     bool                        IsDetected;

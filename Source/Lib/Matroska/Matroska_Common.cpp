@@ -383,6 +383,7 @@ void matroska_ProgressIndicator_Show(matroska* M)
 
 //---------------------------------------------------------------------------
 matroska::matroska() :
+    Quiet(false),
     IsDetected(false)
 {
     FramesPool = new ThreadPool(1);
@@ -451,7 +452,9 @@ void matroska::Parse()
     Timestampscale = 1000000;
     Cluster_Timestamp = 0;
     Block_Timestamp = 0;
-    thread ProgressIndicator_Thread(matroska_ProgressIndicator_Show, this);
+    thread* ProgressIndicator_Thread;
+    if (!Quiet)
+        ProgressIndicator_Thread=new thread(matroska_ProgressIndicator_Show, this);
 
     Levels[Level].Offset_End = Buffer_Size;
     Levels[Level].SubElements = &matroska::SubElements__;
@@ -481,8 +484,12 @@ void matroska::Parse()
 
     // Progress indicator
     Buffer_Offset = Buffer_Size;
-    ProgressIndicator_IsEnd.notify_one();
-    ProgressIndicator_Thread.join();
+    if (!Quiet)
+    {
+        ProgressIndicator_IsEnd.notify_one();
+        ProgressIndicator_Thread->join();
+        delete ProgressIndicator_Thread;
+    }
 }
 
 //---------------------------------------------------------------------------

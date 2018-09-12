@@ -100,25 +100,25 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
 
         switch (Style_Private)
         {
-            case dpx::RGB_8:
+            case dpx::Raw_RGB_8:
                                         {
                                         FrameBuffer_Temp_8[x*3]   = (uint8_t)r;
                                         FrameBuffer_Temp_8[x*3+1] = (uint8_t)g;
                                         FrameBuffer_Temp_8[x*3+2] = (uint8_t)b;
                                         }
                                         break;
-            case dpx::RGB_10_FilledA_LE:
+            case dpx::Raw_RGB_10_FilledA_LE:
                                         {
                                         FrameBuffer_Temp_32[x] = (r << 22) | (b << 12) | (g << 2); // Exception indicated in specs, g and b are inverted
                                         }
                                         break;
-            case dpx::RGB_10_FilledA_BE:
+            case dpx::Raw_RGB_10_FilledA_BE:
                                         {
                                         uint32_t c = (r << 22) | (b << 12) | (g << 2); // Exception indicated in specs, g and b are inverted
                                         FrameBuffer_Temp_32[x] = ((c & 0xFF000000) >> 24) | ((c & 0x00FF0000) >> 8) | ((c & 0x0000FF00) << 8) | ((c & 0x000000FF) << 24); // Swap bytes
                                         }
                                         break;
-            case dpx::RGB_12_Packed_BE:
+            case dpx::Raw_RGB_12_Packed_BE:
                                         {
                                         uint32_t c; // Exception indicated in specs, g and b are inverted
                                         swap(b, g);
@@ -172,35 +172,35 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                             s = 0;
                                         }
                                         break;
-            case dpx::RGB_12_FilledA_BE:
+            case dpx::Raw_RGB_12_FilledA_BE:
                                         {  // Exception indicated in specs, g and b are inverted
                                         FrameBuffer_Temp_16[x*3]   = ((r & 0xFF0) >> 4) | ((r & 0xF) << 12);  // Swap bytes after shift by 4
                                         FrameBuffer_Temp_16[x*3+1] = ((b & 0xFF0) >> 4) | ((b & 0xF) << 12);  // Swap bytes after shift by 4
                                         FrameBuffer_Temp_16[x*3+2] = ((g & 0xFF0) >> 4) | ((g & 0xF) << 12);  // Swap bytes after shift by 4
                                         }
                                         break;
-            case dpx::RGB_12_FilledA_LE:
+            case dpx::Raw_RGB_12_FilledA_LE:
                                         {  // Exception indicated in specs, g and b are inverted
                                         FrameBuffer_Temp_16[x*3]   = r << 4;
                                         FrameBuffer_Temp_16[x*3+1] = b << 4;
                                         FrameBuffer_Temp_16[x*3+2] = g << 4;
                                         }
                                         break;
-            case dpx::RGB_16_BE:
+            case dpx::Raw_RGB_16_BE:
                                         { 
                                         FrameBuffer_Temp_16[x*3]   = ((r & 0xFF00) >> 8) | ((r & 0xFF) << 8);  // Swap bytes
                                         FrameBuffer_Temp_16[x*3+1] = ((g & 0xFF00) >> 8) | ((g & 0xFF) << 8);  // Swap bytes
                                         FrameBuffer_Temp_16[x*3+2] = ((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);  // Swap bytes
                                         }
                                         break;
-            case dpx::RGB_16_LE:
+            case dpx::Raw_RGB_16_LE:
                                         { 
                                         FrameBuffer_Temp_16[x*3]   = r;
                                         FrameBuffer_Temp_16[x*3+1] = g;
                                         FrameBuffer_Temp_16[x*3+2] = b;
                                         }
                                         break;
-            case dpx::RGBA_8:
+            case dpx::Raw_RGBA_8:
                                         {
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_8[x*4]   = (uint8_t)r;
@@ -209,7 +209,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_8[x*4+3] = (uint8_t)a;
                                         }
                                         break;
-            case dpx::RGBA_10_FilledA_BE:
+            case dpx::Raw_RGBA_10_FilledA_BE:
                                         {
                                         pixel_t a = A[x];
                                         uint32_t c;
@@ -238,7 +238,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                             s = 0;
                                         }
                                         break;
-            case dpx::RGBA_10_FilledA_LE:
+            case dpx::Raw_RGBA_10_FilledA_LE:
                                         {
                                         pixel_t a = A[x];
                                         switch (s)
@@ -262,7 +262,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                             s = 0;
                                         }
                                         break;
-            case dpx::RGBA_12_Packed_BE:
+            case dpx::Raw_RGBA_12_Packed_BE:
                                         {
                                         pixel_t a = A[x];
                                         uint32_t c;
@@ -286,7 +286,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                             s = 0;
                                         }
                                         break;
-            case dpx::RGBA_12_FilledA_BE:
+            case dpx::Raw_RGBA_12_FilledA_BE:
                                         {
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_16[x*4]   = (uint16_t)((r & 0xFF0) >> 4) | ((r & 0xF) << 12);  // Swap bytes after shift by 4
@@ -295,7 +295,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_16[x*4+3] = (uint16_t)((a & 0xFF0) >> 4) | ((a & 0xF) << 12);  // Swap bytes after shift by 4
                                         }
                                         break;
-            case dpx::RGBA_12_FilledA_LE:
+            case dpx::Raw_RGBA_12_FilledA_LE:
                                         {
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_16[x*4]   = r << 4;
@@ -304,7 +304,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_16[x*4+3] = a << 4;
                                         }
                                         break;
-            case dpx::RGBA_16_BE:
+            case dpx::Raw_RGBA_16_BE:
                                         {
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_16[x*4]   = (uint16_t)((r & 0xFF00) >> 8) | ((r & 0xFF) << 8);  // Swap bytes
@@ -313,7 +313,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         FrameBuffer_Temp_16[x*4+3] = (uint16_t)((a & 0xFF00) >> 8) | ((a & 0xFF) << 8);  // Swap bytes
                                         }
                                         break;
-            case dpx::RGBA_16_LE:
+            case dpx::Raw_RGBA_16_LE:
                                         {
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_16[x*4]   = r;

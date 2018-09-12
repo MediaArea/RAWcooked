@@ -89,6 +89,9 @@ ReturnValue Help(const char* Name)
     cout << "              the  output  A/V  file during the encoding, this file is deleted" << endl;
     cout << "              after encoding." << endl;
     cout << "              Note: Not yet implemented for decoding." << endl;
+    cout << "       --quiet" << endl;
+    cout << "              Do not show information related to RAWcooked." << endl;
+    cout << "              Encoder application may need an additional option." << endl;
     cout << endl;
     cout << "INPUT RELATED OPTIONS" << endl;
     cout << "       --file" << endl;

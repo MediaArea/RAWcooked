@@ -31,6 +31,7 @@ public:
     bool                        AcceptFiles;
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
+    bool                        Quiet;
 
     // Intermediate info
     size_t                      Path_Pos_Global;
