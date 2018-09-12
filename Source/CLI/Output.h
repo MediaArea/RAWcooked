@@ -23,6 +23,8 @@ struct stream
     string                      FileName;
     string                      FileName_Template;
     string                      FileName_StartNumber;
+    string                      FileName_EndNumber;
+    string                      Flavor;
     string                      Slices;
     string                      FrameRate;
 };

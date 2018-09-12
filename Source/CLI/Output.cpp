@@ -76,6 +76,22 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     // Input
     for (size_t i = 0; i < Streams.size(); i++)
     {
+        // Info
+        if (!Global.Quiet)
+        {
+            cerr << "Track " << i + 1 << ':' << endl;
+            if (Streams[i].FileName_Template.empty())
+            {
+                cerr << "  " << Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+            }
+            else
+            {
+                cerr << "  " << Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+                cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber << ')' << endl;
+            }
+            cerr << "  " << Streams[i].Flavor << endl;
+        }
+
         if (!Streams[i].Slices.empty())
         {
             for (map<string, string>::iterator Option = Global.VideoInputOptions.begin(); Option != Global.VideoInputOptions.end(); Option++)
@@ -115,6 +131,14 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         Command += " -" + Option->first + ' ' + Option->second;
     for (size_t i = 0; i < Attachments.size(); i++)
     {
+        // Info
+        if (!Global.Quiet)
+        {
+            if (!i)
+                cerr << "Attachments:" << endl;
+            cerr << "  " << Attachments[i].FileName_Out.substr(Attachments[i].FileName_Out.find_first_of("/\\")+1) << endl;
+        }
+
         stringstream t;
         t << MapPos++;
         Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
@@ -135,6 +159,12 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         Command += " -f matroska \"";
         Command += Global.OutputFileName;
         Command += '\"';
+    }
+
+    // Info
+    if (!Global.Quiet)
+    {
+        cerr << endl;
     }
 
     if (Global.DisplayCommand)

@@ -11,51 +11,45 @@
 
 //---------------------------------------------------------------------------
 // Tested cases
-enum endianess
-{
-    BE, // Or Signed for 8-bit
-    LE, // Or Unsigned for 8-bit
-};
-
 struct riff_tested
 {
     uint32_t                    SamplesPerSec;
     uint8_t                     BitDepth;
     uint8_t                     Channels;
-    endianess                   Endianess;
+    riff::endianess             Endianess;
     riff::style                 Style;
 };
 
 const size_t RIFF_Tested_Size = 27;
 struct riff_tested RIFF_Tested[RIFF_Tested_Size] =
 {
-    { 44100,  8, 1, LE, riff::PCM_44100_8_1_U },
-    { 44100,  8, 2, LE, riff::PCM_44100_8_2_U },
-    { 44100,  8, 6, LE, riff::PCM_44100_8_6_U },
-    { 44100, 16, 1, LE, riff::PCM_44100_16_1_LE },
-    { 44100, 16, 2, LE, riff::PCM_44100_16_2_LE },
-    { 44100, 16, 6, LE, riff::PCM_44100_16_6_LE },
-    { 44100, 24, 1, LE, riff::PCM_44100_24_1_LE },
-    { 44100, 24, 2, LE, riff::PCM_44100_24_2_LE },
-    { 44100, 24, 6, LE, riff::PCM_44100_24_6_LE },
-    { 48000,  8, 1, LE, riff::PCM_44100_8_1_U },
-    { 48000,  8, 2, LE, riff::PCM_44100_8_2_U },
-    { 48000,  8, 6, LE, riff::PCM_44100_8_6_U },
-    { 48000, 16, 1, LE, riff::PCM_48000_16_1_LE },
-    { 48000, 16, 2, LE, riff::PCM_48000_16_2_LE },
-    { 48000, 16, 6, LE, riff::PCM_48000_16_6_LE },
-    { 48000, 24, 1, LE, riff::PCM_48000_24_1_LE },
-    { 48000, 24, 2, LE, riff::PCM_48000_24_2_LE },
-    { 48000, 24, 6, LE, riff::PCM_48000_24_6_LE },
-    { 96000,  8, 1, LE, riff::PCM_44100_8_1_U },
-    { 96000,  8, 2, LE, riff::PCM_44100_8_2_U },
-    { 96000,  8, 6, LE, riff::PCM_44100_8_6_U },
-    { 96000, 16, 1, LE, riff::PCM_96000_16_1_LE },
-    { 96000, 16, 2, LE, riff::PCM_96000_16_2_LE },
-    { 96000, 16, 6, LE, riff::PCM_96000_16_6_LE },
-    { 96000, 24, 1, LE, riff::PCM_96000_24_1_LE },
-    { 96000, 24, 2, LE, riff::PCM_96000_24_2_LE },
-    { 96000, 24, 6, LE, riff::PCM_96000_24_6_LE },
+    { 44100,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
+    { 44100,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
+    { 44100,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
+    { 44100, 16, 1, riff::LE, riff::PCM_44100_16_1_LE },
+    { 44100, 16, 2, riff::LE, riff::PCM_44100_16_2_LE },
+    { 44100, 16, 6, riff::LE, riff::PCM_44100_16_6_LE },
+    { 44100, 24, 1, riff::LE, riff::PCM_44100_24_1_LE },
+    { 44100, 24, 2, riff::LE, riff::PCM_44100_24_2_LE },
+    { 44100, 24, 6, riff::LE, riff::PCM_44100_24_6_LE },
+    { 48000,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
+    { 48000,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
+    { 48000,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
+    { 48000, 16, 1, riff::LE, riff::PCM_48000_16_1_LE },
+    { 48000, 16, 2, riff::LE, riff::PCM_48000_16_2_LE },
+    { 48000, 16, 6, riff::LE, riff::PCM_48000_16_6_LE },
+    { 48000, 24, 1, riff::LE, riff::PCM_48000_24_1_LE },
+    { 48000, 24, 2, riff::LE, riff::PCM_48000_24_2_LE },
+    { 48000, 24, 6, riff::LE, riff::PCM_48000_24_6_LE },
+    { 96000,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
+    { 96000,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
+    { 96000,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
+    { 96000, 16, 1, riff::LE, riff::PCM_96000_16_1_LE },
+    { 96000, 16, 2, riff::LE, riff::PCM_96000_16_2_LE },
+    { 96000, 16, 6, riff::LE, riff::PCM_96000_16_6_LE },
+    { 96000, 24, 1, riff::LE, riff::PCM_96000_24_1_LE },
+    { 96000, 24, 2, riff::LE, riff::PCM_96000_24_2_LE },
+    { 96000, 24, 6, riff::LE, riff::PCM_96000_24_6_LE },
 };
 
 //---------------------------------------------------------------------------
@@ -113,7 +107,7 @@ const char* riff::ErrorMessage()
 riff::riff() :
     RAWcooked(NULL),
     IsDetected(false),
-    Style(PCM_Style_Max),
+    Style(Style_Max),
     error_message(NULL)
 {
 }
@@ -240,7 +234,7 @@ uint8_t riff::BitDepth()
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::Endianess()
+riff::endianess riff::Endianess()
 {
     return RIFF_Tested[Style].Endianess;
 }
@@ -392,5 +386,213 @@ void riff::WAVE_fmt_()
         return;
     }
     Style = RIFF_Tested[Tested].Style;
+}
+
+//---------------------------------------------------------------------------
+uint32_t riff::SamplesPerSec(riff::style Style)
+{
+    switch (Style)
+    {
+        case PCM_44100_8_1_U:
+        case PCM_44100_8_2_U:
+        case PCM_44100_8_6_U:
+        case PCM_44100_16_1_LE:
+        case PCM_44100_16_2_LE:
+        case PCM_44100_16_6_LE:
+        case PCM_44100_24_1_LE:
+        case PCM_44100_24_2_LE:
+        case PCM_44100_24_6_LE:
+                                        return 44100;
+        case PCM_48000_8_1_U:
+        case PCM_48000_8_2_U:
+        case PCM_48000_8_6_U:
+        case PCM_48000_16_1_LE:
+        case PCM_48000_16_2_LE:
+        case PCM_48000_16_6_LE:
+        case PCM_48000_24_1_LE:
+        case PCM_48000_24_2_LE:
+        case PCM_48000_24_6_LE:
+                                        return 48000;
+        case PCM_96000_8_1_U:
+        case PCM_96000_8_2_U:
+        case PCM_96000_8_6_U:
+        case PCM_96000_16_1_LE:
+        case PCM_96000_16_2_LE:
+        case PCM_96000_16_6_LE:
+        case PCM_96000_24_1_LE:
+        case PCM_96000_24_2_LE:
+        case PCM_96000_24_6_LE:
+                                        return 96000;
+        default:
+                                        return 0;
+    }
+}
+const char* riff::SamplesPerSec_String(riff::style Style)
+{
+    uint32_t Value = riff::SamplesPerSec(Style);
+
+    switch (Value)
+    {
+        case 44100:
+                                        return "44";
+        case 48000:
+                                        return "48";
+        case 96000:
+                                        return "96";
+        default:
+                                        return "";
+    }
+}
+
+//---------------------------------------------------------------------------
+uint8_t riff::BitDepth(riff::style Style)
+{
+    switch (Style)
+    {
+        case PCM_44100_8_1_U:
+        case PCM_44100_8_2_U:
+        case PCM_44100_8_6_U:
+        case PCM_48000_8_1_U:
+        case PCM_48000_8_2_U:
+        case PCM_48000_8_6_U:
+        case PCM_96000_8_1_U:
+        case PCM_96000_8_2_U:
+        case PCM_96000_8_6_U:
+                                        return 8;
+        case PCM_44100_16_1_LE:
+        case PCM_44100_16_2_LE:
+        case PCM_44100_16_6_LE:
+        case PCM_48000_16_1_LE:
+        case PCM_48000_16_2_LE:
+        case PCM_48000_16_6_LE:
+        case PCM_96000_16_1_LE:
+        case PCM_96000_16_2_LE:
+        case PCM_96000_16_6_LE:
+                                        return 16;
+        case PCM_44100_24_1_LE:
+        case PCM_44100_24_2_LE:
+        case PCM_44100_24_6_LE:
+        case PCM_48000_24_1_LE:
+        case PCM_48000_24_2_LE:
+        case PCM_48000_24_6_LE:
+        case PCM_96000_24_1_LE:
+        case PCM_96000_24_2_LE:
+        case PCM_96000_24_6_LE:
+                                        return 24;
+        default:
+                                        return 0;
+    }
+}
+const char* riff::BitDepth_String(riff::style Style)
+{
+    uint8_t Value = riff::BitDepth(Style);
+
+    switch (Value)
+    {
+        case 8:
+                                        return "8";
+        case 16:
+                                        return "16";
+        case 24:
+                                        return "24";
+        default:
+                                        return "";
+    }
+}
+
+//---------------------------------------------------------------------------
+uint8_t riff::Channels(riff::style Style)
+{
+    switch (Style)
+    {
+        case PCM_44100_8_1_U:
+        case PCM_48000_8_1_U:
+        case PCM_96000_8_1_U:
+        case PCM_44100_16_1_LE:
+        case PCM_48000_16_1_LE:
+        case PCM_96000_16_1_LE:
+        case PCM_48000_24_1_LE:
+        case PCM_44100_24_1_LE:
+        case PCM_96000_24_1_LE:
+                                        return 1;
+        case PCM_44100_8_2_U:
+        case PCM_48000_8_2_U:
+        case PCM_96000_8_2_U:
+        case PCM_44100_16_2_LE:
+        case PCM_48000_16_2_LE:
+        case PCM_96000_16_2_LE:
+        case PCM_44100_24_2_LE:
+        case PCM_48000_24_2_LE:
+        case PCM_96000_24_2_LE:
+                                        return 2;
+        case PCM_44100_8_6_U:
+        case PCM_48000_8_6_U:
+        case PCM_96000_8_6_U:
+        case PCM_44100_16_6_LE:
+        case PCM_48000_16_6_LE:
+        case PCM_96000_16_6_LE:
+        case PCM_44100_24_6_LE:
+        case PCM_48000_24_6_LE:
+        case PCM_96000_24_6_LE:
+                                        return 6;
+        default:
+                                        return 0;
+    }
+}
+const char* riff::Channels_String(riff::style Style)
+{
+    uint8_t Value = riff::Channels(Style);
+
+    switch (Value)
+    {
+        case 1:
+                                        return "1";
+        case 2:
+                                        return "2";
+        case 6:
+                                        return "6";
+        default:
+                                        return "";
+    }
+}
+
+//---------------------------------------------------------------------------
+riff::endianess riff::Endianess(riff::style Style)
+{
+    return LE; //For the moment all is LE or Unsigned
+}
+const char* riff::Endianess_String(riff::style Style)
+{
+    riff::endianess Value = riff::Endianess(Style);
+    uint8_t BitDepth = riff::BitDepth(Style);
+
+    switch (Value)
+    {
+        case LE:
+                                        return BitDepth==8?"U":"LE";
+        case BE:
+                                        return BitDepth==8?"S":"BE";
+        default:
+                                        return "";
+    }
+}
+
+//---------------------------------------------------------------------------
+string riff::Flavor_String(riff::style Style)
+{
+    string ToReturn("WAV/PCM/");
+    ToReturn += SamplesPerSec_String(Style);
+    ToReturn += "kHz/";
+    ToReturn += BitDepth_String(Style);
+    ToReturn += "bit/";
+    ToReturn += Channels_String(Style);
+    ToReturn += "ch";
+    const char* Value = Endianess_String(Style);
+    if (Value[0])
+    {
+        ToReturn += '/';
+        ToReturn += Value;
+    }
+    return ToReturn;
 }
 

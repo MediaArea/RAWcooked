@@ -51,6 +51,7 @@ int ParseFile(size_t Files_Pos)
         if (M.OutputDirectoryName.find_last_of("/\\") != M.OutputDirectoryName.size() - 1)
             M.OutputDirectoryName += PathSeparator;
     }
+    M.Quiet = Global.Quiet;
     M.Buffer = FileMap.Buffer;
     M.Buffer_Size = FileMap.Buffer_Size;
     M.Parse();
@@ -58,6 +59,8 @@ int ParseFile(size_t Files_Pos)
     vector<string> RemovedFiles;
     string FileName_Template;
     string FileName_StartNumber;
+    string FileName_EndNumber;
+    string Flavor;
     string Slices;
     string FrameRate;
 
@@ -83,13 +86,14 @@ int ParseFile(size_t Files_Pos)
         if (RIFF.IsDetected)
         {
             RemovedFiles.push_back(Name);
+            Flavor = RIFF.Flavor_String((riff::style)RIFF.Style);
         }
     }
 
     dpx DPX;
     if (!M.IsDetected && !RIFF.IsDetected)
     {
-        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber);
+        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
 
         size_t i = 0;
         for (;;)
@@ -120,6 +124,11 @@ int ParseFile(size_t Files_Pos)
                 break;
             Name = RemovedFiles[i];
             FileMap.Open_ReadMode(Name);
+        }
+
+        if (DPX.IsDetected)
+        {
+            Flavor = DPX.Flavor_String((dpx::style)DPX.Style);
         }
     }
 
@@ -164,9 +173,11 @@ int ParseFile(size_t Files_Pos)
             Stream.FileName = RemovedFiles[0];
             if (!FileName_StartNumber.empty() && !FileName_Template.empty())
             {
-                Stream.FileName_StartNumber = FileName_StartNumber;
                 Stream.FileName_Template = FileName_Template;
+                Stream.FileName_StartNumber = FileName_StartNumber;
+                Stream.FileName_EndNumber = FileName_EndNumber;
             }
+            Stream.Flavor = Flavor;
 
             Stream.Slices = Slices;
             if (!Slices.empty() && FrameRateFromOptions == Global.VideoInputOptions.end())
@@ -176,7 +187,7 @@ int ParseFile(size_t Files_Pos)
         }
 
     }
-    else
+    else if (!Global.Quiet)
         cout << "Files are in " << M.OutputDirectoryName << endl;
 
     FileMap.Close();

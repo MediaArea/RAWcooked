@@ -152,6 +152,18 @@ int global::SetOption(const char* argv[], int& i, int argc)
         }
         return Error_NotTested(argv[i - 1], argv[i]);
     }
+    if (!strcmp(argv[i], "-loglevel"))
+    {
+        if (++i >= argc)
+            return Error_NotTested(argv[i - 1]);
+        if (!strcmp(argv[i], "error")
+         || !strcmp(argv[i], "warning"))
+        {
+            OutputOptions["loglevel"] = argv[i];
+            return 0;
+        }
+        return Error_NotTested(argv[i - 1], argv[i]);
+    }
     if (!strcmp(argv[i], "-slicecrc"))
     {
         if (++i >= argc)
@@ -197,6 +209,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     AttachmentMaxSize = (size_t)-1;
     DisplayCommand = false;
     AcceptFiles = false;
+    Quiet = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -219,7 +232,9 @@ int global::ManageCommandLine(const char* argv[], int argc)
             }
         }
         else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
+        {
             AttachmentMaxSize = atoi(argv[++i]);
+        }
         else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0) && i + 1 < argc)
         {
             int Value = SetBinName(argv[++i]);
@@ -255,6 +270,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetOutputFileName(argv[++i]);
             if (Value)
                 return Value;
+        }
+        else if (strcmp(argv[i], "--quiet") == 0)
+        {
+            Quiet = true;
         }
         else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0) && i + 1 < argc)
             rawcooked_reversibility_data_FileName = argv[++i];

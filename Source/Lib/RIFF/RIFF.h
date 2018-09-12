@@ -33,7 +33,7 @@ public:
 
     // Info
     bool                        IsDetected;
-    uint64_t                    Style;
+    uint8_t                     Style;
 
     // Error message
     const char*                 ErrorMessage();
@@ -67,12 +67,26 @@ public:
         PCM_96000_24_1_LE,
         PCM_96000_24_2_LE,
         PCM_96000_24_6_LE,
-        PCM_Style_Max,
+        Style_Max,
+    };
+    enum endianess
+    {
+        BE, // Or Signed for 8-bit
+        LE, // Or Unsigned for 8-bit
     };
 
     // Info about formats
     uint8_t BitDepth();
-    uint8_t Endianess();
+    endianess Endianess();
+    static uint32_t SamplesPerSec(style Style);
+    static const char* SamplesPerSec_String(style Style);
+    static uint8_t BitDepth(style Style);
+    static const char* BitDepth_String(style Style);
+    static uint8_t Channels(style Style);
+    static const char* Channels_String(style Style);
+    static endianess Endianess(style Style);
+    static const char* Endianess_String(style Style);
+    static string Flavor_String(style Style);
 
 private:
     size_t                      Buffer_Offset;

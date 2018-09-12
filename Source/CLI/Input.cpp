@@ -60,7 +60,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber)
+void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber)
 {
     string FN(Files[AllFiles_Pos]);
     string Path;
@@ -90,6 +90,7 @@ void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, si
         for (;;)
         {
             RemovedFiles.push_back(Path + Before + FN + After);
+            FileName_EndNumber = FN;
             size_t i = FN.size() - 1;
             for (;;)
             {

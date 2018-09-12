@@ -33,7 +33,7 @@ public:
 
     // Info
     bool                        IsDetected;
-    uint64_t                    Style;
+    uint8_t                     Style;
     size_t                      slice_x;
     size_t                      slice_y;
     string*                     FrameRate;
@@ -41,30 +41,74 @@ public:
     // Error message
     const char*                 ErrorMessage();
 
-    enum style
+    enum style : uint8_t
     {
-        RGB_8,
-        RGB_10_FilledA_LE,
-        RGB_10_FilledA_BE,
-        RGB_12_Packed_BE,
-        RGB_12_FilledA_BE,
-        RGB_12_FilledA_LE,
-        RGB_16_BE,
-        RGB_16_LE,
-        RGBA_8,
-        RGBA_10_FilledA_LE,
-        RGBA_10_FilledA_BE,
-        RGBA_12_Packed_BE,
-        RGBA_12_FilledA_BE,
-        RGBA_12_FilledA_LE,
-        RGBA_16_BE,
-        RGBA_16_LE,
-        DPX_Style_Max,
+        Raw_RGB_8,
+        Raw_RGB_10_FilledA_LE,
+        Raw_RGB_10_FilledA_BE,
+        Raw_RGB_12_Packed_BE,
+        Raw_RGB_12_FilledA_BE,
+        Raw_RGB_12_FilledA_LE,
+        Raw_RGB_16_BE,
+        Raw_RGB_16_LE,
+        Raw_RGBA_8,
+        Raw_RGBA_10_FilledA_LE,
+        Raw_RGBA_10_FilledA_BE,
+        Raw_RGBA_12_Packed_BE,
+        Raw_RGBA_12_FilledA_BE,
+        Raw_RGBA_12_FilledA_LE,
+        Raw_RGBA_16_BE,
+        Raw_RGBA_16_LE,
+        Style_Max,
+    };
+
+    enum endianess : uint8_t
+    {
+        LE,
+        BE,
+    };
+    enum descriptor : uint8_t
+    {
+        R           =   1,
+        G           =   2,
+        B           =   3,
+        A           =   4,
+        Y           =   6,
+        ColorDiff   =   7,
+        Z           =   8,
+        Composite   =   9,
+        RGB         =  50,
+        RGBA        =  51,
+        ABGR        =  52,
+        CbYCrY      = 100,
+        CbYACrYA    = 101,
+        CbYCr       = 102,
+        CbYCrA      = 103,
+    };
+    enum encoding : uint8_t
+    {
+        Raw,
+        RLE,
+    };
+    enum packing : uint8_t
+    {
+        Packed,
+        MethodA,
+        MethodB,
     };
 
     // Info about formats
     static size_t BitsPerBlock(style Style);
     static size_t PixelsPerBlock(style Style); // Need no overlap every x pixels
+    static descriptor ColorSpace(style Style);
+    static const char* ColorSpace_String(style Style);
+    static uint8_t BitDepth(style Style);
+    static const char* BitDepth_String(style Style);
+    static packing Packing(style Style);
+    static const char* Packing_String(style Style);
+    static endianess Endianess(style Style);
+    static const char* Endianess_String(style Style);
+    static string Flavor_String(style Style);
 
 private:
     size_t                      Buffer_Offset;
