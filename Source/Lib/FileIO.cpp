@@ -15,7 +15,6 @@
     #define access _access_s
     #define mkdir _mkdir
     #define stat _stat
-    static const char PathSeparator = '\\';
 #else
     #include <dirent.h>
     #include <fcntl.h>
@@ -23,7 +22,6 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
-    static const char PathSeparator = '/';
 #endif
 //---------------------------------------------------------------------------
 

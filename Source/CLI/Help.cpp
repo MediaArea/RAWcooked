@@ -76,9 +76,10 @@ ReturnValue Help(const char* Name)
     cout << "              When an external encoder/decoder is used, display the command to" << endl;
     cout << "              launch instead of launching it." << endl;
     cout << endl;
-    cout << "       --output-file-name value | -o value" << endl;
-    cout << "              Set the name of the output file to value." << endl;
-    cout << "              Default value is ${Input}.mkv/." << endl;
+    cout << "       --output-name value | -o value" << endl;
+    cout << "              Set the name of the output file or folder to value." << endl;
+    cout << "              Default value is ${Input}.mkv (if input is a folder)" << endl;
+    cout << "              or ${Input}.RAWcooked (if input is a file)." << endl;
     cout << endl;
     cout << "       --rawcooked-file-name value | -r value" << endl;
     cout << "              Set  (encoding)  or  get  (decoding)  the  name of the RAWcooked" << endl;

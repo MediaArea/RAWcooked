@@ -121,19 +121,21 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
     stringstream t;
     t << MapPos++;
-    Command += " -attach \"" + Global.rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" \"";
+    Command += " -attach \"" + Global.rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
+        Command += '\"';
         Command += FileName;
         if (Command[Command.size() - 1] == '/' || Command[Command.size() - 1] == '\\')
             Command.pop_back();
-        Command += ".mkv";
+        Command += ".mkv\"";
     }
     else
     {
+        Command += " -f matroska \"";
         Command += Global.OutputFileName;
+        Command += '\"';
     }
-    Command += '\"';
 
     if (Global.DisplayCommand)
         cout << Command << endl;

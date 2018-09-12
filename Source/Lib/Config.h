@@ -18,3 +18,11 @@ using namespace std;
 //---------------------------------------------------------------------------
 // Defines the maximum bit size of a pixel
 typedef int32_t pixel_t;
+
+//---------------------------------------------------------------------------
+// Platform specific
+#if defined(_WIN32) || defined(_WINDOWS)
+    static const char PathSeparator = '\\';
+#else
+    static const char PathSeparator = '/';
+#endif
