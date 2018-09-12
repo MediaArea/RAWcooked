@@ -240,9 +240,6 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\float.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\format.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
@@ -372,9 +369,6 @@
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c">
-      <Filter>ThirdParty\flac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\float.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c">

@@ -41,7 +41,6 @@
     <ProjectGuid>{5F56E9D9-9268-49C9-8658-901271E3A23E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>RAWcooked</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <ProjectName>RAWcooked_CLI</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

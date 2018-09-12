@@ -57,7 +57,6 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\crc.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\float.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\format.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\lpc.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\macros.h" />
@@ -100,7 +99,6 @@
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\float.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c" />
@@ -129,7 +127,6 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}</ProjectGuid>
     <RootNamespace>Lib</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
     <ProjectName>RAWcooked_Lib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
