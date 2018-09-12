@@ -134,6 +134,12 @@ int ParseFile(size_t Files_Pos)
     // Processing DPX to MKV/FFV1
     if (!M.IsDetected)
     {
+        if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
+        {
+            cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command.\n";
+            return 1;
+        }
+        
         if (!M.IsDetected && !RIFF.IsDetected && !DPX.IsDetected)
         {
             size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
