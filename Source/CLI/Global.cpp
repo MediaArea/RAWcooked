@@ -22,15 +22,6 @@
 //---------------------------------------------------------------------------
 int global::SetOutputFileName(const char* FileName)
 {
-    const char* AfterDot = strrchr(FileName, '.');
-    if (AfterDot)
-        AfterDot++;
-    if (!AfterDot || (strcmp(AfterDot, "mkv") && strcmp(AfterDot, "MKV")))
-    {
-        cout << "Unsupported output file extension. Please contact info@mediaarea.net if you want support of such output format.\n";
-        return 1;
-    }
-
     OutputFileName = FileName;
     return 0;
 }
