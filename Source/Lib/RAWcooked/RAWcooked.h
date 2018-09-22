@@ -35,7 +35,7 @@ public:
     void                        Close();
 
     string                      FileName;
-    string                      FileNameDPX;
+    string                      OutputFileName;
 
 private:
     uint64_t                    Buffer_Offset;

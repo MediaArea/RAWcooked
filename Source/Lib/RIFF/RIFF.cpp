@@ -17,7 +17,7 @@ struct riff_tested
     uint8_t                     BitDepth;
     uint8_t                     Channels;
     riff::endianess             Endianess;
-    riff::style                 Style;
+    riff::flavor                 Flavor;
 };
 
 const size_t RIFF_Tested_Size = 27;
@@ -90,50 +90,13 @@ riff::call riff::SubElements_Void(uint64_t Name)
 }
 
 //***************************************************************************
-// Errors
-//***************************************************************************
-
-//---------------------------------------------------------------------------
-const char* riff::ErrorMessage()
-{
-    return error_message;
-}
-
-//***************************************************************************
 // RIFF
 //***************************************************************************
 
 //---------------------------------------------------------------------------
 riff::riff() :
-    RAWcooked(NULL),
-    IsDetected(false),
-    Style(Style_Max),
-    error_message(NULL)
+    input_base_uncompressed()
 {
-}
-
-//---------------------------------------------------------------------------
-uint16_t riff::Get_L2()
-{
-    uint16_t ToReturn = Buffer[Buffer_Offset + 0] | (Buffer[Buffer_Offset + 1] << 8);
-    Buffer_Offset += 2;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-uint32_t riff::Get_L4()
-{
-    uint32_t ToReturn = Buffer[Buffer_Offset+0] | (Buffer[Buffer_Offset + 1] << 8) | (Buffer[Buffer_Offset + 2] << 16) | (Buffer[Buffer_Offset + 3] << 24);
-    Buffer_Offset += 4;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-uint32_t riff::Get_B4()
-{
-    uint32_t ToReturn = (Buffer[Buffer_Offset + 0] << 24) | (Buffer[Buffer_Offset + 1] << 16) | (Buffer[Buffer_Offset + 2] << 8) | Buffer[Buffer_Offset + 3];
-    Buffer_Offset += 4;
-    return ToReturn;
 }
 
 //---------------------------------------------------------------------------
@@ -145,9 +108,8 @@ bool riff::Parse(bool AcceptTruncated)
         return false;
     if (Buffer[0] == 'R' && Buffer[1] == 'F' && Buffer[2] == '6' && Buffer[3] == '4')
     {
-        IsDetected = true;
-        Error("RF64 (4GB+ WAV)");
-        return false;
+        Unssuported("RF64 (4GB+ WAV)");
+        return true;
     }
     if (Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
         return false;
@@ -177,10 +139,7 @@ bool riff::Parse(bool AcceptTruncated)
             if (Name == 0x52494646) // "RIFF"
             {
                 if (Size < 4)
-                {
-                    Error("Incoherency detected while parsing RIFF");
-                    return false;
-                }
+                    return Unssuported("Incoherency detected while parsing RIFF");
                 Name = Get_B4();
                 Size -= 4;
             }
@@ -188,19 +147,12 @@ bool riff::Parse(bool AcceptTruncated)
             {
                 // Truncated
                 if (!AcceptTruncated)
-                {
-                    Error("Truncated RIFF?");
-                    return false;
-                }
+                    return Unssuported("Truncated RIFF?");
                 Size = Levels[Level - 1].Offset_End - Buffer_Offset;
             }
         }
         else
-        {
-            // There is a problem in the chunk
-            Error("Incoherency detected while parsing RIFF");
-            return false;
-        }
+            return Unssuported("Incoherency detected while parsing RIFF");
 
         // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -224,19 +176,25 @@ bool riff::Parse(bool AcceptTruncated)
             Level++;
     }
 
-    return 0;
+    return ErrorMessage() ? true : false;
+}
+
+//---------------------------------------------------------------------------
+string riff::Flavor_String()
+{
+    return Flavor_String(Flavor);
 }
 
 //---------------------------------------------------------------------------
 uint8_t riff::BitDepth()
 {
-    return RIFF_Tested[Style].BitDepth;
+    return RIFF_Tested[Flavor].BitDepth;
 }
 
 //---------------------------------------------------------------------------
 riff::endianess riff::Endianess()
 {
-    return RIFF_Tested[Style].Endianess;
+    return RIFF_Tested[Flavor].Endianess;
 }
 
 //---------------------------------------------------------------------------
@@ -270,7 +228,7 @@ void riff::WAVE_fmt_()
 {
     if (Levels[Level].Offset_End - Buffer_Offset < 16)
     {
-        Error("WAV FormatTag format");
+        Unssuported("WAV FormatTag format");
         return;
     }
 
@@ -280,7 +238,7 @@ void riff::WAVE_fmt_()
         Endianess = LE;
     else
     {
-        Error("WAV FormatTag is not WAVE_FORMAT_PCM 1");
+        Unssuported("WAV FormatTag is not WAVE_FORMAT_PCM 1");
         return;
     }
 
@@ -292,12 +250,12 @@ void riff::WAVE_fmt_()
 
     if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
     {
-        Error("WAV BlockAlign not supported");
+        Unssuported("WAV BlockAlign not supported");
         return;
     }
     if (BlockAlign * 8 != Channels * BitDepth)
     {
-        Error("WAV BlockAlign not supported");
+        Unssuported("WAV BlockAlign not supported");
         return;
     }
     if (FormatTag == 1)
@@ -307,7 +265,7 @@ void riff::WAVE_fmt_()
             uint16_t Padding0 = Get_L2(); // Some files have 2 zeroes, it does not hurt so we accept them
             if (Padding0)
             {
-                Error("WAV FormatTag extension");
+                Unssuported("WAV FormatTag extension");
                 return;
             }
         }
@@ -317,14 +275,14 @@ void riff::WAVE_fmt_()
             uint32_t Padding0 = Get_L4(); // Some files have 4 zeroes, it does not hurt so we accept them
             if (Padding0)
             {
-                Error("WAV FormatTag extension");
+                Unssuported("WAV FormatTag extension");
                 return;
             }
         }
 
         if (Levels[Level].Offset_End - Buffer_Offset)
         {
-            Error("WAV FormatTag extension");
+            Unssuported("WAV FormatTag extension");
             return;
         }
     }
@@ -332,19 +290,19 @@ void riff::WAVE_fmt_()
     {
         if (Levels[Level].Offset_End - Buffer_Offset != 24)
         {
-            Error("WAV FormatTag extension");
+            Unssuported("WAV FormatTag extension");
             return;
         }
         uint16_t cbSize = Get_L2();
         if (cbSize != 22)
         {
-            Error("WAV FormatTag cbSize");
+            Unssuported("WAV FormatTag cbSize");
             return;
         }
         uint16_t ValidBitsPerSample = Get_L2();
         if (ValidBitsPerSample != BitDepth)
         {
-            Error("WAV FormatTag ValidBitsPerSample");
+            Unssuported("WAV FormatTag ValidBitsPerSample");
             return;
         }
         uint32_t ChannelMask = Get_L4();
@@ -352,7 +310,7 @@ void riff::WAVE_fmt_()
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F)))
         {
-            Error("WAV FormatTag ChannelMask");
+            Unssuported("WAV FormatTag ChannelMask");
             return;
         }
         uint32_t SubFormat1 = Get_L4();
@@ -364,7 +322,7 @@ void riff::WAVE_fmt_()
          || SubFormat3 != 0x800000aa
          || SubFormat4 != 0x00389b71)
         {
-            Error("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
+            Unssuported("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
             return;
         }
     }
@@ -382,16 +340,16 @@ void riff::WAVE_fmt_()
     }
     if (Tested >= RIFF_Tested_Size)
     {
-        Error("Style (SamplesPerSec / BitDepth / Channels / Endianess combination)");
+        Unssuported("Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)");
         return;
     }
-    Style = RIFF_Tested[Tested].Style;
+    Flavor = RIFF_Tested[Tested].Flavor;
 }
 
 //---------------------------------------------------------------------------
-uint32_t riff::SamplesPerSec(riff::style Style)
+uint32_t riff::SamplesPerSec(riff::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case PCM_44100_8_1_U:
         case PCM_44100_8_2_U:
@@ -427,9 +385,9 @@ uint32_t riff::SamplesPerSec(riff::style Style)
                                         return 0;
     }
 }
-const char* riff::SamplesPerSec_String(riff::style Style)
+const char* riff::SamplesPerSec_String(riff::flavor Flavor)
 {
-    uint32_t Value = riff::SamplesPerSec(Style);
+    uint32_t Value = riff::SamplesPerSec(Flavor);
 
     switch (Value)
     {
@@ -445,9 +403,9 @@ const char* riff::SamplesPerSec_String(riff::style Style)
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::BitDepth(riff::style Style)
+uint8_t riff::BitDepth(riff::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case PCM_44100_8_1_U:
         case PCM_44100_8_2_U:
@@ -483,9 +441,9 @@ uint8_t riff::BitDepth(riff::style Style)
                                         return 0;
     }
 }
-const char* riff::BitDepth_String(riff::style Style)
+const char* riff::BitDepth_String(riff::flavor Flavor)
 {
-    uint8_t Value = riff::BitDepth(Style);
+    uint8_t Value = riff::BitDepth(Flavor);
 
     switch (Value)
     {
@@ -501,9 +459,9 @@ const char* riff::BitDepth_String(riff::style Style)
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::Channels(riff::style Style)
+uint8_t riff::Channels(riff::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case PCM_44100_8_1_U:
         case PCM_48000_8_1_U:
@@ -539,9 +497,9 @@ uint8_t riff::Channels(riff::style Style)
                                         return 0;
     }
 }
-const char* riff::Channels_String(riff::style Style)
+const char* riff::Channels_String(riff::flavor Flavor)
 {
-    uint8_t Value = riff::Channels(Style);
+    uint8_t Value = riff::Channels(Flavor);
 
     switch (Value)
     {
@@ -557,14 +515,14 @@ const char* riff::Channels_String(riff::style Style)
 }
 
 //---------------------------------------------------------------------------
-riff::endianess riff::Endianess(riff::style Style)
+riff::endianess riff::Endianess(riff::flavor Flavor)
 {
     return LE; //For the moment all is LE or Unsigned
 }
-const char* riff::Endianess_String(riff::style Style)
+const char* riff::Endianess_String(riff::flavor Flavor)
 {
-    riff::endianess Value = riff::Endianess(Style);
-    uint8_t BitDepth = riff::BitDepth(Style);
+    riff::endianess Value = riff::Endianess(Flavor);
+    uint8_t BitDepth = riff::BitDepth(Flavor);
 
     switch (Value)
     {
@@ -578,16 +536,16 @@ const char* riff::Endianess_String(riff::style Style)
 }
 
 //---------------------------------------------------------------------------
-string riff::Flavor_String(riff::style Style)
+string riff::Flavor_String(uint8_t Flavor)
 {
     string ToReturn("WAV/PCM/");
-    ToReturn += SamplesPerSec_String(Style);
+    ToReturn += SamplesPerSec_String((flavor)Flavor);
     ToReturn += "kHz/";
-    ToReturn += BitDepth_String(Style);
+    ToReturn += BitDepth_String((flavor)Flavor);
     ToReturn += "bit/";
-    ToReturn += Channels_String(Style);
+    ToReturn += Channels_String((flavor)Flavor);
     ToReturn += "ch";
-    const char* Value = Endianess_String(Style);
+    const char* Value = Endianess_String((flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';

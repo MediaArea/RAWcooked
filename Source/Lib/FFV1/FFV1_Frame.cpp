@@ -156,7 +156,7 @@ void frame::Read_Buffer_Continue(uint8_t* Buffer, size_t Buffer_Size)
         //Frame
         //delete RawFrame;
         //RawFrame = new raw_frame;
-        RawFrame->Create(raw_frame::Style_DPX, P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
+        RawFrame->Create(raw_frame::Flavor_DPX, P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
     }
 
     size_t Slices_Size = 0;

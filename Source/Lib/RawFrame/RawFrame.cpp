@@ -10,21 +10,21 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-void raw_frame::Create(style Style_, size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
+void raw_frame::Create(flavor Style_, size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
 {
     if (!Planes.empty())
         return; //TODO: manage when it changes
 
-    Style = Style_;
+    Flavor = Style_;
 
     for (size_t i = 0; i < Planes.size(); i++)
         delete Planes[i];
     Planes.clear();
 
-    switch (Style)
+    switch (Flavor)
     {
-        case Style_FFmpeg: FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
-        case Style_DPX: DPX_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
+        case Flavor_FFmpeg: FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
+        case Flavor_DPX: DPX_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
     }
 }
 
@@ -62,7 +62,7 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, 
     switch (colorspace_type)
     {
         case 1: // JPEG2000-RCT --> RGB
-                Planes.push_back(new plane(width, height, dpx::BitsPerBlock((dpx::style)Style_Private), dpx::PixelsPerBlock((dpx::style)Style_Private)));
+                Planes.push_back(new plane(width, height, dpx::BitsPerBlock((dpx::flavor)Flavor_Private), dpx::PixelsPerBlock((dpx::flavor)Flavor_Private)));
         default: ;
     }
 }

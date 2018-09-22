@@ -138,13 +138,13 @@ void rawcooked::Parse()
     // If not doing this, files are not considered as in a sub-directory when encoded with a Windows platform then decoded with a Unix-based platform.
     #if defined(_WIN32) || defined(_WINDOWS)
         string::size_type i = 0;
-        while ((i = FileNameDPX.find('\\', i)) != string::npos)
-            FileNameDPX[i++] = '/';
+        while ((i = OutputFileName.find('\\', i)) != string::npos)
+            OutputFileName[i++] = '/';
     #endif
 
     // Create or Use mask
-    uint8_t* FileName = (uint8_t*)FileNameDPX.c_str();
-    size_t FileName_Size = FileNameDPX.size();
+    uint8_t* FileName = (uint8_t*)OutputFileName.c_str();
+    size_t FileName_Size = OutputFileName.size();
     uint8_t* ToStore_FileName = FileName;
     uint8_t* ToStore_Before = Before;
     uint8_t* ToStore_After = After;

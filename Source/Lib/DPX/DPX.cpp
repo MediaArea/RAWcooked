@@ -9,7 +9,6 @@
 #include "Lib/RAWcooked/RAWcooked.h"
 #include <sstream>
 #include <ios>
-#include <cmath>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -22,7 +21,7 @@ struct dpx_tested
     uint8_t                     BitDepth;
     dpx::packing                Packing;
     dpx::endianess              Endianess;
-    dpx::style                  Style;
+    dpx::flavor                  Flavor;
 };
 
 const size_t DPX_Tested_Size = 26;
@@ -59,92 +58,21 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 //---------------------------------------------------------------------------
 
 //***************************************************************************
-// Errors
-//***************************************************************************
-
-//---------------------------------------------------------------------------
-const char* dpx::ErrorMessage()
-{
-    return error_message;
-}
-
-//***************************************************************************
 // DPX
 //***************************************************************************
 
 //---------------------------------------------------------------------------
 dpx::dpx() :
-    RAWcooked(NULL),
-    IsDetected(false),
-    Style(Style_Max),
-    FrameRate(NULL),
-    error_message(NULL)
+    input_base_uncompressed(true),
+    FrameRate(NULL)
 {
 }
 
 //---------------------------------------------------------------------------
-uint16_t dpx::Get_L2()
-{
-    uint16_t ToReturn = Buffer[Buffer_Offset + 0] | (Buffer[Buffer_Offset + 1] << 8);
-    Buffer_Offset += 2;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-uint16_t dpx::Get_B2()
-{
-    uint16_t ToReturn = (Buffer[Buffer_Offset + 0] << 8) | Buffer[Buffer_Offset + 1];
-    Buffer_Offset += 2;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-uint32_t dpx::Get_L4()
-{
-    uint32_t ToReturn = Buffer[Buffer_Offset+0] | (Buffer[Buffer_Offset + 1] << 8) | (Buffer[Buffer_Offset + 2] << 16) | (Buffer[Buffer_Offset + 3] << 24);
-    Buffer_Offset += 4;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-uint32_t dpx::Get_B4()
-{
-    uint32_t ToReturn = (Buffer[Buffer_Offset + 0] << 24) | (Buffer[Buffer_Offset + 1] << 16) | (Buffer[Buffer_Offset + 2] << 8) | Buffer[Buffer_Offset + 3];
-    Buffer_Offset += 4;
-    return ToReturn;
-}
-
-//---------------------------------------------------------------------------
-double dpx::Get_XF4()
-{
-    // sign          1 bit
-    // exponent      8 bit
-    // significand  23 bit
-
-    // Retrieving data
-    uint32_t Integer = Get_X4();
-
-    // Retrieving elements
-    bool     Sign     = (Integer >> 31) ? true : false;
-    uint32_t Exponent = (Integer >> 23) & 0xFF;
-    uint32_t Mantissa =  Integer        & 0x007FFFFF;
-
-    // Some computing
-    if (Exponent == 0 || Exponent == 0xFF)
-        return 0; // These are denormalised numbers, NANs, and other horrible things
-    Exponent -= 0x7F; // Bias
-    double Answer = (((double)Mantissa) / 8388608 + 1.0)*std::pow((double)2, (int)Exponent); // (1+Mantissa) * 2^Exponent
-    if (Sign)
-        Answer = -Answer;
-
-    return Answer;
-}
-
-//---------------------------------------------------------------------------
-bool dpx::Parse()
+bool dpx::Parse(bool AcceptTruncated)
 {
     if (Buffer_Size < 1664)
-        return Error(NULL);
+        return false;
 
     Buffer_Offset = 0;
     uint32_t Magic = Get_B4();
@@ -157,19 +85,19 @@ bool dpx::Parse()
             IsBigEndian = true;
             break;
         default:
-            return Error(NULL);
+            return false;
     }
     IsDetected = true;
     uint32_t OffsetToImage = Get_X4();
     if (OffsetToImage > Buffer_Size)
-        return Error("Offset to image data in bytes");
+        return Unssuported("Offset to image data in bytes");
     uint32_t VersioNumber = Get_B4();
     switch (VersioNumber)
     {
         case 0x56312E30: // V1.0
         case 0x56322E30: // V2.0
                         break;
-        default:        return Error("Version number of header format");
+        default:        return Unssuported("Version number of header format");
     }
     Buffer_Offset = 28;
     uint32_t IndustryHeaderSize = Get_X4();
@@ -178,17 +106,17 @@ bool dpx::Parse()
     Buffer_Offset = 660;
     uint32_t Encryption = Get_X4();
     if (Encryption != 0xFFFFFFFF && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
-        return Error("Encryption key");
+        return Unssuported("Encryption key");
     Buffer_Offset = 768;
     if (Get_X2() != 0)
-        return Error("Image orientation");
+        return Unssuported("Image orientation");
     if (Get_X2() != 1)
-        return Error("Number of image elements");
+        return Unssuported("Number of image elements");
     uint32_t Width = Get_X4();
     uint32_t Height = Get_X4();
     Buffer_Offset = 780;
     if (Get_X4() != 0)
-        return Error("Data sign");
+        return Unssuported("Data sign");
     Buffer_Offset = 800;
     uint8_t Descriptor = Get_X1();
     Buffer_Offset = 803;
@@ -197,9 +125,9 @@ bool dpx::Parse()
     uint16_t Encoding = Get_X2();
     uint32_t OffsetToData = Get_X4();
     if (OffsetToData != OffsetToImage)
-        return Error("Offset to data");
+        return Unssuported("Offset to data");
     if (Get_X4() != 0)
-        return Error("End-of-line padding");
+        return Unssuported("End-of-line padding");
     //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
     
     if (IndustryHeaderSize && FrameRate)
@@ -211,7 +139,7 @@ bool dpx::Parse()
 
         // Integrity of frame rate
         if (FrameRate_Film && FrameRate_Television && FrameRate_Film != FrameRate_Television)
-            return Error("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
+            return Unssuported("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
 
         // Availability of frame rate
         // We have lot of DPX files without frame rate info, using FFmpeg default (25 at the moment of writing)
@@ -241,8 +169,8 @@ bool dpx::Parse()
             break;
     }
     if (Tested >= DPX_Tested_Size)
-        return Error("Style (Descriptor / BitDepth / Packing / Endianess combination)");
-    Style = DPX_Tested[Tested].Style;
+        return Unssuported("Flavor (Descriptor / BitDepth / Packing / Endianess combination)");
+    Flavor = DPX_Tested[Tested].Flavor;
 
     // Slices count
     // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
@@ -264,21 +192,21 @@ bool dpx::Parse()
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
 
     // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
-    size_t Slice_Multiplier = PixelsPerBlock((style)Style);
+    size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Slice_Multiplier == 0)
-        return Error("(Internal error)");
+        return Invalid("(Internal error)");
     for (; slice_x; slice_x--)
     {
         if (Width % (slice_x * Slice_Multiplier) == 0)
             break;
     }
     if (slice_x == 0)
-        return Error("Pixels in slice not on a 32-bit boundary");
+        return Unssuported("Pixels in slice not on a 32-bit boundary");
 
     // Computing EndOfImagePadding
-    size_t ContentSize_Multiplier = BitsPerBlock((style)Style);
+    size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
     if (ContentSize_Multiplier == 0)
-        return Error("(Internal error)");
+        return Invalid("(Internal error)");
     size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8);
 
     // Write RAWcooked file
@@ -292,13 +220,19 @@ bool dpx::Parse()
         RAWcooked->Parse();
     }
 
-    return 0;
+    return ErrorMessage() ? true : false;
 }
 
 //---------------------------------------------------------------------------
-size_t dpx::BitsPerBlock(dpx::style Style)
+string dpx::Flavor_String()
 {
-    switch (Style)
+    return Flavor_String(Flavor);
+}
+
+//---------------------------------------------------------------------------
+size_t dpx::BitsPerBlock(dpx::flavor Flavor)
+{
+    switch (Flavor)
     {
         case dpx::Raw_RGB_8:                // 3x8-bit content
                                         return 24;
@@ -329,9 +263,9 @@ size_t dpx::BitsPerBlock(dpx::style Style)
 }
 
 //---------------------------------------------------------------------------
-size_t dpx::PixelsPerBlock(dpx::style Style)
+size_t dpx::PixelsPerBlock(dpx::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case dpx::Raw_RGB_8:
         case dpx::Raw_RGBA_8:
@@ -359,9 +293,9 @@ size_t dpx::PixelsPerBlock(dpx::style Style)
 }
 
 //---------------------------------------------------------------------------
-dpx::descriptor dpx::ColorSpace(dpx::style Style)
+dpx::descriptor dpx::ColorSpace(dpx::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case Raw_RGB_8:
         case Raw_RGB_10_FilledA_BE:
@@ -385,9 +319,9 @@ dpx::descriptor dpx::ColorSpace(dpx::style Style)
                                         return (dpx::descriptor)-1;
     }
 }
-const char* dpx::ColorSpace_String(dpx::style Style)
+const char* dpx::ColorSpace_String(dpx::flavor Flavor)
 {
-    dpx::descriptor Value = dpx::ColorSpace(Style);
+    dpx::descriptor Value = dpx::ColorSpace(Flavor);
 
     switch (Value)
     {
@@ -401,9 +335,9 @@ const char* dpx::ColorSpace_String(dpx::style Style)
 }
 
 //---------------------------------------------------------------------------
-uint8_t dpx::BitDepth(dpx::style Style)
+uint8_t dpx::BitDepth(dpx::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case Raw_RGB_8:
         case Raw_RGBA_8:
@@ -429,9 +363,9 @@ uint8_t dpx::BitDepth(dpx::style Style)
                                         return 0;
     }
 }
-const char* dpx::BitDepth_String(dpx::style Style)
+const char* dpx::BitDepth_String(dpx::flavor Flavor)
 {
-    uint8_t Value = dpx::BitDepth(Style);
+    uint8_t Value = dpx::BitDepth(Flavor);
 
     switch (Value)
     {
@@ -449,9 +383,9 @@ const char* dpx::BitDepth_String(dpx::style Style)
 }
 
 //---------------------------------------------------------------------------
-dpx::packing dpx::Packing(dpx::style Style)
+dpx::packing dpx::Packing(dpx::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case Raw_RGB_10_FilledA_BE:
         case Raw_RGB_10_FilledA_LE:
@@ -469,9 +403,9 @@ dpx::packing dpx::Packing(dpx::style Style)
                                         return (packing)-1;
     }
 }
-const char* dpx::Packing_String(dpx::style Style)
+const char* dpx::Packing_String(dpx::flavor Flavor)
 {
-    dpx::packing Value = dpx::Packing(Style);
+    dpx::packing Value = dpx::Packing(Flavor);
 
     switch (Value)
     {
@@ -485,9 +419,9 @@ const char* dpx::Packing_String(dpx::style Style)
 }
 
 //---------------------------------------------------------------------------
-dpx::endianess dpx::Endianess(dpx::style Style)
+dpx::endianess dpx::Endianess(dpx::flavor Flavor)
 {
-    switch (Style)
+    switch (Flavor)
     {
         case Raw_RGB_10_FilledA_LE:
         case Raw_RGB_12_FilledA_LE:
@@ -509,9 +443,9 @@ dpx::endianess dpx::Endianess(dpx::style Style)
                                         return (dpx::endianess)-1;
     }
 }
-const char* dpx::Endianess_String(dpx::style Style)
+const char* dpx::Endianess_String(dpx::flavor Flavor)
 {
-    dpx::endianess Value = dpx::Endianess(Style);
+    dpx::endianess Value = dpx::Endianess(Flavor);
 
     switch (Value)
     {
@@ -524,20 +458,20 @@ const char* dpx::Endianess_String(dpx::style Style)
     }
 }
 //---------------------------------------------------------------------------
-string dpx::Flavor_String(dpx::style Style)
+string dpx::Flavor_String(uint8_t Flavor)
 {
     string ToReturn("DPX/Raw/");
-    ToReturn += ColorSpace_String(Style);
+    ToReturn += ColorSpace_String((flavor)Flavor);
     ToReturn += '/';
-    ToReturn += BitDepth_String(Style);
+    ToReturn += BitDepth_String((flavor)Flavor);
     ToReturn += "bit";
-    const char* Value = Packing_String(Style);
+    const char* Value = Packing_String((flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
         ToReturn += Value;
     }
-    Value = Endianess_String(Style);
+    Value = Endianess_String((flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';

@@ -11,6 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
+#include "Lib/Input_Base.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -22,26 +23,17 @@ class matroska_mapping;
 class ThreadPool;
 class flac_info;
 
-class matroska
+class matroska : public input_base
 {
 public:
     matroska();
     ~matroska();
 
-    uint8_t*                    Buffer;
-    uint64_t                    Buffer_Size;
-
-    void                        Parse();
+    bool                        Parse(bool AcceptTruncated = false);
     void                        Shutdown();
 
     string                      OutputDirectoryName;
     bool                        Quiet;
-
-    // Info
-    bool                        IsDetected;
-
-    // Error message
-    const char*                 ErrorMessage();
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
@@ -53,8 +45,6 @@ public:
     void                        FLAC_Write(const uint32_t* buffer[], size_t blocksize);
 
 private:
-    uint64_t                    Buffer_Offset;
-
     typedef void (matroska::*call)();
     typedef call(matroska::*name)(uint64_t);
 
@@ -142,7 +132,6 @@ private:
         flac_info*              FlacInfo;
         frame                   Frame;
         bool                    Unique;
-        string                  ErrorMessage;
         format                  Format;
 
         trackinfo() :

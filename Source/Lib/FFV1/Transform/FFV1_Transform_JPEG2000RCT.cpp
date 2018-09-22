@@ -16,7 +16,7 @@ transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_,
     Bits(Bits_)
 {
     Offset = ((pixel_t)1) << Bits;
-    Style_Private = RawFrame->Style_Private;
+    Flavor_Private = RawFrame->Flavor_Private;
 
     size_t FrameBuffer_Temp_Size = RawFrame->Planes.size();
     for (size_t p = 0; p<FrameBuffer_Temp_Size; p++)
@@ -30,10 +30,10 @@ transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_,
 //---------------------------------------------------------------------------
 void transform_jpeg2000rct::From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A)
 {
-    switch (RawFrame->Style)
+    switch (RawFrame->Flavor)
     {
-        case raw_frame::Style_FFmpeg: FFmpeg_From(w, Y, U, V, A); break;
-        case raw_frame::Style_DPX: DPX_From(w, Y, U, V, A); break;
+        case raw_frame::Flavor_FFmpeg: FFmpeg_From(w, Y, U, V, A); break;
+        case raw_frame::Flavor_DPX: DPX_From(w, Y, U, V, A); break;
         default:;
     }
 
@@ -98,7 +98,7 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
         b += g;
         r += g;
 
-        switch (Style_Private)
+        switch (Flavor_Private)
         {
             case dpx::Raw_RGB_8:
                                         {
