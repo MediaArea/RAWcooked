@@ -46,6 +46,13 @@ int global::SetAcceptFiles()
 }
 
 //---------------------------------------------------------------------------
+int global::SetFullCheck(bool Value)
+{
+    FullCheck = Value;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
     cerr << "Error: option " << Option1;
@@ -209,6 +216,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     AttachmentMaxSize = (size_t)-1;
     DisplayCommand = false;
     AcceptFiles = false;
+    FullCheck = false;
     Quiet = false;
 
     for (int i = 1; i < argc; i++)
@@ -253,6 +261,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--full-check") == 0)
+        {
+            int Value = SetFullCheck(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
         {
             int Value = Help(argv[0]);
@@ -268,6 +282,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if ((strcmp(argv[i], "--output-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
         {
             int Value = SetOutputFileName(argv[++i]);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--partial-check") == 0)
+        {
+            int Value = SetFullCheck(false);
             if (Value)
                 return Value;
         }

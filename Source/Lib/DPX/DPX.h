@@ -21,7 +21,7 @@ class dpx : public input_base_uncompressed
 public:
     dpx();
 
-    bool                        Parse(bool AcceptTruncated = false);
+    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     frame                       Frame;

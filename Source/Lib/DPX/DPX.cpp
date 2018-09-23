@@ -69,7 +69,7 @@ dpx::dpx() :
 }
 
 //---------------------------------------------------------------------------
-bool dpx::Parse(bool AcceptTruncated)
+bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 1664)
         return false;
@@ -217,6 +217,20 @@ bool dpx::Parse(bool AcceptTruncated)
     }
     else
         EndOfImagePadding = Buffer_Size - OffsetAfterImage;
+
+    if (!AcceptTruncated && FullCheck)
+    {
+        if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
+        {
+            size_t Step = BitDepth == 10 ? 4 : 2;
+            bool IsNOK = false;
+            for (size_t i = OffsetToImage + (IsBigEndian ? (Step - 1) : 0); i < OffsetAfterImage; i += Step)
+                if (Buffer[i] & 0x3)
+                    IsNOK = true;
+            if (IsNOK)
+                return Unssuported("padding bits are not 0");
+        }
+    }
 
     // Write RAWcooked file
     if (RAWcooked)

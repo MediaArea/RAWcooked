@@ -29,7 +29,7 @@ public:
     matroska();
     ~matroska();
 
-    bool                        Parse(bool AcceptTruncated = false);
+    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     void                        Shutdown();
 
     string                      OutputDirectoryName;

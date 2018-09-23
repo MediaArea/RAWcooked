@@ -26,7 +26,7 @@ public:
     // Direct access to file map data
     unsigned char*              Buffer;
     size_t                      Buffer_Size;
-    virtual bool                Parse(bool AcceptTruncated = false) = 0;
+    virtual bool                Parse(bool AcceptTruncated = false, bool FullCheck = false) = 0;
 
     // Error message
     const char*                 ErrorMessage();

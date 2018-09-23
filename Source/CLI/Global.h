@@ -29,6 +29,7 @@ public:
     string                      BinName;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
+    bool                        FullCheck;
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
     bool                        Quiet;
@@ -47,6 +48,7 @@ private:
     int SetBinName(const char* FileName);
     int SetDisplayCommand();
     int SetAcceptFiles();
+    int SetFullCheck(bool Value);
 };
 
 #endif

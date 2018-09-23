@@ -42,10 +42,24 @@ Default value is \fI1048576\fR.
 .B \-\-display\-command \fR|\fB \-d
 When an external encoder/decoder is used, display the command to launch instead of launching it.
 .TP
+.B \-\-full\-check
+Do costly (in terms of analysis duration or bytes read) checks.
+.br
+This guaranties reversability.
+.br
+Default value is partial check.
+.TP
 .B \-\-output\-name \fIvalue\fR | \fB\-o \fIvalue
 Set the name of the output file or folder to \fIvalue\fR.
 .br
 Default value is \fI${Input}.mkv\fR (if input is a folder) or \fI${Input}.RAWcooked\fR (if input is a file).
+.TP
+.B \-\-partial\-check
+Avoid costly (in terms of analysis duration or bytes read) checks.
+.br
+This may lead to partial reversibility with non conform files.
+.br
+Default value is partial check.
 .TP
 .B \-\-rawcooked\-file\-name \fIvalue\fR | \fB\-r \fIvalue
 Set (encoding) or get (decoding) the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR.
