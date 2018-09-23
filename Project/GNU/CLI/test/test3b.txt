@@ -1,0 +1,8 @@
+Formats/DPX/Features/PaddingBitsNotZero/RGB_10_FilledA_BE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGB_10_FilledA_LE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGB_12_FilledA_BE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGB_12_FilledA_LE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGBA_10_FilledA_BE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGBA_10_FilledA_LE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGBA_12_FilledA_BE fail
+Formats/DPX/Features/PaddingBitsNotZero/RGBA_12_FilledA_LE fail

@@ -385,7 +385,7 @@ matroska::call matroska::SubElements_Void(uint64_t Name)
 }
 
 //---------------------------------------------------------------------------
-bool matroska::Parse(bool AcceptTruncated)
+bool matroska::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
         return true;

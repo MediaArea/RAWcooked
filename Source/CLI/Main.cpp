@@ -60,7 +60,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     SingleFile.Buffer_Size = FileMap.Buffer_Size;
 
     // Parse
-    SingleFile.Parse();
+    SingleFile.Parse(false, Global.FullCheck);
     if (SingleFile.ErrorMessage())
     {
         cerr << SingleFile.ErrorType_Before() << Name->substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
