@@ -4,3 +4,4 @@ BuggyPackages/MissingAudioVideo/AttachmentOnly fail
 BuggyPackages/IncompatibleVersion/RAWcooked_Alpha1/10bit.dpx.mkv fail
 BuggyPackages/CompatibleVersion/RAWcooked_Alpha2/10bit.dpx.mkv pass
 BuggyPackages/CompatibleVersion/RAWcooked_Alpha3/10bit.dpx.mkv pass
+BuggyPackages/SmallFile fail

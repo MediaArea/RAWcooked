@@ -207,7 +207,16 @@ bool dpx::Parse(bool AcceptTruncated)
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
     if (ContentSize_Multiplier == 0)
         return Invalid("(Internal error)");
-    size_t EndOfImagePadding = Buffer_Size - (OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8);
+    size_t OffsetAfterImage = OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8;
+    size_t EndOfImagePadding;
+    if (OffsetAfterImage > Buffer_Size)
+    {
+        if (!AcceptTruncated)
+            return Invalid("File size is too small, file integrity issue");
+        EndOfImagePadding = 0;
+    }
+    else
+        EndOfImagePadding = Buffer_Size - OffsetAfterImage;
 
     // Write RAWcooked file
     if (RAWcooked)
