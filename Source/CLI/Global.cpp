@@ -48,10 +48,10 @@ int global::SetAcceptFiles()
 //---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
-    cerr << "Option " << Option1;
+    cerr << "Error: option " << Option1;
     if (Option2)
         cerr << ' ' << Option2;
-    cerr << " not yet tested, please contact info@mediaarea.net if you want support of such option\n";
+    cerr << " not yet tested.\nPlease contact info@mediaarea.net if you want support of such option." << endl;
     return 1;
 }
 

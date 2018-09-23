@@ -17,7 +17,7 @@ int output::Process(global& Global)
         return FFmpeg_Command(Global.Inputs[0].c_str(), Global);
     else if (!Attachments.empty())
     {
-        cerr << "No A/V content detected, please contact info@mediaarea.net if you want support of such content\n";
+        cerr << "Error: no A/V content detected.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
         return 1;
     }
 
@@ -40,7 +40,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Slices = Streams[i].Slices;
             if (!Streams[i].Slices.empty() && Streams[i].Slices != Slices)
             {
-                cerr << "Untested multiple slices counts, please contact info@mediaarea.net if you want support of such file\n";
+                cerr << "Error: untested multiple slices counts.\nPlease contact info@mediaarea.net if you want support of such file." << endl;
                 return 1;
             }
         }
@@ -57,7 +57,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 FrameRate = Streams[i].FrameRate;
             if (!Streams[i].Slices.empty() && !Streams[i].FrameRate.empty() && Streams[i].FrameRate != FrameRate) // Note: Slices part is used here for detecting video streams. TODO: more explicit track type flagging
             {
-                cerr << "Untested multiple frame rates, please contact info@mediaarea.net if you want support of such file\n";
+                cerr << "Error: untested multiple frame rates.\nPlease contact info@mediaarea.net if you want support of such file" << endl;
                 return 1;
             }
         }

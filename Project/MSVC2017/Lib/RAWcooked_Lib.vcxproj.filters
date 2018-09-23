@@ -264,6 +264,9 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Input_Base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -382,6 +385,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c">
       <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Input_Base.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

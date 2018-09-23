@@ -11,37 +11,27 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
+#include "Lib/Input_Base.h"
 #include <cstdint>
 #include <cstddef>
 //---------------------------------------------------------------------------
 
-class rawcooked;
-
-class dpx
+class dpx : public input_base_uncompressed
 {
 public:
     dpx();
 
-    uint8_t*                    Buffer;
-    uint64_t                    Buffer_Size;
-
-    bool                        Parse();
+    bool                        Parse(bool AcceptTruncated = false);
+    string                      Flavor_String();
 
     frame                       Frame;
 
-    rawcooked*                  RAWcooked;
-
     // Info
-    bool                        IsDetected;
-    uint8_t                     Style;
     size_t                      slice_x;
     size_t                      slice_y;
     string*                     FrameRate;
 
-    // Error message
-    const char*                 ErrorMessage();
-
-    enum style : uint8_t
+    enum flavor : uint8_t
     {
         Raw_RGB_8,
         Raw_RGB_10_FilledA_LE,
@@ -98,33 +88,17 @@ public:
     };
 
     // Info about formats
-    static size_t BitsPerBlock(style Style);
-    static size_t PixelsPerBlock(style Style); // Need no overlap every x pixels
-    static descriptor ColorSpace(style Style);
-    static const char* ColorSpace_String(style Style);
-    static uint8_t BitDepth(style Style);
-    static const char* BitDepth_String(style Style);
-    static packing Packing(style Style);
-    static const char* Packing_String(style Style);
-    static endianess Endianess(style Style);
-    static const char* Endianess_String(style Style);
-    static string Flavor_String(style Style);
-
-private:
-    size_t                      Buffer_Offset;
-    bool                        IsBigEndian;
-    uint8_t                     Get_X1() { return Buffer[Buffer_Offset++]; }
-    uint16_t                    Get_L2();
-    uint16_t                    Get_B2();
-    uint32_t                    Get_X2() { return IsBigEndian ? Get_B2() : Get_L2(); }
-    uint32_t                    Get_L4();
-    uint32_t                    Get_B4();
-    uint32_t                    Get_X4() { return IsBigEndian ? Get_B4() : Get_L4(); }
-    double                      Get_XF4();
-
-    // Error message
-    const char*                 error_message;
-    bool                        Error(const char* Error) { error_message = Error; return true; }
+    static size_t BitsPerBlock(flavor Flavor);
+    static size_t PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
+    static descriptor ColorSpace(flavor Flavor);
+    static const char* ColorSpace_String(flavor Flavor);
+    static uint8_t BitDepth(flavor Flavor);
+    static const char* BitDepth_String(flavor Flavor);
+    static packing Packing(flavor Flavor);
+    static const char* Packing_String(flavor Flavor);
+    static endianess Endianess(flavor Flavor);
+    static const char* Endianess_String(flavor Flavor);
+    static string Flavor_String(uint8_t Flavor);
 };
 
 //---------------------------------------------------------------------------

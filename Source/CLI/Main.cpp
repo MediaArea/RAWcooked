@@ -31,31 +31,10 @@ output Output;
 rawcooked RAWcooked;
 //---------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------
-int ParseFile(size_t Files_Pos)
+struct parse_info
 {
-    RAWcooked.ResetTrack();
-    
-    string Name = Input.Files[Files_Pos];
-    
+    string Name;
     filemap FileMap;
-    if (int Value = FileMap.Open_ReadMode(Name))
-        return Value;
-
-    matroska M;
-    if (Global.OutputFileName.empty())
-        M.OutputDirectoryName = Name + ".RAWcooked" + PathSeparator;
-    else
-    {
-        M.OutputDirectoryName = Global.OutputFileName;
-        if (M.OutputDirectoryName.find_last_of("/\\") != M.OutputDirectoryName.size() - 1)
-            M.OutputDirectoryName += PathSeparator;
-    }
-    M.Quiet = Global.Quiet;
-    M.Buffer = FileMap.Buffer;
-    M.Buffer_Size = FileMap.Buffer_Size;
-    M.Parse();
-
     vector<string> RemovedFiles;
     string FileName_Template;
     string FileName_StartNumber;
@@ -63,135 +42,207 @@ int ParseFile(size_t Files_Pos)
     string Flavor;
     string Slices;
     string FrameRate;
+    bool   IsDetected;
 
+    bool ParseFile_Input(input_base& Input);
+    bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
+
+    parse_info():
+        IsDetected(false)
+    {}
+};
+
+//---------------------------------------------------------------------------
+bool parse_info::ParseFile_Input(input_base& SingleFile)
+{
+    // Init
+    SingleFile.Buffer = FileMap.Buffer;
+    SingleFile.Buffer_Size = FileMap.Buffer_Size;
+
+    // Parse
+    SingleFile.Parse();
+    if (SingleFile.ErrorMessage())
+    {
+        cerr << SingleFile.ErrorType_Before() << Name.substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
+        return true;
+    }
+
+    // Management
+    if (SingleFile.IsDetected)
+        IsDetected = true;
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos)
+{
+    if (IsDetected)
+        return false;
+
+    // Init
+    SingleFile.RAWcooked = &RAWcooked;
+    RAWcooked.OutputFileName = Name.substr(Global.Path_Pos_Global);
+
+    // Parse
+    if (ParseFile_Input((input_base&)SingleFile))
+        return true;
+    if (!IsDetected)
+        return false;
+
+    // Management
+    Flavor = SingleFile.Flavor_String();
+    if (SingleFile.IsSequence)
+        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
+    if (RemovedFiles.empty())
+        RemovedFiles.push_back(Name);
+    else
+    {
+        size_t i_Max = RemovedFiles.size();
+        for (size_t i = 1; i < i_Max; i++)
+        {
+            string& RemovedFile = RemovedFiles[i];
+            FileMap.Open_ReadMode(RemovedFile);
+            RAWcooked.OutputFileName = RemovedFile.substr(Global.Path_Pos_Global);
+
+            if (ParseFile_Input((input_base&)SingleFile))
+                return true;
+        }
+
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
+{
+    // Init
+    RAWcooked.ResetTrack();
     map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
     if (FrameRateFromOptions != Global.VideoInputOptions.end())
-        FrameRate = FrameRateFromOptions->second;
+        ParseInfo.FrameRate = FrameRateFromOptions->second;
 
-    riff RIFF;
-    if (!M.IsDetected)
+    // WAV
+    if (!ParseInfo.IsDetected)
     {
-        RAWcooked.FileNameDPX = Name.substr(Global.Path_Pos_Global);
-
-        RIFF.RAWcooked = &RAWcooked;
-        RIFF.Buffer = FileMap.Buffer;
-        RIFF.Buffer_Size = FileMap.Buffer_Size;
-        RIFF.Parse();
-        if (RIFF.ErrorMessage())
-        {
-            cerr << "Untested " << RIFF.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+        riff RIFF;
+        if (ParseInfo.ParseFile_Input(RIFF, Input, Files_Pos))
             return 1;
-        }
+    }
 
-        if (RIFF.IsDetected)
+    // DPX
+    if (!ParseInfo.IsDetected)
+    {
+        dpx DPX;
+        DPX.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
+        if (ParseInfo.ParseFile_Input(DPX, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
         {
-            RemovedFiles.push_back(Name);
-            Flavor = RIFF.Flavor_String((riff::style)RIFF.Style);
+            stringstream t;
+            t << DPX.slice_x * DPX.slice_y;
+            ParseInfo.Slices = t.str();
         }
     }
 
-    dpx DPX;
-    if (!M.IsDetected && !RIFF.IsDetected)
+    // End
+    if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
     {
-        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
-
-        size_t i = 0;
-        for (;;)
-        {
-            RAWcooked.FileNameDPX = Name.substr(Global.Path_Pos_Global);
-
-            DPX.RAWcooked = &RAWcooked;
-            DPX.Buffer = FileMap.Buffer;
-            DPX.Buffer_Size = FileMap.Buffer_Size;
-            DPX.FrameRate = FrameRate.empty() ? &FrameRate : NULL;
-            DPX.Parse();
-            if (DPX.ErrorMessage())
-            {
-                cerr << "Untested " << DPX.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
-                return 1;
-            }
-            if (!DPX.IsDetected)
-                break;
-            if (!i)
-            {
-                stringstream t;
-                t << DPX.slice_x * DPX.slice_y;
-                Slices = t.str();
-            }
-            i++;
-
-            if (i >= RemovedFiles.size())
-                break;
-            Name = RemovedFiles[i];
-            FileMap.Open_ReadMode(Name);
-        }
-
-        if (DPX.IsDetected)
-        {
-            Flavor = DPX.Flavor_String((dpx::style)DPX.Style);
-        }
-    }
-
-    M.Shutdown();
-
-    if (M.ErrorMessage())
-    {
-        cerr << "Untested " << M.ErrorMessage() << ", please contact info@mediaarea.net if you want support of such file\n";
+        cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;
         return 1;
     }
-
-    // Processing DPX to MKV/FFV1
-    if (!M.IsDetected)
+    if (ParseInfo.IsDetected)
     {
-        if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
+        stream Stream;
+
+        Stream.FileName = ParseInfo.RemovedFiles[0];
+        if (!ParseInfo.FileName_StartNumber.empty() && !ParseInfo.FileName_Template.empty())
         {
-            cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command.\n";
-            return 1;
+            Stream.FileName_Template = ParseInfo.FileName_Template;
+            Stream.FileName_StartNumber = ParseInfo.FileName_StartNumber;
+            Stream.FileName_EndNumber = ParseInfo.FileName_EndNumber;
         }
-        
-        if (!M.IsDetected && !RIFF.IsDetected && !DPX.IsDetected)
-        {
-            size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
-            if (FileMap.Buffer_Size >= AttachmentSizeFinal)
-            {
-                cout << Name << " is not small, expected to be an attachment? Please contact info@mediaarea.net if you want support of such file.\n";
-                exit(1);
-            }
+        Stream.Flavor = ParseInfo.Flavor;
 
-            if (FileMap.Buffer_Size) // Ignoring file with size of 0
-            {
-                attachment Attachment;
-                Attachment.FileName_In = Name;
-                Attachment.FileName_Out = Name.substr(Global.Path_Pos_Global);
-                Output.Attachments.push_back(Attachment);
-            }
-        }
-        else
-        {
-            stream Stream;
+        Stream.Slices = ParseInfo.Slices;
+        if (!ParseInfo.FrameRate.empty())
+            Stream.FrameRate = ParseInfo.FrameRate;
 
-            Stream.FileName = RemovedFiles[0];
-            if (!FileName_StartNumber.empty() && !FileName_Template.empty())
-            {
-                Stream.FileName_Template = FileName_Template;
-                Stream.FileName_StartNumber = FileName_StartNumber;
-                Stream.FileName_EndNumber = FileName_EndNumber;
-            }
-            Stream.Flavor = Flavor;
-
-            Stream.Slices = Slices;
-            if (!Slices.empty() && FrameRateFromOptions == Global.VideoInputOptions.end())
-                Stream.FrameRate = FrameRate;
-
-            Output.Streams.push_back(Stream);
-        }
-
+        Output.Streams.push_back(Stream);
     }
-    else if (!Global.Quiet)
-        cout << "Files are in " << M.OutputDirectoryName << endl;
 
-    FileMap.Close();
+    return 0;
+}
 
+//---------------------------------------------------------------------------
+int ParseFile_Compressed(parse_info& ParseInfo, size_t Files_Pos)
+{
+    // Init
+    string OutputDirectoryName;
+    if (Global.OutputFileName.empty())
+        OutputDirectoryName = ParseInfo.Name + ".RAWcooked" + PathSeparator;
+    else
+    {
+        OutputDirectoryName = Global.OutputFileName;
+        if (OutputDirectoryName.find_last_of("/\\") != OutputDirectoryName.size() - 1)
+            OutputDirectoryName += PathSeparator;
+    }
+
+    // Matroska
+    if (!ParseInfo.IsDetected)
+    {
+        matroska M;
+        M.OutputDirectoryName = OutputDirectoryName;
+        M.Quiet = Global.Quiet;
+        if (ParseInfo.ParseFile_Input(M))
+            return 1;
+    }
+
+    // End
+    if (ParseInfo.IsDetected && !Global.Quiet)
+        cout << "Files are in " << OutputDirectoryName << '.' << endl;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int ParseFile(size_t Files_Pos)
+{
+    // Init
+    parse_info ParseInfo;
+    ParseInfo.Name = Input.Files[Files_Pos];
+
+    // Open file
+    if (int Value = ParseInfo.FileMap.Open_ReadMode(ParseInfo.Name))
+        return Value;
+
+    // Compressed content
+    if (int Value = ParseFile_Compressed(ParseInfo, Files_Pos))
+        return Value;
+    if (ParseInfo.IsDetected)
+        return 0;
+
+    // Uncompressed content
+    if (int Value = ParseFile_Uncompressed(ParseInfo, Files_Pos))
+        return Value;
+    if (ParseInfo.IsDetected)
+        return 0;
+
+    // Attachments
+    size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
+    if (ParseInfo.FileMap.Buffer_Size >= AttachmentSizeFinal)
+    {
+        cout << "Error: " << ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
+        return 1;
+    }
+    if (ParseInfo.FileMap.Buffer_Size) // Ignoring file with size of 0
+    {
+        attachment Attachment;
+        Attachment.FileName_In = ParseInfo.Name;
+        Attachment.FileName_Out = ParseInfo.Name.substr(Global.Path_Pos_Global);
+        Output.Attachments.push_back(Attachment);
+    }
     return 0;
 }
 

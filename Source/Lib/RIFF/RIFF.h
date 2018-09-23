@@ -11,34 +11,20 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
+#include "Lib/Input_Base.h"
 #include <cstdint>
 #include <cstddef>
 //---------------------------------------------------------------------------
 
-class rawcooked;
-
-class riff
+class riff : public input_base_uncompressed
 {
 public:
     riff();
 
-    uint8_t*                    Buffer;
-    uint64_t                    Buffer_Size;
+    bool                        Parse(bool AcceptTruncated = false);
+    string                      Flavor_String();
 
-    bool                        Parse(bool AcceptTruncated=false);
-
-    frame                       Frame;
-
-    rawcooked*                  RAWcooked;
-
-    // Info
-    bool                        IsDetected;
-    uint8_t                     Style;
-
-    // Error message
-    const char*                 ErrorMessage();
-
-    enum style
+    enum flavor
     {
         PCM_44100_8_1_U,
         PCM_44100_8_2_U,
@@ -78,22 +64,17 @@ public:
     // Info about formats
     uint8_t BitDepth();
     endianess Endianess();
-    static uint32_t SamplesPerSec(style Style);
-    static const char* SamplesPerSec_String(style Style);
-    static uint8_t BitDepth(style Style);
-    static const char* BitDepth_String(style Style);
-    static uint8_t Channels(style Style);
-    static const char* Channels_String(style Style);
-    static endianess Endianess(style Style);
-    static const char* Endianess_String(style Style);
-    static string Flavor_String(style Style);
+    static uint32_t SamplesPerSec(flavor Flavor);
+    static const char* SamplesPerSec_String(flavor Flavor);
+    static uint8_t BitDepth(flavor Flavor);
+    static const char* BitDepth_String(flavor Flavor);
+    static uint8_t Channels(flavor Flavor);
+    static const char* Channels_String(flavor Flavor);
+    static endianess Endianess(flavor Flavor);
+    static const char* Endianess_String(flavor Flavor);
+    static string Flavor_String(uint8_t Flavor);
 
 private:
-    size_t                      Buffer_Offset;
-    uint16_t                    Get_L2();
-    uint32_t                    Get_L4();
-    uint32_t                    Get_B4();
-
     typedef void (riff::*call)();
     typedef call(riff::*name)(uint64_t);
 
@@ -116,10 +97,6 @@ private:
     RIFF_ELEMENT(WAVE_data);
     RIFF_ELEMENT(WAVE_fmt_);
     RIFF_ELEMENT(Void);
-
-    // Error message
-    const char*                 error_message;
-    bool                        Error(const char* Error) { error_message = Error; return true; }
 };
 
 //---------------------------------------------------------------------------

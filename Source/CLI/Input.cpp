@@ -212,7 +212,7 @@ int input::AnalyzeInputs(global& Global)
         {
             if (Global.HasAtLeastOneDir)
             {
-                cerr << "Input contains several directories, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+                cerr << "Error: input contains several directories, is it intended?\nPlease contact info@mediaarea.net if you want support of such input." << endl;
                 return 1;
             }
             Global.HasAtLeastOneDir = true;
@@ -228,13 +228,13 @@ int input::AnalyzeInputs(global& Global)
     }
     if (Global.HasAtLeastOneDir && Global.HasAtLeastOneFile)
     {
-        cerr << "Input contains a mix of directories and files, is it intended? Please contact info@mediaarea.net if you want support of such input.\n";
+        cerr << "Error: input contains a mix of directories and files, is it intended?\nPlease contact info@mediaarea.net if you want support of such input." << endl;
         return 1;
     }
 
     if (Files.empty())
     {
-        cerr << "Input file names structure is not recognized. Please contact info@mediaarea.net if you want support of such input.\n";
+        cerr << "Error: input file names structure is not recognized.\nPlease contact info@mediaarea.net if you want support of such input." << endl;
         return 1;
     }
 

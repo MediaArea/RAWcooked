@@ -19,7 +19,7 @@ using namespace std;
 class raw_frame
 {
 public:
-    uint64_t                    Style_Private; //Used by specialized style for marking the configuration of such style (e.g. endianess of DPX)
+    uint64_t                    Flavor_Private; //Used by specialized flavor for marking the configuration of such flavor (e.g. endianess of DPX)
     uint8_t*                    Pre;
     size_t                      Pre_Size;
     uint8_t*                    Post;
@@ -71,15 +71,15 @@ public:
     };
     std::vector<plane*> Planes;
 
-    enum style
+    enum flavor
     {
-        Style_FFmpeg,
-        Style_DPX,
+        Flavor_FFmpeg,
+        Flavor_DPX,
     };
-    style                       Style;
+    flavor                       Flavor;
 
     raw_frame() :
-        Style_Private(0),
+        Flavor_Private(0),
         Pre(NULL),
         Post(NULL),
         Buffer(NULL)
@@ -96,7 +96,7 @@ public:
     }
 
     // Creation
-    void Create(style Style, size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
+    void Create(flavor Flavor, size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
 
 private:
     void FFmpeg_Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
