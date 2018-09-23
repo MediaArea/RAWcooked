@@ -33,7 +33,7 @@ rawcooked RAWcooked;
 
 struct parse_info
 {
-    string Name;
+    string* Name;
     filemap FileMap;
     vector<string> RemovedFiles;
     string FileName_Template;
@@ -63,7 +63,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     SingleFile.Parse();
     if (SingleFile.ErrorMessage())
     {
-        cerr << SingleFile.ErrorType_Before() << Name.substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
+        cerr << SingleFile.ErrorType_Before() << Name->substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
         return true;
     }
 
@@ -82,7 +82,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
 
     // Init
     SingleFile.RAWcooked = &RAWcooked;
-    RAWcooked.OutputFileName = Name.substr(Global.Path_Pos_Global);
+    RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
 
     // Parse
     if (ParseFile_Input((input_base&)SingleFile))
@@ -95,15 +95,15 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     if (SingleFile.IsSequence)
         Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
     if (RemovedFiles.empty())
-        RemovedFiles.push_back(Name);
+        RemovedFiles.push_back(*Name);
     else
     {
         size_t i_Max = RemovedFiles.size();
         for (size_t i = 1; i < i_Max; i++)
         {
-            string& RemovedFile = RemovedFiles[i];
-            FileMap.Open_ReadMode(RemovedFile);
-            RAWcooked.OutputFileName = RemovedFile.substr(Global.Path_Pos_Global);
+            Name = &RemovedFiles[i];
+            FileMap.Open_ReadMode(*Name);
+            RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
 
             if (ParseFile_Input((input_base&)SingleFile))
                 return true;
@@ -182,7 +182,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, size_t Files_Pos)
     // Init
     string OutputDirectoryName;
     if (Global.OutputFileName.empty())
-        OutputDirectoryName = ParseInfo.Name + ".RAWcooked" + PathSeparator;
+        OutputDirectoryName = *ParseInfo.Name + ".RAWcooked" + PathSeparator;
     else
     {
         OutputDirectoryName = Global.OutputFileName;
@@ -211,10 +211,10 @@ int ParseFile(size_t Files_Pos)
 {
     // Init
     parse_info ParseInfo;
-    ParseInfo.Name = Input.Files[Files_Pos];
+    ParseInfo.Name = &Input.Files[Files_Pos];
 
     // Open file
-    if (int Value = ParseInfo.FileMap.Open_ReadMode(ParseInfo.Name))
+    if (int Value = ParseInfo.FileMap.Open_ReadMode(*ParseInfo.Name))
         return Value;
 
     // Compressed content
@@ -233,14 +233,14 @@ int ParseFile(size_t Files_Pos)
     size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
     if (ParseInfo.FileMap.Buffer_Size >= AttachmentSizeFinal)
     {
-        cout << "Error: " << ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
+        cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
         return 1;
     }
     if (ParseInfo.FileMap.Buffer_Size) // Ignoring file with size of 0
     {
         attachment Attachment;
-        Attachment.FileName_In = ParseInfo.Name;
-        Attachment.FileName_Out = ParseInfo.Name.substr(Global.Path_Pos_Global);
+        Attachment.FileName_In = *ParseInfo.Name;
+        Attachment.FileName_Out = ParseInfo.Name->substr(Global.Path_Pos_Global);
         Output.Attachments.push_back(Attachment);
     }
     return 0;
