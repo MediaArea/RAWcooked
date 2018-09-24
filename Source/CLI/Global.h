@@ -14,6 +14,8 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <condition_variable>
+#include <thread>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -41,12 +43,26 @@ public:
     int ManageCommandLine(const char* argv[], int argc);
     int SetDefaults();
 
+    // Progress indicator
+    void                        ProgressIndicator_Start(size_t Total);
+    void                        ProgressIndicator_Increment() { ProgressIndicator_Current++; }
+    void                        ProgressIndicator_Stop();
+
+    // Theading relating functions
+    void                        ProgressIndicator_Show();
+
 private:
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
     int SetDisplayCommand();
     int SetAcceptFiles();
+
+    // Progress indicator
+    condition_variable          ProgressIndicator_IsEnd;
+    thread*                     ProgressIndicator_Thread;
+    size_t                      ProgressIndicator_Current;
+    size_t                      ProgressIndicator_Total;
 };
 
 #endif
