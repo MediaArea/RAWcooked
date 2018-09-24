@@ -35,6 +35,14 @@
 //---------------------------------------------------------------------------
 void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& OutputFileName)
 {
+    // Post-processing
+    if (RawFrame->Buffer && RawFrame->In && RawFrame->Buffer_Size == RawFrame->In_Size)
+        for (size_t i = 0; i < RawFrame->In_Size; i++)
+            RawFrame->Buffer[i] ^= RawFrame->In[i];
+    if (RawFrame->Planes.size() == 1 && RawFrame->Planes[0] && RawFrame->Planes[0]->Buffer && RawFrame->In && RawFrame->Planes[0]->Buffer_Size == RawFrame->In_Size)
+        for (size_t i = 0; i < RawFrame->In_Size; i++)
+            RawFrame->Planes[0]->Buffer[i] ^= RawFrame->In[i];
+
     #ifdef _MSC_VER
         #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
     #endif
@@ -277,10 +285,12 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
 ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData)
+ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName)
 ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData)
 ELEMENT_VOID(       3, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData)
 ELEMENT_VOID(      11, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName)
+ELEMENT_VOID(       6, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionInData)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedSegment)
@@ -292,12 +302,14 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
 ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeData)
+ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_InData)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName)
 ELEMENT_VOID(      70, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName)
 ELEMENT_VOID(      71, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion)
 ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseAfterData)
 ELEMENT_VOID(       3, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseBeforeData)
 ELEMENT_VOID(      11, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName)
+ELEMENT_VOID(       6, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseInData)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Cluster)
@@ -385,7 +397,7 @@ matroska::call matroska::SubElements_Void(uint64_t Name)
 }
 
 //---------------------------------------------------------------------------
-bool matroska::Parse(bool AcceptTruncated)
+bool matroska::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
         return true;
@@ -565,6 +577,26 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterDat
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!TrackInfo_Current->DPX_In)
+    {
+        TrackInfo_Current->DPX_In = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_In, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_In_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_In_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+
+    Uncompress(TrackInfo_Current->DPX_In[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    TrackInfo_Current->DPX_Buffer_Count++;
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName()
 {
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
@@ -636,6 +668,32 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
     {
         for (size_t i = 0; i < TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_After_Size; i++)
             TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_After[i];
+    }
+
+    TrackInfo_Current->DPX_Buffer_Count++;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionInData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!TrackInfo_Current->DPX_In)
+    {
+        TrackInfo_Current->DPX_In = new uint8_t*[1000000];
+        memset(TrackInfo_Current->DPX_In, 0x00, 1000000 * sizeof(uint8_t*));
+        TrackInfo_Current->DPX_In_Size = new size_t[1000000];
+        memset(TrackInfo_Current->DPX_In_Size, 0x00, 1000000 * sizeof(uint64_t));
+    }
+
+    Uncompress(TrackInfo_Current->DPX_In[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Count]);
+
+    if (TrackInfo_Current->Mask_In)
+    {
+        for (size_t i = 0; i < TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_In_Size; i++)
+            TrackInfo_Current->DPX_In[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_In[i];
     }
 
     TrackInfo_Current->DPX_Buffer_Count++;
@@ -744,6 +802,24 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterDat
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_InData()
+{
+    if (Levels[Level - 1].Offset_End - Buffer_Offset < 1)
+        return;
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_In)
+    {
+        TrackInfo_Current->DPX_In = new uint8_t*[1];
+        TrackInfo_Current->DPX_In_Size = new size_t[1];
+    }
+    TrackInfo_Current->Unique = true;
+
+    Uncompress(TrackInfo_Current->DPX_In[0], TrackInfo_Current->DPX_In_Size[0]);
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName()
 {
     trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
@@ -781,6 +857,14 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryV
     // Note: LibraryVersion in RawCookedTrack is out of spec (alpha 1&2)
     RAWcooked_LibraryVersion = string((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
     RejectIncompatibleVersions();
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseInData()
+{
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    Uncompress(TrackInfo_Current->Mask_In, TrackInfo_Current->Mask_In_Size);
 }
 
 //---------------------------------------------------------------------------
@@ -826,6 +910,11 @@ void matroska::Segment_Cluster_SimpleBlock()
                             {
                                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Pos];
                                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Pos];
+                            }
+                            if (TrackInfo_Current->DPX_In && TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Pos])
+                            {
+                                TrackInfo_Current->Frame.RawFrame->In = TrackInfo_Current->DPX_In[TrackInfo_Current->DPX_Buffer_Pos];
+                                TrackInfo_Current->Frame.RawFrame->In_Size = TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Pos];
                             }
                             if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                             {

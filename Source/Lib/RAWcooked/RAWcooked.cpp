@@ -33,6 +33,9 @@ static const uint32_t Name_RawCooked_MaskBaseBeforeData = 0x03;     // In BlockG
 static const uint32_t Name_RawCooked_MaskBaseAfterData = 0x04;      // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionBeforeData = 0x03; // In Track only
 static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04;  // In Track only
+static const uint32_t Name_RawCooked_InData = 0x05;
+static const uint32_t Name_RawCooked_MaskBaseInData = 0x06;         // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskAdditionInData = 0x06;     // In Track only
 // File metadata
 static const uint32_t Name_RawCooked_FileName = 0x10;
 static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11;     // In BlockGroup only
@@ -118,6 +121,8 @@ static void Put_EB(unsigned char* Buffer, size_t& Offset, uint64_t Size)
 rawcooked::rawcooked() :
     Unique(false),
     F(NULL),
+    In(NULL),
+    In_Size(0),
     BlockCount(0)
 {
 }
@@ -148,6 +153,7 @@ void rawcooked::Parse()
     uint8_t* ToStore_FileName = FileName;
     uint8_t* ToStore_Before = Before;
     uint8_t* ToStore_After = After;
+    uint8_t* ToStore_In = In;
     bool IsUsingMask_FileName = false;
     bool IsUsingMask_Before = false;
     bool IsUsingMask_After = false;
@@ -273,6 +279,13 @@ void rawcooked::Parse()
         Compressed_After = ToStore_After;
         Compressed_After_Size = 0;
     }
+    uint8_t* Compressed_In = new uint8_t[In_Size];
+    uLongf Compressed_In_Size = (uLongf)In_Size;
+    if (compress((Bytef*)Compressed_In, &Compressed_In_Size, (const Bytef*)ToStore_In, (uLong)In_Size) < 0)
+    {
+        Compressed_In = ToStore_In;
+        Compressed_In_Size = 0;
+    }
 
     uint64_t Out_Size = 0;
 
@@ -330,6 +343,12 @@ void rawcooked::Parse()
     {
         AfterData_Size = Size_EB(Compressed_After_Size ? After_Size : 0) + (Compressed_After_Size ? Compressed_After_Size : After_Size); // size then data
         Block_Size += Size_EB(Name_RawCooked_AfterData, AfterData_Size);
+    }
+    uint64_t InData_Size = 0;
+    if (Compressed_In_Size || In_Size)
+    {
+        InData_Size = Size_EB(Compressed_In_Size ? In_Size : 0) + (Compressed_In_Size ? Compressed_In_Size : In_Size); // size then data
+        Block_Size += Size_EB(Name_RawCooked_InData, InData_Size);
     }
 
     // Case if the file is unique
@@ -431,6 +450,13 @@ void rawcooked::Parse()
         memcpy(Out + Out_Offset, Compressed_After, (Compressed_After_Size ? Compressed_After_Size : After_Size));
         Out_Offset += (Compressed_After_Size ? Compressed_After_Size : After_Size);
     }
+    if (InData_Size)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCooked_InData, InData_Size);
+        Put_EB(Out, Out_Offset, Compressed_In_Size ? In_Size : 0);
+        memcpy(Out + Out_Offset, Compressed_In, (Compressed_In_Size ? Compressed_In_Size : In_Size));
+        Out_Offset += (Compressed_In_Size ? Compressed_In_Size : In_Size);
+    }
 
     // Write
     WriteToDisk(Out, Out_Size);
@@ -443,6 +469,8 @@ void rawcooked::Parse()
         delete[] Compressed_Before;
     if (Compressed_After_Size)
         delete[] Compressed_After;
+    if (Compressed_In_Size)
+        delete[] Compressed_In;
     if (IsUsingMask_FileName)
         delete[] ToStore_FileName;
     if (IsUsingMask_Before)

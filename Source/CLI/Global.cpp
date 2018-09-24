@@ -55,6 +55,23 @@ int global::SetAcceptFiles()
 }
 
 //---------------------------------------------------------------------------
+int global::SetFullCheck(const char* Value)
+{
+    if (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0)
+    {
+        FullCheck = false;
+        return 0;
+    }
+    if (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0)
+    {
+        FullCheck = true;
+        return 0;
+    }
+    cerr << "Invalid --check value." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
     cerr << "Error: option " << Option1;
@@ -218,6 +235,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     AttachmentMaxSize = (size_t)-1;
     DisplayCommand = false;
     AcceptFiles = false;
+    FullCheck = false;
     Quiet = false;
     ProgressIndicator_Thread = NULL;
 
@@ -248,6 +266,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0) && i + 1 < argc)
         {
             int Value = SetBinName(argv[++i]);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--check") == 0 && i + 1 < argc)
+        {
+            int Value = SetFullCheck(argv[++i]);
             if (Value)
                 return Value;
         }

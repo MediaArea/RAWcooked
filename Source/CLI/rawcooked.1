@@ -39,6 +39,15 @@ Set maximum size of attachment to \fIvalue\fR (in bytes).
 .br
 Default value is \fI1048576\fR.
 .TP
+.B \-\-check \fIvalue\fR
+Do or don't do costly (in terms of analysis duration or bytes read) checks.
+.br
+\fIpartial\fR (or \fI0\fR) is quicker but may lead to partial reversibility with non conform files.
+.br
+\fIfull\fR (or \fI1\fR) is slower but  guaranties reversability with e.g. DPX files with non zero padding bits.
+.br
+Default value is 'partial'.
+.TP
 .B \-\-display\-command \fR|\fB \-d
 When an external encoder/decoder is used, display the command to launch instead of launching it.
 .TP

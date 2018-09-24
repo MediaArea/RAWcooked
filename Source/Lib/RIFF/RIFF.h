@@ -21,7 +21,7 @@ class riff : public input_base_uncompressed
 public:
     riff();
 
-    bool                        Parse(bool AcceptTruncated = false);
+    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     enum flavor

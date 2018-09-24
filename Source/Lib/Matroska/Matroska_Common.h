@@ -29,7 +29,7 @@ public:
     matroska();
     ~matroska();
 
-    bool                        Parse(bool AcceptTruncated = false);
+    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     void                        Shutdown();
 
     string                      OutputDirectoryName;
@@ -71,10 +71,12 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionInData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryVersion);
@@ -85,9 +87,11 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_InData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseAfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseBeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseFileName);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBaseInData);
     MATROSKA_ELEMENT(Segment_Cluster);
     MATROSKA_ELEMENT(Segment_Cluster_SimpleBlock);
     MATROSKA_ELEMENT(Segment_Cluster_Timestamp);
@@ -116,15 +120,19 @@ private:
         uint8_t*                Mask_FileName;
         uint8_t*                Mask_Before;
         uint8_t*                Mask_After;
+        uint8_t*                Mask_In;
         uint8_t**               DPX_FileName;
         uint8_t**               DPX_Before;
         uint8_t**               DPX_After;
+        uint8_t**               DPX_In;
         size_t                  Mask_FileName_Size;
         size_t                  Mask_Before_Size;
         size_t                  Mask_After_Size;
+        size_t                  Mask_In_Size;
         size_t*                 DPX_FileName_Size;
         size_t*                 DPX_Before_Size;
         size_t*                 DPX_After_Size;
+        size_t*                 DPX_In_Size;
         size_t                  DPX_Buffer_Pos;
         size_t                  DPX_Buffer_Count;
         raw_frame*              R_A;
@@ -138,15 +146,19 @@ private:
             Mask_FileName(NULL),
             Mask_Before(NULL),
             Mask_After(NULL),
+            Mask_In(NULL),
             DPX_FileName(NULL),
             DPX_Before(NULL),
             DPX_After(NULL),
+            DPX_In(NULL),
             Mask_FileName_Size(0),
             Mask_Before_Size(0),
             Mask_After_Size(0),
+            Mask_In_Size(0),
             DPX_FileName_Size(0),
             DPX_Before_Size(0),
             DPX_After_Size(0),
+            DPX_In_Size(0),
             DPX_Buffer_Pos(0),
             DPX_Buffer_Count(0),
             R_A(NULL),

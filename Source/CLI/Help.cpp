@@ -72,6 +72,14 @@ ReturnValue Help(const char* Name)
     cout << "              Set maximum size of attachment to value (in bytes)." << endl;
     cout << "              Default value is 1048576." << endl;
     cout << endl;
+    cout << "       --check value" << endl;
+    cout << "              Do or don't do costly (in terms of analysis duration or bytes read) checks." << endl;
+    cout << "              'partial' (or '0') is quicker but may lead to partial reversibility" << endl;
+    cout <<"               with non conform files." << endl;
+    cout << "              'full' (or '1') is slower but  guaranties reversability with e.g." << endl;
+    cout << "              DPX files with non zero padding bits." << endl;
+    cout << "              Default value is 'partial'." << endl;
+    cout << endl;
     cout << "       --display-command | -d" << endl;
     cout << "              When an external encoder/decoder is used, display the command to" << endl;
     cout << "              launch instead of launching it." << endl;
