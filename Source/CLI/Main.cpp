@@ -60,7 +60,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     SingleFile.Buffer_Size = FileMap.Buffer_Size;
 
     // Parse
-    SingleFile.Parse();
+    SingleFile.Parse(false, Global.FullCheck);
     Global.ProgressIndicator_Increment();
     if (SingleFile.ErrorMessage())
     {

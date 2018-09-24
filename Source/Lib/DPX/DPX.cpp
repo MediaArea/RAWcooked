@@ -69,7 +69,7 @@ dpx::dpx() :
 }
 
 //---------------------------------------------------------------------------
-bool dpx::Parse(bool AcceptTruncated)
+bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 1664)
         return false;
@@ -218,6 +218,29 @@ bool dpx::Parse(bool AcceptTruncated)
     else
         EndOfImagePadding = Buffer_Size - OffsetAfterImage;
 
+    // Testing padding bits
+    uint8_t* In = NULL;
+    size_t In_Size = 0;
+    if (!AcceptTruncated && FullCheck)
+    {
+        if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
+        {
+            size_t Step = BitDepth == 10 ? 4 : 2;
+            bool IsNOK = false;
+            for (size_t i = OffsetToImage + (IsBigEndian ? (Step - 1) : 0); i < OffsetAfterImage; i += Step)
+                if (Buffer[i] & 0x3)
+                    IsNOK = true;
+            if (IsNOK)
+            {
+                In_Size = OffsetAfterImage - OffsetToImage;
+                In = new uint8_t[In_Size];
+                memset(In, 0x00, In_Size);
+                for (size_t i = (IsBigEndian ? (Step - 1) : 0); i < In_Size; i += Step)
+                    In[i] = Buffer[OffsetToImage + i] & 0x3;
+            }
+        }
+    }
+
     // Write RAWcooked file
     if (RAWcooked)
     {
@@ -226,6 +249,8 @@ bool dpx::Parse(bool AcceptTruncated)
         RAWcooked->Before_Size = OffsetToImage;
         RAWcooked->After = Buffer + Buffer_Size - EndOfImagePadding;
         RAWcooked->After_Size = EndOfImagePadding;
+        RAWcooked->In = In;
+        RAWcooked->In_Size = In_Size;
         RAWcooked->Parse();
     }
 

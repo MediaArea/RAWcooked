@@ -24,6 +24,8 @@ public:
     size_t                      Pre_Size;
     uint8_t*                    Post;
     size_t                      Post_Size;
+    uint8_t*                    In;
+    size_t                      In_Size;
     uint8_t*                    Buffer;
     size_t                      Buffer_Size;
     bool                        Buffer_IsOwned;
@@ -82,6 +84,7 @@ public:
         Flavor_Private(0),
         Pre(NULL),
         Post(NULL),
+        In(NULL),
         Buffer(NULL)
     {
     }

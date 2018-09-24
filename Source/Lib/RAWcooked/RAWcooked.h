@@ -30,6 +30,9 @@ public:
     uint8_t*                    After;
     uint64_t                    After_Size;
 
+    uint8_t*                    In;
+    uint64_t                    In_Size;
+
     void                        Parse();
     void                        ResetTrack();
     void                        Close();

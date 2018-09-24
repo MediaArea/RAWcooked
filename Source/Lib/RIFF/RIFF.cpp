@@ -100,7 +100,7 @@ riff::riff() :
 }
 
 //---------------------------------------------------------------------------
-bool riff::Parse(bool AcceptTruncated)
+bool riff::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 12)
         return false;
