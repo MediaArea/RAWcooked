@@ -9,6 +9,8 @@
 #include "CLI/Help.h"
 #include <iostream>
 #include <cstring>
+#include <iomanip>
+#include <thread>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include <direct.h>
     #define getcwd _getcwd
@@ -16,6 +18,13 @@
     #include <unistd.h>
 #endif
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// Glue
+void global_ProgressIndicator_Show(global* G)
+{
+    G->ProgressIndicator_Show();
+}
 
 //---------------------------------------------------------------------------
 int global::SetOutputFileName(const char* FileName)
@@ -210,6 +219,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     DisplayCommand = false;
     AcceptFiles = false;
     Quiet = false;
+    ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)
     {
@@ -332,4 +342,96 @@ int global::SetDefaults()
     }
 
     return 0;
+}
+
+//---------------------------------------------------------------------------
+void global::ProgressIndicator_Start(size_t Total)
+{
+    if (ProgressIndicator_Thread)
+        return;
+    ProgressIndicator_Current = 0;
+    ProgressIndicator_Total = Total;
+    ProgressIndicator_Thread = new thread(global_ProgressIndicator_Show, this);
+}
+
+//---------------------------------------------------------------------------
+void global::ProgressIndicator_Stop()
+{
+    if (!ProgressIndicator_Thread)
+        return;
+    ProgressIndicator_Current = ProgressIndicator_Total;
+    ProgressIndicator_IsEnd.notify_one();
+    ProgressIndicator_Thread->join();
+    delete ProgressIndicator_Thread;
+    ProgressIndicator_Thread = NULL;
+}
+
+//---------------------------------------------------------------------------
+// Progress indicator show
+void global::ProgressIndicator_Show()
+{
+    // Configure progress indicator precision
+    size_t ProgressIndicator_Value = (size_t)-1;
+    size_t ProgressIndicator_Frequency = 100;
+    streamsize Precision = 0;
+    cerr.setf(ios::fixed, ios::floatfield);
+
+    // Configure benches
+    using namespace chrono;
+    steady_clock::time_point Clock_Init = steady_clock::now();
+    steady_clock::time_point Clock_Previous = Clock_Init;
+    uint64_t FileCount_Previous = 0;
+
+    // Show progress indicator at a specific frequency
+    const chrono::seconds Frequency = chrono::seconds(1);
+    size_t StallDetection = 0;
+    mutex Mutex;
+    unique_lock<mutex> Lock(Mutex);
+    do
+    {
+        size_t ProgressIndicator_New = (size_t)(((float)ProgressIndicator_Current) * ProgressIndicator_Frequency / ProgressIndicator_Total);
+        if (ProgressIndicator_New == ProgressIndicator_Value)
+        {
+            StallDetection++;
+            if (StallDetection >= 4)
+            {
+                while (ProgressIndicator_New == ProgressIndicator_Value && ProgressIndicator_Frequency < 10000)
+                {
+                    ProgressIndicator_Frequency *= 10;
+                    ProgressIndicator_Value *= 10;
+                    Precision++;
+                    ProgressIndicator_New = (size_t)(((float)ProgressIndicator_Current) * ProgressIndicator_Frequency / ProgressIndicator_Total);
+                }
+            }
+        }
+        else
+            StallDetection = 0;
+        if (ProgressIndicator_New != ProgressIndicator_Value)
+        {
+            float FileRate = 0;
+            if (ProgressIndicator_Value != (size_t)-1)
+            {
+                steady_clock::time_point Clock_Current = steady_clock::now();
+                steady_clock::duration Duration = Clock_Current - Clock_Previous;
+                FileRate = (float)(ProgressIndicator_Current - FileCount_Previous) * 1000 / duration_cast<milliseconds>(Duration).count();
+                Clock_Previous = Clock_Current;
+                FileCount_Previous = ProgressIndicator_Current;
+            }
+            cerr << '\r';
+            cerr << "Analyzing files (" << setprecision(Precision) << ((float)ProgressIndicator_New) * 100 / ProgressIndicator_Frequency << "%)";
+            if (FileRate)
+            {
+                cerr << ", ";
+                cerr << setprecision(0) << FileRate;
+                cerr << " files/s";
+            }
+            cerr << "    "; // Clean up in case there is less content outputed than the previous time
+
+            ProgressIndicator_Value = ProgressIndicator_New;
+        }
+    } while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, ProgressIndicator_Current != ProgressIndicator_Total);
+
+    // Show summary
+    cerr << '\r';
+    cerr << "                              \r"; // Clean up in case there is less content outputed than the previous time
 }

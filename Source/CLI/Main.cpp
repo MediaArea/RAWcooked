@@ -61,8 +61,10 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
 
     // Parse
     SingleFile.Parse();
+    Global.ProgressIndicator_Increment();
     if (SingleFile.ErrorMessage())
     {
+        Global.ProgressIndicator_Stop();
         cerr << SingleFile.ErrorType_Before() << Name->substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
         return true;
     }
@@ -98,6 +100,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         RemovedFiles.push_back(*Name);
     else
     {
+        Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         size_t i_Max = RemovedFiles.size();
         for (size_t i = 1; i < i_Max; i++)
         {
@@ -264,6 +267,9 @@ int main(int argc, const char* argv[])
         if (int Value = ParseFile(i))
             return Value;
     RAWcooked.Close();
+
+    // Progress indicator
+    Global.ProgressIndicator_Stop();
 
     // FFmpeg
     if (int Value = Output.Process(Global))
