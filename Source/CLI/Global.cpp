@@ -88,7 +88,12 @@ int global::SetOption(const char* argv[], int& i, int argc)
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        if (strcmp(argv[i], "copy") == 0 || strcmp(argv[i], "flac") == 0)
+        if (strcmp(argv[i], "copy") == 0)
+        {
+            OutputOptions["c:a"] = argv[i];
+            return 0;
+        }
+        if (strcmp(argv[i], "flac") == 0)
         {
             OutputOptions["c:a"] = argv[i];
             return 0;
