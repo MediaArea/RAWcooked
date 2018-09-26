@@ -21,7 +21,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
-    ../../../Source/Lib/RIFF/RIFF.cpp \
+    ../../../Source/Lib/WAV/WAV.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/cpu.c \

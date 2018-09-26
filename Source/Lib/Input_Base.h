@@ -16,6 +16,16 @@ using namespace std;
 class rawcooked;
 //---------------------------------------------------------------------------
 
+//---------------------------------------------------------------------------
+// Parser codes
+enum parser
+{
+    Parser_DPX,
+    Parser_WAV,
+    Parser_Max,
+};
+
+//---------------------------------------------------------------------------
 class input_base
 {
 public:
@@ -70,7 +80,7 @@ class uncompressed
 {
 public:
     // Constructor/Destructor
-    uncompressed(bool IsSequence = false);
+    uncompressed(parser ParserCode, bool IsSequence = false);
     ~uncompressed();
 
     // Info
@@ -80,13 +90,14 @@ public:
     // Common info
     bool                        IsSequence;
     rawcooked*                  RAWcooked;
+    parser                      ParserCode;
 };
 
 class input_base_uncompressed : public input_base, public uncompressed
 {
 public:
     // Constructor/Destructor
-    input_base_uncompressed(bool IsSequence = false) : input_base(), uncompressed(IsSequence) {}
+    input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(), uncompressed(ParserCode, IsSequence) {}
 };
 
 #endif

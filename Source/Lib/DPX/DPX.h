@@ -98,8 +98,9 @@ public:
     static const char* Packing_String(flavor Flavor);
     static endianess Endianess(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
-    static string Flavor_String(uint8_t Flavor);
 };
+
+string DPX_Flavor_String(uint8_t Flavor);
 
 //---------------------------------------------------------------------------
 #endif

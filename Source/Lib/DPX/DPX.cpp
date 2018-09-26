@@ -21,38 +21,38 @@ struct dpx_tested
     uint8_t                     BitDepth;
     dpx::packing                Packing;
     dpx::endianess              Endianess;
-    dpx::flavor                  Flavor;
+    dpx::flavor                 Flavor;
 };
 
 const size_t DPX_Tested_Size = 26;
 struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 {
-    { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::BE, dpx::Raw_RGB_8 },
-    { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::LE, dpx::Raw_RGB_8 },
-    { dpx::Raw  , dpx::RGB      ,  8, dpx::MethodA, dpx::BE, dpx::Raw_RGB_8 },
-    { dpx::Raw  , dpx::RGB      ,  8, dpx::MethodA, dpx::LE, dpx::Raw_RGB_8 },
-    { dpx::Raw  , dpx::RGB      , 10, dpx::MethodA, dpx::LE, dpx::Raw_RGB_10_FilledA_LE },
-    { dpx::Raw  , dpx::RGB      , 10, dpx::MethodA, dpx::BE, dpx::Raw_RGB_10_FilledA_BE },
-    { dpx::Raw  , dpx::RGB      , 12, dpx::Packed , dpx::BE, dpx::Raw_RGB_12_Packed_BE },
-    { dpx::Raw  , dpx::RGB      , 12, dpx::MethodA, dpx::BE, dpx::Raw_RGB_12_FilledA_BE },
-    { dpx::Raw  , dpx::RGB      , 12, dpx::MethodA, dpx::LE, dpx::Raw_RGB_12_FilledA_LE },
-    { dpx::Raw  , dpx::RGB      , 16, dpx::Packed , dpx::BE, dpx::Raw_RGB_16_BE },
-    { dpx::Raw  , dpx::RGB      , 16, dpx::Packed , dpx::LE, dpx::Raw_RGB_16_LE },
-    { dpx::Raw  , dpx::RGB      , 16, dpx::MethodA, dpx::BE, dpx::Raw_RGB_16_BE },
-    { dpx::Raw  , dpx::RGB      , 16, dpx::MethodA, dpx::LE, dpx::Raw_RGB_16_LE },
-    { dpx::Raw  , dpx::RGBA     ,  8, dpx::Packed , dpx::BE, dpx::Raw_RGBA_8 },
-    { dpx::Raw  , dpx::RGBA     ,  8, dpx::Packed , dpx::LE, dpx::Raw_RGBA_8 },
-    { dpx::Raw  , dpx::RGBA     ,  8, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_8 },
-    { dpx::Raw  , dpx::RGBA     ,  8, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_8 },
-    { dpx::Raw  , dpx::RGBA     , 10, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_10_FilledA_LE },
-    { dpx::Raw  , dpx::RGBA     , 10, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_10_FilledA_BE },
-    { dpx::Raw  , dpx::RGBA     , 12, dpx::Packed , dpx::BE, dpx::Raw_RGBA_12_Packed_BE },
-    { dpx::Raw  , dpx::RGBA     , 12, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_12_FilledA_BE },
-    { dpx::Raw  , dpx::RGBA     , 12, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_12_FilledA_LE },
-    { dpx::Raw  , dpx::RGBA     , 16, dpx::Packed , dpx::BE, dpx::Raw_RGBA_16_BE },
-    { dpx::Raw  , dpx::RGBA     , 16, dpx::Packed , dpx::LE, dpx::Raw_RGBA_16_LE },
-    { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_16_BE },
-    { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_16_LE },
+    { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::BE, dpx::Raw_RGB_8                 },
+    { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::LE, dpx::Raw_RGB_8                 },
+    { dpx::Raw  , dpx::RGB      ,  8, dpx::MethodA, dpx::BE, dpx::Raw_RGB_8                 },
+    { dpx::Raw  , dpx::RGB      ,  8, dpx::MethodA, dpx::LE, dpx::Raw_RGB_8                 },
+    { dpx::Raw  , dpx::RGB      , 10, dpx::MethodA, dpx::LE, dpx::Raw_RGB_10_FilledA_LE     },
+    { dpx::Raw  , dpx::RGB      , 10, dpx::MethodA, dpx::BE, dpx::Raw_RGB_10_FilledA_BE     },
+    { dpx::Raw  , dpx::RGB      , 12, dpx::Packed , dpx::BE, dpx::Raw_RGB_12_Packed_BE      },
+    { dpx::Raw  , dpx::RGB      , 12, dpx::MethodA, dpx::BE, dpx::Raw_RGB_12_FilledA_BE     },
+    { dpx::Raw  , dpx::RGB      , 12, dpx::MethodA, dpx::LE, dpx::Raw_RGB_12_FilledA_LE     },
+    { dpx::Raw  , dpx::RGB      , 16, dpx::Packed , dpx::BE, dpx::Raw_RGB_16_BE             },
+    { dpx::Raw  , dpx::RGB      , 16, dpx::Packed , dpx::LE, dpx::Raw_RGB_16_LE             },
+    { dpx::Raw  , dpx::RGB      , 16, dpx::MethodA, dpx::BE, dpx::Raw_RGB_16_BE             },
+    { dpx::Raw  , dpx::RGB      , 16, dpx::MethodA, dpx::LE, dpx::Raw_RGB_16_LE             },
+    { dpx::Raw  , dpx::RGBA     ,  8, dpx::Packed , dpx::BE, dpx::Raw_RGBA_8                },
+    { dpx::Raw  , dpx::RGBA     ,  8, dpx::Packed , dpx::LE, dpx::Raw_RGBA_8                },
+    { dpx::Raw  , dpx::RGBA     ,  8, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_8                },
+    { dpx::Raw  , dpx::RGBA     ,  8, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_8                },
+    { dpx::Raw  , dpx::RGBA     , 10, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_10_FilledA_LE    },
+    { dpx::Raw  , dpx::RGBA     , 10, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_10_FilledA_BE    },
+    { dpx::Raw  , dpx::RGBA     , 12, dpx::Packed , dpx::BE, dpx::Raw_RGBA_12_Packed_BE     },
+    { dpx::Raw  , dpx::RGBA     , 12, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_12_FilledA_BE    },
+    { dpx::Raw  , dpx::RGBA     , 12, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_12_FilledA_LE    },
+    { dpx::Raw  , dpx::RGBA     , 16, dpx::Packed , dpx::BE, dpx::Raw_RGBA_16_BE            },
+    { dpx::Raw  , dpx::RGBA     , 16, dpx::Packed , dpx::LE, dpx::Raw_RGBA_16_LE            },
+    { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_16_BE            },
+    { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_16_LE            },
 };
 
 //---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 
 //---------------------------------------------------------------------------
 dpx::dpx() :
-    input_base_uncompressed(true),
+    input_base_uncompressed(Parser_DPX, true),
     FrameRate(NULL)
 {
 }
@@ -260,7 +260,7 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
 //---------------------------------------------------------------------------
 string dpx::Flavor_String()
 {
-    return Flavor_String(Flavor);
+    return DPX_Flavor_String(Flavor);
 }
 
 //---------------------------------------------------------------------------
@@ -399,7 +399,7 @@ uint8_t dpx::BitDepth(dpx::flavor Flavor)
 }
 const char* dpx::BitDepth_String(dpx::flavor Flavor)
 {
-    uint8_t Value = dpx::BitDepth(Flavor);
+    uint8_t Value = BitDepth(Flavor);
 
     switch (Value)
     {
@@ -439,7 +439,7 @@ dpx::packing dpx::Packing(dpx::flavor Flavor)
 }
 const char* dpx::Packing_String(dpx::flavor Flavor)
 {
-    dpx::packing Value = dpx::Packing(Flavor);
+    dpx::packing Value = Packing(Flavor);
 
     switch (Value)
     {
@@ -479,7 +479,7 @@ dpx::endianess dpx::Endianess(dpx::flavor Flavor)
 }
 const char* dpx::Endianess_String(dpx::flavor Flavor)
 {
-    dpx::endianess Value = dpx::Endianess(Flavor);
+    dpx::endianess Value = Endianess(Flavor);
 
     switch (Value)
     {
@@ -492,20 +492,20 @@ const char* dpx::Endianess_String(dpx::flavor Flavor)
     }
 }
 //---------------------------------------------------------------------------
-string dpx::Flavor_String(uint8_t Flavor)
+string DPX_Flavor_String(uint8_t Flavor)
 {
     string ToReturn("DPX/Raw/");
-    ToReturn += ColorSpace_String((flavor)Flavor);
+    ToReturn += dpx::ColorSpace_String((dpx::flavor)Flavor);
     ToReturn += '/';
-    ToReturn += BitDepth_String((flavor)Flavor);
+    ToReturn += dpx::BitDepth_String((dpx::flavor)Flavor);
     ToReturn += "bit";
-    const char* Value = Packing_String((flavor)Flavor);
+    const char* Value = dpx::Packing_String((dpx::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
         ToReturn += Value;
     }
-    Value = Endianess_String((flavor)Flavor);
+    Value = dpx::Endianess_String((dpx::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
