@@ -72,7 +72,6 @@ public:
     static const char* Channels_String(flavor Flavor);
     static endianess Endianess(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
-    string Flavor_String(uint8_t Flavor);
 
 private:
     typedef void (wav::*call)();
@@ -98,6 +97,8 @@ private:
     WAV_ELEMENT(WAVE_fmt_);
     WAV_ELEMENT(Void);
 };
+
+string WAV_Flavor_String(uint8_t Flavor);
 
 //---------------------------------------------------------------------------
 #endif

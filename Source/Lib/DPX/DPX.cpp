@@ -63,7 +63,7 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 
 //---------------------------------------------------------------------------
 dpx::dpx() :
-    input_base_uncompressed(true),
+    input_base_uncompressed(Parser_DPX, true),
     FrameRate(NULL)
 {
 }
@@ -260,7 +260,7 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
 //---------------------------------------------------------------------------
 string dpx::Flavor_String()
 {
-    return Flavor_String(Flavor);
+    return DPX_Flavor_String(Flavor);
 }
 
 //---------------------------------------------------------------------------
@@ -492,20 +492,20 @@ const char* dpx::Endianess_String(dpx::flavor Flavor)
     }
 }
 //---------------------------------------------------------------------------
-string dpx::Flavor_String(uint8_t Flavor)
+string DPX_Flavor_String(uint8_t Flavor)
 {
     string ToReturn("DPX/Raw/");
-    ToReturn += ColorSpace_String((flavor)Flavor);
+    ToReturn += dpx::ColorSpace_String((dpx::flavor)Flavor);
     ToReturn += '/';
-    ToReturn += BitDepth_String((flavor)Flavor);
+    ToReturn += dpx::BitDepth_String((dpx::flavor)Flavor);
     ToReturn += "bit";
-    const char* Value = Packing_String((flavor)Flavor);
+    const char* Value = dpx::Packing_String((dpx::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
         ToReturn += Value;
     }
-    Value = Endianess_String((flavor)Flavor);
+    Value = dpx::Endianess_String((dpx::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';

@@ -95,7 +95,7 @@ wav::call wav::SubElements_Void(uint64_t Name)
 
 //---------------------------------------------------------------------------
 wav::wav() :
-    input_base_uncompressed()
+    input_base_uncompressed(Parser_WAV)
 {
 }
 
@@ -182,7 +182,7 @@ bool wav::Parse(bool AcceptTruncated, bool FullCheck)
 //---------------------------------------------------------------------------
 string wav::Flavor_String()
 {
-    return Flavor_String(Flavor);
+    return WAV_Flavor_String(Flavor);
 }
 
 //---------------------------------------------------------------------------
@@ -536,16 +536,16 @@ const char* wav::Endianess_String(wav::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-string wav::Flavor_String(uint8_t Flavor)
+string WAV_Flavor_String(uint8_t Flavor)
 {
     string ToReturn("WAV/PCM/");
-    ToReturn += SamplesPerSec_String((flavor)Flavor);
+    ToReturn += wav::SamplesPerSec_String((wav::flavor)Flavor);
     ToReturn += "kHz/";
-    ToReturn += BitDepth_String((flavor)Flavor);
+    ToReturn += wav::BitDepth_String((wav::flavor)Flavor);
     ToReturn += "bit/";
-    ToReturn += Channels_String((flavor)Flavor);
+    ToReturn += wav::Channels_String((wav::flavor)Flavor);
     ToReturn += "ch";
-    const char* Value = Endianess_String((flavor)Flavor);
+    const char* Value = wav::Endianess_String((wav::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';

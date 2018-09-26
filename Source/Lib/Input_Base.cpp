@@ -215,7 +215,8 @@ bool input_base::Invalid(const char* Message)
 }
 
 //---------------------------------------------------------------------------
-uncompressed::uncompressed(bool IsSequence_) :
+uncompressed::uncompressed(parser ParserCode_, bool IsSequence_) :
+    ParserCode(ParserCode_),
     RAWcooked(NULL),
     IsSequence(IsSequence_),
     Flavor((uint8_t)-1)
