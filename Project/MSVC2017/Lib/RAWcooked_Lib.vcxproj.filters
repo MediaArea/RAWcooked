@@ -267,6 +267,12 @@
     <ClInclude Include="..\..\..\Source\Lib\Input_Base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License_Internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -387,6 +393,9 @@
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Input_Base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\License.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

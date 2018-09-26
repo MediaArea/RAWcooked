@@ -11,6 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
+#include "Lib/License.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -29,6 +30,10 @@ public:
     string                      rawcooked_reversibility_data_FileName;
     string                      OutputFileName;
     string                      BinName;
+    string                      LicenseKey;
+    bool                        IgnoreLicenseKey;
+    bool                        ShowLicenseKey;
+    bool                        StoreLicenseKey;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
     bool                        FullCheck;
@@ -39,6 +44,7 @@ public:
     // Intermediate info
     size_t                      Path_Pos_Global;
     vector<string>              Inputs;
+    license                     License;
 
     // Options
     int ManageCommandLine(const char* argv[], int argc);
@@ -56,6 +62,7 @@ private:
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
+    int SetLicenseKey(const char* Key, bool Add);
     int SetDisplayCommand();
     int SetAcceptFiles();
     int SetFullCheck(const char* Value);

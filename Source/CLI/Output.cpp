@@ -73,6 +73,16 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     else
         Command += Global.BinName;
 
+    // Info
+    bool Problem = false;
+
+    if (Streams.size() > 2 && !Global.License.IsSupported(Feature_MultipleTracks))
+    {
+        if (!Global.Quiet)
+            cerr << "*** More than 2 tracks is not supported by the current licence key. ***" << endl;
+        Problem = true;
+    }
+
     // Input
     for (size_t i = 0; i < Streams.size(); i++)
     {
@@ -90,7 +100,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber << ')' << endl;
             }
             cerr << "  " << Streams[i].Flavor << endl;
+            if (Streams[i].Problem)
+                cerr << "  *** This input format flavor is not supported by the current licence key. ***" << endl;
         }
+        if (Streams[i].Problem)
+            Problem = true;
 
         if (!Streams[i].Slices.empty())
         {
@@ -162,7 +176,15 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
 
     // Info
-    if (!Global.Quiet)
+    if (Problem)
+    {
+        cerr << "\nOne or more requested features are not supported with the current license key.\n";
+        cerr << "Please contact info@mediaarea.net for a quote or a temporary key." << endl;
+        if (!Global.IgnoreLicenseKey)
+            return 1;
+        cerr << "Ignoring the license for the moment." << endl;
+    }
+    if (!Global.Quiet || Problem)
     {
         cerr << endl;
     }

@@ -43,12 +43,14 @@ struct parse_info
     string Slices;
     string FrameRate;
     bool   IsDetected;
+    bool   Problem;
 
     bool ParseFile_Input(input_base& Input);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
 
     parse_info():
-        IsDetected(false)
+        IsDetected(false),
+        Problem(false)
     {}
 };
 
@@ -114,6 +116,10 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
 
     }
 
+    // License
+    if (!Problem)
+        Problem = !Global.License.IsSupported(SingleFile.ParserCode, SingleFile.Flavor);
+
     return false;
 }
 
@@ -168,6 +174,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             Stream.FileName_EndNumber = ParseInfo.FileName_EndNumber;
         }
         Stream.Flavor = ParseInfo.Flavor;
+        Stream.Problem = ParseInfo.Problem;
 
         Stream.Slices = ParseInfo.Slices;
         if (!ParseInfo.FrameRate.empty())
