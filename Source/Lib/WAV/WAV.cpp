@@ -5,67 +5,67 @@
  */
 
 //---------------------------------------------------------------------------
-#include "Lib/RIFF/RIFF.h"
+#include "Lib/WAV/WAV.h"
 #include "Lib/RAWcooked/RAWcooked.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
 // Tested cases
-struct riff_tested
+struct wav_tested
 {
     uint32_t                    SamplesPerSec;
     uint8_t                     BitDepth;
     uint8_t                     Channels;
-    riff::endianess             Endianess;
-    riff::flavor                 Flavor;
+    wav::endianess              Endianess;
+    wav::flavor                 Flavor;
 };
 
-const size_t RIFF_Tested_Size = 27;
-struct riff_tested RIFF_Tested[RIFF_Tested_Size] =
+const size_t WAV_Tested_Size = 27;
+struct wav_tested WAV_Tested[WAV_Tested_Size] =
 {
-    { 44100,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
-    { 44100,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
-    { 44100,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
-    { 44100, 16, 1, riff::LE, riff::PCM_44100_16_1_LE },
-    { 44100, 16, 2, riff::LE, riff::PCM_44100_16_2_LE },
-    { 44100, 16, 6, riff::LE, riff::PCM_44100_16_6_LE },
-    { 44100, 24, 1, riff::LE, riff::PCM_44100_24_1_LE },
-    { 44100, 24, 2, riff::LE, riff::PCM_44100_24_2_LE },
-    { 44100, 24, 6, riff::LE, riff::PCM_44100_24_6_LE },
-    { 48000,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
-    { 48000,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
-    { 48000,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
-    { 48000, 16, 1, riff::LE, riff::PCM_48000_16_1_LE },
-    { 48000, 16, 2, riff::LE, riff::PCM_48000_16_2_LE },
-    { 48000, 16, 6, riff::LE, riff::PCM_48000_16_6_LE },
-    { 48000, 24, 1, riff::LE, riff::PCM_48000_24_1_LE },
-    { 48000, 24, 2, riff::LE, riff::PCM_48000_24_2_LE },
-    { 48000, 24, 6, riff::LE, riff::PCM_48000_24_6_LE },
-    { 96000,  8, 1, riff::LE, riff::PCM_44100_8_1_U },
-    { 96000,  8, 2, riff::LE, riff::PCM_44100_8_2_U },
-    { 96000,  8, 6, riff::LE, riff::PCM_44100_8_6_U },
-    { 96000, 16, 1, riff::LE, riff::PCM_96000_16_1_LE },
-    { 96000, 16, 2, riff::LE, riff::PCM_96000_16_2_LE },
-    { 96000, 16, 6, riff::LE, riff::PCM_96000_16_6_LE },
-    { 96000, 24, 1, riff::LE, riff::PCM_96000_24_1_LE },
-    { 96000, 24, 2, riff::LE, riff::PCM_96000_24_2_LE },
-    { 96000, 24, 6, riff::LE, riff::PCM_96000_24_6_LE },
+    { 44100,  8, 1, wav::LE, wav::PCM_44100_8_1_U   },
+    { 44100,  8, 2, wav::LE, wav::PCM_44100_8_2_U   },
+    { 44100,  8, 6, wav::LE, wav::PCM_44100_8_6_U   },
+    { 44100, 16, 1, wav::LE, wav::PCM_44100_16_1_LE },
+    { 44100, 16, 2, wav::LE, wav::PCM_44100_16_2_LE },
+    { 44100, 16, 6, wav::LE, wav::PCM_44100_16_6_LE },
+    { 44100, 24, 1, wav::LE, wav::PCM_44100_24_1_LE },
+    { 44100, 24, 2, wav::LE, wav::PCM_44100_24_2_LE },
+    { 44100, 24, 6, wav::LE, wav::PCM_44100_24_6_LE },
+    { 48000,  8, 1, wav::LE, wav::PCM_44100_8_1_U   },
+    { 48000,  8, 2, wav::LE, wav::PCM_44100_8_2_U   },
+    { 48000,  8, 6, wav::LE, wav::PCM_44100_8_6_U   },
+    { 48000, 16, 1, wav::LE, wav::PCM_48000_16_1_LE },
+    { 48000, 16, 2, wav::LE, wav::PCM_48000_16_2_LE },
+    { 48000, 16, 6, wav::LE, wav::PCM_48000_16_6_LE },
+    { 48000, 24, 1, wav::LE, wav::PCM_48000_24_1_LE },
+    { 48000, 24, 2, wav::LE, wav::PCM_48000_24_2_LE },
+    { 48000, 24, 6, wav::LE, wav::PCM_48000_24_6_LE },
+    { 96000,  8, 1, wav::LE, wav::PCM_44100_8_1_U   },
+    { 96000,  8, 2, wav::LE, wav::PCM_44100_8_2_U   },
+    { 96000,  8, 6, wav::LE, wav::PCM_44100_8_6_U   },
+    { 96000, 16, 1, wav::LE, wav::PCM_96000_16_1_LE },
+    { 96000, 16, 2, wav::LE, wav::PCM_96000_16_2_LE },
+    { 96000, 16, 6, wav::LE, wav::PCM_96000_16_6_LE },
+    { 96000, 24, 1, wav::LE, wav::PCM_96000_24_1_LE },
+    { 96000, 24, 2, wav::LE, wav::PCM_96000_24_2_LE },
+    { 96000, 24, 6, wav::LE, wav::PCM_96000_24_6_LE },
 };
 
 //---------------------------------------------------------------------------
 
 
 #define ELEMENT_BEGIN(_VALUE) \
-riff::call riff::SubElements_##_VALUE(uint64_t Name) \
+wav::call wav::SubElements_##_VALUE(uint64_t Name) \
 { \
     switch (Name) \
     { \
 
 #define ELEMENT_CASE(_VALUE,_NAME) \
-    case 0x##_VALUE:  Levels[Level].SubElements = &riff::SubElements_##_NAME;  return &riff::_NAME;
+    case 0x##_VALUE:  Levels[Level].SubElements = &wav::SubElements_##_NAME;  return &wav::_NAME;
 
 #define ELEMENT_VOID(_VALUE,_NAME) \
-    case 0x##_VALUE:  Levels[Level].SubElements = &riff::SubElements_Void;  return &riff::_NAME;
+    case 0x##_VALUE:  Levels[Level].SubElements = &wav::SubElements_Void;  return &wav::_NAME;
 
 
 #define ELEMENT_END() \
@@ -84,23 +84,23 @@ ELEMENT_END()
 
 
 //---------------------------------------------------------------------------
-riff::call riff::SubElements_Void(uint64_t Name)
+wav::call wav::SubElements_Void(uint64_t Name)
 {
-    Levels[Level].SubElements = &riff::SubElements_Void; return &riff::Void;
+    Levels[Level].SubElements = &wav::SubElements_Void; return &wav::Void;
 }
 
 //***************************************************************************
-// RIFF
+// WAV
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-riff::riff() :
+wav::wav() :
     input_base_uncompressed()
 {
 }
 
 //---------------------------------------------------------------------------
-bool riff::Parse(bool AcceptTruncated, bool FullCheck)
+bool wav::Parse(bool AcceptTruncated, bool FullCheck)
 {
     if (Buffer_Size < 12)
         return false;
@@ -117,7 +117,7 @@ bool riff::Parse(bool AcceptTruncated, bool FullCheck)
 
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer_Size;
-    Levels[0].SubElements = &riff::SubElements__;
+    Levels[0].SubElements = &wav::SubElements__;
     Level=1;
 
     while (Buffer_Offset < Buffer_Size)
@@ -136,10 +136,10 @@ bool riff::Parse(bool AcceptTruncated, bool FullCheck)
         {
             Name = Get_B4();
             Size = Get_L4();
-            if (Name == 0x52494646) // "RIFF"
+            if (Name == 0x52494646) // "WAV"
             {
                 if (Size < 4)
-                    return Unssuported("Incoherency detected while parsing RIFF");
+                    return Unssuported("Incoherency detected while parsing WAV");
                 Name = Get_B4();
                 Size -= 4;
             }
@@ -147,12 +147,12 @@ bool riff::Parse(bool AcceptTruncated, bool FullCheck)
             {
                 // Truncated
                 if (!AcceptTruncated)
-                    return Unssuported("Truncated RIFF?");
+                    return Unssuported("Truncated WAV?");
                 Size = Levels[Level - 1].Offset_End - Buffer_Offset;
             }
         }
         else
-            return Unssuported("Incoherency detected while parsing RIFF");
+            return Unssuported("Incoherency detected while parsing WAV");
 
         // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -180,36 +180,36 @@ bool riff::Parse(bool AcceptTruncated, bool FullCheck)
 }
 
 //---------------------------------------------------------------------------
-string riff::Flavor_String()
+string wav::Flavor_String()
 {
     return Flavor_String(Flavor);
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::BitDepth()
+uint8_t wav::BitDepth()
 {
-    return RIFF_Tested[Flavor].BitDepth;
+    return WAV_Tested[Flavor].BitDepth;
 }
 
 //---------------------------------------------------------------------------
-riff::endianess riff::Endianess()
+wav::endianess wav::Endianess()
 {
-    return RIFF_Tested[Flavor].Endianess;
+    return WAV_Tested[Flavor].Endianess;
 }
 
 //---------------------------------------------------------------------------
-void riff::Void()
+void wav::Void()
 {
 }
 
 //---------------------------------------------------------------------------
-void riff::WAVE()
+void wav::WAVE()
 {
     IsList = true;
 }
 
 //---------------------------------------------------------------------------
-void riff::WAVE_data()
+void wav::WAVE_data()
 {
     // Write RAWcooked file
     if (RAWcooked)
@@ -224,7 +224,7 @@ void riff::WAVE_data()
 }
 
 //---------------------------------------------------------------------------
-void riff::WAVE_fmt_()
+void wav::WAVE_fmt_()
 {
     if (Levels[Level].Offset_End - Buffer_Offset < 16)
     {
@@ -329,25 +329,25 @@ void riff::WAVE_fmt_()
 
     // Supported?
     size_t Tested = 0;
-    for (; Tested < RIFF_Tested_Size; Tested++)
+    for (; Tested < WAV_Tested_Size; Tested++)
     {
-        riff_tested& RIFF_Tested_Item = RIFF_Tested[Tested];
-        if (RIFF_Tested_Item.SamplesPerSec == SamplesPerSec
-            && RIFF_Tested_Item.BitDepth == BitDepth
-            && RIFF_Tested_Item.Channels == Channels
-            && RIFF_Tested_Item.Endianess == Endianess)
+        wav_tested& WAV_Tested_Item = WAV_Tested[Tested];
+        if (WAV_Tested_Item.SamplesPerSec == SamplesPerSec
+            && WAV_Tested_Item.BitDepth == BitDepth
+            && WAV_Tested_Item.Channels == Channels
+            && WAV_Tested_Item.Endianess == Endianess)
             break;
     }
-    if (Tested >= RIFF_Tested_Size)
+    if (Tested >= WAV_Tested_Size)
     {
         Unssuported("Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)");
         return;
     }
-    Flavor = RIFF_Tested[Tested].Flavor;
+    Flavor = WAV_Tested[Tested].Flavor;
 }
 
 //---------------------------------------------------------------------------
-uint32_t riff::SamplesPerSec(riff::flavor Flavor)
+uint32_t wav::SamplesPerSec(wav::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -385,9 +385,9 @@ uint32_t riff::SamplesPerSec(riff::flavor Flavor)
                                         return 0;
     }
 }
-const char* riff::SamplesPerSec_String(riff::flavor Flavor)
+const char* wav::SamplesPerSec_String(wav::flavor Flavor)
 {
-    uint32_t Value = riff::SamplesPerSec(Flavor);
+    uint32_t Value = wav::SamplesPerSec(Flavor);
 
     switch (Value)
     {
@@ -403,7 +403,7 @@ const char* riff::SamplesPerSec_String(riff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::BitDepth(riff::flavor Flavor)
+uint8_t wav::BitDepth(wav::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -441,9 +441,9 @@ uint8_t riff::BitDepth(riff::flavor Flavor)
                                         return 0;
     }
 }
-const char* riff::BitDepth_String(riff::flavor Flavor)
+const char* wav::BitDepth_String(wav::flavor Flavor)
 {
-    uint8_t Value = riff::BitDepth(Flavor);
+    uint8_t Value = wav::BitDepth(Flavor);
 
     switch (Value)
     {
@@ -459,7 +459,7 @@ const char* riff::BitDepth_String(riff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-uint8_t riff::Channels(riff::flavor Flavor)
+uint8_t wav::Channels(wav::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -497,9 +497,9 @@ uint8_t riff::Channels(riff::flavor Flavor)
                                         return 0;
     }
 }
-const char* riff::Channels_String(riff::flavor Flavor)
+const char* wav::Channels_String(wav::flavor Flavor)
 {
-    uint8_t Value = riff::Channels(Flavor);
+    uint8_t Value = wav::Channels(Flavor);
 
     switch (Value)
     {
@@ -515,14 +515,14 @@ const char* riff::Channels_String(riff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-riff::endianess riff::Endianess(riff::flavor Flavor)
+wav::endianess wav::Endianess(wav::flavor Flavor)
 {
     return LE; //For the moment all is LE or Unsigned
 }
-const char* riff::Endianess_String(riff::flavor Flavor)
+const char* wav::Endianess_String(wav::flavor Flavor)
 {
-    riff::endianess Value = riff::Endianess(Flavor);
-    uint8_t BitDepth = riff::BitDepth(Flavor);
+    wav::endianess Value = wav::Endianess(Flavor);
+    uint8_t BitDepth = wav::BitDepth(Flavor);
 
     switch (Value)
     {
@@ -536,7 +536,7 @@ const char* riff::Endianess_String(riff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-string riff::Flavor_String(uint8_t Flavor)
+string wav::Flavor_String(uint8_t Flavor)
 {
     string ToReturn("WAV/PCM/");
     ToReturn += SamplesPerSec_String((flavor)Flavor);

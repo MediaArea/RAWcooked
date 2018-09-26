@@ -7,7 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
-#include "Lib/RIFF/RIFF.h"
+#include "Lib/WAV/WAV.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
 #include <stdlib.h>
@@ -960,18 +960,18 @@ void matroska::Segment_Cluster_SimpleBlock()
 
                                 if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                                 {
-                                    riff RIFF;
-                                    RIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                    RIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                    RIFF.Parse(true);
-                                    if (RIFF.ErrorMessage())
+                                    wav WAV;
+                                    WAV.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                    WAV.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                    WAV.Parse(true);
+                                    if (WAV.ErrorMessage())
                                     {
                                         Invalid("Unreadable frame header in reversibility data");
                                         return;
                                     }
-                                    if (RIFF.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                    if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                         TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
-                                    TrackInfo_Current->FlacInfo->Endianess = RIFF.Endianess();
+                                    TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
                                 }
 
                                 TrackInfo_Current->DPX_Buffer_Pos++;

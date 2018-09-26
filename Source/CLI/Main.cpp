@@ -11,7 +11,7 @@
 #include "Lib/FileIO.h"
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
-#include "Lib/RIFF/RIFF.h"
+#include "Lib/WAV/WAV.h"
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/RAWcooked/RAWcooked.h"
@@ -129,8 +129,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // WAV
     if (!ParseInfo.IsDetected)
     {
-        riff RIFF;
-        if (ParseInfo.ParseFile_Input(RIFF, Input, Files_Pos))
+        wav WAV;
+        if (ParseInfo.ParseFile_Input(WAV, Input, Files_Pos))
             return 1;
     }
 

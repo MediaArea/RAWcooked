@@ -73,10 +73,10 @@
     <Filter Include="Source Files\DPX">
       <UniqueIdentifier>{5154ec89-4df8-41dc-88cd-9f7fb3ea2f31}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\RIFF">
+    <Filter Include="Source Files\WAV">
       <UniqueIdentifier>{c0f1c942-c682-441f-b78d-18043ec4b2eb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\RIFF">
+    <Filter Include="Header Files\WAV">
       <UniqueIdentifier>{e92f4c0c-4015-4076-8d5d-ec6dafb5e905}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\zlib">
@@ -141,8 +141,8 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h">
       <Filter>ThirdParty\thread-pool</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\RIFF\RIFF.h">
-      <Filter>Header Files\RIFF</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h">
+      <Filter>Header Files\WAV</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h">
       <Filter>ThirdParty\zlib</Filter>
@@ -305,8 +305,8 @@
     <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp">
       <Filter>Source Files\DPX</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\RIFF\RIFF.cpp">
-      <Filter>Source Files\RIFF</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\WAV\WAV.cpp">
+      <Filter>Source Files\WAV</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c">
       <Filter>ThirdParty\zlib</Filter>

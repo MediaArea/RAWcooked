@@ -5,8 +5,8 @@
  */
 
 //---------------------------------------------------------------------------
-#ifndef RIFFH
-#define RIFFH
+#ifndef WAVH
+#define WAVH
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -16,10 +16,10 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
-class riff : public input_base_uncompressed
+class wav : public input_base_uncompressed
 {
 public:
-    riff();
+    wav();
 
     bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
@@ -72,11 +72,11 @@ public:
     static const char* Channels_String(flavor Flavor);
     static endianess Endianess(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
-    static string Flavor_String(uint8_t Flavor);
+    string Flavor_String(uint8_t Flavor);
 
 private:
-    typedef void (riff::*call)();
-    typedef call(riff::*name)(uint64_t);
+    typedef void (wav::*call)();
+    typedef call (wav::*name)(uint64_t);
 
     static const size_t Levels_Max = 16;
     struct levels_struct
@@ -88,15 +88,15 @@ private:
     size_t Level;
     bool IsList;
 
-#define RIFF_ELEMENT(_NAME) \
+#define WAV_ELEMENT(_NAME) \
         void _NAME(); \
         call SubElements_##_NAME(uint64_t Name);
 
-    RIFF_ELEMENT(_);
-    RIFF_ELEMENT(WAVE);
-    RIFF_ELEMENT(WAVE_data);
-    RIFF_ELEMENT(WAVE_fmt_);
-    RIFF_ELEMENT(Void);
+    WAV_ELEMENT(_);
+    WAV_ELEMENT(WAVE);
+    WAV_ELEMENT(WAVE_data);
+    WAV_ELEMENT(WAVE_fmt_);
+    WAV_ELEMENT(Void);
 };
 
 //---------------------------------------------------------------------------
