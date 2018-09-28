@@ -12,7 +12,7 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Description: RAWcooked provides:
  .
- Encodes RAW audio-visual data while permiting reversability
+ Encodes RAW audio-visual data while permitting reversibility
 
 Package: rawcooked-dbg
 Section: debug
@@ -21,6 +21,6 @@ Priority: extra
 Depends: rawcooked (= ${binary:Version})
 Description: RAWcooked provides:
  .
- Encodes RAW audio-visual data while permiting reversability
+ Encodes RAW audio-visual data while permitting reversibility
  .
  This package contains the debugging symbols.
