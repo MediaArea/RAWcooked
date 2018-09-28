@@ -4,7 +4,7 @@
 pkgname=('rawcooked')
 pkgver=18.07
 pkgrel=1
-pkgdesc="Encodes RAW audio-visual data while permiting reversability"
+pkgdesc="Encodes RAW audio-visual data while permitting reversibility"
 url="http://mediaarea.net"
 license=('BSD-2-Clause')
 source=(${pkgname}_${pkgver}-1.tar.gz)
