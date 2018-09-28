@@ -9,7 +9,7 @@
 Name:			rawcooked
 Version:		%rawcooked_version
 Release:		1
-Summary:		Encodes RAW A/V data while permiting reversability (CLI)
+Summary:		Encodes RAW A/V data while permitting reversibility (CLI)
 Group:			Productivity/Multimedia/Other
 License:		BSD-2-Clause
 URL:			https://mediaarea.net/RAWcooked
@@ -28,7 +28,7 @@ rawcooked CLI (Command Line Interface)
 
 RAWcooked provides this service:
 
-Encodes RAW audio-visual data while permiting reversability
+Encodes RAW audio-visual data while permitting reversibility
 
 %prep
 %setup -q -n rawcooked
