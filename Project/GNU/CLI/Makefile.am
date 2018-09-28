@@ -18,6 +18,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/FFV1/FFV1_Slice.cpp \
     ../../../Source/Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
     ../../../Source/Lib/Input_Base.cpp \
+    ../../../Source/Lib/License.cpp \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \

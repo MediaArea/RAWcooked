@@ -17,7 +17,7 @@ before_install:
 before_script:
   - >
        if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
-         cd Project/GNU/CLI/ &&
+         pushd Project/GNU/CLI/ &&
          # git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git &&
          curl -O https://mediaarea.net/temp/FFmpeg-20180801.tar.bz2 &&
          tar xjf FFmpeg-20180801.tar.bz2 &&
@@ -26,11 +26,19 @@ before_script:
          make &&
          mv ffmpeg .. &&
          popd;
+         popd;
+         if [[ -n "$PATCH" ]] ; then
+             echo "$PATCH" | base64 -d | git apply -v;
+         fi;
        fi
   - >
        if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
-         cd Project/GNU/CLI/ &&
+         pushd Project/GNU/CLI/ &&
          curl -O "https://evermeet.cx/ffmpeg/$(curl https://evermeet.cx/ffmpeg/ 2>/dev/null | grep -oe 'ffmpeg-[0-9a-z-]\+.7z')" 2>/dev/null &&
          7za e *.7z ;
+         popd;
+         if [[ -n "$PATCH" ]] ; then
+             echo "$PATCH" | base64 -D | git apply -v;
+         fi;
        fi
-script: sh autogen.sh && ./configure && make && make clone_testing_files && make check
+script: cd Project/GNU/CLI/ && sh autogen.sh && ./configure && make && make clone_testing_files && make check
