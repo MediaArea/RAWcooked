@@ -136,7 +136,7 @@ bool wav::Parse(bool AcceptTruncated, bool FullCheck)
         {
             Name = Get_B4();
             Size = Get_L4();
-            if (Name == 0x52494646) // "WAV"
+            if (Name == 0x52494646) // "RIFF"
             {
                 if (Size < 4)
                     return Unssuported("Incoherency detected while parsing WAV");

@@ -79,7 +79,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     if (Streams.size() > 2 && !Global.License.IsSupported(Feature_MultipleTracks))
     {
         if (!Global.Quiet)
-            cerr << "*** More than 2 tracks is not supported by the current licence key. ***" << endl;
+            cerr << "*** More than 2 tracks is not supported by the current license key. ***" << endl;
         Problem = true;
     }
 
@@ -101,7 +101,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
             }
             cerr << "  " << Streams[i].Flavor << endl;
             if (Streams[i].Problem)
-                cerr << "  *** This input format flavor is not supported by the current licence key. ***" << endl;
+                cerr << "  *** This input format flavor is not supported by the current lisence key. ***" << endl;
         }
         if (Streams[i].Problem)
             Problem = true;
