@@ -90,14 +90,14 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
     IsDetected = true;
     uint32_t OffsetToImage = Get_X4();
     if (OffsetToImage > Buffer_Size)
-        return Unssuported("Offset to image data in bytes");
+        return Unsupported("Offset to image data in bytes");
     uint32_t VersioNumber = Get_B4();
     switch (VersioNumber)
     {
         case 0x56312E30: // V1.0
         case 0x56322E30: // V2.0
                         break;
-        default:        return Unssuported("Version number of header format");
+        default:        return Unsupported("Version number of header format");
     }
     Buffer_Offset = 28;
     uint32_t IndustryHeaderSize = Get_X4();
@@ -106,17 +106,17 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
     Buffer_Offset = 660;
     uint32_t Encryption = Get_X4();
     if (Encryption != 0xFFFFFFFF && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
-        return Unssuported("Encryption key");
+        return Unsupported("Encryption key");
     Buffer_Offset = 768;
     if (Get_X2() != 0)
-        return Unssuported("Image orientation");
+        return Unsupported("Image orientation");
     if (Get_X2() != 1)
-        return Unssuported("Number of image elements");
+        return Unsupported("Number of image elements");
     uint32_t Width = Get_X4();
     uint32_t Height = Get_X4();
     Buffer_Offset = 780;
     if (Get_X4() != 0)
-        return Unssuported("Data sign");
+        return Unsupported("Data sign");
     Buffer_Offset = 800;
     uint8_t Descriptor = Get_X1();
     Buffer_Offset = 803;
@@ -125,9 +125,9 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
     uint16_t Encoding = Get_X2();
     uint32_t OffsetToData = Get_X4();
     if (OffsetToData != OffsetToImage)
-        return Unssuported("Offset to data");
+        return Unsupported("Offset to data");
     if (Get_X4() != 0)
-        return Unssuported("End-of-line padding");
+        return Unsupported("End-of-line padding");
     //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
     
     if (IndustryHeaderSize && FrameRate)
@@ -139,7 +139,7 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
 
         // Integrity of frame rate
         if (FrameRate_Film && FrameRate_Television && FrameRate_Film != FrameRate_Television)
-            return Unssuported("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
+            return Unsupported("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
 
         // Availability of frame rate
         // We have lot of DPX files without frame rate info, using FFmpeg default (25 at the moment of writing)
@@ -169,7 +169,7 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
             break;
     }
     if (Tested >= DPX_Tested_Size)
-        return Unssuported("Flavor (Descriptor / BitDepth / Packing / Endianess combination)");
+        return Unsupported("Flavor (Descriptor / BitDepth / Packing / Endianess combination)");
     Flavor = DPX_Tested[Tested].Flavor;
 
     // Slices count
@@ -201,7 +201,7 @@ bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
             break;
     }
     if (slice_x == 0)
-        return Unssuported("Pixels in slice not on a 32-bit boundary");
+        return Unsupported("Pixels in slice not on a 32-bit boundary");
 
     // Computing EndOfImagePadding
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);

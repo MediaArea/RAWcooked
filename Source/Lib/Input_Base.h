@@ -62,7 +62,7 @@ protected:
     uint64_t                    Get_EB();
 
     // Error message
-    bool                        Unssuported(const char* Message);
+    bool                        Unsupported(const char* Message);
     bool                        Invalid(const char* Message);
 
 private:
