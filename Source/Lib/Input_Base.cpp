@@ -193,7 +193,7 @@ const char* input_base::ErrorType_After()
 }
 
 //---------------------------------------------------------------------------
-bool input_base::Unssuported(const char* Message)
+bool input_base::Unsupported(const char* Message)
 {
     if (Error_Message)
         return true; // Already filled, currently ignoring the second message

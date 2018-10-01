@@ -108,7 +108,7 @@ bool wav::Parse(bool AcceptTruncated, bool FullCheck)
         return false;
     if (Buffer[0] == 'R' && Buffer[1] == 'F' && Buffer[2] == '6' && Buffer[3] == '4')
     {
-        Unssuported("RF64 (4GB+ WAV)");
+        Unsupported("RF64 (4GB+ WAV)");
         return true;
     }
     if (Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
@@ -139,7 +139,7 @@ bool wav::Parse(bool AcceptTruncated, bool FullCheck)
             if (Name == 0x52494646) // "RIFF"
             {
                 if (Size < 4)
-                    return Unssuported("Incoherency detected while parsing WAV");
+                    return Unsupported("Incoherency detected while parsing WAV");
                 Name = Get_B4();
                 Size -= 4;
             }
@@ -147,12 +147,12 @@ bool wav::Parse(bool AcceptTruncated, bool FullCheck)
             {
                 // Truncated
                 if (!AcceptTruncated)
-                    return Unssuported("Truncated WAV?");
+                    return Unsupported("Truncated WAV?");
                 Size = Levels[Level - 1].Offset_End - Buffer_Offset;
             }
         }
         else
-            return Unssuported("Incoherency detected while parsing WAV");
+            return Unsupported("Incoherency detected while parsing WAV");
 
         // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -228,7 +228,7 @@ void wav::WAVE_fmt_()
 {
     if (Levels[Level].Offset_End - Buffer_Offset < 16)
     {
-        Unssuported("WAV FormatTag format");
+        Unsupported("WAV FormatTag format");
         return;
     }
 
@@ -238,7 +238,7 @@ void wav::WAVE_fmt_()
         Endianess = LE;
     else
     {
-        Unssuported("WAV FormatTag is not WAVE_FORMAT_PCM 1");
+        Unsupported("WAV FormatTag is not WAVE_FORMAT_PCM 1");
         return;
     }
 
@@ -250,12 +250,12 @@ void wav::WAVE_fmt_()
 
     if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
     {
-        Unssuported("WAV BlockAlign not supported");
+        Unsupported("WAV BlockAlign not supported");
         return;
     }
     if (BlockAlign * 8 != Channels * BitDepth)
     {
-        Unssuported("WAV BlockAlign not supported");
+        Unsupported("WAV BlockAlign not supported");
         return;
     }
     if (FormatTag == 1)
@@ -265,7 +265,7 @@ void wav::WAVE_fmt_()
             uint16_t Padding0 = Get_L2(); // Some files have 2 zeroes, it does not hurt so we accept them
             if (Padding0)
             {
-                Unssuported("WAV FormatTag extension");
+                Unsupported("WAV FormatTag extension");
                 return;
             }
         }
@@ -275,14 +275,14 @@ void wav::WAVE_fmt_()
             uint32_t Padding0 = Get_L4(); // Some files have 4 zeroes, it does not hurt so we accept them
             if (Padding0)
             {
-                Unssuported("WAV FormatTag extension");
+                Unsupported("WAV FormatTag extension");
                 return;
             }
         }
 
         if (Levels[Level].Offset_End - Buffer_Offset)
         {
-            Unssuported("WAV FormatTag extension");
+            Unsupported("WAV FormatTag extension");
             return;
         }
     }
@@ -290,19 +290,19 @@ void wav::WAVE_fmt_()
     {
         if (Levels[Level].Offset_End - Buffer_Offset != 24)
         {
-            Unssuported("WAV FormatTag extension");
+            Unsupported("WAV FormatTag extension");
             return;
         }
         uint16_t cbSize = Get_L2();
         if (cbSize != 22)
         {
-            Unssuported("WAV FormatTag cbSize");
+            Unsupported("WAV FormatTag cbSize");
             return;
         }
         uint16_t ValidBitsPerSample = Get_L2();
         if (ValidBitsPerSample != BitDepth)
         {
-            Unssuported("WAV FormatTag ValidBitsPerSample");
+            Unsupported("WAV FormatTag ValidBitsPerSample");
             return;
         }
         uint32_t ChannelMask = Get_L4();
@@ -310,7 +310,7 @@ void wav::WAVE_fmt_()
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F)))
         {
-            Unssuported("WAV FormatTag ChannelMask");
+            Unsupported("WAV FormatTag ChannelMask");
             return;
         }
         uint32_t SubFormat1 = Get_L4();
@@ -322,7 +322,7 @@ void wav::WAVE_fmt_()
          || SubFormat3 != 0x800000aa
          || SubFormat4 != 0x00389b71)
         {
-            Unssuported("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
+            Unsupported("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
             return;
         }
     }
@@ -340,7 +340,7 @@ void wav::WAVE_fmt_()
     }
     if (Tested >= WAV_Tested_Size)
     {
-        Unssuported("Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)");
+        Unsupported("Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)");
         return;
     }
     Flavor = WAV_Tested[Tested].Flavor;
