@@ -85,6 +85,18 @@
     <Filter Include="ThirdParty\flac">
       <UniqueIdentifier>{57b8e003-f051-4de2-904b-ec5d41c0a70d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\TIFF">
+      <UniqueIdentifier>{d8501450-01e7-412c-84bd-de0b5552626a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\TIFF">
+      <UniqueIdentifier>{cc49955e-4176-4119-be35-f8b659796662}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\AIFF">
+      <UniqueIdentifier>{6bd79131-9aa6-420c-9eae-442d147ffd12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\AIFF">
+      <UniqueIdentifier>{0dcc0039-defc-4688-b2d7-d14d80faffbb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -273,6 +285,12 @@
     <ClInclude Include="..\..\..\Source\Lib\License_Internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h">
+      <Filter>Header Files\TIFF</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\AIFF\AIFF.h">
+      <Filter>Header Files\AIFF</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -397,6 +415,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\License.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\TIFF\TIFF.cpp">
+      <Filter>Source Files\TIFF</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp">
+      <Filter>Source Files\AIFF</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

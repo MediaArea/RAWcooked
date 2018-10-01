@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/TIFF/TIFF.h"
 #include "Lib/RawFrame/RawFrame.h"
 //---------------------------------------------------------------------------
 
@@ -34,6 +35,7 @@ void transform_jpeg2000rct::From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, p
     {
         case raw_frame::Flavor_FFmpeg: FFmpeg_From(w, Y, U, V, A); break;
         case raw_frame::Flavor_DPX: DPX_From(w, Y, U, V, A); break;
+        case raw_frame::Flavor_TIFF: TIFF_From(w, Y, U, V, A); break;
         default:;
     }
 
@@ -315,6 +317,72 @@ void transform_jpeg2000rct::DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* 
                                         break;
             case dpx::Raw_RGBA_16_LE:
                                         {
+                                        pixel_t a = A[x];
+                                        FrameBuffer_Temp_16[x*4]   = r;
+                                        FrameBuffer_Temp_16[x*4+1] = g;
+                                        FrameBuffer_Temp_16[x*4+2] = b;
+                                        FrameBuffer_Temp_16[x*4+3] = a;
+                                        }
+                                        break;
+            default:;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
+void transform_jpeg2000rct::TIFF_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A)
+{
+    uint8_t*  FrameBuffer_Temp_8  = (uint8_t* )FrameBuffer_Temp[0];
+    uint16_t* FrameBuffer_Temp_16 = (uint16_t*)FrameBuffer_Temp[0];
+    uint32_t* FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer_Temp[0];
+
+    size_t t=0, s=0;
+    for (size_t x = 0; x < w; x++)
+    {
+        pixel_t g = Y[x];
+        pixel_t b = U[x];
+        pixel_t r = V[x];
+
+        b -= Offset;
+        r -= Offset;
+        g -= (b + r) >> 2;
+        b += g;
+        r += g;
+
+        switch (Flavor_Private)
+        {
+            case tiff::Raw_RGB_8_U:
+                                        {
+                                        FrameBuffer_Temp_8[x*3]   = (uint8_t)r;
+                                        FrameBuffer_Temp_8[x*3+1] = (uint8_t)g;
+                                        FrameBuffer_Temp_8[x*3+2] = (uint8_t)b;
+                                        }
+                                        break;
+            case tiff::Raw_RGB_16_U_BE:
+                                        { 
+                                        FrameBuffer_Temp_16[x*3]   = ((r & 0xFF00) >> 8) | ((r & 0xFF) << 8);  // Swap bytes
+                                        FrameBuffer_Temp_16[x*3+1] = ((g & 0xFF00) >> 8) | ((g & 0xFF) << 8);  // Swap bytes
+                                        FrameBuffer_Temp_16[x*3+2] = ((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);  // Swap bytes
+                                        }
+                                        break;
+            case tiff::Raw_RGB_16_U_LE:
+                                        { 
+                                        FrameBuffer_Temp_16[x*3]   = r;
+                                        FrameBuffer_Temp_16[x*3+1] = g;
+                                        FrameBuffer_Temp_16[x*3+2] = b;
+                                        }
+                                        break;
+            case tiff::Raw_RGBA_8_U:
+                                        {
+                                        pixel_t a = A[x];
+                                        FrameBuffer_Temp_8[x*4]   = (uint8_t)r;
+                                        FrameBuffer_Temp_8[x*4+1] = (uint8_t)g;
+                                        FrameBuffer_Temp_8[x*4+2] = (uint8_t)b;
+                                        FrameBuffer_Temp_8[x*4+3] = (uint8_t)a;
+                                        }
+                                        break;
+            case tiff::Raw_RGBA_16_U_LE:
+                                        { 
                                         pixel_t a = A[x];
                                         FrameBuffer_Temp_16[x*4]   = r;
                                         FrameBuffer_Temp_16[x*4+1] = g;

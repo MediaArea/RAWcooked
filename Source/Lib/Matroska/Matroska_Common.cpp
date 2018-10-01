@@ -7,7 +7,9 @@
 //---------------------------------------------------------------------------
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/TIFF/TIFF.h"
 #include "Lib/WAV/WAV.h"
+#include "Lib/AIFF/AIFF.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
 #include <stdlib.h>
@@ -213,21 +215,48 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
                 }
             break;
         case 16:
-            for (size_t i = 0; i < blocksize; i++)
-                for (size_t j = 0; j < channels; j++)
-                {
-                    *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
-                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
-                }
+            switch (TrackInfo_Current->FlacInfo->Endianess)
+            {
+                case 0:
+                        for (size_t i = 0; i < blocksize; i++)
+                            for (size_t j = 0; j < channels; j++)
+                            {
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                            }
+                        break;
+                case 1:
+                        for (size_t i = 0; i < blocksize; i++)
+                            for (size_t j = 0; j < channels; j++)
+                            {
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                            }
+                        break;
+            }
             break;
         case 24:
-            for (size_t i = 0; i < blocksize; i++)
-                for (size_t j = 0; j < channels; j++)
-                {
-                    *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
-                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
-                    *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 16);
-                }
+            switch (TrackInfo_Current->FlacInfo->Endianess)
+            {
+                case 0:
+                        for (size_t i = 0; i < blocksize; i++)
+                            for (size_t j = 0; j < channels; j++)
+                            {
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 16);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                            }
+                        break;
+                case 1:
+                        for (size_t i = 0; i < blocksize; i++)
+                            for (size_t j = 0; j < channels; j++)
+                            {
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i]);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 8);
+                                *(Buffer_Current++) = (uint8_t)(buffer[j][i] >> 16);
+                            }
+                        break;
+            }
             break;
     }
 
@@ -287,6 +316,7 @@ ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData)
 ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName)
+ELEMENT_VOID(      30, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileSize)
 ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData)
 ELEMENT_VOID(       3, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData)
 ELEMENT_VOID(      11, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName)
@@ -534,6 +564,37 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName
     }
 
     Uncompress(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
+}
+
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileSize()
+{
+    uint64_t Size = Levels[Level].Offset_End - Buffer_Offset;
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    if (!TrackInfo_Current->DPX_FileSize)
+    {
+        TrackInfo_Current->DPX_FileSize = new uint64_t[1000000];
+    }
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    if (!Size)
+    {
+        TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Count] = (uint64_t)-1; 
+        return;
+    }
+
+    TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Count] = 0;
+    for (; Size; Size--)
+    {
+        TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Count] <<= 8;
+        TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Count] |= Buffer[Buffer_Offset++];
+    }
+
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
@@ -926,8 +987,45 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     Invalid("Unreadable frame header in reversibility data");
                                     return;
                                 }
-                                TrackInfo_Current->R_A->Flavor_Private = DPX.Flavor;
-                                TrackInfo_Current->R_B->Flavor_Private = DPX.Flavor;
+                                if (DPX.IsDetected)
+                                {
+                                    TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_DPX;
+                                    TrackInfo_Current->R_A->Flavor_Private = DPX.Flavor;
+                                    TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_DPX;
+                                    TrackInfo_Current->R_B->Flavor_Private = DPX.Flavor;
+                                }
+                                else
+                                {
+                                    tiff TIFF;
+                                    if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] == (uint64_t)-1)
+                                    {
+                                        TIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                        TIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                    }
+                                    else
+                                    {
+                                        // TODO: more optimal method without allocation of the full file size and without new/delete
+                                        TIFF.Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
+                                        TIFF.Buffer = new uint8_t[TIFF.Buffer_Size];
+                                        memcpy(TIFF.Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+                                        memcpy(TIFF.Buffer + TIFF.Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+                                    }
+                                    bool Result = TIFF.Parse(true);
+                                    if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
+                                        delete[] TIFF.Buffer;
+                                    if (Result)
+                                    {
+                                        Invalid("Unreadable frame header in reversibility data");
+                                        return;
+                                    }
+                                    if (TIFF.IsDetected)
+                                    {
+                                        TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_TIFF;
+                                        TrackInfo_Current->R_A->Flavor_Private = TIFF.Flavor;
+                                        TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_TIFF;
+                                        TrackInfo_Current->R_B->Flavor_Private = TIFF.Flavor;
+                                    }
+                                }
                             }
                             TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
                             {
@@ -969,9 +1067,30 @@ void matroska::Segment_Cluster_SimpleBlock()
                                         Invalid("Unreadable frame header in reversibility data");
                                         return;
                                     }
-                                    if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
-                                        TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
-                                    TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
+                                    if (WAV.IsDetected)
+                                    {
+                                        TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
+                                        if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                            TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
+                                    }
+                                    else
+                                    {
+                                        aiff AIFF;
+                                        AIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                        AIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                        AIFF.Parse(true);
+                                        if (AIFF.ErrorMessage())
+                                        {
+                                            Invalid("Unreadable frame header in reversibility data");
+                                            return;
+                                        }
+                                        if (AIFF.IsDetected)
+                                        {
+                                            TrackInfo_Current->FlacInfo->Endianess = AIFF.Endianess();
+                                            if (AIFF.sampleSize() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                                TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
+                                        }
+                                    }
                                 }
 
                                 TrackInfo_Current->DPX_Buffer_Pos++;

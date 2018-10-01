@@ -83,7 +83,7 @@ while read line ; do
         # check framemd5
         media=$(ffmpeg -hide_banner -i "${file}" 2>&1 </dev/null | tr -d ' ' | grep -m1 '^Stream#.\+:.\+' | cut -d ':' -f 3)
         if [ "${media}" == "Video" ] ; then
-            pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:dpx,' | cut -d, -f2)
+            pixfmt=$(ffmpeg -hide_banner -i "${file}" -f framemd5 "${file}.framemd5" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:.\+,' | cut -d, -f2)
             ffmpeg -i "${file}.mkv" -pix_fmt ${pixfmt} -f framemd5 "${file}.mkv.framemd5" </dev/null
         elif [ "${media}" == "Audio" ] ; then
             pcmfmt=$(ffmpeg -hide_banner -i "${file}" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Audio:' | grep -o 'pcm_[[:alnum:]]\+')

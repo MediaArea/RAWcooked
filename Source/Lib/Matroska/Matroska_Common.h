@@ -73,6 +73,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileSize);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionBeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionFileName);
@@ -122,6 +123,7 @@ private:
         uint8_t*                Mask_After;
         uint8_t*                Mask_In;
         uint8_t**               DPX_FileName;
+        uint64_t*               DPX_FileSize;
         uint8_t**               DPX_Before;
         uint8_t**               DPX_After;
         uint8_t**               DPX_In;
@@ -148,6 +150,7 @@ private:
             Mask_After(NULL),
             Mask_In(NULL),
             DPX_FileName(NULL),
+            DPX_FileSize(NULL),
             DPX_Before(NULL),
             DPX_After(NULL),
             DPX_In(NULL),

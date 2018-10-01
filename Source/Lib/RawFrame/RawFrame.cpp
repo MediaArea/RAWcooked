@@ -7,15 +7,14 @@
 //---------------------------------------------------------------------------
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/TIFF/TIFF.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-void raw_frame::Create(flavor Style_, size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
+void raw_frame::Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
 {
     if (!Planes.empty())
         return; //TODO: manage when it changes
-
-    Flavor = Style_;
 
     for (size_t i = 0; i < Planes.size(); i++)
         delete Planes[i];
@@ -25,6 +24,7 @@ void raw_frame::Create(flavor Style_, size_t colorspace_type, size_t width, size
     {
         case Flavor_FFmpeg: FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
         case Flavor_DPX: DPX_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
+        case Flavor_TIFF: TIFF_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
     }
 }
 
@@ -63,6 +63,17 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, 
     {
         case 1: // JPEG2000-RCT --> RGB
                 Planes.push_back(new plane(width, height, dpx::BitsPerBlock((dpx::flavor)Flavor_Private), dpx::PixelsPerBlock((dpx::flavor)Flavor_Private)));
+        default: ;
+    }
+}
+
+//---------------------------------------------------------------------------
+void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
+{
+    switch (colorspace_type)
+    {
+        case 1: // JPEG2000-RCT --> RGB
+                Planes.push_back(new plane(width, height, tiff::BitsPerBlock((tiff::flavor)Flavor_Private), tiff::PixelsPerBlock((tiff::flavor)Flavor_Private)));
         default: ;
     }
 }

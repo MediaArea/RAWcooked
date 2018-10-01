@@ -36,7 +36,7 @@ static const uint32_t Name_RawCooked_MaskAdditionAfterData = 0x04;  // In Track 
 static const uint32_t Name_RawCooked_InData = 0x05;
 static const uint32_t Name_RawCooked_MaskBaseInData = 0x06;         // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionInData = 0x06;     // In Track only
-// File metadata
+// File text metadata
 static const uint32_t Name_RawCooked_FileName = 0x10;
 static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11;     // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track only
@@ -44,6 +44,10 @@ static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track on
 static const uint32_t Name_RawCooked_FileMD5 = 0x20;
 static const uint32_t Name_RawCooked_FileSHA1 = 0x21;
 static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
+// File number metadata
+static const uint32_t Name_RawCooked_FileSize = 0x30;
+static const uint32_t Name_RawCooked_MaskBaseFileSize = 0x31;     // In BlockGroup only
+static const uint32_t Name_RawCooked_MaskAdditionFileSize = 0x32; // In Track only
 // Global information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
@@ -72,6 +76,15 @@ static size_t Size_EB(uint64_t Size)
 {
     size_t S_l = 1;
     while (Size >> (S_l * 7))
+        S_l++;
+    return S_l;
+}
+
+//---------------------------------------------------------------------------
+static size_t Size_Number(uint64_t Number)
+{
+    size_t S_l = 1;
+    while (Number >> (S_l * 8))
         S_l++;
     return S_l;
 }
@@ -118,11 +131,26 @@ static void Put_EB(unsigned char* Buffer, size_t& Offset, uint64_t Size)
 }
 
 //---------------------------------------------------------------------------
+static void Put_Number(unsigned char* Buffer, size_t& Offset, uint64_t Number)
+{
+    size_t S_l = 1;
+    while (Number >> (S_l * 8))
+        S_l++;
+    while (S_l)
+    {
+        Buffer[Offset] = (uint8_t)(Number >> ((S_l - 1) * 8));
+        Offset++;
+        S_l--;
+    }
+}
+
+//---------------------------------------------------------------------------
 rawcooked::rawcooked() :
     Unique(false),
     F(NULL),
     In(NULL),
     In_Size(0),
+    FileSize((uint64_t)-1),
     BlockCount(0)
 {
 }
@@ -350,6 +378,10 @@ void rawcooked::Parse()
         InData_Size = Size_EB(Compressed_In_Size ? In_Size : 0) + (Compressed_In_Size ? Compressed_In_Size : In_Size); // size then data
         Block_Size += Size_EB(Name_RawCooked_InData, InData_Size);
     }
+    if (FileSize != (uint64_t)-1)
+    {
+        Block_Size += Size_EB(Name_RawCooked_InData, Size_Number(FileSize));
+    }
 
     // Case if the file is unique
     if (Unique)
@@ -456,6 +488,11 @@ void rawcooked::Parse()
         Put_EB(Out, Out_Offset, Compressed_In_Size ? In_Size : 0);
         memcpy(Out + Out_Offset, Compressed_In, (Compressed_In_Size ? Compressed_In_Size : In_Size));
         Out_Offset += (Compressed_In_Size ? Compressed_In_Size : In_Size);
+    }
+    if (FileSize != (uint64_t)-1)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCooked_FileSize, Size_Number(FileSize));
+        Put_Number(Out, Out_Offset, FileSize);
     }
 
     // Write
