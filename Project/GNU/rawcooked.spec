@@ -4,7 +4,7 @@
 
 # norootforbuild
 
-%global rawcooked_version		18.07
+%global rawcooked_version		18.09
 
 Name:			rawcooked
 Version:		%rawcooked_version
@@ -68,5 +68,5 @@ popd
 %{_mandir}/man1/rawcooked.*
 
 %changelog
-* Mon Jan 01 2018 Jerome Martinez <info@mediaarea.net> - 18.07-0
+* Mon Jan 01 2018 Jerome Martinez <info@mediaarea.net> - 18.09-0
 - See History.txt for more info and real dates

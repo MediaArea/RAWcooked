@@ -1,3 +1,16 @@
+Version 18.09beta1, 2018-10-02
+--------------------
+More WAV flavors
+TIFF support
+AIFF support
+Output name option
+Information about input after analysis
+Progress indicator while analyzing input files
+More file integrity tests e.g. not same file size
+Option for full check and support of some buggy DPX files e.g. in case
+padding bits are not 0.
+License management
+
 Version 18.07alpha2, 2018-07-31
 --------------------
 Decoding progress indicator
