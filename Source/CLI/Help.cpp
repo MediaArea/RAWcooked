@@ -73,9 +73,10 @@ ReturnValue Help(const char* Name)
     cout << "              Default value is 1048576." << endl;
     cout << endl;
     cout << "       --check value" << endl;
-    cout << "              Do or don't do costly (in terms of analysis duration or bytes read) checks." << endl;
-    cout << "              'partial' (or '0') is quicker but may lead to partial reversibility" << endl;
-    cout <<"               with non conform files." << endl;
+    cout << "              Do or don't do costly (in terms of analysis duration or bytes" << endl;
+    cout << "              read) checks." << endl;
+    cout << "              'partial' (or '0') is quicker but may lead to partial" << endl;
+    cout << "              reversibility with non conform files." << endl;
     cout << "              'full' (or '1') is slower but  guaranties reversability with e.g." << endl;
     cout << "              DPX files with non zero padding bits." << endl;
     cout << "              Default value is 'partial'." << endl;
