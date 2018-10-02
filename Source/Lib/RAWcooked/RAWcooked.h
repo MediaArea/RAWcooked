@@ -39,6 +39,7 @@ public:
 
     string                      FileName;
     string                      OutputFileName;
+    uint64_t                    FileSize;
 
 private:
     uint64_t                    Buffer_Offset;

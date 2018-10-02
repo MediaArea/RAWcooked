@@ -11,7 +11,9 @@
 #include "Lib/FileIO.h"
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
+#include "Lib/TIFF/TIFF.h"
 #include "Lib/WAV/WAV.h"
+#include "Lib/AIFF/AIFF.h"
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/RAWcooked/RAWcooked.h"
@@ -140,6 +142,14 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             return 1;
     }
 
+    // AIFF
+    if (!ParseInfo.IsDetected)
+    {
+        aiff AIFF;
+        if (ParseInfo.ParseFile_Input(AIFF, Input, Files_Pos))
+            return 1;
+    }
+
     // DPX
     if (!ParseInfo.IsDetected)
     {
@@ -152,6 +162,22 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             stringstream t;
             t << DPX.slice_x * DPX.slice_y;
+            ParseInfo.Slices = t.str();
+        }
+    }
+
+    // TIFF
+    if (!ParseInfo.IsDetected)
+    {
+        tiff TIFF;
+        TIFF.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
+        if (ParseInfo.ParseFile_Input(TIFF, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
+        {
+            stringstream t;
+            t << TIFF.slice_x * TIFF.slice_y;
             ParseInfo.Slices = t.str();
         }
     }

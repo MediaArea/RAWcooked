@@ -112,6 +112,53 @@ uint32_t input_base::Get_B4()
 }
 
 //---------------------------------------------------------------------------
+uint64_t input_base::Get_B8()
+{
+    if (Buffer_Offset + 7 >= Buffer_Size)
+    {
+        Invalid(Buffer_Overflow);
+        return 0;
+    }
+
+    uint64_t ToReturn = ((uint64_t)Buffer[Buffer_Offset + 0] << 56) | ((uint64_t)Buffer[Buffer_Offset + 1] << 48) | ((uint64_t)Buffer[Buffer_Offset + 2] << 40) | ((uint64_t)Buffer[Buffer_Offset + 3] << 32) | (Buffer[Buffer_Offset + 4] << 24) | (Buffer[Buffer_Offset + 5] << 16) | (Buffer[Buffer_Offset + 6] << 8) | Buffer[Buffer_Offset + 7];
+    Buffer_Offset += 8;
+    return ToReturn;
+}
+
+//---------------------------------------------------------------------------
+long double input_base::Get_BF10()
+{
+    if (Buffer_Offset + 10 >= Buffer_Size)
+    {
+        Invalid(Buffer_Overflow);
+        return 0;
+    }
+
+    //sign          1 bit
+    //exponent     15 bit
+    //integer?      1 bit
+    //significand  63 bit
+
+    //Retrieving data
+    uint16_t Integer1 = Get_B2();
+    uint64_t Integer2 = Get_B8();
+
+    //Retrieving elements
+    bool     Sign = (Integer1 & 0x8000) ? true : false;
+    uint16_t Exponent = Integer1 & 0x7FFF;
+    uint64_t Mantissa = Integer2 & 0x7FFFFFFFFFFFFFFFLL; //Only 63 bits, 1 most significant bit is explicit
+    //Some computing
+    if (Exponent == 0 || Exponent == 0x7FFF)
+        return 0; //These are denormalised numbers, NANs, and other horrible things
+    Exponent -= 0x3FFF; //Bias
+    long double ToReturn = (((long double)Mantissa) / 9223372036854775808.0 + 1.0)*std::pow((float)2, (int)Exponent); //(1+Mantissa) * 2^Exponent
+    if (Sign)
+        ToReturn = -ToReturn;
+
+    return (long double)ToReturn;
+}
+
+//---------------------------------------------------------------------------
 double input_base::Get_XF4()
 {
     if (Buffer_Offset + 3 >= Buffer_Size)

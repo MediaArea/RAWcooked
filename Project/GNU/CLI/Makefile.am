@@ -7,6 +7,7 @@ rawcooked_SOURCES = \
     ../../../Source/CLI/Input.cpp \
     ../../../Source/CLI/Main.cpp \
     ../../../Source/CLI/Output.cpp \
+    ../../../Source/Lib/AIFF/AIFF.cpp \
     ../../../Source/Lib/CRC32/ZenCRC32.cpp \
     ../../../Source/Lib/DPX/DPX.cpp \
     ../../../Source/Lib/FileIO.cpp \
@@ -22,6 +23,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
+    ../../../Source/Lib/TIFF/TIFF.cpp \
     ../../../Source/Lib/WAV/WAV.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \

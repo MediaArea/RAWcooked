@@ -11,7 +11,9 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/DPX/DPX.h"
+#include "Lib/TIFF/TIFF.h"
 #include "Lib/WAV/WAV.h"
+#include "Lib/AIFF/AIFF.h"
 #include "Lib/License.h"
 //---------------------------------------------------------------------------
 
@@ -87,7 +89,9 @@ static const parser_info Infos[3 + Parser_Max + 1] =
     { "muxers/demuxers"     , Muxer_Max             , Muxers_String         },
     { "encoders/decoders"   , Encoder_Max           , Encoders_String       },
     { "DPX flavors"         , dpx::Style_Max        , DPX_Flavor_String     },
+    { "TIFF flavors"        , tiff::Style_Max       , TIFF_Flavor_String    },
     { "WAV flavors"         , wav::Style_Max        , WAV_Flavor_String     },
+    { "AIFF flavors"        , aiff::Style_Max       , AIFF_Flavor_String    },
     { NULL                  , 0                     , NULL                  },
 };
 

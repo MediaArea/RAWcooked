@@ -33,6 +33,7 @@ private:
 
     void FFmpeg_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
     void DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
+    void TIFF_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
 };
 
 //---------------------------------------------------------------------------

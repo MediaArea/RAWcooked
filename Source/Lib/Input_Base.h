@@ -21,7 +21,9 @@ class rawcooked;
 enum parser
 {
     Parser_DPX,
+    Parser_TIFF,
     Parser_WAV,
+    Parser_AIFF,
     Parser_Max,
 };
 
@@ -59,6 +61,8 @@ protected:
     uint32_t                    Get_B4();
     uint32_t                    Get_X4() { return IsBigEndian ? Get_B4() : Get_L4(); }
     double                      Get_XF4();
+    uint64_t                    Get_B8();
+    long double                 Get_BF10();
     uint64_t                    Get_EB();
 
     // Error message
