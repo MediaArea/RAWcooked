@@ -303,32 +303,50 @@ uint32_t aiff::sampleRate(aiff::flavor Flavor)
 {
     switch (Flavor)
     {
+        case PCM_44100_8_1_S:
         case PCM_44100_8_1_U:
+        case PCM_44100_8_2_S:
         case PCM_44100_8_2_U:
+        case PCM_44100_8_6_S:
         case PCM_44100_8_6_U:
         case PCM_44100_16_1_BE:
+        case PCM_44100_16_1_LE:
         case PCM_44100_16_2_BE:
+        case PCM_44100_16_2_LE:
         case PCM_44100_16_6_BE:
+        case PCM_44100_16_6_LE:
         case PCM_44100_24_1_BE:
         case PCM_44100_24_2_BE:
         case PCM_44100_24_6_BE:
                                         return 44100;
+        case PCM_48000_8_1_S:
         case PCM_48000_8_1_U:
+        case PCM_48000_8_2_S:
         case PCM_48000_8_2_U:
+        case PCM_48000_8_6_S:
         case PCM_48000_8_6_U:
         case PCM_48000_16_1_BE:
+        case PCM_48000_16_1_LE:
         case PCM_48000_16_2_BE:
+        case PCM_48000_16_2_LE:
         case PCM_48000_16_6_BE:
+        case PCM_48000_16_6_LE:
         case PCM_48000_24_1_BE:
         case PCM_48000_24_2_BE:
         case PCM_48000_24_6_BE:
                                         return 48000;
+        case PCM_96000_8_1_S:
         case PCM_96000_8_1_U:
+        case PCM_96000_8_2_S:
         case PCM_96000_8_2_U:
+        case PCM_96000_8_6_S:
         case PCM_96000_8_6_U:
         case PCM_96000_16_1_BE:
+        case PCM_96000_16_1_LE:
         case PCM_96000_16_2_BE:
+        case PCM_96000_16_2_LE:
         case PCM_96000_16_6_BE:
+        case PCM_96000_16_6_LE:
         case PCM_96000_24_1_BE:
         case PCM_96000_24_2_BE:
         case PCM_96000_24_6_BE:
@@ -359,25 +377,43 @@ uint16_t aiff::sampleSize(aiff::flavor Flavor)
 {
     switch (Flavor)
     {
+        case PCM_44100_8_1_S:
         case PCM_44100_8_1_U:
+        case PCM_44100_8_2_S:
         case PCM_44100_8_2_U:
+        case PCM_44100_8_6_S:
         case PCM_44100_8_6_U:
+        case PCM_48000_8_1_S:
         case PCM_48000_8_1_U:
+        case PCM_48000_8_2_S:
         case PCM_48000_8_2_U:
+        case PCM_48000_8_6_S:
         case PCM_48000_8_6_U:
+        case PCM_96000_8_1_S:
         case PCM_96000_8_1_U:
+        case PCM_96000_8_2_S:
         case PCM_96000_8_2_U:
+        case PCM_96000_8_6_S:
         case PCM_96000_8_6_U:
                                         return 8;
         case PCM_44100_16_1_BE:
+        case PCM_44100_16_1_LE:
         case PCM_44100_16_2_BE:
+        case PCM_44100_16_2_LE:
         case PCM_44100_16_6_BE:
+        case PCM_44100_16_6_LE:
         case PCM_48000_16_1_BE:
+        case PCM_48000_16_1_LE:
         case PCM_48000_16_2_BE:
+        case PCM_48000_16_2_LE:
         case PCM_48000_16_6_BE:
+        case PCM_48000_16_6_LE:
         case PCM_96000_16_1_BE:
+        case PCM_96000_16_1_LE:
         case PCM_96000_16_2_BE:
+        case PCM_96000_16_2_LE:
         case PCM_96000_16_6_BE:
+        case PCM_96000_16_6_LE:
                                         return 16;
         case PCM_44100_24_1_BE:
         case PCM_44100_24_2_BE:
@@ -415,32 +451,50 @@ uint8_t aiff::numChannels(aiff::flavor Flavor)
 {
     switch (Flavor)
     {
+        case PCM_44100_8_1_S:
         case PCM_44100_8_1_U:
+        case PCM_48000_8_1_S:
         case PCM_48000_8_1_U:
+        case PCM_96000_8_1_S:
         case PCM_96000_8_1_U:
         case PCM_44100_16_1_BE:
+        case PCM_44100_16_1_LE:
         case PCM_48000_16_1_BE:
+        case PCM_48000_16_1_LE:
         case PCM_96000_16_1_BE:
+        case PCM_96000_16_1_LE:
         case PCM_48000_24_1_BE:
         case PCM_44100_24_1_BE:
         case PCM_96000_24_1_BE:
                                         return 1;
+        case PCM_44100_8_2_S:
         case PCM_44100_8_2_U:
+        case PCM_48000_8_2_S:
         case PCM_48000_8_2_U:
+        case PCM_96000_8_2_S:
         case PCM_96000_8_2_U:
         case PCM_44100_16_2_BE:
+        case PCM_44100_16_2_LE:
         case PCM_48000_16_2_BE:
+        case PCM_48000_16_2_LE:
         case PCM_96000_16_2_BE:
+        case PCM_96000_16_2_LE:
         case PCM_44100_24_2_BE:
         case PCM_48000_24_2_BE:
         case PCM_96000_24_2_BE:
                                         return 2;
+        case PCM_44100_8_6_S:
         case PCM_44100_8_6_U:
+        case PCM_48000_8_6_S:
         case PCM_48000_8_6_U:
+        case PCM_96000_8_6_S:
         case PCM_96000_8_6_U:
         case PCM_44100_16_6_BE:
+        case PCM_44100_16_6_LE:
         case PCM_48000_16_6_BE:
+        case PCM_48000_16_6_LE:
         case PCM_96000_16_6_BE:
+        case PCM_96000_16_6_LE:
         case PCM_44100_24_6_BE:
         case PCM_48000_24_6_BE:
         case PCM_96000_24_6_BE:
@@ -469,7 +523,58 @@ const char* aiff::numChannels_String(aiff::flavor Flavor)
 //---------------------------------------------------------------------------
 aiff::endianess aiff::Endianess(aiff::flavor Flavor)
 {
-    return BE; //For the moment all is BE or U
+    switch (Flavor)
+    {
+        case PCM_44100_8_1_S:
+        case PCM_44100_8_2_S:
+        case PCM_44100_8_6_S:
+        case PCM_48000_8_1_S:
+        case PCM_48000_8_2_S:
+        case PCM_48000_8_6_S:
+        case PCM_96000_8_1_S:
+        case PCM_96000_8_2_S:
+        case PCM_96000_8_6_S:
+        case PCM_44100_16_1_BE:
+        case PCM_44100_16_2_BE:
+        case PCM_44100_16_6_BE:
+        case PCM_48000_16_1_BE:
+        case PCM_48000_16_2_BE:
+        case PCM_48000_16_6_BE:
+        case PCM_96000_16_1_BE:
+        case PCM_96000_16_2_BE:
+        case PCM_96000_16_6_BE:
+        case PCM_44100_24_1_BE:
+        case PCM_44100_24_2_BE:
+        case PCM_44100_24_6_BE:
+        case PCM_48000_24_1_BE:
+        case PCM_48000_24_2_BE:
+        case PCM_48000_24_6_BE:
+        case PCM_96000_24_1_BE:
+        case PCM_96000_24_2_BE:
+        case PCM_96000_24_6_BE:
+                                        return BE; // Or Signed
+        case PCM_44100_8_1_U:
+        case PCM_44100_8_2_U:
+        case PCM_44100_8_6_U:
+        case PCM_48000_8_1_U:
+        case PCM_48000_8_2_U:
+        case PCM_48000_8_6_U:
+        case PCM_96000_8_1_U:
+        case PCM_96000_8_2_U:
+        case PCM_96000_8_6_U:
+        case PCM_44100_16_1_LE:
+        case PCM_44100_16_2_LE:
+        case PCM_44100_16_6_LE:
+        case PCM_48000_16_1_LE:
+        case PCM_48000_16_2_LE:
+        case PCM_48000_16_6_LE:
+        case PCM_96000_16_1_LE:
+        case PCM_96000_16_2_LE:
+        case PCM_96000_16_6_LE:
+                                        return LE; // Or Unsigned
+        default:
+                                        return (endianess)-1;
+    }
 }
 const char* aiff::Endianess_String(aiff::flavor Flavor)
 {
