@@ -101,7 +101,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
             }
             cerr << "  " << Streams[i].Flavor << endl;
             if (Streams[i].Problem)
-                cerr << "  *** This input format flavor is not supported by the current lisence key. ***" << endl;
+                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
         }
         if (Streams[i].Problem)
             Problem = true;
