@@ -1,6 +1,6 @@
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 18.07,0,0
- PRODUCTVERSION 18.07,0,0
+ FILEVERSION 18.09,0,0
+ PRODUCTVERSION 18.09,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -17,12 +17,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "MediaArea.net"
             VALUE "FileDescription", "RAWcooked"
-            VALUE "FileVersion", "18.07.0.0"
+            VALUE "FileVersion", "18.09.0.0"
             VALUE "InternalName", "RAWcooked - CLI"
             VALUE "LegalCopyright", "MediaArea.net"
             VALUE "OriginalFilename", "RAWcooked.exe"
             VALUE "ProductName", "RAWcooked"
-            VALUE "ProductVersion", "18.07.0.0"
+            VALUE "ProductVersion", "18.09.0.0"
         END
     END
     BLOCK "VarFileInfo"
