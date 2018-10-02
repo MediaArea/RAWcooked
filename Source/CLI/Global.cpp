@@ -90,6 +90,13 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 }
 
 //---------------------------------------------------------------------------
+int Error_Missing(const char* Option1)
+{
+    cerr << "Error: missing argument for option '" << Option1 << "'." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int global::SetOption(const char* argv[], int& i, int argc)
 {
     if (strcmp(argv[i], "-c:a") == 0)
@@ -287,19 +294,25 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return 1;
             }
         }
-        else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0))
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             AttachmentMaxSize = atoi(argv[++i]);
             License.Feature(Feature_GeneralOptions);
         }
-        else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0))
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             int Value = SetBinName(argv[++i]);
             if (Value)
                 return Value;
         }
-        else if (strcmp(argv[i], "--check") == 0 && i + 1 < argc)
+        else if (strcmp(argv[i], "--check") == 0)
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             int Value = SetFullCheck(argv[++i]);
             if (Value)
                 return Value;
@@ -323,8 +336,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
-        else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0))
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], false);
             if (Value)
                 return Value;
@@ -335,8 +350,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
-        else if ((strcmp(argv[i], "--output-name") == 0 || strcmp(argv[i], "-o") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--output-name") == 0 || strcmp(argv[i], "-o") == 0))
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             int Value = SetOutputFileName(argv[++i]);
             if (Value)
                 return Value;
@@ -346,14 +363,20 @@ int global::ManageCommandLine(const char* argv[], int argc)
             Quiet = true;
             License.Feature(Feature_GeneralOptions);
         }
-        else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0))
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             rawcooked_reversibility_data_FileName = argv[++i];
+        }
         else if (strcmp(argv[i], "--show-license") == 0 || strcmp(argv[i], "--show-licence") == 0)
         {
             ShowLicenseKey = true;
         }
-        else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0) && i + 1 < argc)
+        else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0))
         {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], true);
             if (Value)
                 return Value;
