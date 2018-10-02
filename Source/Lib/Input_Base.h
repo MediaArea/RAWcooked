@@ -51,8 +51,8 @@ public:
 protected:
     size_t                      Buffer_Offset;
     bool                        IsBigEndian;
-    uint8_t                     Get_L1() { Get_X1(); }
-    uint8_t                     Get_B1() { Get_X1(); }
+    uint8_t                     Get_L1() { return Get_X1(); }
+    uint8_t                     Get_B1() { return Get_X1(); }
     uint8_t                     Get_X1();
     uint16_t                    Get_L2();
     uint16_t                    Get_B2();
