@@ -7,5 +7,10 @@ Features/AV_Package HavingReels01-02/
 Features/AV_Package HavingReels1-10/
 Features/EmptyContent EmptyFiles/
 Features/EmptyContent EmptyFolders/
+Features/FileNaming/000dpx+000wav 01
+Features/FileNaming/000dpx+000wav 12
+Features/FileNaming/000dpx+000wav 13
+Features/FileNaming/000dpx+000wav All
+Features/FileNaming 000dpx+000wav
 Formats/WAV/Features 2ExtraNullBytesInFmtChunk
 Formats/WAV/Features 4ExtraNullBytesInFmtChunk

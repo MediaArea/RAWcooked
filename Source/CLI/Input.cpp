@@ -60,7 +60,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber)
 {
     string FN(Files[AllFiles_Pos]);
     string Path;
@@ -83,7 +83,8 @@ void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, si
         FN.erase(0, Before_Pos + 1);
     }
 
-    size_t AllFiles_PosToDelete = AllFiles_Pos;
+    size_t AllFiles_PosToDelete = AllFiles_Pos + 1;
+    size_t KeepFirst = 1;
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
@@ -105,25 +106,34 @@ void input::DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, si
                 i--;
             }
             string FullPath = Path + Before + FN + After;
-            if (AllFiles_PosToDelete + 1 < Files.size())
+
+            if (CheckIfFilesExist)
             {
-                // Test from allready created file list
-                if (FullPath == Files[AllFiles_PosToDelete + 1])
-                    AllFiles_PosToDelete++;
-                //Checking directly if file exists
-                else if (access(FullPath.c_str(), 0))
+                // File list not available, checking directly if file exists
+                if (access(FullPath.c_str(), 0))
                     break;
             }
             else
             {
-                // File list not avalable, checking directly if file exists
-                if (access(FullPath.c_str(), 0))
-                    break;
+                // Test from already created files list
+                if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
+                {
+                    // Remove files from the list (except the first one, used for loop increment)
+                    Files.erase(Files.begin() + AllFiles_Pos + KeepFirst, Files.begin() + AllFiles_PosToDelete);
+                    KeepFirst = 0;
+
+                    // Check if there is more from the sequence
+                    while (AllFiles_Pos < Files.size() && FullPath > Files[AllFiles_Pos])
+                        AllFiles_Pos++; // Skipping files not in the expected order
+                    if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
+                        break;
+
+                    // Keep checking files in the sequence
+                    AllFiles_PosToDelete = AllFiles_Pos;
+                }
+                AllFiles_PosToDelete++;
             }
         }
-
-        if (AllFiles_PosToDelete != AllFiles_Pos)
-            Files.erase(Files.begin() + AllFiles_Pos, Files.begin() + AllFiles_PosToDelete);
     }
 
     if (RemovedFiles.empty())

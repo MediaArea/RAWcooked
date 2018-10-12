@@ -99,7 +99,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     // Management
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
-        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
+        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
