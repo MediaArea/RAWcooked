@@ -24,7 +24,7 @@ public:
 
     // Commands
     int AnalyzeInputs(global& Global);
-    void DetectSequence(size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber);
+    void DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber);
 };
 
 #endif

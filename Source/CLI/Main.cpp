@@ -99,7 +99,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     // Management
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
-        Input.DetectSequence(Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
+        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber);
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
@@ -185,6 +185,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // End
     if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
     {
+        Global.ProgressIndicator_Stop();
         cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;
         return 1;
     }
