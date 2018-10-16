@@ -185,6 +185,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // End
     if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
     {
+        Global.ProgressIndicator_Stop();
         cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;
         return 1;
     }
