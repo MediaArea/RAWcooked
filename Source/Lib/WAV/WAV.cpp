@@ -260,19 +260,10 @@ void wav::WAVE_fmt_()
     }
     if (FormatTag == 1)
     {
-        if (Levels[Level].Offset_End == Buffer_Offset + 2)
+        // Some files have zeroes after actual fmt content, it does not hurt so we accept them
+        while (Buffer_Offset + 2 <= Levels[Level].Offset_End)
         {
-            uint16_t Padding0 = Get_L2(); // Some files have 2 zeroes, it does not hurt so we accept them
-            if (Padding0)
-            {
-                Unsupported("WAV FormatTag extension");
-                return;
-            }
-        }
-
-        if (Levels[Level].Offset_End == Buffer_Offset + 4)
-        {
-            uint32_t Padding0 = Get_L4(); // Some files have 4 zeroes, it does not hurt so we accept them
+            uint16_t Padding0 = Get_L2(); 
             if (Padding0)
             {
                 Unsupported("WAV FormatTag extension");
