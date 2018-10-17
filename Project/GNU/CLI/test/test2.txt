@@ -14,3 +14,4 @@ Features/FileNaming/000dpx+000wav All
 Features/FileNaming 000dpx+000wav
 Formats/WAV/Features 2ExtraNullBytesInFmtChunk
 Formats/WAV/Features 4ExtraNullBytesInFmtChunk
+Formats/WAV/Features 24ExtraNullBytesInFmtChunk
