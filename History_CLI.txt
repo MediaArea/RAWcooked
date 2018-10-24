@@ -1,3 +1,10 @@
+Version 18.10, 2018-10-24
+-------------
+Fix duplicated video streams with directories having WAV files with 
+names similar to DPX files
+Fix display glitch with progress indication
+Accept any even count of padding bytes in WAV fmt chunk
+
 Version 18.09beta1, 2018-10-02
 --------------------
 More WAV flavors
