@@ -4,7 +4,7 @@ RAWcooked encodes RAW audio-visual data into the Matroska container (MKV), using
 
 ## Status
 
-The current beta is not ready for production use. It's released for testing purpose only.
+RAWcooked is ready for production. As with any other tool, keep doing basic checks e.g. testing reversibility with your own files.
 
 ## Website
 
