@@ -199,7 +199,7 @@ uint64_t input_base::Get_EB()
         return 0;
     }
 
-    uint32_t ToReturn = Buffer[Buffer_Offset];
+    uint64_t ToReturn = Buffer[Buffer_Offset];
     uint64_t s = 0;
     while (!(ToReturn&(((uint64_t)1) << (7 - s))))
         s++;
