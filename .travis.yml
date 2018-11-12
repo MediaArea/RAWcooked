@@ -34,7 +34,7 @@ before_script:
   - >
        if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then
          pushd Project/GNU/CLI/ &&
-         curl -O "https://evermeet.cx/ffmpeg/$(curl https://evermeet.cx/ffmpeg/ 2>/dev/null | grep -oe 'ffmpeg-[0-9a-z-]\+.7z')" 2>/dev/null &&
+         curl -O "https://evermeet.cx/ffmpeg/$(curl https://evermeet.cx/ffmpeg/ 2>/dev/null | grep -m1 -oe 'ffmpeg-[0-9a-z-]\+.7z')" 2>/dev/null &&
          7za e *.7z ;
          popd;
          if [[ -n "$PATCH" ]] ; then
