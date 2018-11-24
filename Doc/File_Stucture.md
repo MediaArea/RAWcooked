@@ -1,13 +1,13 @@
 # Structure of RAWcooked reversibility data 
 
 Beside video and audio content, losslessly compressed with adapted lossless format, some sidecar data is needed for guaranteeing the reversibility to the original files.  
-RAWcooked reversibility data is built for a specific file, with specific options. I most cases, RAWcooked reversibility data is still usable after a remux (e.g. from MKV to MOV with RAWcooked reversibility data in a sidecar file) or transcode (e.g. FFV1v1 to FFV1v3, keeping the same tracks in the same order) but it is not guaranteed.
+RAWcooked reversibility data is built for a specific file, with specific options. I most cases, RAWcooked reversibility data is still usable after a remux (e.g. from Matroska (.mkv) to QuickTime (.mov) with RAWcooked reversibility data in a sidecar file) or transcode (e.g. FFV1 version 1 to FFV1 version 3, keeping the same tracks in the same order) but it is not guaranteed.
 
 Reversibility data can be stored in e.g. a side car file, a container attachment or a chunk/atom/tag.  
 
 ## Base design
 
-RAWcooked reversibility data file is an EBML file, with EBML Doctype "rawcooked", EBMLReadVersion 1.  
+The RAWcooked reversibility data file is an EBML file, with EBML Doctype "rawcooked", EBMLReadVersion 1.  
 It contains a sequence of RawCookedSegment, RawCookedTrack or RawCookedBlock elements.  
 
 ### Specific types
@@ -126,7 +126,7 @@ The description should contain the text "rawcooked_reversibility_data" or any va
 ### In a standalone file
 
 For a file name named "FileName.Ext", RAWcooked reversibility data should be in a sidecar file named "FileName.Ext.rawcooked_reversibility_data".  
-The file name does not matter except for automatic check of the presence of RAWcooked reversibility data, and the RAWcooked reversibility data file name can be provided to the demux tool if automatic detection does not work.  
+The file name does not matter except for automatic check of the presence of RAWcooked reversibility data, and the RAWcooked reversibility data file name can be provided to the demux tool if automatic detection should not work.  
 
 ### As container attachment
 
