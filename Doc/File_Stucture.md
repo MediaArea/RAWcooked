@@ -1,9 +1,9 @@
 # Structure of RAWcooked reversibility data 
 
 Beside video and audio content, losslessly compressed with adapted lossless format, some sidecar data is needed for guaranteeing the reversibility to the original files.  
-RAWcooked reversibility data is built for a specific file, with specific options. I most cases, RAWcooked reversibility data is still usable after a remux (e.g. from Matroska (.mkv) to QuickTime (.mov) with RAWcooked reversibility data in a sidecar file) or transcode (e.g. FFV1 version 1 to FFV1 version 3, keeping the same tracks in the same order) but it is not guaranteed.
+RAWcooked reversibility data is built for a specific file, with specific options. In most cases, RAWcooked reversibility data is still usable after a remux (e.g. from Matroska (.mkv) to QuickTime (.mov) with RAWcooked reversibility data in a sidecar file) or transcode (e.g. FFV1 version 1 to FFV1 version 3, keeping the same tracks in the same order) but it is not guaranteed.
 
-Reversibility data can be stored in e.g. a side car file, a container attachment or a chunk/atom/tag.  
+Reversibility data can be stored in e.g. a sidecar file, a container attachment or a chunk/atom/tag.  
 
 ## Base design
 
@@ -39,7 +39,7 @@ Type: unsigned integer
 
 #### BeforeData
 
-Metadata of the the resulting file before the actual content.  
+Metadata of the resulting file before the actual content.  
 
 If not present, BeforeData content size is considered as 0.  
 
@@ -47,7 +47,7 @@ Type: Compressed
 
 #### AfterData
 
-Metadata of the the resulting file after the actual content.
+Metadata of the resulting file after the actual content.
 
 If not present, AfterData content size is considered as 0.  
 
