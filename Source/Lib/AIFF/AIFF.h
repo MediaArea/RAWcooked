@@ -21,7 +21,6 @@ class aiff : public input_base_uncompressed
 public:
     aiff();
 
-    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     enum flavor
@@ -92,6 +91,7 @@ public:
     static const char* Endianess_String(flavor Flavor);
 
 private:
+    bool                        ParseBuffer();
     typedef void (aiff::*call)();
     typedef call (aiff::*name)(uint64_t);
 

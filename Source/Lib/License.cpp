@@ -127,14 +127,16 @@ class license_input : public input_base
 {
 public:
     license_input() : input_base(), Supported(false) {}
-    bool Parse(bool AcceptTruncated = false, bool FullCheck = false);
 
     license_internal* License;
     bool Supported;
+
+private:
+    bool                        ParseBuffer();
 };
 
 //---------------------------------------------------------------------------
-bool license_input::Parse(bool AcceptTruncated, bool FullCheck)
+bool license_input::ParseBuffer()
 {
     // Place holder for license key descrambling - Begin
     return true; // Not supported
@@ -172,9 +174,7 @@ bool DecodeLicense(const string& FromUser, license_internal* License)
     // Parse
     license_input Input;
     Input.License = License;
-    Input.Buffer = Buffer;
-    Input.Buffer_Size = Buffer_Offset;
-    if (Input.Parse())
+    if (Input.Parse(Buffer, Buffer_Offset))
     {
         if (License && !Input.Supported)
         {

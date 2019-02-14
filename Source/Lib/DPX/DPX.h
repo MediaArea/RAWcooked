@@ -21,7 +21,6 @@ class dpx : public input_base_uncompressed
 public:
     dpx();
 
-    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     frame                       Frame;
@@ -98,6 +97,9 @@ public:
     static const char* Packing_String(flavor Flavor);
     static endianess Endianess(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
+
+private:
+    bool                        ParseBuffer();
 };
 
 string DPX_Flavor_String(uint8_t Flavor);

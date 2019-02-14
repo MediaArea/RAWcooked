@@ -76,20 +76,7 @@ int filemap::Open_ReadMode(const char* FileName)
                 {
                     P.Mapping = CreateFileMapping(P.File, 0, PAGE_READONLY, 0, 0, 0);
                     if (P.Mapping)
-                    {
-                        Buffer = (unsigned char*)MapViewOfFile(P.Mapping, FILE_MAP_READ, 0, 0, 0);
-                        if (Buffer)
-                            FileIsOpen = true;
-                        else
-                        {
-                            CloseHandle(P.Mapping);
-                            CloseHandle(P.File);
-                            P.Mapping = NULL;
-                            P.File = INVALID_HANDLE_VALUE;
-                            Buffer_Size = 0;
-                            FileIsOpen = false;
-                        }
-                    }
+                        FileIsOpen = true;
                     else
                     {
                         CloseHandle(P.File);
@@ -119,18 +106,7 @@ int filemap::Open_ReadMode(const char* FileName)
             {
                 P.File = open(FileName, O_RDONLY, 0);
                 if (P.File != -1)
-                {
-                    Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, P.File, 0);
-                    if (Buffer != MAP_FAILED)
-                        FileIsOpen = true;
-                    else
-                    {
-                        close(P.File);
-                        Buffer = NULL;
-                        Buffer_Size = 0;
-                        FileIsOpen = false;
-                    }
-                }
+                    FileIsOpen = true;
                 else
                 {
                     Buffer_Size = 0;
@@ -145,11 +121,50 @@ int filemap::Open_ReadMode(const char* FileName)
 
     #endif
 
+    if (FileIsOpen)
+        FileIsOpen = Remap() ? false : true;
+
     if (!FileIsOpen)
     {
         cerr << "Cannot open " << FileName << endl;
         return 1;
     }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int filemap::Remap()
+{
+    if (!Buffer_Size)
+        return 0;
+
+    private_data& P = *((private_data*)Private);
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+        UnmapViewOfFile(Buffer);
+        Buffer = (unsigned char*)MapViewOfFile(P.Mapping, FILE_MAP_READ, 0, 0, 0);
+        if (!Buffer)
+        {
+            CloseHandle(P.Mapping);
+            CloseHandle(P.File);
+            P.Mapping = NULL;
+            P.File = INVALID_HANDLE_VALUE;
+            Buffer_Size = 0;
+            return 1;
+        }
+    #else
+        if (Buffer)
+            munmap(Buffer, Buffer_Size);
+        Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, P.File, 0);
+        if (Buffer == MAP_FAILED)
+        {
+            close(P.File);
+            Buffer = NULL;
+            Buffer_Size = 0;
+            return 1;
+        }
+    #endif
 
     return 0;
 }

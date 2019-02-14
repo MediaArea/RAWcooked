@@ -32,6 +32,7 @@ public:
     // Actions
     int                         Open_ReadMode(const char* FileName);
     int                         Open_ReadMode(const string& FileName) { return Open_ReadMode(FileName.c_str()); }
+    int                         Remap();
     int                         Close();
 
 private:

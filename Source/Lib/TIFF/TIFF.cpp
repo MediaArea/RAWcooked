@@ -258,7 +258,7 @@ uint32_t tiff::Get_Element(std::vector<uint32_t>* List)
 }
 
 //---------------------------------------------------------------------------
-bool tiff::Parse(bool AcceptTruncated, bool FullCheck)
+bool tiff::ParseBuffer()
 {
     if (Buffer_Size < 8)
         return false;

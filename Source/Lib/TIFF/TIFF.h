@@ -23,7 +23,6 @@ class tiff : public input_base_uncompressed
 public:
     tiff();
 
-    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     frame                       Frame;
@@ -124,6 +123,9 @@ public:
         }
     };
     std::set<data_content> DataContents;
+
+private:
+    bool                        ParseBuffer();
 };
 
 string TIFF_Flavor_String(uint8_t Flavor);

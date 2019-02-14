@@ -69,7 +69,7 @@ dpx::dpx() :
 }
 
 //---------------------------------------------------------------------------
-bool dpx::Parse(bool AcceptTruncated, bool FullCheck)
+bool dpx::ParseBuffer()
 {
     if (Buffer_Size < 1664)
         return false;

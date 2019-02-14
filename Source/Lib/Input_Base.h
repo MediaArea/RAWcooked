@@ -14,6 +14,7 @@
 #include <string>
 using namespace std;
 class rawcooked;
+class filemap;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -35,10 +36,13 @@ public:
     input_base();
     ~input_base();
 
-    // Direct access to file map data
-    unsigned char*              Buffer;
-    size_t                      Buffer_Size;
-    virtual bool                Parse(bool AcceptTruncated = false, bool FullCheck = false) = 0;
+    // Config
+    bool                        AcceptTruncated = false;
+    bool                        FullCheck = false;
+    
+    // Parse
+    bool                        Parse(unsigned char* Buffer, size_t Buffer_Size);
+    bool                        Parse(filemap& FileMap);
 
     // Error message
     const char*                 ErrorMessage();
@@ -49,6 +53,11 @@ public:
     bool                        IsDetected;
 
 protected:
+    virtual bool                ParseBuffer() = 0;
+
+    filemap*                    FileMap;
+    unsigned char*              Buffer;
+    size_t                      Buffer_Size;
     size_t                      Buffer_Offset;
     bool                        IsBigEndian;
     uint8_t                     Get_L1() { return Get_X1(); }
