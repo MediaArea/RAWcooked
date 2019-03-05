@@ -1,0 +1,431 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\FFV1">
+      <UniqueIdentifier>{edaa0440-2432-4980-95ae-471735b429c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\FFV1">
+      <UniqueIdentifier>{9927d355-950b-40b4-9d99-f81dc3c6a728}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\BitStream">
+      <UniqueIdentifier>{95e010b9-9b10-4b47-a357-25736324231f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CRC32">
+      <UniqueIdentifier>{c792f75b-e47c-41d7-bce8-66a90df874cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CRC32">
+      <UniqueIdentifier>{afc4de72-ec4b-436f-943a-0f50243220f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Matroska">
+      <UniqueIdentifier>{4c7becaf-2b6a-42cd-abf2-d65dc7d32511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Matroska">
+      <UniqueIdentifier>{bd5ed8d3-19fb-452e-b96c-594944c2cc8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RawFrame">
+      <UniqueIdentifier>{be89bd39-d1a7-4adc-9a79-168b6b60d477}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RawFrame">
+      <UniqueIdentifier>{f1ffc5f0-e21b-49eb-ae71-0fcca242d3a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\FrameHash">
+      <UniqueIdentifier>{30782949-bf6f-4dba-9d1e-0d7f5ac4b1ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{14d4d37c-77ab-4463-bd6d-2103b8785e2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\DPX">
+      <UniqueIdentifier>{a9a17abe-9c4b-48f9-9193-30b60eb38fc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RAWcooked">
+      <UniqueIdentifier>{c3e2c1bc-a03b-4f71-992b-f95b5806d46c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RAWcooked">
+      <UniqueIdentifier>{88504ec6-4042-49ff-9bac-a60b15353367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\FFV1\Coder">
+      <UniqueIdentifier>{bc3a0f91-332b-443e-b823-0822fd6f5014}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\FFV1\Coder">
+      <UniqueIdentifier>{71d1e08b-131b-4959-b2fb-a30fa1aaae07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\FFV1\Transform">
+      <UniqueIdentifier>{45f585d5-4f80-4957-9e57-c19baa0083bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\FFV1\Transform">
+      <UniqueIdentifier>{480db659-e3a9-4e5a-bb1c-1240ebb4cc80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\thread-pool">
+      <UniqueIdentifier>{ce93a161-8199-4205-9b5e-d6957352bd49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DPX">
+      <UniqueIdentifier>{5154ec89-4df8-41dc-88cd-9f7fb3ea2f31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\WAV">
+      <UniqueIdentifier>{c0f1c942-c682-441f-b78d-18043ec4b2eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\WAV">
+      <UniqueIdentifier>{e92f4c0c-4015-4076-8d5d-ec6dafb5e905}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\zlib">
+      <UniqueIdentifier>{7600ed4d-f620-4716-9226-25d0256084bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\flac">
+      <UniqueIdentifier>{57b8e003-f051-4de2-904b-ec5d41c0a70d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\TIFF">
+      <UniqueIdentifier>{d8501450-01e7-412c-84bd-de0b5552626a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\TIFF">
+      <UniqueIdentifier>{cc49955e-4176-4119-be35-f8b659796662}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\AIFF">
+      <UniqueIdentifier>{6bd79131-9aa6-420c-9eae-442d147ffd12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\AIFF">
+      <UniqueIdentifier>{0dcc0039-defc-4688-b2d7-d14d80faffbb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
+      <Filter>Header Files\BitStream</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h">
+      <Filter>Header Files\CRC32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.h">
+      <Filter>Header Files\FFV1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h">
+      <Filter>Header Files\Matroska</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.h">
+      <Filter>Header Files\FFV1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.h">
+      <Filter>Header Files\FFV1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.h">
+      <Filter>Header Files\FFV1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h">
+      <Filter>Header Files\RawFrame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.h">
+      <Filter>Header Files\FrameHash</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h">
+      <Filter>Header Files\DPX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h">
+      <Filter>Header Files\RAWcooked</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h">
+      <Filter>Header Files\FFV1\Coder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.h">
+      <Filter>Header Files\FFV1\Coder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder.h">
+      <Filter>Header Files\FFV1\Coder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.h">
+      <Filter>Header Files\FFV1\Transform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h">
+      <Filter>ThirdParty\thread-pool</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h">
+      <Filter>ThirdParty\thread-pool</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h">
+      <Filter>Header Files\WAV</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\gzguts.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffixed.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zconf.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zlib.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.h">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\FileIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\callback.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\export.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\format.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\metadata.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\ordinals.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\stream_decoder.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\alloc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\compat.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\endswap.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\macros.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\safe_str.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\win_utf8_io.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\windows_unicode_filenames.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitmath.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitreader.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitwriter.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\crc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\format.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\lpc.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\macros.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\md5.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\memory.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\metadata.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\window.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h">
+      <Filter>ThirdParty\flac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Input_Base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License_Internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h">
+      <Filter>Header Files\TIFF</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\AIFF\AIFF.h">
+      <Filter>Header Files\AIFF</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
+      <Filter>Source Files\CRC32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp">
+      <Filter>Source Files\FFV1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp">
+      <Filter>Source Files\Matroska</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.cpp">
+      <Filter>Source Files\FFV1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.cpp">
+      <Filter>Source Files\FFV1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.cpp">
+      <Filter>Source Files\FFV1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp">
+      <Filter>Source Files\RawFrame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp">
+      <Filter>Source Files\RAWcooked</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp">
+      <Filter>Source Files\FFV1\Coder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.cpp">
+      <Filter>Source Files\FFV1\Coder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp">
+      <Filter>Source Files\FFV1\Transform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp">
+      <Filter>Source Files\DPX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\WAV\WAV.cpp">
+      <Filter>Source Files\WAV</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\compress.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\infback.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\uncompr.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.c">
+      <Filter>ThirdParty\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitreader.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\window.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_object.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_iterators.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c">
+      <Filter>ThirdParty\flac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Input_Base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\License.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\TIFF\TIFF.cpp">
+      <Filter>Source Files\TIFF</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp">
+      <Filter>Source Files\AIFF</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Source\Lib\ThirdParty\zlib\README">
+      <Filter>ThirdParty\zlib</Filter>
+    </None>
+  </ItemGroup>
+</Project>

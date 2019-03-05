@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Source\Lib\AIFF\AIFF.h" />
+    <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Config.h" />
+    <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h" />
+    <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FileIO.h" />
+    <ClInclude Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Input_Base.h" />
+    <ClInclude Include="..\..\..\Source\Lib\License.h" />
+    <ClInclude Include="..\..\..\Source\Lib\License_Internal.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h" />
+    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
+    <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h" />
+    <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\callback.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\export.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\format.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\metadata.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\ordinals.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\stream_decoder.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\alloc.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\compat.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\endswap.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\macros.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\safe_str.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\windows_unicode_filenames.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\win_utf8_io.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitmath.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitreader.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitwriter.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\crc.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\format.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\lpc.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\macros.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\md5.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\memory.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\metadata.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\window.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\gzguts.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inffixed.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zconf.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zlib.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Input_Base.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\License.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\TIFF\TIFF.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\WAV\WAV.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitreader.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_iterators.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_object.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\window.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\compress.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\deflate.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\infback.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inffast.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inflate.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\inftrees.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\trees.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\uncompr.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Source\Lib\ThirdParty\zlib\README" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}</ProjectGuid>
+    <RootNamespace>Lib</RootNamespace>
+    <ProjectName>RAWcooked_Lib</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>RAWcooked</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>RAWcooked</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>RAWcooked</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>RAWcooked</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
