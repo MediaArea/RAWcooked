@@ -100,7 +100,7 @@ wav::wav() :
 }
 
 //---------------------------------------------------------------------------
-bool wav::Parse(bool AcceptTruncated, bool FullCheck)
+bool wav::ParseBuffer()
 {
     if (Buffer_Size < 12)
         return false;

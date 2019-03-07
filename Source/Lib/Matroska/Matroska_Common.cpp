@@ -12,6 +12,7 @@
 #include "Lib/AIFF/AIFF.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
+#include "Lib/FileIO.h"
 #include <stdlib.h>
 #include <cstdio>
 #include <thread>
@@ -427,7 +428,7 @@ matroska::call matroska::SubElements_Void(uint64_t Name)
 }
 
 //---------------------------------------------------------------------------
-bool matroska::Parse(bool AcceptTruncated, bool FullCheck)
+bool matroska::ParseBuffer()
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
         return true;
@@ -446,6 +447,8 @@ bool matroska::Parse(bool AcceptTruncated, bool FullCheck)
     Levels[Level].Offset_End = Buffer_Size;
     Levels[Level].SubElements = &matroska::SubElements__;
     Level++;
+
+    size_t Buffer_Offset_LowerLimit = 0; // Used for indicating the system that we'll not need anymore memory below this value 
 
     while (Buffer_Offset < Buffer_Size)
     {
@@ -466,6 +469,13 @@ bool matroska::Parse(bool AcceptTruncated, bool FullCheck)
                 Levels[Level].SubElements = NULL;
                 Level--;
             }
+        }
+
+        // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
+        if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
+        {
+            FileMap->Remap();
+            Buffer_Offset_LowerLimit = Buffer_Offset;
         }
     }
 
@@ -980,9 +990,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                             if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                             {
                                 dpx DPX;
-                                DPX.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                DPX.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                if (DPX.Parse(true))
+                                DPX.AcceptTruncated = true;
+                                if (DPX.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                 {
                                     Invalid("Unreadable frame header in reversibility data");
                                     return;
@@ -997,22 +1006,25 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 else
                                 {
                                     tiff TIFF;
+                                    DPX.AcceptTruncated = true;
+                                    unsigned char* Frame_Buffer;
+                                    size_t Frame_Buffer_Size;
                                     if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] == (uint64_t)-1)
                                     {
-                                        TIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                        TIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+                                        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
                                     }
                                     else
                                     {
                                         // TODO: more optimal method without allocation of the full file size and without new/delete
-                                        TIFF.Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
-                                        TIFF.Buffer = new uint8_t[TIFF.Buffer_Size];
-                                        memcpy(TIFF.Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-                                        memcpy(TIFF.Buffer + TIFF.Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+                                        Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
+                                        Frame_Buffer = new uint8_t[Frame_Buffer_Size];
+                                        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+                                        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
                                     }
-                                    bool Result = TIFF.Parse(true);
+                                    bool Result = TIFF.Parse(Frame_Buffer, Frame_Buffer_Size);
                                     if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
-                                        delete[] TIFF.Buffer;
+                                        delete[] Frame_Buffer;
                                     if (Result)
                                     {
                                         Invalid("Unreadable frame header in reversibility data");
@@ -1059,9 +1071,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                                 {
                                     wav WAV;
-                                    WAV.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                    WAV.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                    WAV.Parse(true);
+                                    WAV.AcceptTruncated = true;
+                                    WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
                                     if (WAV.ErrorMessage())
                                     {
                                         Invalid("Unreadable frame header in reversibility data");
@@ -1076,9 +1087,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     else
                                     {
                                         aiff AIFF;
-                                        AIFF.Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                        AIFF.Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                        AIFF.Parse(true);
+                                        AIFF.AcceptTruncated = true;
+                                        AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
                                         if (AIFF.ErrorMessage())
                                         {
                                             Invalid("Unreadable frame header in reversibility data");

@@ -123,7 +123,7 @@ aiff::aiff() :
 }
 
 //---------------------------------------------------------------------------
-bool aiff::Parse(bool AcceptTruncated, bool FullCheck)
+bool aiff::ParseBuffer()
 {
     if (Buffer_Size < 12)
         return false;

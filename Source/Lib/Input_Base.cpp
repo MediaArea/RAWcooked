@@ -5,6 +5,7 @@
  */
 
 //---------------------------------------------------------------------------
+#include "Lib/FileIO.h"
 #include "Lib/Input_Base.h"
 #include <cmath>
 //---------------------------------------------------------------------------
@@ -27,18 +28,37 @@ static const char* ErrorTypes_After[] =
 };
 
 //---------------------------------------------------------------------------
-input_base::input_base() :
-    Buffer(NULL),
-    Buffer_Size(0),
-    Buffer_Offset(0),
-    IsDetected(false),
-    Error_Message(NULL)
+input_base::input_base()
 {
 }
 
 //---------------------------------------------------------------------------
 input_base::~input_base()
 {
+}
+
+//---------------------------------------------------------------------------
+bool input_base::Parse(unsigned char* Buffer_Source, size_t Buffer_Size_Source)
+{
+    FileMap = NULL;
+    Buffer = Buffer_Source;
+    Buffer_Size = Buffer_Size_Source;
+
+    IsDetected = false;
+    Error_Message = NULL;
+    return ParseBuffer();
+}
+
+//---------------------------------------------------------------------------
+bool input_base::Parse(filemap& FileMap_Source)
+{
+    FileMap = &FileMap_Source;
+    Buffer = FileMap_Source.Buffer;
+    Buffer_Size = FileMap_Source.Buffer_Size;
+
+    IsDetected = false;
+    Error_Message = NULL;
+    return ParseBuffer();
 }
 
 //---------------------------------------------------------------------------

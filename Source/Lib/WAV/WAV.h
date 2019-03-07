@@ -21,7 +21,6 @@ class wav : public input_base_uncompressed
 public:
     wav();
 
-    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     string                      Flavor_String();
 
     enum flavor
@@ -74,6 +73,7 @@ public:
     static const char* Endianess_String(flavor Flavor);
 
 private:
+    bool                        ParseBuffer();
     typedef void (wav::*call)();
     typedef call (wav::*name)(uint64_t);
 

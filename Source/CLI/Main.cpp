@@ -60,11 +60,11 @@ struct parse_info
 bool parse_info::ParseFile_Input(input_base& SingleFile)
 {
     // Init
-    SingleFile.Buffer = FileMap.Buffer;
-    SingleFile.Buffer_Size = FileMap.Buffer_Size;
+    SingleFile.AcceptTruncated = false;
+    SingleFile.FullCheck = Global.FullCheck;
 
     // Parse
-    SingleFile.Parse(false, Global.FullCheck);
+    SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
     if (SingleFile.ErrorMessage())
     {

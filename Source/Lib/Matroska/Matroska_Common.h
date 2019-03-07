@@ -29,7 +29,6 @@ public:
     matroska();
     ~matroska();
 
-    bool                        Parse(bool AcceptTruncated = false, bool FullCheck = false);
     void                        Shutdown();
 
     string                      OutputDirectoryName;
@@ -45,6 +44,7 @@ public:
     void                        FLAC_Write(const uint32_t* buffer[], size_t blocksize);
 
 private:
+    bool                        ParseBuffer();
     typedef void (matroska::*call)();
     typedef call(matroska::*name)(uint64_t);
 
