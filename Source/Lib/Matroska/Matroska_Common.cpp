@@ -448,6 +448,8 @@ bool matroska::ParseBuffer()
     Levels[Level].SubElements = &matroska::SubElements__;
     Level++;
 
+    size_t Buffer_Offset_LowerLimit = 0; // Used for indicating the system that we'll not need anymore memory below this value 
+
     while (Buffer_Offset < Buffer_Size)
     {
         uint64_t Name = Get_EB();
@@ -467,6 +469,13 @@ bool matroska::ParseBuffer()
                 Levels[Level].SubElements = NULL;
                 Level--;
             }
+        }
+
+        // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
+        if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
+        {
+            FileMap->Remap();
+            Buffer_Offset_LowerLimit = Buffer_Offset;
         }
     }
 
