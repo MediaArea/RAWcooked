@@ -16,10 +16,16 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
+namespace wav_issue
+{
+    namespace undecodable { enum code : uint8_t; }
+    namespace unsupported { enum code : uint8_t; }
+}
+
 class wav : public input_base_uncompressed
 {
 public:
-    wav();
+    wav(errors* Errors = NULL);
 
     string                      Flavor_String();
 
@@ -52,7 +58,7 @@ public:
         PCM_96000_24_1_LE,
         PCM_96000_24_2_LE,
         PCM_96000_24_6_LE,
-        Style_Max,
+        Flavor_Max,
     };
     enum endianess
     {
@@ -73,7 +79,10 @@ public:
     static const char* Endianess_String(flavor Flavor);
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
+    void                        Undecodable(wav_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
+    void                        Unsupported(wav_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
     typedef void (wav::*call)();
     typedef call (wav::*name)(uint64_t);
 

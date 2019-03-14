@@ -10,6 +10,8 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+#include "Lib/Errors.h"
+#include "Lib/FileIO.h"
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -41,11 +43,14 @@ public:
     string                      OutputFileName;
     uint64_t                    FileSize;
 
+    // Errors
+    errors*                     Errors = NULL;
+
 private:
     uint64_t                    Buffer_Offset;
 
     // File IO
-    FILE*                       F;
+    file                        File;
     size_t                      BlockCount;
     void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size);
 

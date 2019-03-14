@@ -126,21 +126,26 @@ string GetLocalConfigPath (bool Create = false)
 class license_input : public input_base
 {
 public:
-    license_input() : input_base(), Supported(false) {}
+    license_input() : input_base(Parser_License), Supported(false) {}
 
     license_internal* License;
     bool Supported;
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
 };
 
 //---------------------------------------------------------------------------
-bool license_input::ParseBuffer()
+void license_input::ParseBuffer()
 {
     // Place holder for license key descrambling - Begin
-    return true; // Not supported
     // Place holder for license key descrambling - End
+}
+
+//---------------------------------------------------------------------------
+void license_input::BufferOverflow()
+{
 }
 
 //---------------------------------------------------------------------------

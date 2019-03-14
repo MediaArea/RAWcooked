@@ -45,6 +45,7 @@ public:
     size_t                      Path_Pos_Global;
     vector<string>              Inputs;
     license                     License;
+    errors                      Errors;
 
     // Options
     int ManageCommandLine(const char* argv[], int argc);

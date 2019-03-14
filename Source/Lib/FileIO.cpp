@@ -194,3 +194,135 @@ int filemap::Close()
 
     return 0;
 }
+
+//---------------------------------------------------------------------------
+// Errors
+
+namespace file_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "can not create directory",
+    "can not open file for writing",
+    "can not write in the file",
+};
+
+enum code : uint8_t
+{
+    CreateDirectory,
+    FileOpenWriting,
+    FileWrite,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // file_issue
+
+//---------------------------------------------------------------------------
+// file
+
+bool file::Open(const string& BaseDirectory, const string& OutputFileName_Source, const char* Mode)
+{
+    OutputFileName = OutputFileName_Source;
+    string FullName = BaseDirectory + OutputFileName;
+
+    #ifdef _MSC_VER
+        #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
+    #endif
+    FILE* F = fopen(FullName.c_str(), Mode);
+    #ifdef _MSC_VER
+        #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
+    #endif
+    if (!F)
+    {
+        size_t i = 0;
+        for (;;)
+        {
+            i = FullName.find_first_of("/\\", i + 1);
+            if (i == (size_t)-1)
+                break;
+            string t = FullName.substr(0, i);
+            if (access(t.c_str(), 0))
+            {
+                #if defined(_WIN32) || defined(_WINDOWS)
+                if (mkdir(t.c_str()))
+                #else
+                if (mkdir(t.c_str(), 0755))
+                #endif
+                {
+                    if (Errors)
+                        Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::CreateDirectory, OutputFileName.substr(0, i));
+                    return true;
+                }
+            }
+        }
+        #ifdef _MSC_VER
+            #pragma warning(disable:4996) // _CRT_SECURE_NO_WARNINGS
+        #endif
+        F = fopen(FullName.c_str(), Mode);
+        #ifdef _MSC_VER
+            #pragma warning(default:4996) // _CRT_SECURE_NO_WARNINGS
+        #endif
+        if (!F)
+        {
+            if (Errors)
+                Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileOpenWriting, OutputFileName);
+            return true;
+        }
+    }
+
+    Private = F;
+    return false;
+}
+
+//---------------------------------------------------------------------------
+// file
+
+bool file::Write(const void* Buffer, size_t Size)
+{
+    if (!Size)
+        return false;
+
+    if (fwrite(Buffer, Size, 1, (FILE*)Private) != 1)
+    {
+        if (Errors)
+            Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileWrite, OutputFileName);
+        fclose((FILE*)Private);
+        return true;
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+// file
+
+bool file::Close()
+{
+    if (!Private)
+        return false;
+        
+    if (fclose((FILE*)Private))
+    {
+        if (Errors)
+            Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileWrite, OutputFileName);
+        return true;
+    }
+
+    Private = nullptr;
+    return false;
+}

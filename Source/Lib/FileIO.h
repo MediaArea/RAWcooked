@@ -12,6 +12,7 @@
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
 #include "CLI/Global.h"
+#include "Lib/Errors.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include <string>
 #include <vector>
@@ -37,6 +38,26 @@ public:
 
 private:
     void*                       Private;
+};
+
+class file
+{
+public:
+    // Constructor/Destructor
+                                ~file() { Close(); }
+
+    // Actions
+    bool                        Open(const string& BaseDirectory_Source, const string& OutputFileName_Source, const char* Mode);
+    bool                        IsOpen() { return Private ? true : false; }
+    bool                        Write(const void* Buffer, size_t Size);
+    bool                        Close();
+
+    // Errors
+    errors*                     Errors = NULL;
+
+private:
+    void*                       Private = NULL;
+    string                      OutputFileName;
 };
 
 #endif

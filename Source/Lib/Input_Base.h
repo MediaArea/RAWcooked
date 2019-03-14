@@ -10,50 +10,62 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+#include "Lib/Errors.h"
+#include <bitset>
 #include <cstdint>
 #include <string>
+#include <vector>
 using namespace std;
 class rawcooked;
 class filemap;
 //---------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------
-// Parser codes
-enum parser
+enum action : uint8_t
 {
-    Parser_DPX,
-    Parser_TIFF,
-    Parser_WAV,
-    Parser_AIFF,
-    Parser_Max,
+    Action_Encode,
+    Action_Max
 };
+
+enum info : uint8_t
+{
+    Info_IsDetected,
+    Info_IsSupported,
+    Info_HasErrors,
+    Info_BufferOverflow,
+    Info_Max
+};
+
+typedef uint8_t flavor;
 
 //---------------------------------------------------------------------------
 class input_base
 {
 public:
     // Constructor/Destructor
-    input_base();
+    input_base(parser ParserCode);
+    input_base(errors* Errors, parser ParserCode);
     ~input_base();
 
     // Config
     bool                        AcceptTruncated = false;
     bool                        FullCheck = false;
-    
+    bitset<Action_Max>          Actions = { 1 << Action_Encode };
+
     // Parse
     bool                        Parse(unsigned char* Buffer, size_t Buffer_Size);
     bool                        Parse(filemap& FileMap);
 
-    // Error message
-    const char*                 ErrorMessage();
-    const char*                 ErrorType_Before();
-    const char*                 ErrorType_After();
-
     // Info
-    bool                        IsDetected;
+    bool                        IsDetected() { return Info[Info_IsDetected]; }
+    bool                        IsSupported() { return Info[Info_IsSupported]; }
+    bool                        HasErrors() { return Info[Info_HasErrors]; }
+
+    // Common info
+    parser                      ParserCode;
 
 protected:
-    virtual bool                ParseBuffer() = 0;
+    virtual void                ParseBuffer() = 0;
+    virtual void                BufferOverflow() = 0;
 
     filemap*                    FileMap;
     unsigned char*              Buffer;
@@ -75,42 +87,48 @@ protected:
     uint64_t                    Get_EB();
 
     // Error message
-    bool                        Unsupported(const char* Message);
-    bool                        Invalid(const char* Message);
+    void                        Undecodable(error::undecodable::code Code) { Error(error::Undecodable, (error::generic::code)Code); }
+    void                        Unsupported(error::unsupported::code Code) { Error(error::Unsupported, (error::generic::code)Code); }
+
+    // Info
+    void                        ClearInfo() { Info.reset(); }
+    void                        SetDetected() { Info.set(Info_IsDetected); }
+    void                        SetSupported() { Info.set(Info_IsSupported); }
+    void                        SetErrors() { Info.set(Info_HasErrors); }
+    void                        SetBufferOverflow() { if (HasBufferOverflow()) return; BufferOverflow(); Info.set(Info_BufferOverflow); }
+    bool                        HasBufferOverflow() { return Info[Info_BufferOverflow]; }
 
 private:
-    const char*                 Error_Message;
-    enum error_type
-    {
-        Error_Unsupported,
-        Error_Invalid,
-    };
-    error_type                  Error_Type;
-};
+    // Errors
+    void                        Error(error::type Type, error::generic::code Code);
+    errors*                     Errors = NULL;
 
+    // Info
+    bitset<Info_Max>            Info;
+};
 
 class uncompressed
 {
 public:
     // Constructor/Destructor
-    uncompressed(parser ParserCode, bool IsSequence = false);
+    uncompressed(bool IsSequence = false);
     ~uncompressed();
 
     // Info
-    uint8_t                     Flavor;
+    flavor                      Flavor;
     virtual string              Flavor_String() = 0;
 
     // Common info
     bool                        IsSequence;
     rawcooked*                  RAWcooked;
-    parser                      ParserCode;
 };
 
 class input_base_uncompressed : public input_base, public uncompressed
 {
 public:
     // Constructor/Destructor
-    input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(), uncompressed(ParserCode, IsSequence) {}
+    input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(ParserCode), uncompressed(IsSequence) {}
+    input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
 };
 
 #endif

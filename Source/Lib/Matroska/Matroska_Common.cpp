@@ -35,8 +35,26 @@
 #endif
 //---------------------------------------------------------------------------
 
+class frame_writer
+{
+public:
+    // Constructor / Destructor
+    frame_writer(const string& BaseDirectory_Source, errors* Errors_Source = nullptr) :
+        BaseDirectory(BaseDirectory_Source),
+        Errors(Errors_Source)
+    {
+    }
+
+    // Actions
+    void WriteFrameCall(raw_frame* RawFrame, const string& OutputFileName);
+
+private:
+    string                      BaseDirectory;
+    errors*                     Errors;
+};
+
 //---------------------------------------------------------------------------
-void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& OutputFileName)
+void frame_writer::WriteFrameCall(raw_frame* RawFrame, const string& OutputFileName)
 {
     // Post-processing
     if (RawFrame->Buffer && RawFrame->In && RawFrame->Buffer_Size == RawFrame->In_Size)
@@ -46,51 +64,19 @@ void WriteFrameCall(uint64_t, raw_frame* RawFrame, const string& OutputFileName)
         for (size_t i = 0; i < RawFrame->In_Size; i++)
             RawFrame->Planes[0]->Buffer[i] ^= RawFrame->In[i];
 
-    #ifdef _MSC_VER
-        #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
-    #endif
-    FILE* F = fopen(OutputFileName.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb");
-    #ifdef _MSC_VER
-        #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
-    #endif
-    if (!F)
-    {
-        size_t i = 0;
-        for (;;)
-        {
-            i = OutputFileName.find_first_of("/\\", i+1);
-            if (i == (size_t)-1)
-                break;
-            string t = OutputFileName.substr(0, i);
-            if (access(t.c_str(), 0))
-            {
-                #if defined(_WIN32) || defined(_WINDOWS)
-                if (mkdir(t.c_str()))
-                #else
-                if (mkdir(t.c_str(), 0755))
-                #endif
-                    exit(0);
-            }
-        }
-        #ifdef _MSC_VER
-            #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
-        #endif
-        F = fopen(OutputFileName.c_str(), (RawFrame->Buffer && !RawFrame->Pre) ?"ab":"wb");
-        #ifdef _MSC_VER
-            #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
-        #endif
-        if (!F)
-            return; // TODO: add a warning message that the file can not be open for writing
-    }
-    if (RawFrame->Pre)
-        fwrite(RawFrame->Pre, RawFrame->Pre_Size, 1, F);
-    if (RawFrame->Buffer)
-        fwrite(RawFrame->Buffer, RawFrame->Buffer_Size, 1, F);
-    for (size_t p = 0; p<RawFrame->Planes.size(); p++)
-        fwrite(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size, 1, F);
-    if (RawFrame->Post)
-        fwrite(RawFrame->Post, RawFrame->Post_Size, 1, F);
-    fclose(F);
+    file File;
+    File.Errors = Errors;
+    if (File.Open(BaseDirectory, OutputFileName, (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb"))
+        return;
+    if (RawFrame->Pre && File.Write(RawFrame->Pre, RawFrame->Pre_Size))
+        return;
+    if (RawFrame->Buffer && File.Write(RawFrame->Buffer, RawFrame->Buffer_Size))
+        return;
+    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
+        if (RawFrame->Planes[p]->Buffer && File.Write(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+            return;
+    if (RawFrame->Post && File.Write(RawFrame->Post, RawFrame->Post_Size))
+        return;
 }
 
 //---------------------------------------------------------------------------
@@ -266,9 +252,51 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-    WriteFrameCall(0x00, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + OutputFileName);
+    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
 }
-    
+
+//---------------------------------------------------------------------------
+// Errors
+
+namespace matroska_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file smaller than expected",
+    "Unreadable frame header in reversibility data",
+    "More video frames in source content than saved frame headers in reversibility data",
+};
+
+enum code : uint8_t
+{
+    BufferOverflow,
+    ReversibilityData_UnreadableFrameHeader,
+    ReversibilityData_FrameCount,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // matroska_issue
+
+using namespace matroska_issue;
+
+//---------------------------------------------------------------------------
+// Matroska parser
+
 #define ELEMENT_BEGIN(_VALUE) \
 matroska::call matroska::SubElements_##_VALUE(uint64_t Name) \
 { \
@@ -371,9 +399,10 @@ void matroska_ProgressIndicator_Show(matroska* M)
 }
 
 //---------------------------------------------------------------------------
-matroska::matroska() :
-    input_base(),
-    FramesPool(NULL),
+matroska::matroska(const string& OutputDirectoryName, errors* Errors_Source) :
+    input_base(Errors_Source, Parser_Matroska),
+    FramesPool(nullptr),
+    FrameWriter(new frame_writer(OutputDirectoryName, Errors_Source)),
     Quiet(false)
 {
 }
@@ -382,6 +411,7 @@ matroska::matroska() :
 matroska::~matroska()
 {
     Shutdown();
+    delete FrameWriter;
 }
 
 //---------------------------------------------------------------------------
@@ -401,7 +431,7 @@ void matroska::Shutdown()
                 TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset;
                 TrackInfo_Current->Frame.RawFrame->Buffer_Size = 0;
                 TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = false;
-                TrackInfo_Current->Frame.RawFrame->Pre = NULL;
+                TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
                 TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[0];
                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[0];
@@ -410,7 +440,7 @@ void matroska::Shutdown()
                     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                    WriteFrameCall(0, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + OutputFileName);
+                    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
                 }
             }
         }
@@ -418,7 +448,7 @@ void matroska::Shutdown()
 
     FramesPool->shutdown();
     delete FramesPool;
-    FramesPool = NULL;
+    FramesPool = nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -428,10 +458,10 @@ matroska::call matroska::SubElements_Void(uint64_t Name)
 }
 
 //---------------------------------------------------------------------------
-bool matroska::ParseBuffer()
+void matroska::ParseBuffer()
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
-        return true;
+        return;
 
     Buffer_Offset = 0;
     Level = 0;
@@ -466,7 +496,7 @@ bool matroska::ParseBuffer()
         {
             while (Level && Buffer_Offset >= Levels[Level - 1].Offset_End)
             {
-                Levels[Level].SubElements = NULL;
+                Levels[Level].SubElements = nullptr;
                 Level--;
             }
         }
@@ -487,8 +517,12 @@ bool matroska::ParseBuffer()
         ProgressIndicator_Thread->join();
         delete ProgressIndicator_Thread;
     }
+}
 
-    return ErrorMessage() ? true : false;
+//---------------------------------------------------------------------------
+void matroska::BufferOverflow()
+{
+    Undecodable(undecodable::BufferOverflow);
 }
 
 //---------------------------------------------------------------------------
@@ -499,7 +533,7 @@ void matroska::Void()
 //---------------------------------------------------------------------------
 void matroska::Segment()
 {
-    IsDetected = true;
+    SetDetected();
     IsList = true;
 }
 
@@ -549,7 +583,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         RawFrame.Pre_Size = Levels[Level].Offset_End - Buffer_Offset;
 
         //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-        WriteFrameCall(0, &RawFrame, OutputDirectoryName + AttachedFile_FileName);
+        FrameWriter->WriteFrameCall(&RawFrame, AttachedFile_FileName);
     }
 
 }
@@ -991,13 +1025,13 @@ void matroska::Segment_Cluster_SimpleBlock()
                             {
                                 dpx DPX;
                                 DPX.AcceptTruncated = true;
-                                if (DPX.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
+                                if (!DPX.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                 {
-                                    Invalid("Unreadable frame header in reversibility data");
-                                    return;
-                                }
-                                if (DPX.IsDetected)
-                                {
+                                    if (!DPX.IsSupported())
+                                    {
+                                        Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                        return;
+                                    }
                                     TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_DPX;
                                     TrackInfo_Current->R_A->Flavor_Private = DPX.Flavor;
                                     TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_DPX;
@@ -1006,15 +1040,10 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 else
                                 {
                                     tiff TIFF;
-                                    DPX.AcceptTruncated = true;
+                                    TIFF.AcceptTruncated = true;
                                     unsigned char* Frame_Buffer;
                                     size_t Frame_Buffer_Size;
-                                    if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] == (uint64_t)-1)
-                                    {
-                                        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                    }
-                                    else
+                                    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
                                     {
                                         // TODO: more optimal method without allocation of the full file size and without new/delete
                                         Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
@@ -1022,16 +1051,21 @@ void matroska::Segment_Cluster_SimpleBlock()
                                         memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
                                         memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
                                     }
-                                    bool Result = TIFF.Parse(Frame_Buffer, Frame_Buffer_Size);
-                                    if (TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
-                                        delete[] Frame_Buffer;
-                                    if (Result)
+                                    else
                                     {
-                                        Invalid("Unreadable frame header in reversibility data");
-                                        return;
+                                        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+                                        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
                                     }
-                                    if (TIFF.IsDetected)
+                                    bool TiffParseResult = TIFF.Parse(Frame_Buffer, Frame_Buffer_Size);
+                                    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
+                                        delete[] Frame_Buffer;
+                                    if (!TiffParseResult)
                                     {
+                                        if (!TIFF.IsSupported())
+                                        {
+                                            Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                            return;
+                                        }
                                         TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_TIFF;
                                         TrackInfo_Current->R_A->Flavor_Private = TIFF.Flavor;
                                         TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_TIFF;
@@ -1047,10 +1081,10 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
 
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                    WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + OutputFileName);
+                                    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
                                 }
                                 else
-                                    Invalid("More video frames in source content than saved frame headers in reversibility data");
+                                    Undecodable(undecodable::ReversibilityData_FrameCount);
                             }
                             TrackInfo_Current->DPX_Buffer_Pos++;
                             break;
@@ -1064,7 +1098,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 }
                                 else
                                 {
-                                    TrackInfo_Current->Frame.RawFrame->Pre = NULL;
+                                    TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                                 }
 
@@ -1072,14 +1106,13 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 {
                                     wav WAV;
                                     WAV.AcceptTruncated = true;
-                                    WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-                                    if (WAV.ErrorMessage())
+                                    if (!WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                     {
-                                        Invalid("Unreadable frame header in reversibility data");
-                                        return;
-                                    }
-                                    if (WAV.IsDetected)
-                                    {
+                                        if (!WAV.IsSupported())
+                                        {
+                                            Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                            return;
+                                        }
                                         TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
                                         if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                             TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
@@ -1088,14 +1121,13 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     {
                                         aiff AIFF;
                                         AIFF.AcceptTruncated = true;
-                                        AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-                                        if (AIFF.ErrorMessage())
+                                        if (!AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                         {
-                                            Invalid("Unreadable frame header in reversibility data");
-                                            return;
-                                        }
-                                        if (AIFF.IsDetected)
-                                        {
+                                            if (!AIFF.IsSupported())
+                                            {
+                                                Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                                return;
+                                            }
                                             TrackInfo_Current->FlacInfo->Endianess = AIFF.Endianess();
                                             if (AIFF.sampleSize() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                                 TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
@@ -1119,7 +1151,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 }
                                 else
                                 {
-                                    TrackInfo_Current->Frame.RawFrame->Pre = NULL;
+                                    TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                                 }
 
@@ -1133,7 +1165,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                WriteFrameCall(Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, OutputDirectoryName + OutputFileName);
+                                FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
                             }
                             break;
                 default:;
@@ -1358,13 +1390,13 @@ void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
         if (uncompress((Bytef*)Output, &t, (const Bytef*)Buffer + Buffer_Offset, (uLong)(Levels[Level].Offset_End - Buffer_Offset))<0)
         {
             delete[] Output;
-            Output = NULL;
+            Output = nullptr;
             Output_Size = 0;
         }
         if (t != RealBuffer_Size)
         {
             delete[] Output;
-            Output = NULL;
+            Output = nullptr;
             Output_Size = 0;
         }
     }
@@ -1472,7 +1504,7 @@ void matroska::ProcessCodecPrivate_FLAC()
         if (FLAC__stream_decoder_init_stream(TrackInfo_Current->FlacInfo->Decoder, flac_read_callback, 0, flac_tell_callback, 0, 0, flac_write_callback, flac_metadata_callback, flac_error_callback, this) != FLAC__STREAM_DECODER_INIT_STATUS_OK)
         {
             FLAC__stream_decoder_delete(TrackInfo_Current->FlacInfo->Decoder);
-            TrackInfo_Current->FlacInfo->Decoder = NULL;
+            TrackInfo_Current->FlacInfo->Decoder = nullptr;
             return;
         }
     }

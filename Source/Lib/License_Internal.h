@@ -88,10 +88,10 @@ static const parser_info Infos[3 + Parser_Max + 1] =
     { "features"            , Feature_Max           , Features_String       },
     { "muxers/demuxers"     , Muxer_Max             , Muxers_String         },
     { "encoders/decoders"   , Encoder_Max           , Encoders_String       },
-    { "DPX flavors"         , dpx::Style_Max        , DPX_Flavor_String     },
-    { "TIFF flavors"        , tiff::Style_Max       , TIFF_Flavor_String    },
-    { "WAV flavors"         , wav::Style_Max        , WAV_Flavor_String     },
-    { "AIFF flavors"        , aiff::Style_Max       , AIFF_Flavor_String    },
+    { "DPX flavors"         , dpx::Flavor_Max        , DPX_Flavor_String     },
+    { "TIFF flavors"        , tiff::Flavor_Max       , TIFF_Flavor_String    },
+    { "WAV flavors"         , wav::Flavor_Max        , WAV_Flavor_String     },
+    { "AIFF flavors"        , aiff::Flavor_Max       , AIFF_Flavor_String    },
     { NULL                  , 0                     , NULL                  },
 };
 

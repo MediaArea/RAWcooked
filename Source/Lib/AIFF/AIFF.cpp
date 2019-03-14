@@ -10,6 +10,70 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Errors
+
+namespace aiff_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file smaller than expected",
+    "FORM chunk size",
+    "COMM chunk size",
+    "truncated chunk",
+};
+
+enum code : uint8_t
+{
+    BufferOverflow,
+    FORM_ChunkSize,
+    COMM_ChunkSize,
+    TruncatedChunk,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    // Unsupported
+    "COMM compressionType not known PCM",
+    "COMM chunk not before data chunk",
+    "Flavor (sampleRate / sampleSize / numChannels / Endianess combination)",
+};
+
+enum code : uint8_t
+{
+    COMM_compressionType_NotPcm,
+    COMM_Location,
+    Flavor,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unsupported
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    unsupported::MessageText,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // aiff_issue
+
+using namespace aiff_issue;
+
+//---------------------------------------------------------------------------
 // Tested cases
 struct aiff_tested
 {
@@ -91,13 +155,8 @@ aiff::call aiff::SubElements_##_VALUE(uint64_t Name) \
 } \
 
 ELEMENT_BEGIN(_)
-ELEMENT_CASE(41494643, AIFF)
-ELEMENT_CASE(41494646, AIFF)
-ELEMENT_END()
-
-ELEMENT_BEGIN(AIFC)
-ELEMENT_VOID(434F4D4D, AIFF_COMM)
-ELEMENT_VOID(53534E44, AIFF_SSND)
+ELEMENT_CASE(464F524D41494643, AIFF)
+ELEMENT_CASE(464F524D41494646, AIFF)
 ELEMENT_END()
 
 ELEMENT_BEGIN(AIFF)
@@ -117,21 +176,22 @@ aiff::call aiff::SubElements_Void(uint64_t Name)
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-aiff::aiff() :
-    input_base_uncompressed(Parser_AIFF)
+aiff::aiff(errors* Errors_Source) :
+    input_base_uncompressed(Errors_Source, Parser_AIFF)
 {
 }
 
 //---------------------------------------------------------------------------
-bool aiff::ParseBuffer()
+void aiff::ParseBuffer()
 {
     if (Buffer_Size < 12)
-        return false;
+        return;
     if (Buffer[0] != 'F' || Buffer[1] != 'O' || Buffer[2] != 'R' || Buffer[3] != 'M'
      || Buffer[8] != 'A' || Buffer[9] != 'I' || Buffer[10] != 'F' || (Buffer[11] != 'F' && Buffer[11] != 'C'))
-        return false;
-    IsDetected = true;
+        return;
+    SetDetected();
 
+    Flavor = Flavor_Max; // Used for detected if COMM chunk is parsed
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer_Size;
     Levels[0].SubElements = &aiff::SubElements__;
@@ -142,34 +202,41 @@ bool aiff::ParseBuffer()
         // Find the current nesting level
         while (Buffer_Offset >= Levels[Level - 1].Offset_End)
         {
-            Levels[Level].SubElements = NULL;
+            Levels[Level].SubElements = nullptr;
             Level--;
         }
+        uint64_t End = Levels[Level - 1].Offset_End;
 
         // Parse the chunk header
-        uint32_t Name;
+        uint64_t Name;
         uint64_t Size;
-        if (Buffer_Offset + 8 <= Levels[Level - 1].Offset_End)
+        if (Buffer_Offset + 8 > End)
         {
-            Name = Get_B4();
-            Size = Get_B4();
-            if (Name == 0x464F524D) // "FORM"
-            {
-                if (Size < 4)
-                    return Unsupported("Incoherency detected while parsing AIFF");
-                Name = Get_B4();
-                Size -= 4;
-            }
-            if (Buffer_Offset + Size > Levels[Level - 1].Offset_End)
-            {
-                // Truncated
-                if (!AcceptTruncated)
-                    return Unsupported("Truncated AIFF?");
-                Size = Levels[Level - 1].Offset_End - Buffer_Offset;
-            }
+            Undecodable(undecodable::TruncatedChunk);
+            return;
         }
-        else
-            return Unsupported("Incoherency detected while parsing AIFF");
+        Name = Get_B4();
+        Size = Get_B4();
+        if (Name == 0x464F524D) // "FORM"
+        {
+            if (Size < 4 || Buffer_Offset + 4 > End)
+            {
+                Undecodable(undecodable::FORM_ChunkSize);
+                return;
+            }
+            Name <<= 32;
+            Name |= Get_B4();
+            Size -= 4;
+        }
+        if (Buffer_Offset + Size > End)
+        {
+            if (!AcceptTruncated)
+            {
+                Undecodable(undecodable::TruncatedChunk);
+                return;
+            }
+            Size = Levels[Level - 1].Offset_End - Buffer_Offset;
+        }
 
         // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -195,11 +262,15 @@ bool aiff::ParseBuffer()
 
     if (Flavor == (uint8_t)-1)
     {
-        Unsupported("Flavor (sampleRate / sampleSize / numChannels / Endianess combination)");
-        return false;
+        Unsupported(unsupported::Flavor);
+        return;
     }
+}
 
-    return ErrorMessage() ? true : false;
+//---------------------------------------------------------------------------
+void aiff::BufferOverflow()
+{
+    Undecodable(undecodable::BufferOverflow);
 }
 
 //---------------------------------------------------------------------------
@@ -242,7 +313,7 @@ void aiff::AIFF_COMM()
 {
     if (Levels[Level].Offset_End - Buffer_Offset < 16)
     {
-        Unsupported("AIFF FormatTag format");
+        Undecodable(undecodable::COMM_ChunkSize);
         return;
     }
 
@@ -251,18 +322,28 @@ void aiff::AIFF_COMM()
     uint16_t sampleSize = Get_B2();
     long double sampleRate = Get_BF10();
     endianess Endianess = BE;
-    
+    bool compressionType_NotPcm = false; // PCM by default
+
     if (Levels[Level].Offset_End - Buffer_Offset)
     {
         uint32_t compressionType = Get_B4();
         switch (compressionType)
         {
-            case 0x72617720:
-            case 0x736F7774 :
+            case 0x4E4F4E45 : // NONE
+            case 0x74776F73 : // twos
+                                break;
+            case 0x72617720 : // raw
+            case 0x736F7774 : // sowt
                                 Endianess = LE;
                                 break;
+            default: 
+                                Unsupported(unsupported::COMM_compressionType_NotPcm);
+                                compressionType_NotPcm = true;
         }
     }
+
+    if (compressionType_NotPcm)
+        return;
 
     // Supported?
     uint8_t Tested = 0;
@@ -277,7 +358,7 @@ void aiff::AIFF_COMM()
     }
     if (Tested >= AIFF_Tested_Size)
     {
-        Unsupported("Flavor (sampleRate / sampleSize / numChannels / Endianess combination)");
+        Unsupported(unsupported::Flavor);
         return;
     }
     Flavor = Tested;
@@ -286,8 +367,16 @@ void aiff::AIFF_COMM()
 //---------------------------------------------------------------------------
 void aiff::AIFF_SSND()
 {
+    // Test if fmt chunk was parsed
+    if (!HasErrors() && Flavor == Flavor_Max)
+        Unsupported(unsupported::COMM_Location);
+
+    // Can we compress?
+    if (!HasErrors())
+        SetSupported();
+
     // Write RAWcooked file
-    if (RAWcooked)
+    if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = true;
         RAWcooked->Before = Buffer;

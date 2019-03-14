@@ -66,15 +66,11 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     // Parse
     SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
-    if (SingleFile.ErrorMessage())
-    {
-        Global.ProgressIndicator_Stop();
-        cerr << SingleFile.ErrorType_Before() << Name->substr(Global.Path_Pos_Global) << ' ' << SingleFile.ErrorMessage() << SingleFile.ErrorType_After() << endl;
+    if (Global.Errors.HasErrors())
         return true;
-    }
 
     // Management
-    if (SingleFile.IsDetected)
+    if (SingleFile.IsDetected())
         IsDetected = true;
 
     return false;
@@ -87,6 +83,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         return false;
 
     // Init
+    RAWcooked.Errors = &Global.Errors;
     SingleFile.RAWcooked = &RAWcooked;
     RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
 
@@ -137,7 +134,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // WAV
     if (!ParseInfo.IsDetected)
     {
-        wav WAV;
+        wav WAV(&Global.Errors);
         if (ParseInfo.ParseFile_Input(WAV, Input, Files_Pos))
             return 1;
     }
@@ -145,7 +142,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // AIFF
     if (!ParseInfo.IsDetected)
     {
-        aiff AIFF;
+        aiff AIFF(&Global.Errors);
         if (ParseInfo.ParseFile_Input(AIFF, Input, Files_Pos))
             return 1;
     }
@@ -153,7 +150,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // DPX
     if (!ParseInfo.IsDetected)
     {
-        dpx DPX;
+        dpx DPX(&Global.Errors);
         DPX.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
         if (ParseInfo.ParseFile_Input(DPX, Input, Files_Pos))
             return 1;
@@ -169,7 +166,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // TIFF
     if (!ParseInfo.IsDetected)
     {
-        tiff TIFF;
+        tiff TIFF(&Global.Errors);
         TIFF.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
         if (ParseInfo.ParseFile_Input(TIFF, Input, Files_Pos))
             return 1;
@@ -230,8 +227,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, size_t Files_Pos)
     // Matroska
     if (!ParseInfo.IsDetected)
     {
-        matroska M;
-        M.OutputDirectoryName = OutputDirectoryName;
+        matroska M(OutputDirectoryName , &Global.Errors);
         M.Quiet = Global.Quiet;
         if (ParseInfo.ParseFile_Input(M))
             return 1;
@@ -297,17 +293,25 @@ int main(int argc, const char* argv[])
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
+    int Value = 0;
     for (int i = 0; i < Input.Files.size(); i++)
-        if (int Value = ParseFile(i))
-            return Value;
+        if (Value = ParseFile(i))
+            break;
     RAWcooked.Close();
 
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
-    // FFmpeg
-    if (int Value = Output.Process(Global))
-        return Value;
+    // Global errors
+    if (Global.Errors.ErrorMessage())
+    {
+        cerr << Global.Errors.ErrorMessage() << endl;
+        return 1;
+    }
 
-    return 0;
+    // FFmpeg
+    if (!Value)
+        Value = Output.Process(Global);
+
+    return Value;
 }

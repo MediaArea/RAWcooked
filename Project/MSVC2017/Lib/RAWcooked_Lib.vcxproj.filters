@@ -291,6 +291,9 @@
     <ClInclude Include="..\..\..\Source\Lib\AIFF\AIFF.h">
       <Filter>Header Files\AIFF</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Errors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -421,6 +424,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp">
       <Filter>Source Files\AIFF</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Errors.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
