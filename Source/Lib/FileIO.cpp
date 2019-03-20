@@ -22,99 +22,72 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
+    #ifndef ftruncate
+        int ftruncate(int __fd, off_t __length)
+        {
+            errno = ENOSYS;
+            return -1;
+        }
+    #endif
 #endif
 //---------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------
-// Platform specific data
-#if defined(_WIN32) || defined(_WINDOWS)
-    struct private_data
-    {
-        HANDLE File;
-        HANDLE Mapping;
-    };
-#else
-    struct private_data
-    {
-        int File;
-    };
-#endif
-
-//---------------------------------------------------------------------------
-filemap::filemap() :
-    Buffer(NULL),
-    Buffer_Size(0)
-{
-    Private = new private_data;
-}
-
-//---------------------------------------------------------------------------
-filemap::~filemap()
-{
-    Close();
-    delete (private_data*)Private;
-}
 
 //---------------------------------------------------------------------------
 int filemap::Open_ReadMode(const char* FileName)
 {
     Close();
 
-    private_data& P=*((private_data*)Private);
     bool FileIsOpen;
 
     #if defined(_WIN32) || defined(_WINDOWS)
-        P.File = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (P.File != INVALID_HANDLE_VALUE)
+        HANDLE& File = (HANDLE&)Private;
+        File = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        if (File != INVALID_HANDLE_VALUE)
         {
             DWORD FileSizeHigh;
-            Buffer_Size = GetFileSize(P.File, &FileSizeHigh);
+            Buffer_Size = GetFileSize(File, &FileSizeHigh);
             if (Buffer_Size != INVALID_FILE_SIZE || GetLastError() == NO_ERROR)
             {
                 Buffer_Size |= ((size_t)FileSizeHigh) << 32;
                 if (Buffer_Size)
                 {
-                    P.Mapping = CreateFileMapping(P.File, 0, PAGE_READONLY, 0, 0, 0);
-                    if (P.Mapping)
+                    HANDLE& Mapping = (HANDLE&)Private2;
+                    Mapping = CreateFileMapping(File, 0, PAGE_READONLY, 0, 0, 0);
+                    if (Mapping)
                         FileIsOpen = true;
                     else
                     {
-                        CloseHandle(P.File);
-                        P.File = INVALID_HANDLE_VALUE;
-                        Buffer_Size = 0;
+                        Close();
                         FileIsOpen = false;
                     }
                 }
                 else
-                    FileIsOpen = true; // MapViewOfFile does not support 0-byte files, so we map manually to NULL
+                    FileIsOpen = true; // CreateFileMapping does not support 0-byte files, so we map manually to NULL
             }
             else
             {
-                CloseHandle(P.File);
-                P.File = INVALID_HANDLE_VALUE;
+                Close();
                 FileIsOpen = false;
             }
         }
         else
             FileIsOpen = false;
     #else
-        struct stat Fstat;
-        if (!stat(FileName, &Fstat))
+        int& P = (int&)Private;
+        P = open(FileName, O_RDONLY, 0);
+        if (P != -1)
         {
-            Buffer_Size = Fstat.st_size;
-            if (Buffer_Size)
+            struct stat Fstat;
+            if (!stat(FileName, &Fstat))
             {
-                P.File = open(FileName, O_RDONLY, 0);
-                if (P.File != -1)
-                    FileIsOpen = true;
-                else
-                {
-                    Buffer_Size = 0;
-                    FileIsOpen = false;
-                }
+                Buffer_Size = Fstat.st_size;
+                FileIsOpen = true;
             }
             else
-                FileIsOpen = true; // mmap does not support 0-byte files, so we map manually to NULL
+            {
+                Close();
+                FileIsOpen = false;
+            }
         }
         else
             FileIsOpen = false;
@@ -125,10 +98,7 @@ int filemap::Open_ReadMode(const char* FileName)
         FileIsOpen = Remap() ? false : true;
 
     if (!FileIsOpen)
-    {
-        cerr << "Cannot open " << FileName << endl;
         return 1;
-    }
 
     return 0;
 }
@@ -136,32 +106,39 @@ int filemap::Open_ReadMode(const char* FileName)
 //---------------------------------------------------------------------------
 int filemap::Remap()
 {
-    if (!Buffer_Size)
-        return 0;
+    if (Buffer)
+    {
+        #if defined(_WIN32) || defined(_WINDOWS)
+            UnmapViewOfFile(Buffer);
+        #else
+            munmap(Buffer, Buffer_Size);
+        #endif
+        Buffer = NULL;
+    }
 
-    private_data& P = *((private_data*)Private);
+    if (!Buffer_Size)
+      return 0;
 
     #if defined(_WIN32) || defined(_WINDOWS)
-        UnmapViewOfFile(Buffer);
-        Buffer = (unsigned char*)MapViewOfFile(P.Mapping, FILE_MAP_READ, 0, 0, 0);
+        HANDLE& Mapping = (HANDLE&)Private2;
+        Buffer = (unsigned char*)MapViewOfFile(Mapping, FILE_MAP_READ, 0, 0, 0);
         if (!Buffer)
         {
-            CloseHandle(P.Mapping);
-            CloseHandle(P.File);
-            P.Mapping = NULL;
-            P.File = INVALID_HANDLE_VALUE;
+            CloseHandle(Mapping);
+            HANDLE& File = (HANDLE&)Private;
+            CloseHandle(File);
+            Mapping = NULL;
+            File = INVALID_HANDLE_VALUE;
             Buffer_Size = 0;
             return 1;
         }
     #else
-        if (Buffer)
-            munmap(Buffer, Buffer_Size);
-        Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, P.File, 0);
+        int& P = (int&)Private;
+        Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, P, 0);
         if (Buffer == MAP_FAILED)
         {
-            close(P.File);
             Buffer = NULL;
-            Buffer_Size = 0;
+            Close();
             return 1;
         }
     #endif
@@ -172,82 +149,60 @@ int filemap::Remap()
 //---------------------------------------------------------------------------
 int filemap::Close()
 {
-    if (!Buffer)
-        return 0;
-
-    private_data& P = *((private_data*)Private);
-
     #if defined(_WIN32) || defined(_WINDOWS)
-        UnmapViewOfFile(Buffer);
-        CloseHandle(P.Mapping);
-        CloseHandle(P.File);
-        P.Mapping = NULL;
-        P.File = INVALID_HANDLE_VALUE;
+        if (Buffer)
+        {
+            UnmapViewOfFile(Buffer);
+            HANDLE& Mapping = (HANDLE&)Private2;
+            CloseHandle(Mapping);
+            Private2 = (void*)-1;
+            Buffer = NULL;
+            Buffer_Size = 0;
+        }
+        HANDLE& File = (HANDLE&)Private;
+        if (File != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(File);
+        }
     #else
-        munmap(Buffer, Buffer_Size);
-        close(P.File);
-        P.File = -1;
+        if (Buffer)
+        {
+            munmap(Buffer, Buffer_Size);
+            Buffer = NULL;
+            Buffer_Size = 0;
+        }
+        int& P = (int&)Private;
+        if (P == -1)
+        {
+            close(P);
+        }
     #endif
 
-    Buffer = NULL;
-    Buffer_Size = 0;
-
+    Private = (void*)-1;
     return 0;
 }
 
 //---------------------------------------------------------------------------
-// Errors
-
-namespace file_issue {
-
-namespace undecodable
-{
-
-static const char* MessageText[] =
-{
-    "can not create directory",
-    "can not open file for writing",
-    "can not write in the file",
-};
-
-enum code : uint8_t
-{
-    CreateDirectory,
-    FileOpenWriting,
-    FileWrite,
-    Max
-};
-
-namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
-
-} // unparsable
-
-const char** ErrorTexts[] =
-{
-    undecodable::MessageText,
-    nullptr,
-};
-
-static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
-
-} // file_issue
-
-//---------------------------------------------------------------------------
 // file
 
-bool file::Open(const string& BaseDirectory, const string& OutputFileName_Source, const char* Mode)
+file::return_value file::Open_WriteMode(const string& BaseDirectory, const string& OutputFileName_Source, bool RejectIfExists, bool Truncate)
 {
-    OutputFileName = OutputFileName_Source;
-    string FullName = BaseDirectory + OutputFileName;
+    Close();
 
-    #ifdef _MSC_VER
-        #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
+    string FullName = BaseDirectory + OutputFileName_Source;
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    HANDLE& P = (HANDLE&)Private;
+    DWORD CreationDisposition = Truncate ? (RejectIfExists ? TRUNCATE_EXISTING : CREATE_ALWAYS) : (RejectIfExists ? CREATE_NEW : OPEN_ALWAYS);
+    P = CreateFileA(FullName.c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+    if (P == INVALID_HANDLE_VALUE)
+    #else
+    int& P = (int&)Private;
+    const int flags = O_WRONLY | O_CREAT | (RejectIfExists ? O_EXCL : 0) | (Truncate ? O_TRUNC : 0);
+    const mode_t Mode = S_IRUSR;
+    P = open(FullName.c_str(), flags, Mode);
+    if (P == -1)
     #endif
-    FILE* F = fopen(FullName.c_str(), Mode);
-    #ifdef _MSC_VER
-        #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
-    #endif
-    if (!F)
     {
         size_t i = 0;
         for (;;)
@@ -264,65 +219,157 @@ bool file::Open(const string& BaseDirectory, const string& OutputFileName_Source
                 if (mkdir(t.c_str(), 0755))
                 #endif
                 {
-                    if (Errors)
-                        Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::CreateDirectory, OutputFileName.substr(0, i));
-                    return true;
+                    Private = (void*)-1;
+                    return Error_CreateDirectory;
                 }
             }
         }
-        #ifdef _MSC_VER
-            #pragma warning(disable:4996) // _CRT_SECURE_NO_WARNINGS
+        #if defined(_WIN32) || defined(_WINDOWS)
+        P = CreateFileA(FullName.c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+        if (P == INVALID_HANDLE_VALUE)
+        #else
+        P = open(FullName.c_str(), flags, Mode);
+        if (P == -1)
         #endif
-        F = fopen(FullName.c_str(), Mode);
-        #ifdef _MSC_VER
-            #pragma warning(default:4996) // _CRT_SECURE_NO_WARNINGS
-        #endif
-        if (!F)
         {
-            if (Errors)
-                Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileOpenWriting, OutputFileName);
-            return true;
+            Private = (void*)-1;
+            return (access(FullName.c_str(), 0)) ? (RejectIfExists ? Error_FileCreate : Error_FileWrite) : Error_FileAlreadyExists;
         }
     }
 
-    Private = F;
-    return false;
+    OutputFileName = OutputFileName_Source;
+    return OK;
 }
 
 //---------------------------------------------------------------------------
 // file
 
-bool file::Write(const void* Buffer, size_t Size)
+file::return_value file::Write(const uint8_t* Buffer, size_t Size)
 {
+    // Handle size of 0
     if (!Size)
-        return false;
+        return OK;
 
-    if (fwrite(Buffer, Size, 1, (FILE*)Private) != 1)
+    // Check that a file is open
+    size_t Offset = 0;
+    #if defined(_WIN32) || defined(_WINDOWS)
+    HANDLE& P = (HANDLE&)Private;
+    BOOL Result;
+    while (Offset < Size)
     {
-        if (Errors)
-            Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileWrite, OutputFileName);
-        fclose((FILE*)Private);
-        return true;
+        DWORD BytesWritten;
+        DWORD Size_Temp;
+        if (Size - Offset >= (DWORD)-1) // WriteFile() accepts only DWORDs
+            Size_Temp = (DWORD)-1;
+        else
+            Size_Temp = (DWORD)(Size - Offset);
+        Result = WriteFile(P, Buffer + Offset, Size_Temp, &BytesWritten, NULL);
+        if (BytesWritten == 0 || Result == FALSE)
+            break;
+        Offset += BytesWritten;
+    }
+    if (Result == FALSE || Offset < Size)
+    #else
+    int& P = (int&)Private;
+    ssize_t BytesWritten;
+    while (Offset < Size)
+    {
+        size_t Size_Temp = Size - Offset;
+        BytesWritten = write(P, Buffer, Size_Temp);
+        if (BytesWritten == 0 || BytesWritten == -1)
+            break;
+        Offset += (size_t)BytesWritten;
+    }
+    if (BytesWritten == -1 || Offset < Size)
+    #endif
+    {
+        return Error_FileWrite;
     }
 
-    return false;
+    return OK;
 }
 
 //---------------------------------------------------------------------------
 // file
 
-bool file::Close()
+file::return_value file::Seek(int64_t Offset, seek_value Method)
 {
-    if (!Private)
-        return false;
+    if (Private == (void*)-1)
+        return Error_FileCreate;
         
-    if (fclose((FILE*)Private))
+    #if defined(_WIN32) || defined(_WINDOWS)
+    HANDLE& P = (HANDLE&)Private;
+    LARGE_INTEGER Offset2;
+    Offset2.QuadPart = Offset;
+    if (SetFilePointerEx(P, Offset2, NULL, Method) == 0)
+    #else
+    int& P = (int&)Private;
+    int whence;
+    switch (Method)
     {
-        if (Errors)
-            Errors->Error(Parser_FileWriter, error::Undecodable, (error::generic::code)file_issue::undecodable::FileWrite, OutputFileName);
-        return true;
+        case Begin   : whence =SEEK_SET; break;
+        case Current : whence =SEEK_CUR; break;
+        case End     : whence =SEEK_END; break;
+        default      : whence =ios_base::beg;
+    }
+    if (lseek(P, Offset, whence) == (off_t)-1)
+    #endif
+    {
+        return Error_Seek;
     }
 
-    Private = nullptr;
-    return false;
+    return OK;
+}
+
+//---------------------------------------------------------------------------
+// file
+
+file::return_value file::SetEndOfFile()
+{
+    if (Private == (void*)-1)
+        return Error_FileCreate;
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    HANDLE& P = (HANDLE&)Private;
+    if (!::SetEndOfFile(P))
+    #else
+    int& P = (int&)Private;
+    off_t length = lseek(P, 0, SEEK_CUR);
+    if (length == (off_t)-1)
+    {
+        return Error_FileWrite;
+    }
+    if (!ftruncate(P, length))
+    #endif
+    {
+        return Error_FileWrite;
+    }
+
+    return OK;
+}
+
+//---------------------------------------------------------------------------
+// file
+
+file::return_value file::Close()
+{
+    if (Private == (void*)-1)
+        return OK;
+        
+    #if defined(_WIN32) || defined(_WINDOWS)
+    HANDLE& P = (HANDLE&)Private;
+    if (CloseHandle(P) == 0)
+    #else
+    int& P = (int&)Private;
+    if (close(P))
+    #endif
+    {
+        Private = (void*)-1;
+        OutputFileName.clear();
+        return Error_FileWrite;
+    }
+
+    Private = (void*)-1;
+    OutputFileName.clear();
+    return OK;
 }

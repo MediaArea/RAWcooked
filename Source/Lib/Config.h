@@ -20,6 +20,17 @@ using namespace std;
 typedef int32_t pixel_t;
 
 //---------------------------------------------------------------------------
+// Defines the mode of user interaction
+
+enum user_mode
+{
+    Ask,
+    AlwaysNo,
+    AlwaysYes,
+};
+typedef user_mode(*ask_callback)(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always);
+
+//---------------------------------------------------------------------------
 // Platform specific
 #if defined(_WIN32) || defined(_WINDOWS)
     static const char PathSeparator = '\\';

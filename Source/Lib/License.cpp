@@ -151,7 +151,7 @@ void license_input::BufferOverflow()
 //---------------------------------------------------------------------------
 bool DecodeLicense(const string& FromUser, license_internal* License)
 {
-    // Size
+    // SizeOnDisk
     if (FromUser.size()>200)
     {
         cerr << "Invalid size of license key." << endl;

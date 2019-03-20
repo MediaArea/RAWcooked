@@ -30,7 +30,7 @@ public:
     }
     BitStream(const uint8_t* Buffer_, size_t Size_) {
         Buffer = Buffer_;
-        Buffer_Size = Buffer_Size_Init = Size_ * 8; //Size is in bits
+        Buffer_Size = Buffer_Size_Init = Size_ * 8; //SizeOnDisk is in bits
         BufferUnderRun = false;
     }
     ~BitStream() {}
@@ -38,7 +38,7 @@ public:
     void Attach(const uint8_t* Buffer_, size_t Size_)
     {
         Buffer = Buffer_;
-        Buffer_Size = Buffer_Size_Init = Size_ * 8; //Size is in bits
+        Buffer_Size = Buffer_Size_Init = Size_ * 8; //SizeOnDisk is in bits
         BufferUnderRun = false;
     }
 

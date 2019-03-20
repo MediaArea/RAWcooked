@@ -33,6 +33,31 @@ output Output;
 rawcooked RAWcooked;
 //---------------------------------------------------------------------------
 
+//---------------------------------------------------------------------------
+// Ask user about overwriting files
+user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always)
+{
+    if (Mode && *Mode != Ask)
+        return *Mode;
+
+    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite ? [y/N] ";
+    string Result;
+    getline(cin, Result);
+    user_mode NewMode = (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')) ? AlwaysYes : AlwaysNo;
+
+    if (Mode && Always)
+    {
+        cerr << "Use this choice for all other files ? [y/N] ";
+        getline(cin, Result);
+        if (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y'))
+            * Mode = NewMode;
+    }
+
+    cerr << endl;
+    return NewMode;
+}
+
+//---------------------------------------------------------------------------
 struct parse_info
 {
     string* Name;
@@ -66,13 +91,13 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     // Parse
     SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
-    if (Global.Errors.HasErrors())
-        return true;
 
     // Management
     if (SingleFile.IsDetected())
         IsDetected = true;
 
+    if (Global.Errors.HasErrors())
+        return true;
     return false;
 }
 
@@ -83,6 +108,8 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         return false;
 
     // Init
+    RAWcooked.Mode = &Global.Mode;
+    RAWcooked.Ask_Callback = Ask_Callback;
     RAWcooked.Errors = &Global.Errors;
     SingleFile.RAWcooked = &RAWcooked;
     RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
@@ -225,18 +252,19 @@ int ParseFile_Compressed(parse_info& ParseInfo, size_t Files_Pos)
     }
 
     // Matroska
+    int ReturnValue = 0;
     if (!ParseInfo.IsDetected)
     {
-        matroska M(OutputDirectoryName , &Global.Errors);
+        matroska M(OutputDirectoryName, &Global.Mode, Ask_Callback, &Global.Errors);
         M.Quiet = Global.Quiet;
         if (ParseInfo.ParseFile_Input(M))
-            return 1;
+            ReturnValue = 1;
     }
 
     // End
     if (ParseInfo.IsDetected && !Global.Quiet)
-        cout << "Files are in " << OutputDirectoryName << '.' << endl;
-    return 0;
+        cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
+    return ReturnValue;
 }
 
 //---------------------------------------------------------------------------
@@ -302,16 +330,17 @@ int main(int argc, const char* argv[])
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
-    // Global errors
-    if (Global.Errors.ErrorMessage())
-    {
-        cerr << Global.Errors.ErrorMessage() << endl;
-        return 1;
-    }
-
     // FFmpeg
     if (!Value)
         Value = Output.Process(Global);
+
+    // RAWcooked file
+    if (!Global.DisplayCommand)
+        RAWcooked.Delete();
+
+    // Global errors
+    if (Global.Errors.ErrorMessage())
+        cerr << Global.Errors.ErrorMessage() << endl;
 
     return Value;
 }

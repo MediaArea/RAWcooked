@@ -35,26 +35,81 @@
 #endif
 //---------------------------------------------------------------------------
 
-class frame_writer
+//---------------------------------------------------------------------------
+// Errors
+
+namespace filewriter_issue {
+
+namespace undecodable
 {
-public:
-    // Constructor / Destructor
-    frame_writer(const string& BaseDirectory_Source, errors* Errors_Source = nullptr) :
-        BaseDirectory(BaseDirectory_Source),
-        Errors(Errors_Source)
-    {
-    }
 
-    // Actions
-    void WriteFrameCall(raw_frame* RawFrame, const string& OutputFileName);
-
-private:
-    string                      BaseDirectory;
-    errors*                     Errors;
+static const char* MessageText[] =
+{
+    "can not create directory",
+    "can not create file",
+    "file already exists",
+    "can not write in the file",
+    "can not seek in the file",
 };
 
+enum code : uint8_t
+{
+    CreateDirectory,
+    FileCreate,
+    FileAlreadyExists,
+    FileWrite,
+    FileSeek,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // filewriter_issue
+
+namespace filechecker_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "can not open file for reading",
+    "files are not same",
+};
+
+enum code : uint8_t
+{
+    FileOpen,
+    FileComparison,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // filechecker_issue
+
 //---------------------------------------------------------------------------
-void frame_writer::WriteFrameCall(raw_frame* RawFrame, const string& OutputFileName)
+void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
 {
     // Post-processing
     if (RawFrame->Buffer && RawFrame->In && RawFrame->Buffer_Size == RawFrame->In_Size)
@@ -64,19 +119,222 @@ void frame_writer::WriteFrameCall(raw_frame* RawFrame, const string& OutputFileN
         for (size_t i = 0; i < RawFrame->In_Size; i++)
             RawFrame->Planes[0]->Buffer[i] ^= RawFrame->In[i];
 
-    file File;
-    File.Errors = Errors;
-    if (File.Open(BaseDirectory, OutputFileName, (RawFrame->Buffer && !RawFrame->Pre) ? "ab" : "wb"))
-        return;
-    if (RawFrame->Pre && File.Write(RawFrame->Pre, RawFrame->Pre_Size))
-        return;
-    if (RawFrame->Buffer && File.Write(RawFrame->Buffer, RawFrame->Buffer_Size))
-        return;
-    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
-        if (RawFrame->Planes[p]->Buffer && File.Write(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+    if (!Mode[IsNotBegin])
+    {
+        {
+            // Open output file in writing mode only if the file does not exist
+            file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
+            switch (Result)
+            {
+                case file::OK:
+                case file::Error_FileAlreadyExists:
+                    break;
+                default:
+                    if (Errors)
+                        switch (Result)
+                        {
+                            case file::Error_CreateDirectory:       Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::CreateDirectory, OutputFileName); break;
+                            case file::Error_FileCreate:            Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileCreate, OutputFileName); break;
+                            default:                                Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName); break;
+                        }
+                    return;
+            }
+        }
+
+        if (!File_Write.IsOpen())
+        {
+            // File already exists, we want to check it
+            if (File_Read.Open_ReadMode(BaseDirectory + OutputFileName))
+            {
+                Offset = (size_t)-1;
+                SizeOnDisk = (size_t)-1;
+                if (Errors)
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileOpen, OutputFileName);
+                return;
+            }
+            SizeOnDisk = File_Read.Buffer_Size;
+        }
+        else
+            SizeOnDisk = (size_t)-1;
+        Offset = 0;
+    }
+
+    // Do we need to write or check?
+    if (Offset == (size_t)-1)
+        return; // File is flagged as already with wrong data
+
+    // Check operation
+    bool DataIsCheckedAndOk;
+    if (File_Read.IsOpen())
+    {
+        if (!Check(RawFrame, OutputFileName))
+        {
+            if (Mode[IsNotEnd] || Offset == File_Read.Buffer_Size)
+                return; // All is OK
+            DataIsCheckedAndOk = true;
+        }
+        else
+            DataIsCheckedAndOk = false;
+
+        // Files don't match, decide what we should do (overwrite or don't overwrite, log check error or don't log)
+        File_Read.Close();
+        bool HasNoError = false;
+        if (UserMode)
+        {
+            user_mode NewMode = *UserMode;
+            if (*UserMode == Ask && Ask_Callback)
+            {
+                M->ProgressIndicator_Trigger();
+                NewMode = Ask_Callback(UserMode, OutputFileName, " and is not same", true);
+                M->ProgressIndicator_Trigger();
+            }
+            if (NewMode == AlwaysYes)
+            {
+                if (file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, false))
+                {
+                    if (Errors)
+                        switch (Result)
+                        {
+                        case file::Error_CreateDirectory:       Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::CreateDirectory, OutputFileName); break;
+                        case file::Error_FileCreate:            Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileCreate, OutputFileName); break;
+                        default:                                Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName); break;
+                        }
+                    Offset = (size_t)-1;
+                    return;
+                }
+                if (Offset)
+                {
+                    if (file::return_value Result = File_Write.Seek(Offset))
+                    {
+                        if (Errors)
+                            Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileSeek, OutputFileName);
+                        Offset = (size_t)-1;
+                        return;
+                    }
+                }
+
+                // It is decided to overwrite the file, error "cancelled"
+                HasNoError = true;
+            }
+        }
+        if (!HasNoError)
+        {
+            if (Errors)
+                Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
+            Offset = (size_t)-1;
             return;
-    if (RawFrame->Post && File.Write(RawFrame->Post, RawFrame->Post_Size))
+        }
+    }
+    else
+        DataIsCheckedAndOk = false;
+
+    // Write operation
+    if (File_Write.IsOpen())
+    {
+        // Write in the created file or file with wrong data being replaced
+        if (!DataIsCheckedAndOk)
+        {
+            if (Write(RawFrame, OutputFileName))
+            {
+                if (Errors)
+                    Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
+                Offset = (size_t)-1;
+                return;
+            }
+        }
+
+        if (!Mode[IsNotEnd])
+        {
+            // Set end of file if necesary
+            if (SizeOnDisk != (size_t)-1 && Offset != SizeOnDisk)
+            {
+                if (File_Write.SetEndOfFile())
+                {
+                    if (Errors)
+                        Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
+                    Offset = (size_t)-1;
+                    return;
+                }
+            }
+
+            // Close file
+            if (File_Write.Close())
+            {
+                if (Errors)
+                    Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
+                Offset = (size_t)-1;
+                return;
+            }
+        }
+
         return;
+    }
+}
+
+//---------------------------------------------------------------------------
+bool frame_writer::Write(raw_frame* RawFrame, const string& OutputFileName)
+{
+    if (RawFrame->Pre)
+    {
+        if (File_Write.Write(RawFrame->Pre, RawFrame->Pre_Size))
+            return true;
+        Offset += RawFrame->Pre_Size;
+    }
+    if (RawFrame->Buffer && File_Write.Write(RawFrame->Buffer, RawFrame->Buffer_Size))
+        return true;
+    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
+        if (RawFrame->Planes[p]->Buffer && File_Write.Write(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+            return true;
+    if (RawFrame->Post && File_Write.Write(RawFrame->Post, RawFrame->Post_Size))
+        return true;
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+bool frame_writer::Check(raw_frame* RawFrame, const string& OutputFileName)
+{
+    size_t Offset_Current = Offset;
+    if (RawFrame->Pre)
+    {
+        size_t Offset_After = Offset_Current + RawFrame->Pre_Size;
+        if (Offset_Current + Offset_After > File_Read.Buffer_Size)
+            return true;
+        if (memcmp(File_Read.Buffer + Offset_Current, RawFrame->Pre, RawFrame->Pre_Size))
+            return true;
+        Offset_Current = Offset_After;
+    }
+    if (RawFrame->Buffer)
+    {
+        size_t Offset_After = Offset_Current + RawFrame->Buffer_Size;
+        if (Offset_After > File_Read.Buffer_Size)
+            return true;
+        if (memcmp(File_Read.Buffer + Offset_Current, RawFrame->Buffer, RawFrame->Buffer_Size))
+            return true;
+        Offset_Current = Offset_After;
+    }
+    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
+        if (RawFrame->Planes[p]->Buffer)
+        {
+            size_t Offset_After = Offset_Current + RawFrame->Planes[p]->Buffer_Size;
+            if (Offset_After > File_Read.Buffer_Size)
+                return true;
+            if (memcmp(File_Read.Buffer + Offset_Current, RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+                return true;
+            Offset_Current = Offset_After;
+        }
+    if (RawFrame->Post)
+    {
+        size_t Offset_After = Offset_Current + RawFrame->Post_Size;
+        if (Offset_After > File_Read.Buffer_Size)
+            return true;
+        if (memcmp(File_Read.Buffer + Offset_Current, RawFrame->Post, RawFrame->Post_Size))
+            return true;
+        Offset_Current = Offset_After;
+    }
+
+    Offset = Offset_Current;
+    return false;
 }
 
 //---------------------------------------------------------------------------
@@ -252,7 +510,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
+    TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
 }
 
 //---------------------------------------------------------------------------
@@ -399,10 +657,10 @@ void matroska_ProgressIndicator_Show(matroska* M)
 }
 
 //---------------------------------------------------------------------------
-matroska::matroska(const string& OutputDirectoryName, errors* Errors_Source) :
+matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, errors* Errors_Source) :
     input_base(Errors_Source, Parser_Matroska),
     FramesPool(nullptr),
-    FrameWriter(new frame_writer(OutputDirectoryName, Errors_Source)),
+    FrameWriter_Template(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source),
     Quiet(false)
 {
 }
@@ -411,7 +669,6 @@ matroska::matroska(const string& OutputDirectoryName, errors* Errors_Source) :
 matroska::~matroska()
 {
     Shutdown();
-    delete FrameWriter;
 }
 
 //---------------------------------------------------------------------------
@@ -426,23 +683,27 @@ void matroska::Shutdown()
 
         if (TrackInfo_Current->Unique)
         {
+            TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset;
+            TrackInfo_Current->Frame.RawFrame->Buffer_Size = 0;
+            TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = false;
+            TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
+            TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
             if (TrackInfo_Current->DPX_After && TrackInfo_Current->DPX_After_Size[0])
             {
-                TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset;
-                TrackInfo_Current->Frame.RawFrame->Buffer_Size = 0;
-                TrackInfo_Current->Frame.RawFrame->Buffer_IsOwned = false;
-                TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
-                TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                 TrackInfo_Current->Frame.RawFrame->Post = TrackInfo_Current->DPX_After[0];
                 TrackInfo_Current->Frame.RawFrame->Post_Size = TrackInfo_Current->DPX_After_Size[0];
-
-                {
-                    string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
-
-                    //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
-                }
             }
+            else
+            {
+                TrackInfo_Current->Frame.RawFrame->Post = nullptr;
+                TrackInfo_Current->Frame.RawFrame->Post_Size = 0;
+            }
+
+            string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+
+            //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
+            TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotEnd] = false;
+            TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
         }
     }
 
@@ -462,12 +723,11 @@ void matroska::ParseBuffer()
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
         return;
-
+                                                                                                    
     Buffer_Offset = 0;
     Level = 0;
 
     // Progress indicator
-    Timestampscale = 1000000;
     Cluster_Timestamp = 0;
     Block_Timestamp = 0;
     thread* ProgressIndicator_Thread;
@@ -505,6 +765,7 @@ void matroska::ParseBuffer()
         if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
         {
             FileMap->Remap();
+            Buffer = FileMap->Buffer;
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
     }
@@ -583,7 +844,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         RawFrame.Pre_Size = Levels[Level].Offset_End - Buffer_Offset;
 
         //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-        FrameWriter->WriteFrameCall(&RawFrame, AttachedFile_FileName);
+        frame_writer FrameWriter(FrameWriter_Template);
+        FrameWriter.FrameCall(&RawFrame, AttachedFile_FileName);
     }
 
 }
@@ -848,7 +1110,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 
     TrackInfo_Pos++;
     if (TrackInfo_Pos >= TrackInfo.size())
-        TrackInfo.push_back(new trackinfo());
+        TrackInfo.push_back(new trackinfo(FrameWriter_Template));
 }
 
 //---------------------------------------------------------------------------
@@ -886,6 +1148,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeDa
     TrackInfo_Current->Unique = true;
 
     Uncompress(TrackInfo_Current->DPX_Before[0], TrackInfo_Current->DPX_Before_Size[0]);
+
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
@@ -1081,7 +1345,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
 
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                    FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
+                                    TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
                                 }
                                 else
                                     Undecodable(undecodable::ReversibilityData_FrameCount);
@@ -1089,62 +1353,71 @@ void matroska::Segment_Cluster_SimpleBlock()
                             TrackInfo_Current->DPX_Buffer_Pos++;
                             break;
             case Format_FLAC:
-                            if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[0])
+                            if (!TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin])
                             {
-                                if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                                TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotEnd] = true;
+                                if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count && TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Pos])
                                 {
                                     TrackInfo_Current->Frame.RawFrame->Pre = TrackInfo_Current->DPX_Before[0];
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = TrackInfo_Current->DPX_Before_Size[0];
-                                }
-                                else
-                                {
-                                    TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
-                                    TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
-                                }
 
-                                if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
-                                {
-                                    wav WAV;
-                                    WAV.AcceptTruncated = true;
-                                    if (!WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
+                                    if (TrackInfo_Current->Frame.RawFrame->Pre)
                                     {
-                                        if (!WAV.IsSupported())
+                                        wav WAV;
+                                        WAV.AcceptTruncated = true;
+                                        if (!WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                         {
-                                            Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
-                                            return;
-                                        }
-                                        TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
-                                        if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
-                                            TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
-                                    }
-                                    else
-                                    {
-                                        aiff AIFF;
-                                        AIFF.AcceptTruncated = true;
-                                        if (!AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
-                                        {
-                                            if (!AIFF.IsSupported())
+                                            if (!WAV.IsSupported())
                                             {
                                                 Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
                                                 return;
                                             }
-                                            TrackInfo_Current->FlacInfo->Endianess = AIFF.Endianess();
-                                            if (AIFF.sampleSize() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                            TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
+                                            if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                                 TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
+                                        }
+                                        else
+                                        {
+                                            aiff AIFF;
+                                            AIFF.AcceptTruncated = true;
+                                            if (!AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
+                                            {
+                                                if (!AIFF.IsSupported())
+                                                {
+                                                    Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                                    return;
+                                                }
+                                                TrackInfo_Current->FlacInfo->Endianess = AIFF.Endianess();
+                                                if (AIFF.sampleSize() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
+                                                    TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
+                                            }
                                         }
                                     }
                                 }
-
-                                TrackInfo_Current->DPX_Buffer_Pos++;
+                                else
+                                {
+                                    TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
+                                    TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
+                                }
                             }
 
                             TrackInfo_Current->FlacInfo->Buffer_Offset_Temp = Buffer_Offset + 4;
                             ProcessFrame_FLAC();
+                            if (TrackInfo_Current->Unique && !TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin])
+                            {
+                                TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin] = true;
+                                if (TrackInfo_Current->Frame.RawFrame->Pre)
+                                {
+                                    TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
+                                    TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
+                                }
+                            }
                             break;
             case Format_PCM:
-                            if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Before_Size[0])
+                            if (!TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin])
                             {
-                                if (TrackInfo_Current->DPX_Buffer_Pos == 0)
+                                TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotEnd] = true;
+                                if (TrackInfo_Current->DPX_Before && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count && TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Pos])
                                 {
                                     TrackInfo_Current->Frame.RawFrame->Pre = TrackInfo_Current->DPX_Before[0];
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = TrackInfo_Current->DPX_Before_Size[0];
@@ -1154,8 +1427,6 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
                                     TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
                                 }
-
-                                TrackInfo_Current->DPX_Buffer_Pos++;
                             }
                             TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset + 4;
                             TrackInfo_Current->Frame.RawFrame->Buffer_Size = Levels[Level].Offset_End - Buffer_Offset - 4;
@@ -1165,7 +1436,16 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
-                                FrameWriter->WriteFrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
+                                TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
+                                if (TrackInfo_Current->Unique && !TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin])
+                                {
+                                    TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin] = true;
+                                    if (TrackInfo_Current->Frame.RawFrame->Pre)
+                                    {
+                                        TrackInfo_Current->Frame.RawFrame->Pre = nullptr;
+                                        TrackInfo_Current->Frame.RawFrame->Pre_Size = 0;
+                                    }
+                                }
                             }
                             break;
                 default:;
@@ -1200,7 +1480,7 @@ void matroska::Segment_Tracks_TrackEntry()
 
     TrackInfo_Pos++;
     if (TrackInfo_Pos >= TrackInfo.size())
-        TrackInfo.push_back(new trackinfo());
+        TrackInfo.push_back(new trackinfo(FrameWriter_Template));
 }
 
 //---------------------------------------------------------------------------
@@ -1305,6 +1585,9 @@ void matroska::ProgressIndicator_Show()
     unique_lock<mutex> Lock(Mutex);
     do
     {
+        if (ProgressIndicator_IsPaused)
+            continue;
+
         size_t ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer_Size);
         if (ProgressIndicator_New == ProgressIndicator_Value)
         {
@@ -1375,6 +1658,19 @@ void matroska::ProgressIndicator_Show()
         ShowRealTime(RealTime);
     }
     cerr << "                              \n"; // Clean up in case there is less content outputed than the previous time
+}
+
+//---------------------------------------------------------------------------
+void matroska::ProgressIndicator_Trigger()
+{
+    if (ProgressIndicator_IsPaused)
+    {
+        ProgressIndicator_IsPaused = false;
+        return;
+    }
+    ProgressIndicator_IsPaused = true;
+    ProgressIndicator_IsEnd.notify_one();
+    cerr << "                                                            \r"; // Clean up output
 }
 
 //---------------------------------------------------------------------------

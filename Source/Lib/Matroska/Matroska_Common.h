@@ -12,6 +12,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/Input_Base.h"
+#include "Lib/FileIO.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,15 +26,54 @@ namespace matroska_issue
     namespace unsupported { enum code : uint8_t; }
 }
 
+class matroska;
 class matroska_mapping;
 class ThreadPool;
 class flac_info;
-class frame_writer;
+
+class frame_writer
+{
+public:
+    // Constructor / Destructor
+    frame_writer(const string& BaseDirectory_Source, user_mode* UserMode_Soure, ask_callback Ask_Callback_Source, matroska* M_Source, errors* Errors_Source = nullptr) :
+        BaseDirectory(BaseDirectory_Source),
+        UserMode(UserMode_Soure),
+        Ask_Callback(Ask_Callback_Source),
+        M(M_Source),
+        Errors(Errors_Source)
+    {
+    }
+
+    // Config
+    enum mode
+    {
+        IsNotBegin,
+        IsNotEnd,
+        mode_Max,
+    };
+    bitset<mode_Max>            Mode;
+
+    // Actions
+    void                        FrameCall(raw_frame* RawFrame, const string& OutputFileName);
+
+private:
+    bool                        Write(raw_frame* RawFrame, const string& OutputFileName);
+    bool                        Check(raw_frame* RawFrame, const string& OutputFileName);
+    file                        File_Write;
+    filemap                     File_Read;
+    string                      BaseDirectory;
+    user_mode*                  UserMode;
+    ask_callback                Ask_Callback;
+    matroska*                   M;
+    errors*                     Errors;
+    size_t                      Offset;
+    size_t                      SizeOnDisk;
+};
 
 class matroska : public input_base
 {
 public:
-    matroska(const string& OutputDirectoryName, errors* Errors = nullptr);
+    matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, errors* Errors = nullptr);
     ~matroska();
 
     void                        Shutdown();
@@ -42,6 +82,7 @@ public:
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
+    void                        ProgressIndicator_Trigger();
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -128,6 +169,7 @@ private:
     string                      RAWcooked_LibraryVersion;
     struct trackinfo
     {
+        frame_writer            FrameWriter;
         uint8_t*                Mask_FileName;
         uint8_t*                Mask_Before;
         uint8_t*                Mask_After;
@@ -154,7 +196,8 @@ private:
         bool                    Unique;
         format                  Format;
 
-        trackinfo() :
+        trackinfo(frame_writer& FrameWriter_Source) :
+            FrameWriter(FrameWriter_Source),
             Mask_FileName(nullptr),
             Mask_Before(nullptr),
             Mask_After(nullptr),
@@ -187,9 +230,9 @@ private:
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
-    frame_writer*               FrameWriter;
+    frame_writer                FrameWriter_Template;
     condition_variable          ProgressIndicator_IsEnd;
-    uint64_t                    Timestampscale;
+    bool                        ProgressIndicator_IsPaused = false;
     uint64_t                    Cluster_Timestamp;
     int16_t                     Block_Timestamp;
 

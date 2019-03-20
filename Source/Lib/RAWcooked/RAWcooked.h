@@ -38,20 +38,22 @@ public:
     void                        Parse();
     void                        ResetTrack();
     void                        Close();
+    void                        Delete();
 
     string                      FileName;
     string                      OutputFileName;
     uint64_t                    FileSize;
 
     // Errors
+    user_mode*                  Mode = NULL;
+    ask_callback                Ask_Callback = NULL;
     errors*                     Errors = NULL;
 
 private:
-    uint64_t                    Buffer_Offset;
-
     // File IO
     file                        File;
     size_t                      BlockCount;
+    bool                        File_WasCreated = false;
     void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size);
 
     // First frame info
