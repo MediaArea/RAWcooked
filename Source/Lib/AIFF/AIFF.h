@@ -16,10 +16,16 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
+namespace aiff_issue
+{
+    namespace undecodable { enum code : uint8_t; }
+    namespace unsupported { enum code : uint8_t; }
+}
+
 class aiff : public input_base_uncompressed
 {
 public:
-    aiff();
+    aiff(errors* Errors = nullptr);
 
     string                      Flavor_String();
 
@@ -70,7 +76,7 @@ public:
         PCM_96000_24_1_BE,
         PCM_96000_24_2_BE,
         PCM_96000_24_6_BE,
-        Style_Max,
+        Flavor_Max,
     };
     enum endianess
     {
@@ -91,7 +97,11 @@ public:
     static const char* Endianess_String(flavor Flavor);
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
+    void                        Undecodable(aiff_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
+    void                        Unsupported(aiff_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
+
     typedef void (aiff::*call)();
     typedef call (aiff::*name)(uint64_t);
 

@@ -24,6 +24,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Config.h" />
     <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h" />
     <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Errors.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h" />
     <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.h" />
@@ -88,6 +89,7 @@
     <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Errors.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.cpp" />

@@ -542,5 +542,5 @@ void global::ProgressIndicator_Show()
 
     // Show summary
     cerr << '\r';
-    cerr << "                              \r"; // Clean up in case there is less content outputed than the previous time
+    cerr << "                                                            \r"; // Clean up in case there is less content outputed than the previous time
 }

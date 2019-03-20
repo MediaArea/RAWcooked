@@ -16,10 +16,17 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
+namespace dpx_issue
+{
+    namespace undecodable { enum code : uint8_t; }
+    namespace unsupported { enum code : uint8_t; }
+    namespace invalid     { enum code : uint8_t; }
+}
+
 class dpx : public input_base_uncompressed
 {
 public:
-    dpx();
+    dpx(errors* Errors = nullptr);
 
     string                      Flavor_String();
 
@@ -48,7 +55,7 @@ public:
         Raw_RGBA_12_FilledA_LE,
         Raw_RGBA_16_BE,
         Raw_RGBA_16_LE,
-        Style_Max,
+        Flavor_Max,
     };
 
     enum endianess : uint8_t
@@ -99,7 +106,10 @@ public:
     static const char* Endianess_String(flavor Flavor);
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
+    void                        Undecodable(dpx_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
+    void                        Unsupported(dpx_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
 };
 
 string DPX_Flavor_String(uint8_t Flavor);

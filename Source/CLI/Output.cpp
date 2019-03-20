@@ -190,7 +190,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
 
     if (Global.DisplayCommand)
-        cout << Command << endl;
+        cout << Command;
     else
     {
         if (int Value = system(Command.c_str()))

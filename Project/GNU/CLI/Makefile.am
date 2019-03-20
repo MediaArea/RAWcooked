@@ -10,6 +10,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/AIFF/AIFF.cpp \
     ../../../Source/Lib/CRC32/ZenCRC32.cpp \
     ../../../Source/Lib/DPX/DPX.cpp \
+    ../../../Source/Lib/Errors.cpp \
     ../../../Source/Lib/FileIO.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \

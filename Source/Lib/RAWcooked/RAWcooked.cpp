@@ -147,7 +147,6 @@ static void Put_Number(unsigned char* Buffer, size_t& Offset, uint64_t Number)
 //---------------------------------------------------------------------------
 rawcooked::rawcooked() :
     Unique(false),
-    F(NULL),
     In(NULL),
     In_Size(0),
     FileSize((uint64_t)-1),
@@ -320,7 +319,7 @@ void rawcooked::Parse()
     // Size computing - EBML header
     uint64_t EBML_Size = 0;
     uint64_t EBML_DocType_Size;
-    if (!F)
+    if (!File.IsOpen())
     {
         EBML_DocType_Size = strlen(DocType);
         EBML_Size += Size_EB(Name_EBML_Doctype, EBML_DocType_Size);
@@ -332,7 +331,7 @@ void rawcooked::Parse()
     uint64_t Segment_Size = 0;
     uint64_t LibraryName_Size;
     uint64_t LibraryVersion_Size;
-    if (!F)
+    if (!File.IsOpen())
     {
         LibraryName_Size = strlen(LibraryName);
         Segment_Size += Size_EB(Name_RawCooked_LibraryName, LibraryName_Size);
@@ -525,25 +524,19 @@ void rawcooked::ResetTrack()
 //---------------------------------------------------------------------------
 void rawcooked::Close()
 {
-    if (F)
-    {
-        fclose(F);
-        F = NULL;
-    }
+    File.Close();
 }
 
 //---------------------------------------------------------------------------
 void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
 {
-    if (!F)
+    if (!File.IsOpen())
     {
-        #ifdef _MSC_VER
-            #pragma warning(disable:4996)// _CRT_SECURE_NO_WARNINGS
-        #endif
-        F = fopen(FileName.c_str(), "wb");
-        #ifdef _MSC_VER
-            #pragma warning(default:4996)// _CRT_SECURE_NO_WARNINGS
-        #endif
+        File.Errors = Errors;
+        if (File.Open(string(), FileName, "wb"))
+            return;
     }
-    fwrite(Buffer, Buffer_Size, 1, F);
+
+    if (File.Write(Buffer, Buffer_Size))
+        return;
 }

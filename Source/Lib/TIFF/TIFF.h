@@ -18,10 +18,16 @@
 #include <cstddef>
 //---------------------------------------------------------------------------
 
+namespace tiff_issue
+{
+    namespace undecodable { enum code : uint8_t; }
+    namespace unsupported { enum code : uint8_t; }
+}
+
 class tiff : public input_base_uncompressed
 {
 public:
-    tiff();
+    tiff(errors* Errors = NULL);
 
     string                      Flavor_String();
 
@@ -39,7 +45,7 @@ public:
         Raw_RGB_16_U_LE,
         Raw_RGBA_8_U,
         Raw_RGBA_16_U_LE,
-        Style_Max,
+        Flavor_Max,
     };
 
     enum endianess : uint8_t
@@ -125,7 +131,10 @@ public:
     std::set<data_content> DataContents;
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
+    void                        Undecodable(tiff_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
+    void                        Unsupported(tiff_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
 };
 
 string TIFF_Flavor_String(uint8_t Flavor);

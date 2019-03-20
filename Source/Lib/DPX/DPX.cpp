@@ -13,6 +13,112 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Errors
+
+namespace dpx_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file smaller than expected",
+    "Version number of header format",
+    "Offset to image data in bytes",
+    "Total image file size",
+    "Number of image elements",
+    "Offset to data",
+    "Expected data size is bigger than real file size",
+};
+
+enum code : uint8_t
+{
+    BufferOverflow,
+    VersionNumber,
+    OffsetToImageData,
+    TotalImageFileSize,
+    NumberOfElements,
+    OffsetToData,
+    DataSize,
+    Max
+};
+
+} // unparsable
+
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    // Unsupported
+    "Encryption key",
+    "Image orientation",
+    "Number of image elements",
+    "Data sign",
+    "Encoding",
+    "End-of-line padding",
+    "\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"",
+    "\"Frame rate of original (frames/s)\" or \"Temporal sampling rate or frame rate (Hz)\" not present",
+    "Flavor (Descriptor / BitDepth / Packing / Endianess combination)",
+    "Pixels in slice not on a 32-bit boundary",
+    "Internal error",
+};
+
+enum code : uint8_t
+{
+    Encryption,
+    Orientation,
+    NumberOfElements,
+    DataSign,
+    Encoding,
+    EolPadding,
+    FrameRate_Incoherent,
+    FrameRate_Unavailable,
+    Flavor,
+    PixelBoundaries,
+    InternalError,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unsupported
+
+namespace invalid
+{
+
+static const char* MessageText[] =
+{
+    "Offset to image data in bytes",
+    "Total image file size",
+    "Number of image elements",
+};
+
+enum code : uint8_t
+{
+    OffsetToImageData,
+    TotalImageFileSize,
+    NumberOfElements,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // invalid
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    unsupported::MessageText,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // dpx_issue
+
+using namespace dpx_issue;
+
+//---------------------------------------------------------------------------
 // Tested cases
 struct dpx_tested
 {
@@ -24,8 +130,7 @@ struct dpx_tested
     dpx::flavor                 Flavor;
 };
 
-const size_t DPX_Tested_Size = 26;
-struct dpx_tested DPX_Tested[DPX_Tested_Size] =
+struct dpx_tested DPX_Tested[] =
 {
     { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::BE, dpx::Raw_RGB_8                 },
     { dpx::Raw  , dpx::RGB      ,  8, dpx::Packed , dpx::LE, dpx::Raw_RGB_8                 },
@@ -54,6 +159,7 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
     { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::BE, dpx::Raw_RGBA_16_BE            },
     { dpx::Raw  , dpx::RGBA     , 16, dpx::MethodA, dpx::LE, dpx::Raw_RGBA_16_LE            },
 };
+const size_t DPX_Tested_Size = sizeof(DPX_Tested) / sizeof(dpx_tested);
 
 //---------------------------------------------------------------------------
 
@@ -62,21 +168,21 @@ struct dpx_tested DPX_Tested[DPX_Tested_Size] =
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-dpx::dpx() :
-    input_base_uncompressed(Parser_DPX, true),
-    FrameRate(NULL)
+dpx::dpx(errors* Errors_Source) :
+    input_base_uncompressed(Errors_Source, Parser_DPX, true),
+    FrameRate(nullptr)
 {
 }
 
 //---------------------------------------------------------------------------
-bool dpx::ParseBuffer()
+void dpx::ParseBuffer()
 {
-    if (Buffer_Size < 1664)
-        return false;
-
+    // Test that it is a DPX
+    if (Buffer_Size < 4)
+        return;
     Buffer_Offset = 0;
-    uint32_t Magic = Get_B4();
-    switch (Magic)
+    uint32_t MagicNumber = Get_B4();
+    switch (MagicNumber)
     {
         case 0x58504453: // XPDS
             IsBigEndian = false;
@@ -85,38 +191,36 @@ bool dpx::ParseBuffer()
             IsBigEndian = true;
             break;
         default:
-            return false;
+            return;
     }
-    IsDetected = true;
-    uint32_t OffsetToImage = Get_X4();
-    if (OffsetToImage > Buffer_Size)
-        return Unsupported("Offset to image data in bytes");
-    uint32_t VersioNumber = Get_B4();
-    switch (VersioNumber)
+    SetDetected();
+
+    Buffer_Offset = 8;
+    uint64_t VersionNumber = Get_B8() >> 24;
+    if (VersionNumber != 0x56312E3000LL && VersionNumber != 0x56322E3000LL)
     {
-        case 0x56312E30: // V1.0
-        case 0x56322E30: // V2.0
-                        break;
-        default:        return Unsupported("Version number of header format");
+        Undecodable(undecodable::VersionNumber);
+        return;
     }
+
     Buffer_Offset = 28;
     uint32_t IndustryHeaderSize = Get_X4();
     if (IndustryHeaderSize == (uint32_t)-1)
         IndustryHeaderSize = 0;
     Buffer_Offset = 660;
     uint32_t Encryption = Get_X4();
-    if (Encryption != 0xFFFFFFFF && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
-        return Unsupported("Encryption key");
+    if (Encryption != (uint32_t)-1 && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
+        Unsupported(unsupported::Encryption);
     Buffer_Offset = 768;
     if (Get_X2() != 0)
-        return Unsupported("Image orientation");
+        Unsupported(unsupported::Orientation);
     if (Get_X2() != 1)
-        return Unsupported("Number of image elements");
+        Unsupported(unsupported::NumberOfElements);
     uint32_t Width = Get_X4();
     uint32_t Height = Get_X4();
     Buffer_Offset = 780;
     if (Get_X4() != 0)
-        return Unsupported("Data sign");
+        Unsupported(unsupported::DataSign);
     Buffer_Offset = 800;
     uint8_t Descriptor = Get_X1();
     Buffer_Offset = 803;
@@ -124,12 +228,11 @@ bool dpx::ParseBuffer()
     uint16_t Packing = Get_X2();
     uint16_t Encoding = Get_X2();
     uint32_t OffsetToData = Get_X4();
-    if (OffsetToData != OffsetToImage)
-        return Unsupported("Offset to data");
+    if (OffsetToData < 1664 || OffsetToData > Buffer_Size)
+        Undecodable(undecodable::OffsetToData);
     if (Get_X4() != 0)
-        return Unsupported("End-of-line padding");
-    //uint32_t EndOfImagePadding = Get_X4(); //We do not rely on EndOfImagePadding and compute the end of content based on other fields
-    
+        Unsupported(unsupported::EolPadding);
+   
     if (IndustryHeaderSize && FrameRate)
     {
         Buffer_Offset = 1724;
@@ -137,14 +240,14 @@ bool dpx::ParseBuffer()
         Buffer_Offset = 1940;
         double FrameRate_Television = Get_XF4(); // Temporal sampling rate or frame rate (Hz)
 
-        // Integrity of frame rate
+        // Coherency of frame rate
         if (FrameRate_Film && FrameRate_Television && FrameRate_Film != FrameRate_Television)
-            return Unsupported("\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"");
+            Unsupported(unsupported::FrameRate_Incoherent);
 
         // Availability of frame rate
         // We have lot of DPX files without frame rate info, using FFmpeg default (25 at the moment of writing)
         //if (!FrameRate_Film && !FrameRate_Television)
-        //    return Error("Frame rate not available in DPX header");
+        //    Unsupported(unsupported::FrameRate_Unavailable);
 
         double FrameRateD = FrameRate_Film ? FrameRate_Film : FrameRate_Television;
         if (FrameRateD)
@@ -169,7 +272,10 @@ bool dpx::ParseBuffer()
             break;
     }
     if (Tested >= DPX_Tested_Size)
-        return Unsupported("Flavor (Descriptor / BitDepth / Packing / Endianess combination)");
+    {
+        Unsupported(unsupported::Flavor);
+        return;
+    }
     Flavor = DPX_Tested[Tested].Flavor;
 
     // Slices count
@@ -194,67 +300,77 @@ bool dpx::ParseBuffer()
     // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Slice_Multiplier == 0)
-        return Invalid("(Internal error)");
+    {
+        Unsupported(unsupported::InternalError);
+        return;
+    }
     for (; slice_x; slice_x--)
     {
         if (Width % (slice_x * Slice_Multiplier) == 0)
             break;
     }
     if (slice_x == 0)
-        return Unsupported("Pixels in slice not on a 32-bit boundary");
+        Unsupported(unsupported::PixelBoundaries);
 
-    // Computing EndOfImagePadding
+    // Computing OffsetAfterData
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
     if (ContentSize_Multiplier == 0)
-        return Invalid("(Internal error)");
-    size_t OffsetAfterImage = OffsetToImage + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8;
-    size_t EndOfImagePadding;
-    if (OffsetAfterImage > Buffer_Size)
+    {
+        Unsupported(unsupported::InternalError);
+        return;
+    }
+    size_t OffsetAfterData = OffsetToData + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8;
+    if (OffsetAfterData > Buffer_Size)
     {
         if (!AcceptTruncated)
-            return Invalid("File size is too small, file integrity issue");
-        EndOfImagePadding = 0;
+            Undecodable(undecodable::DataSize);
     }
-    else
-        EndOfImagePadding = Buffer_Size - OffsetAfterImage;
+
+    // Can we compress?
+    if (!HasErrors())
+        SetSupported();
 
     // Testing padding bits
-    uint8_t* In = NULL;
+    uint8_t* In = nullptr;
     size_t In_Size = 0;
-    if (!AcceptTruncated && FullCheck)
+    if (IsSupported() && !AcceptTruncated && FullCheck)
     {
         if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
         {
             size_t Step = BitDepth == 10 ? 4 : 2;
             bool IsNOK = false;
-            for (size_t i = OffsetToImage + (IsBigEndian ? (Step - 1) : 0); i < OffsetAfterImage; i += Step)
+            for (size_t i = OffsetToData + (IsBigEndian ? (Step - 1) : 0); i < OffsetAfterData; i += Step)
                 if (Buffer[i] & 0x3)
                     IsNOK = true;
             if (IsNOK)
             {
-                In_Size = OffsetAfterImage - OffsetToImage;
+                In_Size = OffsetAfterData - OffsetToData;
                 In = new uint8_t[In_Size];
                 memset(In, 0x00, In_Size);
                 for (size_t i = (IsBigEndian ? (Step - 1) : 0); i < In_Size; i += Step)
-                    In[i] = Buffer[OffsetToImage + i] & 0x3;
+                    In[i] = Buffer[OffsetToData + i] & 0x3;
             }
         }
     }
 
     // Write RAWcooked file
-    if (RAWcooked)
+    if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = false;
         RAWcooked->Before = Buffer;
-        RAWcooked->Before_Size = OffsetToImage;
-        RAWcooked->After = Buffer + Buffer_Size - EndOfImagePadding;
-        RAWcooked->After_Size = EndOfImagePadding;
+        RAWcooked->Before_Size = OffsetToData;
+        RAWcooked->After = Buffer + OffsetAfterData;
+        RAWcooked->After_Size = Buffer_Size - OffsetAfterData;
         RAWcooked->In = In;
         RAWcooked->In_Size = In_Size;
         RAWcooked->Parse();
     }
+}
 
-    return ErrorMessage() ? true : false;
+//---------------------------------------------------------------------------
+void dpx::BufferOverflow()
+{
+    Undecodable(undecodable::BufferOverflow);
 }
 
 //---------------------------------------------------------------------------
@@ -491,6 +607,7 @@ const char* dpx::Endianess_String(dpx::flavor Flavor)
                                         return "";
     }
 }
+
 //---------------------------------------------------------------------------
 string DPX_Flavor_String(uint8_t Flavor)
 {

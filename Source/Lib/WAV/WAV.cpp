@@ -10,6 +10,86 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Errors
+
+namespace wav_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file smaller than expected",
+    "RIFF chunk size",
+    "fmt  chunk size",
+    "truncated chunk",
+};
+
+enum code : uint8_t
+{
+    BufferOverflow,
+    RIFF_ChunkSize,
+    fmt__ChunkSize,
+    TruncatedChunk,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    // Unsupported
+    "RF64 (4GB+ WAV)",
+    "fmt FormatTag not WAVE_FORMAT_PCM 1",
+    "fmt AvgBytesPerSec",
+    "fmt BlockAlign",
+    "fmt extension",
+    "fmt cbSize",
+    "fmt ValidBitsPerSample",
+    "fmt ChannelMask",
+    "fmt SubFormat not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71",
+    "fmt chunk not before data chunk",
+    "Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)",
+};
+
+enum code : uint8_t
+{
+    RF64,
+    fmt__FormatTag,
+    fmt__AvgBytesPerSec,
+    fmt__BlockAlign,
+    fmt__extension,
+    fmt__cbSize,
+    fmt__ValidBitsPerSample,
+    fmt__ChannelMask,
+    fmt__SubFormat,
+    fmt__Location,
+    Flavor,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unsupported
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    unsupported::MessageText,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // wav_issue
+
+using namespace wav_issue;
+
+//---------------------------------------------------------------------------
 // Tested cases
 struct wav_tested
 {
@@ -74,7 +154,7 @@ wav::call wav::SubElements_##_VALUE(uint64_t Name) \
 } \
 
 ELEMENT_BEGIN(_)
-ELEMENT_CASE(57415645, WAVE)
+ELEMENT_CASE(5249464657415645LL, WAVE)
 ELEMENT_END()
 
 ELEMENT_BEGIN(WAVE)
@@ -94,27 +174,28 @@ wav::call wav::SubElements_Void(uint64_t Name)
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-wav::wav() :
-    input_base_uncompressed(Parser_WAV)
+wav::wav(errors* Errors_Source) :
+    input_base_uncompressed(Errors_Source, Parser_WAV)
 {
 }
 
 //---------------------------------------------------------------------------
-bool wav::ParseBuffer()
+void wav::ParseBuffer()
 {
     if (Buffer_Size < 12)
-        return false;
+        return;
     if (Buffer[8] != 'W' || Buffer[9] != 'A' || Buffer[10] != 'V' || Buffer[11] != 'E')
-        return false;
+        return;
     if (Buffer[0] == 'R' && Buffer[1] == 'F' && Buffer[2] == '6' && Buffer[3] == '4')
     {
-        Unsupported("RF64 (4GB+ WAV)");
-        return true;
+        Unsupported(unsupported::RF64);
+        return;
     }
     if (Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
-        return false;
-    IsDetected = true;
+        return;
+    SetDetected();
 
+    Flavor = Flavor_Max; // Used for detected if fmt chunk is parsed
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer_Size;
     Levels[0].SubElements = &wav::SubElements__;
@@ -128,31 +209,38 @@ bool wav::ParseBuffer()
             Levels[Level].SubElements = NULL;
             Level--;
         }
+        uint64_t End = Levels[Level - 1].Offset_End;
 
         // Parse the chunk header
-        uint32_t Name;
+        uint64_t Name;
         uint64_t Size;
-        if (Buffer_Offset + 8 <= Levels[Level - 1].Offset_End)
+        if (Buffer_Offset + 8 > End)
         {
-            Name = Get_B4();
-            Size = Get_L4();
-            if (Name == 0x52494646) // "RIFF"
-            {
-                if (Size < 4)
-                    return Unsupported("Incoherency detected while parsing WAV");
-                Name = Get_B4();
-                Size -= 4;
-            }
-            if (Buffer_Offset + Size > Levels[Level - 1].Offset_End)
-            {
-                // Truncated
-                if (!AcceptTruncated)
-                    return Unsupported("Truncated WAV?");
-                Size = Levels[Level - 1].Offset_End - Buffer_Offset;
-            }
+            Undecodable(undecodable::TruncatedChunk);
+            return;
         }
-        else
-            return Unsupported("Incoherency detected while parsing WAV");
+        Name = Get_B4();
+        Size = Get_L4();
+        if (Name == 0x52494646) // "RIFF"
+        {
+            if (Size < 4 || Buffer_Offset + 4 > End)
+            {
+                Undecodable(undecodable::RIFF_ChunkSize);
+                return;
+            }
+            Name <<= 32;
+            Name |= Get_B4();
+            Size -= 4;
+        }
+        if (Buffer_Offset + Size > End)
+        {
+            if (!AcceptTruncated)
+            {
+                Undecodable(undecodable::TruncatedChunk);
+                return;
+            }
+            Size = Levels[Level - 1].Offset_End - Buffer_Offset;
+        }
 
         // Parse the chunk content
         Levels[Level].Offset_End = Buffer_Offset + Size;
@@ -175,8 +263,12 @@ bool wav::ParseBuffer()
         if (Buffer_Offset < Levels[Level].Offset_End)
             Level++;
     }
+}
 
-    return ErrorMessage() ? true : false;
+//---------------------------------------------------------------------------
+void wav::BufferOverflow()
+{
+    Undecodable(undecodable::BufferOverflow);
 }
 
 //---------------------------------------------------------------------------
@@ -211,8 +303,16 @@ void wav::WAVE()
 //---------------------------------------------------------------------------
 void wav::WAVE_data()
 {
+    // Test if fmt chunk was parsed
+    if (!HasErrors() && Flavor == Flavor_Max)
+        Unsupported(unsupported::fmt__Location);
+
+    // Can we compress?
+    if (!HasErrors())
+        SetSupported();
+
     // Write RAWcooked file
-    if (RAWcooked)
+    if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = true;
         RAWcooked->Before = Buffer;
@@ -228,7 +328,7 @@ void wav::WAVE_fmt_()
 {
     if (Levels[Level].Offset_End - Buffer_Offset < 16)
     {
-        Unsupported("WAV FormatTag format");
+        Undecodable(undecodable::fmt__ChunkSize);
         return;
     }
 
@@ -238,8 +338,8 @@ void wav::WAVE_fmt_()
         Endianess = LE;
     else
     {
-        Unsupported("WAV FormatTag is not WAVE_FORMAT_PCM 1");
-        return;
+        Unsupported(unsupported::fmt__FormatTag);
+        Endianess = BE;
     }
 
     uint16_t Channels = Get_L2();
@@ -249,15 +349,9 @@ void wav::WAVE_fmt_()
     uint16_t BitDepth = Get_L2();
 
     if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
-    {
-        Unsupported("WAV BlockAlign not supported");
-        return;
-    }
+        Unsupported(unsupported::fmt__AvgBytesPerSec);
     if (BlockAlign * 8 != Channels * BitDepth)
-    {
-        Unsupported("WAV BlockAlign not supported");
-        return;
-    }
+        Unsupported(unsupported::fmt__BlockAlign);
     if (FormatTag == 1)
     {
         // Some files have zeroes after actual fmt content, it does not hurt so we accept them
@@ -266,14 +360,14 @@ void wav::WAVE_fmt_()
             uint16_t Padding0 = Get_L2(); 
             if (Padding0)
             {
-                Unsupported("WAV FormatTag extension");
+                Unsupported(unsupported::fmt__extension);
                 return;
             }
         }
 
         if (Levels[Level].Offset_End - Buffer_Offset)
         {
-            Unsupported("WAV FormatTag extension");
+            Unsupported(unsupported::fmt__extension);
             return;
         }
     }
@@ -281,29 +375,23 @@ void wav::WAVE_fmt_()
     {
         if (Levels[Level].Offset_End - Buffer_Offset != 24)
         {
-            Unsupported("WAV FormatTag extension");
+            Unsupported(unsupported::fmt__extension);
             return;
         }
         uint16_t cbSize = Get_L2();
         if (cbSize != 22)
         {
-            Unsupported("WAV FormatTag cbSize");
+            Unsupported(unsupported::fmt__cbSize);
             return;
         }
         uint16_t ValidBitsPerSample = Get_L2();
         if (ValidBitsPerSample != BitDepth)
-        {
-            Unsupported("WAV FormatTag ValidBitsPerSample");
-            return;
-        }
+            Unsupported(unsupported::fmt__ValidBitsPerSample);
         uint32_t ChannelMask = Get_L4();
         if ((Channels != 1 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000004))
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F)))
-        {
-            Unsupported("WAV FormatTag ChannelMask");
-            return;
-        }
+            Unsupported(unsupported::fmt__ChannelMask);
         uint32_t SubFormat1 = Get_L4();
         uint32_t SubFormat2 = Get_L4();
         uint32_t SubFormat3 = Get_B4();
@@ -312,11 +400,11 @@ void wav::WAVE_fmt_()
          || SubFormat2 != 0x00100000
          || SubFormat3 != 0x800000aa
          || SubFormat4 != 0x00389b71)
-        {
-            Unsupported("WAV SubFormat is not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71");
-            return;
-        }
+            Unsupported(unsupported::fmt__SubFormat);
     }
+
+    if (!(FormatTag == 1 || FormatTag == 0xFFFE))
+        return;
 
     // Supported?
     size_t Tested = 0;
@@ -331,7 +419,7 @@ void wav::WAVE_fmt_()
     }
     if (Tested >= WAV_Tested_Size)
     {
-        Unsupported("Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)");
+        Unsupported(unsupported::Flavor);
         return;
     }
     Flavor = WAV_Tested[Tested].Flavor;

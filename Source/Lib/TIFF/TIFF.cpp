@@ -13,6 +13,107 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+
+//---------------------------------------------------------------------------
+// Errors
+
+namespace tiff_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file smaller than expected",
+    "IFD tag type",
+    "IFD tag count",
+    "FirstIFDOffset",
+    "NrOfDirectories",
+    "Expected data size is bigger than real file size",
+};
+
+enum code : uint8_t
+{
+    BufferOverflow,
+    IfdTagType,
+    IfdTagCount,
+    FirstIFDOffset,
+    NrOfDirectories,
+    DataSize,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    // Unsupported
+    "IFD tag values not same",
+    "NewSubfileType",
+    "SubfileType",
+    "FillOrder",
+    "Orientation",
+    "PlanarConfiguration",
+    "ExtraSamples",
+    "ExtraSamples / SamplesPerPixel coherency",
+    "SamplesPerPixel",
+    "empty StripOffsets",
+    "empty StripBytesCounts",
+    "StripOffsets / StripBytesCounts sizes coherency",
+    "non continuous strip offsets",
+    "IFD tag",
+    "IFD unknown tag",
+    "incoherent StripOffsets",
+    "Flavor (Descriptor / BitDepth / Packing / Endianess combination)",
+    "Pixels in slice not on a 32-bit boundary",
+    "Internal error",
+};
+
+enum code : uint8_t
+{
+    IfdTag_ValuesNotSame,
+    NewSubfileType,
+    SubfileType,
+    FillOrder,
+    Orientation,
+    PlanarConfiguration,
+    ExtraSamples,
+    ExtraSamples_SamplesPerPixel,
+    SamplesPerPixel,
+    StripOffsets_Empty,
+    StripBytesCounts_Empty,
+    StripOffsets_StripBytesCounts_Sizes,
+    StripOffsets_NonContinuous,
+    IfdTag,
+    IfdUnknownTag,
+    StripOffsets_Incoherent,
+    Flavor,
+    PixelBoundaries,
+    InternalError,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unsupported
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    unsupported::MessageText,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // tiff_issue
+
+using namespace tiff_issue;
+
 //---------------------------------------------------------------------------
 // Tested cases
 struct tiff_info
@@ -47,7 +148,7 @@ struct tiff_tested TIFF_Tested[] =
     { { tiff::Raw   , tiff::RGB     ,  3, 16, tiff::U   , tiff::LE}, tiff::Raw_RGB_16_U_LE          },
     { { tiff::Raw   , tiff::RGB     ,  4,  8, tiff::U   , tiff::LE}, tiff::Raw_RGBA_8_U             },
     { { tiff::Raw   , tiff::RGB     ,  4, 16, tiff::U   , tiff::LE}, tiff::Raw_RGBA_16_U_LE         },
-    { { tiff::Raw   , tiff::RGB     ,  0,  0, tiff::U   , tiff::LE}, tiff::Style_Max                },
+    { { tiff::Raw   , tiff::RGB     ,  0,  0, tiff::U   , tiff::LE}, tiff::Flavor_Max                },
 };
 
 //---------------------------------------------------------------------------
@@ -57,8 +158,8 @@ struct tiff_tested TIFF_Tested[] =
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-tiff::tiff() :
-    input_base_uncompressed(Parser_TIFF, true),
+tiff::tiff(errors* Errors_Source) :
+    input_base_uncompressed(Errors_Source, Parser_TIFF, true),
     FrameRate(NULL)
 {
 }
@@ -183,7 +284,7 @@ uint32_t tiff::Get_ElementValue(uint32_t Count, uint32_t Size, std::vector<uint3
                 if (!i)
                     ToReturn = ToReturn2;
                 else if (!List && ToReturn != ToReturn2)
-                    Unsupported("TIFF IFD tag value not same");
+                    Unsupported(unsupported::IfdTag_ValuesNotSame);
             }
             break;
         case 2:
@@ -195,7 +296,7 @@ uint32_t tiff::Get_ElementValue(uint32_t Count, uint32_t Size, std::vector<uint3
                 if (!i)
                     ToReturn = ToReturn2;
                 else if (!List && ToReturn != ToReturn2)
-                    Unsupported("TIFF IFD tag value not same");
+                    Unsupported(unsupported::IfdTag_ValuesNotSame);
             }
             break;
         case 4:
@@ -207,7 +308,7 @@ uint32_t tiff::Get_ElementValue(uint32_t Count, uint32_t Size, std::vector<uint3
                 if (!i)
                     ToReturn = ToReturn2;
                 else if (!List && ToReturn != ToReturn2)
-                    Unsupported("TIFF IFD tag value not same");
+                    Unsupported(unsupported::IfdTag_ValuesNotSame);
             }
             break;
     }
@@ -222,14 +323,14 @@ uint32_t tiff::Get_Element(std::vector<uint32_t>* List)
     tag_type TagType = (tag_type)Get_X2();
     if (!TagType || TagType >= TagType_Max)
     {
-        Invalid("TIFF IFD tag type");
+        Undecodable(undecodable::IfdTagType);
         Buffer_Offset += 8;
         return 0;
     }
     uint32_t Count = Get_X4();
     if (!Count)
     {
-        Invalid("TIFF IFD tag count");
+        Undecodable(undecodable::IfdTagCount);
         Buffer_Offset += 8;
         return 0;
     }
@@ -258,10 +359,10 @@ uint32_t tiff::Get_Element(std::vector<uint32_t>* List)
 }
 
 //---------------------------------------------------------------------------
-bool tiff::ParseBuffer()
+void tiff::ParseBuffer()
 {
     if (Buffer_Size < 8)
-        return false;
+        return;
 
     Buffer_Offset = 0;
     uint32_t Magic = Get_B4();
@@ -274,12 +375,15 @@ bool tiff::ParseBuffer()
             IsBigEndian = true;
             break;
         default:
-            return false;
+            return;
     }
-    IsDetected = true;
+    SetDetected();
     uint32_t FirstIFDOffset = Get_X4();
     if (FirstIFDOffset > Buffer_Size)
-        return Invalid("FirstIFDOffset");
+    {
+        Undecodable(undecodable::FirstIFDOffset);
+        return;
+    }
     if (FirstIFDOffset != 8)
         Buffer_Offset = FirstIFDOffset;
 
@@ -311,9 +415,12 @@ bool tiff::ParseBuffer()
 
     uint32_t NrOfDirectories = Get_X2();
     if (Buffer_Offset + 12 * NrOfDirectories + 4 > Buffer_Size) // 12 per directory + 4 for next IFD offset
-        return Invalid("NrOfDirectories");
-    bool InsupportedKnownIFD = false;
-    bool InsupportedUnknownIFD = false;
+    {
+        Undecodable(undecodable::NrOfDirectories);
+        return;
+    }
+    bool UnsupportedKnownIFD = false;
+    bool UnsupportedUnknownIFD = false;
     for (uint32_t i = 0; i < NrOfDirectories; i++)
     {
         uint16_t Tag = Get_X2();
@@ -396,10 +503,10 @@ bool tiff::ParseBuffer()
             case    e::JPEGQTables                  :
             case    e::JPEGDCTTables                :
             case    e::JPEGACTTables                :
-                                                        InsupportedKnownIFD = false;
+                                                        UnsupportedKnownIFD = false;
                                                         break;
             default:
-                                                        InsupportedUnknownIFD = false;
+                                                        UnsupportedUnknownIFD = false;
                                                         break;
         }
     }
@@ -409,8 +516,11 @@ bool tiff::ParseBuffer()
     for (size_t Tested = 0;;)
     {
         tiff_tested& TIFF_Tested_Item = TIFF_Tested[Tested++];
-        if (TIFF_Tested_Item.Flavor == tiff::Style_Max)
-            return Unsupported("Flavor (Descriptor / sampleSize / Packing / Endianess combination)");
+        if (TIFF_Tested_Item.Flavor == tiff::Flavor_Max)
+        {
+            Unsupported(unsupported::Flavor);
+            return;
+        }
         tiff_info& I = TIFF_Tested_Item.Info;
         if (I == Info)
         {
@@ -421,41 +531,41 @@ bool tiff::ParseBuffer()
 
     // Unsupported tag content
     if (NewSubfileType)
-        return Unsupported("NewSubfileType value");
+        Unsupported(unsupported::NewSubfileType);
     if (SubfileType)
-        return Unsupported("NewSubfileType value");
+        Unsupported(unsupported::SubfileType);
     if (FillOrder != 1)
-        return Unsupported("FillOrder value");
+        Unsupported(unsupported::FillOrder);
     if (Orientation != 1)
-        return Unsupported("Orientation value");
+        Unsupported(unsupported::Orientation);
     if (PlanarConfiguration != 1)
-        return Unsupported("PlanarConfiguration value");
+        Unsupported(unsupported::PlanarConfiguration);
     if (ExtraSamples != (uint32_t)-1 && ExtraSamples != 2)
-        return Unsupported("ExtraSamples value");
+        Unsupported(unsupported::ExtraSamples);
     if (ExtraSamples != (uint32_t)-1 && (Info.Descriptor != RGB || Info.SamplesPerPixel != 4))
-        return Unsupported("ExtraSamples/SamplesPerPixel");
+        Unsupported(unsupported::ExtraSamples_SamplesPerPixel);
 
     // StripOffsets / StripBytesCounts / RowsPerStrip
     if (StripOffsets.empty())
-        return Unsupported("empty StripOffsets");
+        Unsupported(unsupported::StripOffsets_Empty);
     if (StripBytesCounts.empty())
-        return Unsupported("empty StripBytesCounts");
+        Unsupported(unsupported::StripBytesCounts_Empty);
     if (StripOffsets.size() != StripBytesCounts.size())
-        return Unsupported("StripOffsets/StripBytesCounts sizes");
+        Unsupported(unsupported::StripOffsets_StripBytesCounts_Sizes);
     uint32_t StripOffsets_Last = StripOffsets[0] + StripBytesCounts[0];
     size_t StripBytesCount_Size = StripBytesCounts.size();
     for (size_t i = 1; i < StripBytesCount_Size; i++)
     {
         if (StripOffsets_Last != StripOffsets[i])
-            return Unsupported("non continuous strip offsets");
+            Unsupported(unsupported::StripOffsets_NonContinuous);
         StripOffsets_Last += StripBytesCounts[i];
     }
 
     // Other IFDs
-    if (InsupportedKnownIFD)
-        return Unsupported("IFD tag");
-    if (InsupportedUnknownIFD)
-        return Unsupported("IFD unknown tag");
+    if (UnsupportedKnownIFD)
+        Unsupported(unsupported::IfdTag);
+    if (UnsupportedUnknownIFD)
+        Unsupported(unsupported::IfdUnknownTag);
                 
     // Slices count
     // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
@@ -479,34 +589,50 @@ bool tiff::ParseBuffer()
     // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Slice_Multiplier == 0)
-        return Invalid("(Internal error)");
+    {
+        Unsupported(unsupported::InternalError);
+        return;
+    }
     for (; slice_x; slice_x--)
     {
         if (Width % (slice_x * Slice_Multiplier) == 0)
             break;
     }
     if (slice_x == 0)
-        return Unsupported("Pixels in slice not on a 32-bit boundary");
+    {
+        Unsupported(unsupported::PixelBoundaries);
+        return;
+    }
 
     // Computing EndOfImagePadding
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
     if (ContentSize_Multiplier == 0)
-        return Invalid("(Internal error)");
+    {
+        Unsupported(unsupported::InternalError);
+        return;
+    }
     size_t OffsetAfterImage = StripOffsets[0] + Width * Height * ContentSize_Multiplier / 8;
     if (OffsetAfterImage != StripOffsets_Last)
-        return Unsupported("incoherent StripOffsets[]");
+        Unsupported(unsupported::StripOffsets_Incoherent);
     size_t EndOfImagePadding;
     if (OffsetAfterImage > Buffer_Size)
     {
         if (!AcceptTruncated)
-            return Invalid("File size is too small, file integrity issue");
+        {
+            Undecodable(undecodable::DataSize);
+            return;
+        }
         EndOfImagePadding = 0;
     }
     else
         EndOfImagePadding = Buffer_Size - OffsetAfterImage;
 
+    // Can we compress?
+    if (!HasErrors())
+        SetSupported();
+
     // Write RAWcooked file
-    if (RAWcooked)
+    if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = false;
         RAWcooked->Before = Buffer;
@@ -516,8 +642,12 @@ bool tiff::ParseBuffer()
         RAWcooked->FileSize = Buffer_Size;
         RAWcooked->Parse();
     }
+}
 
-    return ErrorMessage() ? true : false;
+//---------------------------------------------------------------------------
+void tiff::BufferOverflow()
+{
+    Undecodable(undecodable::BufferOverflow);
 }
 
 //---------------------------------------------------------------------------

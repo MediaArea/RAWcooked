@@ -11,24 +11,15 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-static const char* Buffer_Overflow = "at least 1 file is smaller than expected.";
-
-//---------------------------------------------------------------------------
-static const char* ErrorTypes_Before[] =
+input_base::input_base(parser ParserCode_) :
+    ParserCode(ParserCode_)
 {
-    "Error: untested ",
-    "Error: ",
-};
+}
 
 //---------------------------------------------------------------------------
-static const char* ErrorTypes_After[] =
-{
-    ".\nPlease contact info@mediaarea.net if you want support of such content.",
-    ".",
-};
-
-//---------------------------------------------------------------------------
-input_base::input_base()
+input_base::input_base(errors* Errors_Source, parser ParserCode_) :
+    ParserCode(ParserCode_),
+    Errors(Errors_Source)
 {
 }
 
@@ -40,35 +31,42 @@ input_base::~input_base()
 //---------------------------------------------------------------------------
 bool input_base::Parse(unsigned char* Buffer_Source, size_t Buffer_Size_Source)
 {
+    ClearInfo();
     FileMap = NULL;
     Buffer = Buffer_Source;
     Buffer_Size = Buffer_Size_Source;
 
-    IsDetected = false;
-    Error_Message = NULL;
-    return ParseBuffer();
+    ParseBuffer();
+
+    return !IsDetected();
 }
 
 //---------------------------------------------------------------------------
 bool input_base::Parse(filemap& FileMap_Source)
 {
+    ClearInfo();
     FileMap = &FileMap_Source;
     Buffer = FileMap_Source.Buffer;
     Buffer_Size = FileMap_Source.Buffer_Size;
 
-    IsDetected = false;
-    Error_Message = NULL;
-    return ParseBuffer();
+    ParseBuffer();
+
+    return !IsDetected();
 }
+
+//---------------------------------------------------------------------------
+// Common
+#define TEST_BUFFEROVERFLOW(_SIZE) \
+    if (Buffer_Offset + _SIZE - 1 >= Buffer_Size) \
+    { \
+        SetBufferOverflow(); \
+        return 0; \
+    } \
 
 //---------------------------------------------------------------------------
 uint8_t input_base::Get_X1()
 {
-    if (Buffer_Offset >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(1);
 
     uint8_t ToReturn = Buffer[Buffer_Offset];
     Buffer_Offset ++;
@@ -78,11 +76,7 @@ uint8_t input_base::Get_X1()
 //---------------------------------------------------------------------------
 uint16_t input_base::Get_L2()
 {
-    if (Buffer_Offset + 1 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(2);
 
     uint16_t ToReturn = Buffer[Buffer_Offset + 0] | (Buffer[Buffer_Offset + 1] << 8);
     Buffer_Offset += 2;
@@ -92,11 +86,7 @@ uint16_t input_base::Get_L2()
 //---------------------------------------------------------------------------
 uint16_t input_base::Get_B2()
 {
-    if (Buffer_Offset + 2 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(2);
 
     uint16_t ToReturn = (Buffer[Buffer_Offset + 0] << 8) | Buffer[Buffer_Offset + 1];
     Buffer_Offset += 2;
@@ -106,11 +96,7 @@ uint16_t input_base::Get_B2()
 //---------------------------------------------------------------------------
 uint32_t input_base::Get_L4()
 {
-    if (Buffer_Offset + 3 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(4);
 
     uint32_t ToReturn = Buffer[Buffer_Offset + 0] | (Buffer[Buffer_Offset + 1] << 8) | (Buffer[Buffer_Offset + 2] << 16) | (Buffer[Buffer_Offset + 3] << 24);
     Buffer_Offset += 4;
@@ -120,11 +106,7 @@ uint32_t input_base::Get_L4()
 //---------------------------------------------------------------------------
 uint32_t input_base::Get_B4()
 {
-    if (Buffer_Offset + 3 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(4);
 
     uint32_t ToReturn = (Buffer[Buffer_Offset + 0] << 24) | (Buffer[Buffer_Offset + 1] << 16) | (Buffer[Buffer_Offset + 2] << 8) | Buffer[Buffer_Offset + 3];
     Buffer_Offset += 4;
@@ -134,11 +116,7 @@ uint32_t input_base::Get_B4()
 //---------------------------------------------------------------------------
 uint64_t input_base::Get_B8()
 {
-    if (Buffer_Offset + 7 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(8);
 
     uint64_t ToReturn = ((uint64_t)Buffer[Buffer_Offset + 0] << 56) | ((uint64_t)Buffer[Buffer_Offset + 1] << 48) | ((uint64_t)Buffer[Buffer_Offset + 2] << 40) | ((uint64_t)Buffer[Buffer_Offset + 3] << 32) | (Buffer[Buffer_Offset + 4] << 24) | (Buffer[Buffer_Offset + 5] << 16) | (Buffer[Buffer_Offset + 6] << 8) | Buffer[Buffer_Offset + 7];
     Buffer_Offset += 8;
@@ -148,11 +126,7 @@ uint64_t input_base::Get_B8()
 //---------------------------------------------------------------------------
 long double input_base::Get_BF10()
 {
-    if (Buffer_Offset + 10 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(10);
 
     //sign          1 bit
     //exponent     15 bit
@@ -181,11 +155,7 @@ long double input_base::Get_BF10()
 //---------------------------------------------------------------------------
 double input_base::Get_XF4()
 {
-    if (Buffer_Offset + 3 >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(4);
 
     // sign          1 bit
     // exponent      8 bit
@@ -213,22 +183,14 @@ double input_base::Get_XF4()
 //---------------------------------------------------------------------------
 uint64_t input_base::Get_EB()
 {
-    if (Buffer_Offset >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(1);
 
     uint64_t ToReturn = Buffer[Buffer_Offset];
     uint64_t s = 0;
     while (!(ToReturn&(((uint64_t)1) << (7 - s))))
         s++;
     ToReturn ^= (((uint64_t)1) << (7 - s));
-    if (Buffer_Offset + s >= Buffer_Size)
-    {
-        Invalid(Buffer_Overflow);
-        return 0;
-    }
+    TEST_BUFFEROVERFLOW(1 + s);
     while (s)
     {
         ToReturn <<= 8;
@@ -242,51 +204,21 @@ uint64_t input_base::Get_EB()
 }
 
 //---------------------------------------------------------------------------
-const char* input_base::ErrorMessage()
+void input_base::Error(error::type Type, error::generic::code Code)
 {
-    return Error_Message;
+    if (HasBufferOverflow())
+        return; // Next errors are not real, due to buffer overflow
+    if (!HasErrors())
+        SetErrors();
+    if (Errors)
+        Errors->Error(ParserCode, Type, Code);
 }
 
 //---------------------------------------------------------------------------
-const char* input_base::ErrorType_Before()
-{
-    return ErrorTypes_Before[Error_Type];
-}
-
-//---------------------------------------------------------------------------
-const char* input_base::ErrorType_After()
-{
-    return ErrorTypes_After[Error_Type];
-}
-
-//---------------------------------------------------------------------------
-bool input_base::Unsupported(const char* Message)
-{
-    if (Error_Message)
-        return true; // Already filled, currently ignoring the second message
-
-    Error_Message = Message;
-    Error_Type = Error_Unsupported;
-    return true;
-}
-
-//---------------------------------------------------------------------------
-bool input_base::Invalid(const char* Message)
-{
-    if (Error_Message)
-        return true; // Already filled, currently ignoring the second message
-
-    Error_Message = Message;
-    Error_Type = Error_Invalid;
-    return true;
-}
-
-//---------------------------------------------------------------------------
-uncompressed::uncompressed(parser ParserCode_, bool IsSequence_) :
-    ParserCode(ParserCode_),
+uncompressed::uncompressed(bool IsSequence_) :
     RAWcooked(NULL),
     IsSequence(IsSequence_),
-    Flavor((uint8_t)-1)
+    Flavor((flavor)-1)
 {
 }
 

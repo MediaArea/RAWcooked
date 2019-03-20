@@ -19,19 +19,25 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+namespace matroska_issue
+{
+    namespace undecodable { enum code : uint8_t; }
+    namespace unsupported { enum code : uint8_t; }
+}
+
 class matroska_mapping;
 class ThreadPool;
 class flac_info;
+class frame_writer;
 
 class matroska : public input_base
 {
 public:
-    matroska();
+    matroska(const string& OutputDirectoryName, errors* Errors = nullptr);
     ~matroska();
 
     void                        Shutdown();
 
-    string                      OutputDirectoryName;
     bool                        Quiet;
 
     // Theading relating functions
@@ -44,7 +50,11 @@ public:
     void                        FLAC_Write(const uint32_t* buffer[], size_t blocksize);
 
 private:
-    bool                        ParseBuffer();
+    void                        ParseBuffer();
+    void                        BufferOverflow();
+    void                        Undecodable(matroska_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
+    void                        Unsupported(matroska_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
+
     typedef void (matroska::*call)();
     typedef call(matroska::*name)(uint64_t);
 
@@ -145,15 +155,15 @@ private:
         format                  Format;
 
         trackinfo() :
-            Mask_FileName(NULL),
-            Mask_Before(NULL),
-            Mask_After(NULL),
-            Mask_In(NULL),
-            DPX_FileName(NULL),
-            DPX_FileSize(NULL),
-            DPX_Before(NULL),
-            DPX_After(NULL),
-            DPX_In(NULL),
+            Mask_FileName(nullptr),
+            Mask_Before(nullptr),
+            Mask_After(nullptr),
+            Mask_In(nullptr),
+            DPX_FileName(nullptr),
+            DPX_FileSize(nullptr),
+            DPX_Before(nullptr),
+            DPX_After(nullptr),
+            DPX_In(nullptr),
             Mask_FileName_Size(0),
             Mask_Before_Size(0),
             Mask_After_Size(0),
@@ -164,9 +174,9 @@ private:
             DPX_In_Size(0),
             DPX_Buffer_Pos(0),
             DPX_Buffer_Count(0),
-            R_A(NULL),
-            R_B(NULL),
-            FlacInfo(NULL),
+            R_A(nullptr),
+            R_B(nullptr),
+            FlacInfo(nullptr),
             Unique(false),
             Format(Format_None)
             {
@@ -177,6 +187,7 @@ private:
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
     ThreadPool*                 FramesPool;
+    frame_writer*               FrameWriter;
     condition_variable          ProgressIndicator_IsEnd;
     uint64_t                    Timestampscale;
     uint64_t                    Cluster_Timestamp;
