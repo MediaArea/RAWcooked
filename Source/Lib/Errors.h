@@ -31,7 +31,10 @@ enum parser
     Parser_Matroska,
     Parser_License,
     Parser_Max, // After this line, parsers are not really parsers and must be specifically handled
-    Parser_FileWriter,
+    IO_IntermediateWriter = Parser_Max,
+    IO_FileWriter,
+    IO_FileChecker,
+    IO_Max,
 };
 
 namespace error

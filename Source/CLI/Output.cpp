@@ -142,7 +142,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
 
     // Output
     for (map<string, string>::iterator Option = Global.OutputOptions.begin(); Option != Global.OutputOptions.end(); Option++)
-        Command += " -" + Option->first + ' ' + Option->second;
+    {
+        Command += " -" + Option->first;
+        if (!Option->second.empty())
+            Command += ' ' + Option->second;
+    }
     for (size_t i = 0; i < Attachments.size(); i++)
     {
         // Info
@@ -193,19 +197,13 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         cout << Command;
     else
     {
-        if (int Value = system(Command.c_str()))
-        {
-            #if !(defined(_WIN32) || defined(_WINDOWS))
-                if (Value > 0xFF && !(Value & 0xFF))
-                   Value++; // On Unix-like systems, exit status code is sometimes casted to 8-bit long, and system() returns a value multiple of 0x100 when e.g. the command does not exist. We increment the value by 1 in order to have cast to 8-bit not 0 (which can be considered as "OK" by some commands e.g. appending " && echo OK")
-            #endif
-            return Value;
-        }
+        int Value = system(Command.c_str());
+        #if !(defined(_WIN32) || defined(_WINDOWS))
+        if (Value > 0xFF && !(Value & 0xFF))
+                Value++; // On Unix-like systems, exit status code is sometimes casted to 8-bit long, and system() returns a value multiple of 0x100 when e.g. the command does not exist. We increment the value by 1 in order to have cast to 8-bit not 0 (which can be considered as "OK" by some commands e.g. appending " && echo OK")
+        #endif
 
-        // Delete the temporary file
-        int Result = remove(Global.rawcooked_reversibility_data_FileName.c_str());
-        if (Result)
-            cerr << "Error: can not remove temporary file " << Global.rawcooked_reversibility_data_FileName << endl;
+        return Value;
     }
 
     return 0;

@@ -10,8 +10,6 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "CLI/Config.h"
-#include "CLI/Global.h"
 #include "Lib/Errors.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include <string>
@@ -23,21 +21,24 @@ class filemap
 {
 public:
     // Constructor/Destructor
-                                filemap();
-                                ~filemap();
+                                ~filemap() { Close(); }
 
     // Direct access to file map data
-    unsigned char*              Buffer;
-    size_t                      Buffer_Size;
+    unsigned char*              Buffer = NULL;
+    size_t                      Buffer_Size = 0;
 
     // Actions
     int                         Open_ReadMode(const char* FileName);
     int                         Open_ReadMode(const string& FileName) { return Open_ReadMode(FileName.c_str()); }
+    bool                        IsOpen() { return Private == (void*)-1 ? false : true; }
     int                         Remap();
     int                         Close();
 
 private:
-    void*                       Private;
+    void*                       Private = (void*)-1;
+    #if defined(_WIN32) || defined(_WINDOWS)
+    void*                       Private2 = NULL;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
 };
 
 class file
@@ -47,16 +48,30 @@ public:
                                 ~file() { Close(); }
 
     // Actions
-    bool                        Open(const string& BaseDirectory_Source, const string& OutputFileName_Source, const char* Mode);
-    bool                        IsOpen() { return Private ? true : false; }
-    bool                        Write(const void* Buffer, size_t Size);
-    bool                        Close();
-
-    // Errors
-    errors*                     Errors = NULL;
+    enum return_value
+    {
+        OK = 0,
+        Error_CreateDirectory,
+        Error_FileCreate,
+        Error_FileAlreadyExists,
+        Error_FileWrite,
+        Error_Seek,
+    };
+    return_value                Open_WriteMode(const string& BaseDirectory_Source, const string& OutputFileName_Source, bool RejectIfExists = false, bool Truncate = false);
+    bool                        IsOpen() { return Private == (void*)-1 ? false : true; }
+    return_value                Write(const uint8_t* Buffer, size_t Size);
+    enum seek_value
+    {
+        Begin,
+        Current,
+        End,
+    };
+    return_value                Seek(int64_t Offset, seek_value Method = Begin);
+    return_value                SetEndOfFile();
+    return_value                Close();
 
 private:
-    void*                       Private = NULL;
+    void*                       Private = (void*)-1;
     string                      OutputFileName;
 };
 

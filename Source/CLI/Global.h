@@ -11,6 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
+#include "Lib/Config.h"
 #include "Lib/License.h"
 #include <map>
 #include <vector>
@@ -20,6 +21,10 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------
+user_mode Ask_Callback(user_mode* Mode, const string& FileName, bool Always);
+
+//--------------------------------------------------------------------------
 class global
 {
 public:
@@ -45,6 +50,7 @@ public:
     size_t                      Path_Pos_Global;
     vector<string>              Inputs;
     license                     License;
+    user_mode                        Mode = Ask;
     errors                      Errors;
 
     // Options

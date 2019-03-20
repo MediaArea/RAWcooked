@@ -10,6 +10,48 @@
 #include "zlib.h"
 #include <cstring>
 using namespace std;
+
+//---------------------------------------------------------------------------
+// Errors
+
+namespace intermediatewrite_issue {
+
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "can not create directory",
+    "can not create file",
+    "file already exists",
+    "can not write in the file",
+    "can not remove file",
+};
+
+enum code : uint8_t
+{
+    CreateDirectory,
+    FileCreate,
+    FileAlreadyExists,
+    FileWrite,
+    FileRemove,
+    Max
+};
+
+namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unparsable
+
+const char** ErrorTexts[] =
+{
+    undecodable::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // intermediatewrite_issue
+
 //---------------------------------------------------------------------------
 
 // Library name and version
@@ -316,7 +358,7 @@ void rawcooked::Parse()
 
     uint64_t Out_Size = 0;
 
-    // Size computing - EBML header
+    // SizeOnDisk computing - EBML header
     uint64_t EBML_Size = 0;
     uint64_t EBML_DocType_Size;
     if (!File.IsOpen())
@@ -327,7 +369,7 @@ void rawcooked::Parse()
         EBML_Size += Size_EB(Name_EBML_DoctypeReadVersion, 1);
     }
 
-    // Size computing - Library name/version
+    // SizeOnDisk computing - Library name/version
     uint64_t Segment_Size = 0;
     uint64_t LibraryName_Size;
     uint64_t LibraryVersion_Size;
@@ -339,7 +381,7 @@ void rawcooked::Parse()
         Segment_Size += Size_EB(Name_RawCooked_LibraryVersion, LibraryVersion_Size);
     }
 
-    // Size computing - Track part
+    // SizeOnDisk computing - Track part
     uint64_t Track_Size = 0;
     if (!BlockCount)
     {
@@ -351,7 +393,7 @@ void rawcooked::Parse()
             Track_Size += Size_EB(Name_RawCooked_MaskBaseAfterData, Size_EB(Compressed_MaskAfter_Size ? FirstFrame_After_Size : 0) + (Compressed_MaskAfter_Size ? Compressed_MaskAfter_Size : FirstFrame_After_Size));
     }
 
-    // Size computing - Block part
+    // SizeOnDisk computing - Block part
     uint64_t Block_Size = 0;
     uint64_t BeforeData_Size = 0;
     uint64_t FileNameData_Size = 0;
@@ -389,7 +431,7 @@ void rawcooked::Parse()
         Block_Size = 0;
     }
 
-    // Size computing - Headers
+    // SizeOnDisk computing - Headers
     if (EBML_Size)
         Out_Size += Size_EB(Name_EBML, EBML_Size);
     if (Segment_Size)
@@ -528,13 +570,50 @@ void rawcooked::Close()
 }
 
 //---------------------------------------------------------------------------
+void rawcooked::Delete()
+{
+    if (!File_WasCreated)
+        return;
+
+    // Delete the temporary file
+    int Result = remove(FileName.c_str());
+    if (Result)
+    {
+        if (Errors)
+            Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileRemove, FileName);
+        return;
+    }
+}
+
+//---------------------------------------------------------------------------
 void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
 {
-    if (!File.IsOpen())
+    if (!File_WasCreated)
     {
-        File.Errors = Errors;
-        if (File.Open(string(), FileName, "wb"))
-            return;
+        bool RejectIfExists = (Mode && *Mode == AlwaysYes) ? false : true;
+        if (file::return_value Result = File.Open_WriteMode(string(), FileName, RejectIfExists))
+        {
+            if (RejectIfExists && Result == file::Error_FileAlreadyExists && Mode && *Mode == Ask && Ask_Callback)
+            {
+                user_mode NewMode = Ask_Callback(Mode, FileName, string(), false);
+                if (NewMode == AlwaysYes)
+                    Result = File.Open_WriteMode(string(), FileName, false);
+            }
+
+            if (Result)
+            {
+                if (Errors)
+                    switch (Result)
+                    {
+                        case file::Error_CreateDirectory:       Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::CreateDirectory, FileName); break;
+                        case file::Error_FileCreate:            Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileCreate, FileName); break;
+                        case file::Error_FileAlreadyExists:     Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileAlreadyExists, FileName); break;
+                        default:                                Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileWrite, FileName); break;
+                    }
+                return;
+            }
+        }
+        File_WasCreated = true;
     }
 
     if (File.Write(Buffer, Buffer_Size))

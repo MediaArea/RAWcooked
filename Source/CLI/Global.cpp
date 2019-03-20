@@ -219,6 +219,13 @@ int global::SetOption(const char* argv[], int& i, int argc)
         }
         return Error_NotTested(argv[i - 1], argv[i]);
     }
+    if (strcmp(argv[i], "-n") == 0)
+    {
+        OutputOptions["-n"] = string();
+        Mode = AlwaysNo; // Also RAWcooked itself
+        License.Feature(Feature_GeneralOptions);
+        return 0;
+    }
     if (!strcmp(argv[i], "-slicecrc"))
     {
         if (++i >= argc)
@@ -251,6 +258,13 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
         OutputOptions["threads"] = argv[i];
+        License.Feature(Feature_GeneralOptions);
+        return 0;
+    }
+    if (strcmp(argv[i], "-y") == 0)
+    {
+        OutputOptions["-y"] = string();
+        Mode = AlwaysYes; // Also RAWcooked itself
         License.Feature(Feature_GeneralOptions);
         return 0;
     }
