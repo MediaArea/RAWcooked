@@ -48,7 +48,7 @@ public:
 
     // Config
     bool                        AcceptTruncated = false;
-    bool                        FullCheck = false;
+    bool                        CheckPadding = false;
     bitset<Action_Max>          Actions = { 1 << Action_Encode };
 
     // Parse

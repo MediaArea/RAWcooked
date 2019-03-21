@@ -333,7 +333,7 @@ void dpx::ParseBuffer()
     // Testing padding bits
     uint8_t* In = nullptr;
     size_t In_Size = 0;
-    if (IsSupported() && !AcceptTruncated && FullCheck)
+    if (IsSupported() && !AcceptTruncated && CheckPadding)
     {
         if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
         {

@@ -41,10 +41,12 @@ public:
     bool                        StoreLicenseKey;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
-    bool                        FullCheck;
+    bool                        CheckPadding;
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
+    bool                        OutputFileName_IsProvided;
     bool                        Quiet;
+    bool                        Check;
 
     // Intermediate info
     size_t                      Path_Pos_Global;
@@ -72,7 +74,9 @@ private:
     int SetLicenseKey(const char* Key, bool Add);
     int SetDisplayCommand();
     int SetAcceptFiles();
-    int SetFullCheck(const char* Value);
+    int SetCheck(bool Value);
+    int SetCheck(const char* Value, int& i);
+    int SetCheckPadding(bool Value);
 
     // Progress indicator
     condition_variable          ProgressIndicator_IsEnd;
