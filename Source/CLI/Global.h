@@ -18,6 +18,7 @@
 #include <string>
 #include <condition_variable>
 #include <thread>
+#include <bitset>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -41,12 +42,12 @@ public:
     bool                        StoreLicenseKey;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
-    bool                        CheckPadding;
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
     bool                        Quiet;
     bool                        Check;
+    bitset<Action_Max>          Actions;
 
     // Intermediate info
     size_t                      Path_Pos_Global;
@@ -77,6 +78,8 @@ private:
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetCheckPadding(bool Value);
+    int SetConch(bool Value);
+    int SetEncode(bool Value);
 
     // Progress indicator
     condition_variable          ProgressIndicator_IsEnd;

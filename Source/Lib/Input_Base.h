@@ -23,6 +23,8 @@ class filemap;
 enum action : uint8_t
 {
     Action_Encode,
+    Action_CheckPadding,
+    Action_Conch,
     Action_Max
 };
 
@@ -48,8 +50,7 @@ public:
 
     // Config
     bool                        AcceptTruncated = false;
-    bool                        CheckPadding = false;
-    bitset<Action_Max>          Actions = { 1 << Action_Encode };
+    bitset<Action_Max>          Actions;
 
     // Parse
     bool                        Parse(unsigned char* Buffer, size_t Buffer_Size);
@@ -88,7 +89,8 @@ protected:
 
     // Error message
     void                        Undecodable(error::undecodable::code Code) { Error(error::Undecodable, (error::generic::code)Code); }
-    void                        Unsupported(error::unsupported::code Code) { Error(error::Unsupported, (error::generic::code)Code); }
+    void                        Unsupported(error::unsupported::code Code) { if (!Actions[Action_Encode]) return;  Error(error::Unsupported, (error::generic::code)Code); }
+    void                        Invalid(error::invalid::code Code) { Error(error::Invalid, (error::generic::code)Code); }
 
     // Info
     void                        ClearInfo() { Info.reset(); }

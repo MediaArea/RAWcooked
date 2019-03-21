@@ -24,9 +24,6 @@ static const char* MessageText[] =
 {
     "file smaller than expected",
     "Version number of header format",
-    "Offset to image data in bytes",
-    "Total image file size",
-    "Number of image elements",
     "Offset to data",
     "Expected data size is bigger than real file size",
 };
@@ -35,9 +32,6 @@ enum code : uint8_t
 {
     BufferOverflow,
     VersionNumber,
-    OffsetToImageData,
-    TotalImageFileSize,
-    NumberOfElements,
     OffsetToData,
     DataSize,
     Max
@@ -91,6 +85,8 @@ static const char* MessageText[] =
 {
     "Offset to image data in bytes",
     "Total image file size",
+    "Ditto key",
+    "Ditto key is set to \"same as the previous frame\" but header data differs",
     "Number of image elements",
 };
 
@@ -98,6 +94,8 @@ enum code : uint8_t
 {
     OffsetToImageData,
     TotalImageFileSize,
+    DittoKey,
+    DittoKey_NotSame,
     NumberOfElements,
     Max
 };
@@ -110,9 +108,10 @@ const char** ErrorTexts[] =
 {
     undecodable::MessageText,
     unsupported::MessageText,
+    invalid::MessageText,
 };
 
-static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+//static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
 
 } // dpx_issue
 
@@ -175,8 +174,37 @@ dpx::dpx(errors* Errors_Source) :
 }
 
 //---------------------------------------------------------------------------
+dpx::~dpx()
+{
+    delete[] HeaderCopy;
+}
+
+//---------------------------------------------------------------------------
 void dpx::ParseBuffer()
 {
+    // Handle "same as the previous frame" content
+    if (HeaderCopy)
+    {
+        // Size
+        size_t HeaderCopy_Size = HeaderCopy_Info & 0xFFF;
+        HeaderCopy_Size++;
+
+        // Adapt previous frame content from new frame content
+        uint32_t* HeaderCopy32 = (uint32_t*)HeaderCopy;
+        uint32_t* Buffer32 = (uint32_t*)Buffer;
+        memmove(HeaderCopy + 36, Buffer + 36, 160 - 36); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
+        HeaderCopy32[1676 / 4] = Buffer32[1676 / 4]; // Count
+        HeaderCopy32[1712 / 4] = Buffer32[1712 / 4]; // Frame position in sequence
+        HeaderCopy32[1920 / 4] = Buffer32[1920 / 4]; // SMPTE time code
+        HeaderCopy[1929] = Buffer[1929]; // Field number
+
+        // Compare
+        if (!memcmp(HeaderCopy, Buffer, Buffer_Size >= 2048 ? 2048 : Buffer_Size))
+            return; // Content is fine, no need to check it
+
+        Invalid(invalid::DittoKey_NotSame);
+    }
+
     // Test that it is a DPX
     if (Buffer_Size < 4)
         return;
@@ -333,7 +361,7 @@ void dpx::ParseBuffer()
     // Testing padding bits
     uint8_t* In = nullptr;
     size_t In_Size = 0;
-    if (IsSupported() && !AcceptTruncated && CheckPadding)
+    if (IsSupported() && !AcceptTruncated && Actions[Action_CheckPadding])
     {
         if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
         {
@@ -365,6 +393,9 @@ void dpx::ParseBuffer()
         RAWcooked->In_Size = In_Size;
         RAWcooked->Parse();
     }
+
+    if (Actions[Action_Conch])
+        ConformanceCheck();
 }
 
 //---------------------------------------------------------------------------
@@ -629,4 +660,61 @@ string DPX_Flavor_String(uint8_t Flavor)
         ToReturn += Value;
     }
     return ToReturn;
+}
+
+//---------------------------------------------------------------------------
+void dpx::ConformanceCheck()
+{
+    Buffer_Offset = 4;
+    uint32_t OffsetToImageData = Get_X4();
+    if (OffsetToImageData < 1664 || OffsetToImageData > Buffer_Size)
+        Invalid(invalid::OffsetToImageData);
+    Buffer_Offset = 16;
+    uint32_t TotalImageFileSize = Get_X4();
+    if (TotalImageFileSize != Buffer_Size)
+        Invalid(invalid::TotalImageFileSize);
+    uint32_t DittoKey = Get_X4();
+    if (DittoKey > 1)
+        Invalid(invalid::DittoKey);
+    Buffer_Offset = 770;
+    uint16_t NumberOfElements = Get_X2();
+    if (NumberOfElements == 0 || NumberOfElements > 8)
+    {
+        Invalid(invalid::NumberOfElements);
+        if (NumberOfElements)
+            NumberOfElements = 8; // File has an issue, testing only the first 8 elements
+    }
+    if (Buffer_Offset + 72 * NumberOfElements > Buffer_Size)
+        NumberOfElements = (uint16_t) ((Buffer_Size - Buffer_Offset) / 72); // File has an issue, testing element which can fit in file size
+    Buffer_Offset = 804;
+    bool HasEncoding = false;
+    for (uint16_t i = 0; i < NumberOfElements; i++)
+    {
+        uint32_t Encoding = Get_X4();
+        if (!HasEncoding && Encoding)
+            HasEncoding = true;
+        uint32_t OffsetToData = Get_X4();
+        if (OffsetToData < 1664 || OffsetToData > Buffer_Size)
+        {
+            if (i) // if i == 0, already signaled in the common parsing
+                Undecodable(undecodable::OffsetToData);
+        }
+        else if (OffsetToData < OffsetToImageData)
+            Invalid(invalid::OffsetToImageData);
+        Buffer_Offset += 68; // Next element
+    }
+
+    if (DittoKey == 0 && Buffer_Size >= 1664)
+    {
+        // Copy header content so we compare content in next frames
+        HeaderCopy_Info = OffsetToImageData;
+        if (HeaderCopy_Info < 1664)
+            HeaderCopy_Info = 1664; // Do not trust OffsetToImageData
+        if (HeaderCopy_Info > 2048)
+            HeaderCopy_Info = 2048; // Do not compare user data
+        HeaderCopy = new uint8_t[2048];
+        memmove(HeaderCopy, Buffer, HeaderCopy_Info >= 2048 ? 2048 : HeaderCopy_Info);
+        HeaderCopy_Info--;
+        HeaderCopy_Info |= (HasEncoding ? 1 : 0) << 12;
+    }
 }

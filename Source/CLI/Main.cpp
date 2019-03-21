@@ -86,7 +86,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
 {
     // Init
     SingleFile.AcceptTruncated = false;
-    SingleFile.CheckPadding = Global.CheckPadding;
+    SingleFile.Actions = Global.Actions;
 
     // Parse
     SingleFile.Parse(FileMap);
@@ -344,7 +344,7 @@ int main(int argc, const char* argv[])
     Global.ProgressIndicator_Stop();
 
     // FFmpeg
-    if (!Value)
+    if (!Value && Global.Actions[Action_Encode])
         Value = Output.Process(Global);
 
     // RAWcooked file
