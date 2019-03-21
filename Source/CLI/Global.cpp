@@ -463,7 +463,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
         return 1;
     if (!License.IsSupported())
     {
-        cerr << "Error: one or more requested options are not supported with the current license key.\n";
+        cerr << "\nOne or more requested features are not supported with the current license key.\n";
         cerr << "****** Please contact info@mediaarea.net for a quote or a temporary key." << endl;
         if (!IgnoreLicenseKey)
             return 1;
