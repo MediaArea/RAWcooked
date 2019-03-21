@@ -78,6 +78,7 @@ public:
         Flavor_FFmpeg,
         Flavor_DPX,
         Flavor_TIFF,
+        Flavor_Max,
     };
     flavor                       Flavor;
 
@@ -86,7 +87,8 @@ public:
         Pre(NULL),
         Post(NULL),
         In(NULL),
-        Buffer(NULL)
+        Buffer(NULL),
+        Flavor(Flavor_Max)
     {
     }
     
