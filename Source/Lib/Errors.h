@@ -43,6 +43,7 @@ namespace error
     {
         Undecodable,
         Unsupported,
+        Invalid,
         Type_Max
     };
 
@@ -56,6 +57,10 @@ namespace error
         enum code : uint8_t;
     }
     namespace unsupported
+    {
+        enum code : uint8_t;
+    }
+    namespace invalid
     {
         enum code : uint8_t;
     }

@@ -51,6 +51,7 @@ static const char* ErrorTypes_Strings[] =
 {
     "Error: undecodable",
     "Error: unsupported",
+    "Conformance issue:",
 };
 static_assert(error::Type_Max == sizeof(ErrorTypes_Strings) / sizeof(const char*), IncoherencyMessage); \
 
@@ -59,6 +60,7 @@ static const char* ErrorTypes_Infos[] =
 {
     NULL,
     "Please contact info@mediaarea.net if you want support of such content",
+    "At least 1 file is not conform to specifications",
 };
 static_assert(error::Type_Max == sizeof(ErrorTypes_Infos) / sizeof(const char*), IncoherencyMessage); \
 

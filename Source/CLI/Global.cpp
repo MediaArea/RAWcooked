@@ -75,14 +75,14 @@ int global::SetCheck(const char* Value, int& i)
 {
     if (Value && (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0))
     {
-        CheckPadding = false;
+        Actions.reset(Action_CheckPadding);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --no-check-padding\" instead.\n" << endl;
         return 0;
     }
     if (Value && (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0))
     {
-        CheckPadding = true;
+        Actions.set(Action_CheckPadding);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --check-padding\" instead.\n" << endl;
         return 0;
@@ -95,7 +95,21 @@ int global::SetCheck(const char* Value, int& i)
 //---------------------------------------------------------------------------
 int global::SetCheckPadding(bool Value)
 {
-    CheckPadding = true;
+    Actions.set(Action_CheckPadding, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetConch(bool Value)
+{
+    Actions.set(Action_Conch, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetEncode(bool Value)
+{
+    Actions.set(Action_Encode, Value);
     return 0;
 }
 
@@ -304,10 +318,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
     StoreLicenseKey = false;
     DisplayCommand = false;
     AcceptFiles = false;
-    CheckPadding = false;
     OutputFileName_IsProvided = false;
     Quiet = false;
     Check = false;
+    Actions.set(Action_Encode);
     ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)
@@ -368,12 +382,24 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--conch") == 0)
+        {
+            int Value = SetConch(true);
+            if (Value)
+                return Value;
+        }
         else if ((strcmp(argv[i], "--display-command") == 0 || strcmp(argv[i], "-d") == 0))
         {
             int Value = SetDisplayCommand();
             if (Value)
                 return Value;
             License.Feature(Feature_GeneralOptions);
+        }
+        else if (strcmp(argv[i], "--encode") == 0)
+        {
+            int Value = SetEncode(true);
+            if (Value)
+                return Value;
         }
         else if (strcmp(argv[i], "--file") == 0)
         {
@@ -398,13 +424,24 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--no-check") == 0)
         {
             int Value = SetCheck(false);
-            License.Feature(Feature_GeneralOptions);
             if (Value)
                 return Value;
         }
         else if (strcmp(argv[i], "--no-check-padding") == 0)
         {
             int Value = SetCheckPadding(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-conch") == 0)
+        {
+            int Value = SetConch(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-encode") == 0)
+        {
+            int Value = SetEncode(false);
             if (Value)
                 return Value;
         }

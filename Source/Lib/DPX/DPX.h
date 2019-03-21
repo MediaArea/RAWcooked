@@ -27,6 +27,7 @@ class dpx : public input_base_uncompressed
 {
 public:
     dpx(errors* Errors = nullptr);
+    ~dpx();
 
     string                      Flavor_String();
 
@@ -108,8 +109,14 @@ public:
 private:
     void                        ParseBuffer();
     void                        BufferOverflow();
+    void                        ConformanceCheck();
     void                        Undecodable(dpx_issue::undecodable::code Code) { input_base::Undecodable((error::undecodable::code)Code); }
     void                        Unsupported(dpx_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
+    void                        Invalid(dpx_issue::invalid::code Code) { input_base::Invalid((error::invalid::code)Code); }
+
+    // Comparison
+    uint8_t*                    HeaderCopy = NULL;
+    uint64_t                    HeaderCopy_Info; // 0-11: buffer size - 1, 12: ignore offsets to data image 
 };
 
 string DPX_Flavor_String(uint8_t Flavor);

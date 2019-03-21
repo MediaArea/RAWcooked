@@ -70,6 +70,7 @@ const char** ErrorTexts[] =
 {
     undecodable::MessageText,
     nullptr,
+    nullptr,
 };
 
 static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
@@ -101,6 +102,7 @@ namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const 
 const char** ErrorTexts[] =
 {
     undecodable::MessageText,
+    nullptr,
     nullptr,
 };
 
@@ -544,6 +546,7 @@ namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const 
 const char** ErrorTexts[] =
 {
     undecodable::MessageText,
+    nullptr,
     nullptr,
 };
 

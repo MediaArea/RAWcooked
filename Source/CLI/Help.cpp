@@ -92,6 +92,12 @@ ReturnValue Help(const char* Name)
     cout << "              It is quicker but may lead to partial reversibility with" << endl;
     cout << "              non conform files." << endl;
     cout << "              Is default (it may change in the future)" << endl;
+    cout << "       --conch" << endl;
+    cout << "              Conformance check of the format, when supported." << endl;
+    cout << "              Currently partially implemented for DPX." << endl;
+    cout << "       --no-conch" << endl;
+    cout << "              Don't do conformance check (see above)." << endl;
+    cout << "              Is default (it may change in the future)" << endl;
     cout << endl;
     cout << "       --display-command | -d" << endl;
     cout << "              When an external encoder/decoder is used, display the command to" << endl;
