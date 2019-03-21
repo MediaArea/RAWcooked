@@ -166,18 +166,18 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     Command += " -attach \"" + Global.rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
-        Command += '\"';
-        Command += FileName;
-        if (Command[Command.size() - 1] == '/' || Command[Command.size() - 1] == '\\')
-            Command.pop_back();
-        Command += ".mkv\"";
+        Global.OutputFileName = FileName;
+        if (Global.OutputFileName.back() == '/'
+        #if defined(_WIN32) || defined(_WINDOWS)
+            || Global.OutputFileName.back() == '\\'
+        #endif // defined(_WIN32) || defined(_WINDOWS)
+            )
+            Global.OutputFileName.pop_back();
+        Global.OutputFileName += ".mkv";
     }
-    else
-    {
-        Command += " -f matroska \"";
-        Command += Global.OutputFileName;
-        Command += '\"';
-    }
+    Command += " -f matroska \"";
+    Command += Global.OutputFileName;
+    Command += '\"';
 
     // Info
     if (Problem)

@@ -121,6 +121,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
 
     if (!Mode[IsNotBegin])
     {
+        if (!Mode[NoWrite])
         {
             // Open output file in writing mode only if the file does not exist
             file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
@@ -141,7 +142,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
             }
         }
 
-        if (!File_Write.IsOpen())
+        if (!Mode[NoOutputCheck] && !File_Write.IsOpen())
         {
             // File already exists, we want to check it
             if (File_Read.Open_ReadMode(BaseDirectory + OutputFileName))
@@ -179,7 +180,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
         // Files don't match, decide what we should do (overwrite or don't overwrite, log check error or don't log)
         File_Read.Close();
         bool HasNoError = false;
-        if (UserMode)
+        if (!Mode[NoWrite] && UserMode)
         {
             user_mode NewMode = *UserMode;
             if (*UserMode == Ask && Ask_Callback)
@@ -661,7 +662,9 @@ matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callb
     input_base(Errors_Source, Parser_Matroska),
     FramesPool(nullptr),
     FrameWriter_Template(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source),
-    Quiet(false)
+    Quiet(false),
+    NoWrite(false),
+    NoOutputCheck(false)
 {
 }
 
@@ -733,6 +736,12 @@ void matroska::ParseBuffer()
     thread* ProgressIndicator_Thread;
     if (!Quiet)
         ProgressIndicator_Thread=new thread(matroska_ProgressIndicator_Show, this);
+    
+    // Config
+    if (NoWrite)
+        FrameWriter_Template.Mode.set(frame_writer::NoWrite);
+    if (NoOutputCheck)
+        FrameWriter_Template.Mode.set(frame_writer::NoOutputCheck);
 
     Levels[Level].Offset_End = Buffer_Size;
     Levels[Level].SubElements = &matroska::SubElements__;
@@ -1337,8 +1346,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     }
                                 }
                             }
-                            TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
                             {
+                                TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
                                 if (TrackInfo_Current->DPX_FileName && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count)
                                 {
 

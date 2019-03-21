@@ -86,7 +86,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
 {
     // Init
     SingleFile.AcceptTruncated = false;
-    SingleFile.FullCheck = Global.FullCheck;
+    SingleFile.CheckPadding = Global.CheckPadding;
 
     // Parse
     SingleFile.Parse(FileMap);
@@ -238,32 +238,45 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 }
 
 //---------------------------------------------------------------------------
-int ParseFile_Compressed(parse_info& ParseInfo, size_t Files_Pos)
+int ParseFile_Compressed(parse_info& ParseInfo)
 {
     // Init
     string OutputDirectoryName;
-    if (Global.OutputFileName.empty())
+    if (Global.OutputFileName.empty() && ParseInfo.Name)
         OutputDirectoryName = *ParseInfo.Name + ".RAWcooked" + PathSeparator;
     else
     {
         OutputDirectoryName = Global.OutputFileName;
-        if (OutputDirectoryName.find_last_of("/\\") != OutputDirectoryName.size() - 1)
+        if (!OutputDirectoryName.empty() && OutputDirectoryName.find_last_of("/\\") != OutputDirectoryName.size() - 1)
             OutputDirectoryName += PathSeparator;
     }
 
     // Matroska
     int ReturnValue = 0;
+    bool NoOutputCheck = Global.Check && !Global.OutputFileName_IsProvided;
     if (!ParseInfo.IsDetected)
     {
         matroska M(OutputDirectoryName, &Global.Mode, Ask_Callback, &Global.Errors);
         M.Quiet = Global.Quiet;
+        M.NoWrite = Global.Check;
+        M.NoOutputCheck = NoOutputCheck;
         if (ParseInfo.ParseFile_Input(M))
+        {
             ReturnValue = 1;
+        }
     }
 
     // End
     if (ParseInfo.IsDetected && !Global.Quiet)
-        cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
+    {
+        if (!Global.Check)
+            cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
+        else if (!Global.Errors.HasErrors())
+            cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, no issue detected." << endl;
+    }
+    if (Global.Check && Global.Errors.HasErrors())
+        cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, issues detected, see below." << endl;
+
     return ReturnValue;
 }
 
@@ -279,7 +292,7 @@ int ParseFile(size_t Files_Pos)
         return Value;
 
     // Compressed content
-    if (int Value = ParseFile_Compressed(ParseInfo, Files_Pos))
+    if (int Value = ParseFile_Compressed(ParseInfo))
         return Value;
     if (ParseInfo.IsDetected)
         return 0;
@@ -341,6 +354,33 @@ int main(int argc, const char* argv[])
     // Global errors
     if (Global.Errors.ErrorMessage())
         cerr << Global.Errors.ErrorMessage() << endl;
+
+    // Check result
+    if (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
+    {
+        parse_info ParseInfo;
+        Value = ParseInfo.FileMap.Open_ReadMode(Global.OutputFileName);
+        if (!Value)
+        {
+            // Configure for a 2nd pass
+            ParseInfo.Name = NULL;
+            Global.OutputFileName = Global.Inputs[0];
+            Global.OutputFileName_IsProvided = true;
+
+            // Remove directory name (already in RAWcooked file data)
+            size_t Path_Pos = Global.OutputFileName.find_last_of("/\\");
+            if (Path_Pos == (size_t)-1)
+                Path_Pos = 0;
+            Global.OutputFileName.resize(Path_Pos);
+
+            // Parse (check mode)
+            Value = ParseFile_Compressed(ParseInfo);
+        }
+
+        // Global errors
+        if (Global.Errors.ErrorMessage())
+            cerr << Global.Errors.ErrorMessage() << endl;
+    }
 
     return Value;
 }

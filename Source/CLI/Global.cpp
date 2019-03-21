@@ -30,6 +30,7 @@ void global_ProgressIndicator_Show(global* G)
 int global::SetOutputFileName(const char* FileName)
 {
     OutputFileName = FileName;
+    OutputFileName_IsProvided = true;
     return 0;
 }
 
@@ -63,20 +64,39 @@ int global::SetAcceptFiles()
 }
 
 //---------------------------------------------------------------------------
-int global::SetFullCheck(const char* Value)
+int global::SetCheck(bool Value)
 {
-    if (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0)
+    Check = true;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetCheck(const char* Value, int& i)
+{
+    if (Value && (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0))
     {
-        FullCheck = false;
+        CheckPadding = false;
+        ++i; // Next argument is used
+        cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --no-check-padding\" instead.\n" << endl;
         return 0;
     }
-    if (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0)
+    if (Value && (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0))
     {
-        FullCheck = true;
+        CheckPadding = true;
+        ++i; // Next argument is used
+        cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --check-padding\" instead.\n" << endl;
         return 0;
     }
-    cerr << "Invalid --check value." << endl;
-    return 1;
+
+    Check = true;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetCheckPadding(bool Value)
+{
+    CheckPadding = true;
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -221,7 +241,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
     }
     if (strcmp(argv[i], "-n") == 0)
     {
-        OutputOptions["-n"] = string();
+        OutputOptions["n"] = string();
         Mode = AlwaysNo; // Also RAWcooked itself
         License.Feature(Feature_GeneralOptions);
         return 0;
@@ -263,7 +283,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
     }
     if (strcmp(argv[i], "-y") == 0)
     {
-        OutputOptions["-y"] = string();
+        OutputOptions["y"] = string();
         Mode = AlwaysYes; // Also RAWcooked itself
         License.Feature(Feature_GeneralOptions);
         return 0;
@@ -284,8 +304,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
     StoreLicenseKey = false;
     DisplayCommand = false;
     AcceptFiles = false;
-    FullCheck = false;
+    CheckPadding = false;
+    OutputFileName_IsProvided = false;
     Quiet = false;
+    Check = false;
     ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)
@@ -325,9 +347,24 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if (strcmp(argv[i], "--check") == 0)
         {
-            if (i + 1 == argc)
-                return Error_Missing(argv[i]);
-            int Value = SetFullCheck(argv[++i]);
+            if (i + 1 < argc)
+            {
+                // Deprecated version handling
+                int Value = SetCheck(argv[i + 1], i);
+                if (Value)
+                    return Value;
+            }
+            else
+            {
+                int Value = SetCheck(true);
+                License.Feature(Feature_GeneralOptions);
+                if (Value)
+                    return Value;
+            }
+        }
+        else if (strcmp(argv[i], "--check-padding") == 0)
+        {
+            int Value = SetCheckPadding(true);
             if (Value)
                 return Value;
         }
@@ -355,6 +392,19 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-check") == 0)
+        {
+            int Value = SetCheck(false);
+            License.Feature(Feature_GeneralOptions);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-check-padding") == 0)
+        {
+            int Value = SetCheckPadding(false);
             if (Value)
                 return Value;
         }

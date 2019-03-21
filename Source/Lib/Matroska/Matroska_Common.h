@@ -49,6 +49,8 @@ public:
     {
         IsNotBegin,
         IsNotEnd,
+        NoWrite,
+        NoOutputCheck,
         mode_Max,
     };
     bitset<mode_Max>            Mode;
@@ -79,6 +81,8 @@ public:
     void                        Shutdown();
 
     bool                        Quiet;
+    bool                        NoWrite;
+    bool                        NoOutputCheck;
 
     // Theading relating functions
     void                        ProgressIndicator_Show();

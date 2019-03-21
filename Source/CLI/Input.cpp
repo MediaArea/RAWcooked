@@ -216,6 +216,7 @@ int input::AnalyzeInputs(global& Global)
 
     Global.HasAtLeastOneDir = false;
     Global.HasAtLeastOneFile = false;
+    bool HasMoreThanOneFile = false;
     for (int i = 0; i < Global.Inputs.size(); i++)
     {
         if (IsDir(Global.Inputs[i].c_str()))
@@ -231,12 +232,14 @@ int input::AnalyzeInputs(global& Global)
         }
         else
         {
+            if (Global.HasAtLeastOneFile)
+                HasMoreThanOneFile = true;
             Global.HasAtLeastOneFile = true;
 
             Files.push_back(Global.Inputs[i]);
         }
     }
-    if (Global.HasAtLeastOneDir && Global.HasAtLeastOneFile)
+    if (Global.HasAtLeastOneDir && HasMoreThanOneFile)
     {
         cerr << "Error: input contains a mix of directories and files, is it intended?\nPlease contact info@mediaarea.net if you want support of such input." << endl;
         return 1;
@@ -245,6 +248,12 @@ int input::AnalyzeInputs(global& Global)
     if (Files.empty())
     {
         cerr << "Error: input file names structure is not recognized.\nPlease contact info@mediaarea.net if you want support of such input." << endl;
+        return 1;
+    }
+
+    if (Global.Check && HasMoreThanOneFile)
+    {
+        cerr << "Error: \" --check\" feature is implemented only for 1 input.\nPlease contact info@mediaarea.net if you want support of such input." << endl;
         return 1;
     }
 
