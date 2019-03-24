@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
+#include <thread>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -35,14 +36,20 @@ rawcooked RAWcooked;
 
 //---------------------------------------------------------------------------
 // Ask user about overwriting files
-user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always)
+user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool& ProgressIndicator_IsPaused, condition_variable& ProgressIndicator_IsEnd)
 {
     if (Mode && *Mode != Ask)
         return *Mode;
 
-    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite ? [y/N] ";
     string Result;
+    ProgressIndicator_IsPaused = true;
+    ProgressIndicator_IsEnd.notify_one();
+    cerr << "                                                            \r"; // Clean up output
+    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite ? [y/N] ";
     getline(cin, Result);
+    ProgressIndicator_IsPaused = false;
+    ProgressIndicator_IsEnd.notify_one();
+    cerr << "                                                            \r"; // Clean up output
     user_mode NewMode = (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')) ? AlwaysYes : AlwaysNo;
 
     if (Mode && Always)
@@ -85,15 +92,16 @@ struct parse_info
 bool parse_info::ParseFile_Input(input_base& SingleFile)
 {
     // Init
-    SingleFile.AcceptTruncated = false;
     SingleFile.Actions = Global.Actions;
+    SingleFile.Hashes = &Global.Hashes;
+    SingleFile.FileName = &RAWcooked.OutputFileName;
 
     // Parse
     SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
 
     // Management
-    if (SingleFile.IsDetected())
+    if (SingleFile.IsDetected() && SingleFile.ParserCode != Parser_Unknown && SingleFile.ParserCode != Parser_HashSum)
         IsDetected = true;
 
     if (Global.Errors.HasErrors())
@@ -110,9 +118,12 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     // Init
     RAWcooked.Mode = &Global.Mode;
     RAWcooked.Ask_Callback = Ask_Callback;
+    RAWcooked.ProgressIndicator_IsEnd = &Global.ProgressIndicator_IsEnd;
+    RAWcooked.ProgressIndicator_IsPaused = &Global.ProgressIndicator_IsPaused;
     RAWcooked.Errors = &Global.Errors;
     SingleFile.RAWcooked = &RAWcooked;
     RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
+    FormatPath(RAWcooked.OutputFileName);
 
     // Parse
     if (ParseFile_Input((input_base&)SingleFile))
@@ -135,6 +146,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             Name = &RemovedFiles[i];
             FileMap.Open_ReadMode(*Name);
             RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
+            FormatPath(RAWcooked.OutputFileName);
 
             if (ParseFile_Input((input_base&)SingleFile))
                 return true;
@@ -203,6 +215,31 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             stringstream t;
             t << TIFF.slice_x * TIFF.slice_y;
             ParseInfo.Slices = t.str();
+        }
+    }
+
+    // Unknown (but test if it is hashsum first)
+    if (!ParseInfo.IsDetected)
+    {
+        bool HashFileParsed;
+        if (Global.Actions[Action_Conch])
+        {
+            hashsum HashSum;
+            HashSum.HomePath = ParseInfo.Name->substr(Global.Path_Pos_Global);
+            HashSum.List = &Global.Hashes;
+            if (ParseInfo.ParseFile_Input(HashSum, Input, Files_Pos))
+                return 1;
+            HashFileParsed = HashSum.IsDetected();
+        }
+        else
+            HashFileParsed = false;
+        if (HashFileParsed)
+            Global.Hashes.Ignore(RAWcooked.OutputFileName);
+        else
+        {
+            unknown Unknown;
+            if (ParseInfo.ParseFile_Input(Unknown, Input, Files_Pos))
+                return 1;
         }
     }
 
@@ -340,6 +377,15 @@ int main(int argc, const char* argv[])
             break;
     RAWcooked.Close();
 
+    // Hashes
+    if (Global.Actions[Action_Hash])
+    {
+        Global.Hashes.NoMoreHashFiles();
+        Global.Hashes.Finish();
+        Global.Hashes.CheckFromFiles = true;
+        Global.Hashes.WouldBeError = true;
+    }
+
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
@@ -351,10 +397,6 @@ int main(int argc, const char* argv[])
     if (!Global.DisplayCommand)
         RAWcooked.Delete();
 
-    // Global errors
-    if (Global.Errors.ErrorMessage())
-        cerr << Global.Errors.ErrorMessage() << endl;
-
     // Check result
     if (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
     {
@@ -365,7 +407,9 @@ int main(int argc, const char* argv[])
             // Configure for a 2nd pass
             ParseInfo.Name = NULL;
             Global.OutputFileName = Global.Inputs[0];
-            Global.OutputFileName_IsProvided = true;
+            if (!Global.Actions[Action_Hash])
+                Global.OutputFileName_IsProvided = true;
+            RAWcooked.OutputFileName.clear();
 
             // Remove directory name (already in RAWcooked file data)
             size_t Path_Pos = Global.OutputFileName.find_last_of("/\\");
@@ -376,10 +420,14 @@ int main(int argc, const char* argv[])
             // Parse (check mode)
             Value = ParseFile_Compressed(ParseInfo);
         }
+    }
 
-        // Global errors
-        if (Global.Errors.ErrorMessage())
-            cerr << Global.Errors.ErrorMessage() << endl;
+    // Global errors
+    if (Global.Errors.ErrorMessage())
+    {
+        cerr << Global.Errors.ErrorMessage() << endl;
+        if (!Value)
+            Value = 1;
     }
 
     return Value;

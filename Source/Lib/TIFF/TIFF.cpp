@@ -618,7 +618,7 @@ void tiff::ParseBuffer()
     size_t EndOfImagePadding;
     if (OffsetAfterImage > Buffer_Size)
     {
-        if (!AcceptTruncated)
+        if (!Actions[Action_AcceptTruncated])
         {
             Undecodable(undecodable::DataSize);
             return;
@@ -640,7 +640,17 @@ void tiff::ParseBuffer()
         RAWcooked->Before_Size = StripOffsets[0];
         RAWcooked->After = Buffer + Buffer_Size - EndOfImagePadding;
         RAWcooked->After_Size = EndOfImagePadding;
+        RAWcooked->In = nullptr;
+        RAWcooked->In_Size = 0;
         RAWcooked->FileSize = Buffer_Size;
+        if (Actions[Action_Hash])
+        {
+            Hash();
+            RAWcooked->HashValue = &HashValue;
+        }
+        else
+            RAWcooked->HashValue = nullptr;
+        RAWcooked->IsAttachment = false;
         RAWcooked->Parse();
     }
 }

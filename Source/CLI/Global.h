@@ -12,18 +12,15 @@
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
 #include "Lib/Config.h"
+#include "Lib/HashSum/HashSum.h"
 #include "Lib/License.h"
 #include <map>
 #include <vector>
 #include <string>
-#include <condition_variable>
 #include <thread>
 #include <bitset>
 using namespace std;
 //---------------------------------------------------------------------------
-
-//--------------------------------------------------------------------------
-user_mode Ask_Callback(user_mode* Mode, const string& FileName, bool Always);
 
 //--------------------------------------------------------------------------
 class global
@@ -53,7 +50,8 @@ public:
     size_t                      Path_Pos_Global;
     vector<string>              Inputs;
     license                     License;
-    user_mode                        Mode = Ask;
+    user_mode                   Mode = Ask;
+    hashes                      Hashes;
     errors                      Errors;
 
     // Options
@@ -64,6 +62,8 @@ public:
     void                        ProgressIndicator_Start(size_t Total);
     void                        ProgressIndicator_Increment() { ProgressIndicator_Current++; }
     void                        ProgressIndicator_Stop();
+    condition_variable          ProgressIndicator_IsEnd;
+    bool                        ProgressIndicator_IsPaused = false;
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
@@ -80,9 +80,9 @@ private:
     int SetCheckPadding(bool Value);
     int SetConch(bool Value);
     int SetEncode(bool Value);
+    int SetHash(bool Value);
 
     // Progress indicator
-    condition_variable          ProgressIndicator_IsEnd;
     thread*                     ProgressIndicator_Thread;
     size_t                      ProgressIndicator_Current;
     size_t                      ProgressIndicator_Total;

@@ -45,6 +45,7 @@ namespace unsupported
 static const char* MessageText[] =
 {
     // Unsupported
+    "Offset to image data in bytes",
     "Encryption key",
     "Image orientation",
     "Number of image elements",
@@ -60,6 +61,7 @@ static const char* MessageText[] =
 
 enum code : uint8_t
 {
+    OffsetToImageData,
     Encryption,
     Orientation,
     NumberOfElements,
@@ -199,10 +201,10 @@ void dpx::ParseBuffer()
         HeaderCopy[1929] = Buffer[1929]; // Field number
 
         // Compare
-        if (!memcmp(HeaderCopy, Buffer, Buffer_Size >= 2048 ? 2048 : Buffer_Size))
-            return; // Content is fine, no need to check it
+        if (memcmp(HeaderCopy, Buffer, Buffer_Size >= 2048 ? 2048 : Buffer_Size))
+            Invalid(invalid::DittoKey_NotSame);
 
-        Invalid(invalid::DittoKey_NotSame);
+        //TODO: no need to check again if the file is supported
     }
 
     // Test that it is a DPX
@@ -223,7 +225,7 @@ void dpx::ParseBuffer()
     }
     SetDetected();
 
-    Buffer_Offset = 8;
+    uint32_t OffsetToImageData = Get_X4();
     uint64_t VersionNumber = Get_B8() >> 24;
     if (VersionNumber != 0x56312E3000LL && VersionNumber != 0x56322E3000LL)
     {
@@ -258,6 +260,8 @@ void dpx::ParseBuffer()
     uint32_t OffsetToData = Get_X4();
     if (OffsetToData < 1664 || OffsetToData > Buffer_Size)
         Undecodable(undecodable::OffsetToData);
+    if (OffsetToImageData != OffsetToData)
+        Unsupported(unsupported::OffsetToImageData); // FFmpeg specific, it prioritizes OffsetToImageData over OffsetToData. TODO: remove this limitation when future internal encoder is used
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
    
@@ -350,7 +354,7 @@ void dpx::ParseBuffer()
     size_t OffsetAfterData = OffsetToData + ContentSize_Multiplier * Width * Height / Slice_Multiplier / 8;
     if (OffsetAfterData > Buffer_Size)
     {
-        if (!AcceptTruncated)
+        if (!Actions[Action_AcceptTruncated])
             Undecodable(undecodable::DataSize);
     }
 
@@ -361,7 +365,7 @@ void dpx::ParseBuffer()
     // Testing padding bits
     uint8_t* In = nullptr;
     size_t In_Size = 0;
-    if (IsSupported() && !AcceptTruncated && Actions[Action_CheckPadding])
+    if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding])
     {
         if (Encoding == Raw && (BitDepth == 10 || BitDepth == 12) && Packing == MethodA)
         {
@@ -391,6 +395,15 @@ void dpx::ParseBuffer()
         RAWcooked->After_Size = Buffer_Size - OffsetAfterData;
         RAWcooked->In = In;
         RAWcooked->In_Size = In_Size;
+        RAWcooked->FileSize = (uint64_t)-1;
+        if (Actions[Action_Hash])
+        {
+            Hash();
+            RAWcooked->HashValue = &HashValue;
+        }
+        else
+            RAWcooked->HashValue = nullptr;
+        RAWcooked->IsAttachment = false;
         RAWcooked->Parse();
     }
 

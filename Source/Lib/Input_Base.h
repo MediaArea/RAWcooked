@@ -11,20 +11,23 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Errors.h"
+#include "Lib/FileIO.h"
 #include <bitset>
 #include <cstdint>
 #include <string>
 #include <vector>
 using namespace std;
 class rawcooked;
-class filemap;
+class hashes;
 //---------------------------------------------------------------------------
 
 enum action : uint8_t
 {
     Action_Encode,
-    Action_CheckPadding,
+    Action_Hash,
     Action_Conch,
+    Action_CheckPadding,
+    Action_AcceptTruncated,
     Action_Max
 };
 
@@ -49,12 +52,13 @@ public:
     ~input_base();
 
     // Config
-    bool                        AcceptTruncated = false;
     bitset<Action_Max>          Actions;
+    hashes*                     Hashes = nullptr;
+    string*                     FileName = nullptr;
 
     // Parse
-    bool                        Parse(unsigned char* Buffer, size_t Buffer_Size);
-    bool                        Parse(filemap& FileMap);
+    bool                        Parse(uint8_t* Buffer, size_t Buffer_Size) { return Parse(nullptr, Buffer, Buffer_Size); }
+    bool                        Parse(filemap& FileMap) { return Parse(&FileMap, FileMap.Buffer, FileMap.Buffer_Size); }
 
     // Info
     bool                        IsDetected() { return Info[Info_IsDetected]; }
@@ -100,13 +104,19 @@ protected:
     void                        SetBufferOverflow() { if (HasBufferOverflow()) return; BufferOverflow(); Info.set(Info_BufferOverflow); }
     bool                        HasBufferOverflow() { return Info[Info_BufferOverflow]; }
 
-private:
+protected:
+    // Actions
+    bool                        Parse(filemap* FileMap, uint8_t* Buffer, size_t Buffer_Size);
+    void                        Hash();
+
     // Errors
     void                        Error(error::type Type, error::generic::code Code);
     errors*                     Errors = NULL;
 
     // Info
     bitset<Info_Max>            Info;
+    bool                        HashComputed = false;
+    md5                         HashValue;
 };
 
 class uncompressed
@@ -131,6 +141,18 @@ public:
     // Constructor/Destructor
     input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(ParserCode), uncompressed(IsSequence) {}
     input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
+};
+
+
+class unknown : public input_base_uncompressed
+{
+public:
+    unknown() : input_base_uncompressed(nullptr, Parser_Unknown, false) {}
+
+private:
+    string                      Flavor_String() { return string(); } /// Not used
+    void                        ParseBuffer(); // Accept any
+    void                        BufferOverflow() {} // Not used
 };
 
 #endif

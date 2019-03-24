@@ -12,6 +12,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Errors.h"
 #include "Lib/FileIO.h"
+#include <condition_variable>
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -35,6 +36,9 @@ public:
     uint8_t*                    In;
     uint64_t                    In_Size;
 
+    md5*                        HashValue = nullptr;
+    bool                        IsAttachment = false;
+
     void                        Parse();
     void                        ResetTrack();
     void                        Close();
@@ -45,9 +49,11 @@ public:
     uint64_t                    FileSize;
 
     // Errors
-    user_mode*                  Mode = NULL;
-    ask_callback                Ask_Callback = NULL;
-    errors*                     Errors = NULL;
+    user_mode*                  Mode = nullptr;
+    ask_callback                Ask_Callback = nullptr;
+    bool*                       ProgressIndicator_IsPaused = nullptr;
+    condition_variable*         ProgressIndicator_IsEnd = nullptr;
+    errors*                     Errors = nullptr;
 
 private:
     // File IO

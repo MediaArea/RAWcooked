@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RAWcooked_CLI", "CLI\RAWcoo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RAWcooked_Lib", "Lib\RAWcooked_Lib.vcxproj", "{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "md5", "md5\md5.vcxproj", "{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +33,14 @@ Global
 		{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}.Release|Win32.Build.0 = Release|Win32
 		{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}.Release|x64.ActiveCfg = Release|x64
 		{9E97CE8A-1583-40F8-A7F3-A1C2B318AEF5}.Release|x64.Build.0 = Release|x64
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Debug|Win32.Build.0 = Debug|Win32
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Debug|x64.ActiveCfg = Debug|x64
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Debug|x64.Build.0 = Debug|x64
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Release|Win32.ActiveCfg = Release|Win32
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Release|Win32.Build.0 = Release|Win32
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Release|x64.ActiveCfg = Release|x64
+		{A0831FC5-4718-4FDF-92CE-6F17CCD4D153}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

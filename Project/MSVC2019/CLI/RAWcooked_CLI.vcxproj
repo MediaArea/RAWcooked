@@ -36,6 +36,9 @@
     <ProjectReference Include="..\Lib\RAWcooked_Lib.vcxproj">
       <Project>{9e97ce8a-1583-40f8-a7f3-a1c2b318aef5}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\md5\md5.vcxproj">
+      <Project>{a0831fc5-4718-4fdf-92ce-6f17ccd4d153}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5F56E9D9-9268-49C9-8658-901271E3A23E}</ProjectGuid>
