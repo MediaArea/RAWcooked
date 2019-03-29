@@ -16,7 +16,6 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <condition_variable>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -30,6 +29,7 @@ class matroska;
 class matroska_mapping;
 class ThreadPool;
 class flac_info;
+class hashes;
 
 class frame_writer
 {
@@ -40,9 +40,12 @@ public:
         UserMode(UserMode_Soure),
         Ask_Callback(Ask_Callback_Source),
         M(M_Source),
-        Errors(Errors_Source)
+        Errors(Errors_Source),
+        MD5(nullptr)
     {
     }
+
+    ~frame_writer();
 
     // Config
     enum mode
@@ -59,8 +62,9 @@ public:
     void                        FrameCall(raw_frame* RawFrame, const string& OutputFileName);
 
 private:
-    bool                        Write(raw_frame* RawFrame, const string& OutputFileName);
-    bool                        Check(raw_frame* RawFrame, const string& OutputFileName);
+    bool                        WriteFile(raw_frame* RawFrame);
+    bool                        CheckFile(raw_frame* RawFrame);
+    bool                        CheckMD5(raw_frame* RawFrame);
     file                        File_Write;
     filemap                     File_Read;
     string                      BaseDirectory;
@@ -70,6 +74,7 @@ private:
     errors*                     Errors;
     size_t                      Offset;
     size_t                      SizeOnDisk;
+    void*                       MD5;
 };
 
 class matroska : public input_base
@@ -83,10 +88,11 @@ public:
     bool                        Quiet;
     bool                        NoWrite;
     bool                        NoOutputCheck;
+    hashes*                     Hashes_FromRAWcooked;
+    hashes*                     Hashes_FromAttachments;
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
-    void                        ProgressIndicator_Trigger();
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -123,10 +129,14 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileSize);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData);
@@ -140,6 +150,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeData);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion);
@@ -237,8 +248,10 @@ private:
     frame_writer                FrameWriter_Template;
     condition_variable          ProgressIndicator_IsEnd;
     bool                        ProgressIndicator_IsPaused = false;
+    bool                        RAWcooked_FileNameIsValid;
     uint64_t                    Cluster_Timestamp;
     int16_t                     Block_Timestamp;
+    friend class                frame_writer;
 
     //Utils
     void Uncompress(uint8_t* &Output, size_t &Output_Size);

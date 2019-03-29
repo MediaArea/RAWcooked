@@ -29,11 +29,14 @@ enum parser
     Parser_WAV,
     Parser_AIFF,
     Parser_Matroska,
+    Parser_HashSum,
     Parser_License,
+    Parser_Unknown,
     Parser_Max, // After this line, parsers are not really parsers and must be specifically handled
     IO_IntermediateWriter = Parser_Max,
     IO_FileWriter,
     IO_FileChecker,
+    IO_Hashes,
     IO_Max,
 };
 

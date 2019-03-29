@@ -97,6 +97,12 @@
     <Filter Include="Header Files\AIFF">
       <UniqueIdentifier>{0dcc0039-defc-4688-b2d7-d14d80faffbb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HashSum">
+      <UniqueIdentifier>{437bf470-6fdd-48a5-97dd-774ee75b1fd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HashSum">
+      <UniqueIdentifier>{889f93d5-50da-4606-8480-a1ec82aa200f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -294,6 +300,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Errors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\HashSum\HashSum.h">
+      <Filter>Header Files\HashSum</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -427,6 +436,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Errors.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\HashSum\HashSum.cpp">
+      <Filter>Source Files\HashSum</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

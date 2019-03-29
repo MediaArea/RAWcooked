@@ -19,6 +19,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/FFV1/FFV1_Slice.cpp \
     ../../../Source/Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
+    ../../../Source/Lib/HashSum/HashSum.cpp \
     ../../../Source/Lib/Input_Base.cpp \
     ../../../Source/Lib/License.cpp \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
@@ -40,6 +41,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/metadata_object.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/stream_decoder.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/window.c \
+    ../../../Source/Lib/ThirdParty/md5/md5.c \
     ../../../Source/Lib/ThirdParty/zlib/adler32.c \
     ../../../Source/Lib/ThirdParty/zlib/compress.c \
     ../../../Source/Lib/ThirdParty/zlib/crc32.c \
@@ -55,6 +57,7 @@ rawcooked_SOURCES = \
 AM_CPPFLAGS = -I../../../Source \
               -I../../../Source/Lib/ThirdParty/flac/include \
               -I../../../Source/Lib/ThirdParty/flac/src/libFLAC/include \
+              -I../../../Source/Lib/ThirdParty/md5 \
               -I../../../Source/Lib/ThirdParty/thread-pool/include\
               -I../../../Source/Lib/ThirdParty/zlib
 

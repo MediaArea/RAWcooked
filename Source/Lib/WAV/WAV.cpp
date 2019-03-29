@@ -235,7 +235,7 @@ void wav::ParseBuffer()
         }
         if (Buffer_Offset + Size > End)
         {
-            if (!AcceptTruncated)
+            if (!Actions[Action_AcceptTruncated])
             {
                 Undecodable(undecodable::TruncatedChunk);
                 return;
@@ -320,6 +320,17 @@ void wav::WAVE_data()
         RAWcooked->Before_Size = Buffer_Offset;
         RAWcooked->After = Buffer + Levels[Level].Offset_End;
         RAWcooked->After_Size = Buffer_Size - Levels[Level].Offset_End;
+        RAWcooked->In = nullptr;
+        RAWcooked->In_Size = 0;
+        RAWcooked->FileSize = (uint64_t)-1;
+        if (Actions[Action_Hash])
+        {
+            Hash();
+            RAWcooked->HashValue = &HashValue;
+        }
+        else
+            RAWcooked->HashValue = nullptr;
+        RAWcooked->IsAttachment = false;
         RAWcooked->Parse();
     }
 }

@@ -19,6 +19,7 @@ namespace matroska_issue { extern const char** ErrorTexts[]; }
 namespace intermediatewrite_issue { extern const char** ErrorTexts[]; }
 namespace filewriter_issue { extern const char** ErrorTexts[]; }
 namespace filechecker_issue { extern const char** ErrorTexts[]; }
+namespace hashes_issue { extern const char** ErrorTexts[]; }
 static const char*** AllErrorTexts[] =
 {
     dpx_issue::ErrorTexts,
@@ -26,10 +27,13 @@ static const char*** AllErrorTexts[] =
     wav_issue::ErrorTexts,
     aiff_issue::ErrorTexts,
     matroska_issue::ErrorTexts,
-    NULL,
+    nullptr,
+    nullptr,
+    nullptr,
     intermediatewrite_issue::ErrorTexts,
     filewriter_issue::ErrorTexts,
     filechecker_issue::ErrorTexts,
+    hashes_issue::ErrorTexts,
 };
 static_assert(IO_Max == sizeof(AllErrorTexts) / sizeof(const char***), IncoherencyMessage); \
 
@@ -42,7 +46,9 @@ static const char* ParserNames[] =
     "WAV",
     "AIFF",
     "Matroska",
+    "HashSum",
     "RAWcooked license",
+    "Unknown",
 };
 static_assert(Parser_Max == sizeof(ParserNames) / sizeof(const char*), IncoherencyMessage); \
 
@@ -105,14 +111,14 @@ const char* errors::ErrorMessage()
                 {
                     if (Parsers[i].Codes[j][k].StringList)
                     {
-                        ErrorMessageCache += "Error: ";
+                        ErrorMessageCache += j == error::Invalid? "Invalid: " : "Error: ";
                         ErrorMessageCache += AllErrorTexts[i][j][k];
                         ErrorMessageCache += '.';
                         ErrorMessageCache += '\n';
                         std::vector<string>& List = *Parsers[i].Codes[j][k].StringList;
                         for (size_t l = 0; l < List.size(); l++)
                         {
-                            ErrorMessageCache += "       ";
+                            ErrorMessageCache += j == error::Invalid ? "         " : "       ";
                             ErrorMessageCache += List[l];
                             ErrorMessageCache += '\n';
                         }

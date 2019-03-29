@@ -6,7 +6,13 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/FileIO.h"
+#include "Lib/HashSum/HashSum.h"
 #include "Lib/Input_Base.h"
+#include "Lib/RAWcooked/RAWcooked.h"
+extern "C"
+{
+#include "md5.h"
+}
 #include <cmath>
 //---------------------------------------------------------------------------
 
@@ -29,29 +35,49 @@ input_base::~input_base()
 }
 
 //---------------------------------------------------------------------------
-bool input_base::Parse(unsigned char* Buffer_Source, size_t Buffer_Size_Source)
+bool input_base::Parse(filemap* FileMap_Source, uint8_t* Buffer_Source, size_t Buffer_Size_Source)
 {
     ClearInfo();
-    FileMap = NULL;
+    FileMap = FileMap_Source;
     Buffer = Buffer_Source;
     Buffer_Size = Buffer_Size_Source;
+    HashComputed = false;
 
     ParseBuffer();
+    if (IsDetected())
+        Hash();
 
     return !IsDetected();
 }
 
 //---------------------------------------------------------------------------
-bool input_base::Parse(filemap& FileMap_Source)
+void input_base::Hash()
 {
-    ClearInfo();
-    FileMap = &FileMap_Source;
-    Buffer = FileMap_Source.Buffer;
-    Buffer_Size = FileMap_Source.Buffer_Size;
+    if (!Actions[Action_Hash] || HashComputed)
+        return;
 
-    ParseBuffer();
+    // MD5    
+    {
+        MD5_CTX MD5;
+        MD5_Init(&MD5);
 
-    return !IsDetected();
+        size_t Offset = 0;
+        while (Offset < Buffer_Size)
+        {
+            unsigned long Size_Temp;
+            if (Buffer_Size - Offset >= (unsigned long)-1) // MD5_Update() accepts only unsigned longs
+                Size_Temp = (unsigned long)-1;
+            else
+                Size_Temp = (unsigned long)(Buffer_Size - Offset);
+            MD5_Update(&MD5, Buffer, Size_Temp);
+            Offset += Size_Temp;
+        }
+
+        MD5_Final(HashValue.data(), &MD5);
+        if (Hashes&& FileName && !FileName->empty())
+            Hashes->FromFile(*FileName, HashValue);
+    }
+    HashComputed = true;
 }
 
 //---------------------------------------------------------------------------
@@ -227,3 +253,31 @@ uncompressed::~uncompressed()
 {
 }
 
+//---------------------------------------------------------------------------
+void unknown::ParseBuffer()
+{
+    SetDetected();
+
+    // Write RAWcooked file
+    if (RAWcooked)
+    {
+        RAWcooked->Unique = true;
+        RAWcooked->Before = nullptr;
+        RAWcooked->Before_Size = 0;
+        RAWcooked->After = nullptr;
+        RAWcooked->After_Size = 0;
+        RAWcooked->In = nullptr;
+        RAWcooked->In_Size = 0;
+        RAWcooked->FileSize = (uint64_t)-1;
+        if (Actions[Action_Hash])
+        {
+            Hash();
+            RAWcooked->HashValue = &HashValue;
+        }
+        else
+            RAWcooked->HashValue = nullptr;
+        RAWcooked->IsAttachment = true;
+        RAWcooked->Parse();
+    }
+
+}

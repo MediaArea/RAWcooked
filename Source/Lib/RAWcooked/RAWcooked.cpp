@@ -67,8 +67,10 @@ static const uint32_t Name_EBML_DoctypeReadVersion = 0x0285;
 
 // Top level
 static const uint32_t Name_RawCookedSegment = 0x7273; // "rs", RAWcooked Segment part
+static const uint32_t Name_RawCookedAttachment = 0x7261; // "ra" RAWcooked Attachment part
 static const uint32_t Name_RawCookedTrack = 0x7274;   // "rt", RAWcooked Track part
 static const uint32_t Name_RawCookedBlock = 0x7262;   // "rb", RAWcooked BlockGroup part
+
 // File data
 static const uint32_t Name_RawCooked_BeforeData = 0x01;
 static const uint32_t Name_RawCooked_AfterData = 0x02;
@@ -84,9 +86,7 @@ static const uint32_t Name_RawCooked_FileName = 0x10;
 static const uint32_t Name_RawCooked_MaskBaseFileName = 0x11;     // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionFileName = 0x11; // In Track only
 // File stats
-static const uint32_t Name_RawCooked_FileMD5 = 0x20;
-static const uint32_t Name_RawCooked_FileSHA1 = 0x21;
-static const uint32_t Name_RawCooked_FileSHA256 = 0x22;
+static const uint32_t Name_RawCooked_FileHash = 0x20;
 // File number metadata
 static const uint32_t Name_RawCooked_FileSize = 0x30;
 static const uint32_t Name_RawCooked_MaskBaseFileSize = 0x31;     // In BlockGroup only
@@ -99,6 +99,12 @@ static const uint32_t Name_RawCooked_PathSeparator = 0x72;
 static const char* DocType = "rawcooked";
 static const uint8_t DocTypeVersion = 1;
 static const uint8_t DocTypeReadVersion = 1;
+
+//---------------------------------------------------------------------------
+enum hashformat
+{
+    HashFormat_MD5,
+};
 
 //---------------------------------------------------------------------------
 static size_t Size_EB(uint32_t Name, uint64_t Size)
@@ -209,13 +215,9 @@ void rawcooked::Parse()
     // Cross-platform support
     // RAWcooked file format supports setting of the path separator but
     // we currently set all to "/", which is supported by both Windows and Unix based platforms
-    // On Windows, we convert "\" to "/" as both are considered as path separators and Unix-based  systems don't consider "\" as a path separator
+    // On Windows, we convert "\" to "/" as both are considered as path separators and Unix-based systems don't consider "\" as a path separator
     // If not doing this, files are not considered as in a sub-directory when encoded with a Windows platform then decoded with a Unix-based platform.
-    #if defined(_WIN32) || defined(_WINDOWS)
-        string::size_type i = 0;
-        while ((i = OutputFileName.find('\\', i)) != string::npos)
-            OutputFileName[i++] = '/';
-    #endif
+    // FormatPath(OutputFileName); // Already done elsewhere
 
     // Create or Use mask
     uint8_t* FileName = (uint8_t*)OutputFileName.c_str();
@@ -420,9 +422,13 @@ void rawcooked::Parse()
         InData_Size = Size_EB(Compressed_In_Size ? In_Size : 0) + (Compressed_In_Size ? Compressed_In_Size : In_Size); // size then data
         Block_Size += Size_EB(Name_RawCooked_InData, InData_Size);
     }
+    if (HashValue)
+    {
+        Block_Size += Size_EB(Name_RawCooked_FileHash, Size_Number(HashFormat_MD5) + HashValue->size());
+    }
     if (FileSize != (uint64_t)-1)
     {
-        Block_Size += Size_EB(Name_RawCooked_InData, Size_Number(FileSize));
+        Block_Size += Size_EB(Name_RawCooked_FileSize, Size_Number(FileSize));
     }
 
     // Case if the file is unique
@@ -438,7 +444,7 @@ void rawcooked::Parse()
     if (Segment_Size)
         Out_Size += Size_EB(Name_RawCookedSegment, Segment_Size);
     if (Track_Size)
-        Out_Size += Size_EB(Name_RawCookedTrack, Track_Size);
+        Out_Size += Size_EB(IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack, Track_Size);
     if (Block_Size)
         Out_Size += Size_EB(Name_RawCookedBlock, Block_Size);
 
@@ -476,7 +482,7 @@ void rawcooked::Parse()
     // Fill - Track part
     if (Track_Size)
     {
-        Put_EB(Out, Out_Offset, Name_RawCookedTrack, Track_Size);
+        Put_EB(Out, Out_Offset, IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack, Track_Size);
         if (!Unique && FirstFrame_FileName)
         {
             Put_EB(Out, Out_Offset, Name_RawCooked_MaskBaseFileName, Size_EB(Compressed_MaskFileName_Size ? FirstFrame_FileName_Size : 0) + (Compressed_MaskFileName_Size ? Compressed_MaskFileName_Size : FirstFrame_FileName_Size));
@@ -530,6 +536,13 @@ void rawcooked::Parse()
         Put_EB(Out, Out_Offset, Compressed_In_Size ? In_Size : 0);
         memcpy(Out + Out_Offset, Compressed_In, (Compressed_In_Size ? Compressed_In_Size : In_Size));
         Out_Offset += (Compressed_In_Size ? Compressed_In_Size : In_Size);
+    }
+    if (HashValue)
+    {
+        Put_EB(Out, Out_Offset, Name_RawCooked_FileHash, Size_Number(HashFormat_MD5) + HashValue->size());
+        Put_Number(Out, Out_Offset, HashFormat_MD5);
+        memcpy(Out + Out_Offset, HashValue->data(), HashValue->size());
+        Out_Offset += HashValue->size();
     }
     if (FileSize != (uint64_t)-1)
     {
@@ -596,7 +609,7 @@ void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
         {
             if (RejectIfExists && Result == file::Error_FileAlreadyExists && Mode && *Mode == Ask && Ask_Callback)
             {
-                user_mode NewMode = Ask_Callback(Mode, FileName, string(), false);
+                user_mode NewMode = Ask_Callback(Mode, FileName, string(), false, *ProgressIndicator_IsPaused, *ProgressIndicator_IsEnd);
                 if (NewMode == AlwaysYes)
                     Result = File.Open_WriteMode(string(), FileName, false);
             }

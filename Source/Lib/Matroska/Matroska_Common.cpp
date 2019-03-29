@@ -10,10 +10,12 @@
 #include "Lib/TIFF/TIFF.h"
 #include "Lib/WAV/WAV.h"
 #include "Lib/AIFF/AIFF.h"
+#include "Lib/HashSum/HashSum.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
 #include "Lib/FileIO.h"
-#include <stdlib.h>
+#include <cstdlib>
+#include <algorithm>
 #include <cstdio>
 #include <thread>
 #include <iostream>
@@ -23,6 +25,10 @@
 #include "ThreadPool.h"
 #include "FLAC/stream_decoder.h"
 #include "zlib.h"
+extern "C"
+{
+#include "md5.h"
+}
 #if defined(_WIN32) || defined(_WINDOWS)
     #include <io.h> // File existence
     #include <direct.h> // Directory creation
@@ -111,6 +117,12 @@ static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 } // filechecker_issue
 
 //---------------------------------------------------------------------------
+frame_writer::~frame_writer()
+{
+    delete (MD5_CTX*)MD5;
+}
+
+//---------------------------------------------------------------------------
 void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
 {
     // Post-processing
@@ -166,11 +178,36 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
     if (Offset == (size_t)-1)
         return; // File is flagged as already with wrong data
 
-    // Check operation
+    // Check hash operation
+    if (M->Hashes || M->Hashes_FromRAWcooked || M->Hashes_FromAttachments)
+    {
+        if (!Mode[IsNotBegin])
+        {
+            MD5 = new MD5_CTX;
+            MD5_Init((MD5_CTX*)MD5);
+        }
+
+        CheckMD5(RawFrame);
+
+        if (!Mode[IsNotEnd])
+        {
+            md5 MD5_Result;
+            MD5_Final(MD5_Result.data(), (MD5_CTX*)MD5);
+
+            if (M->Hashes)
+                M->Hashes->FromFile(OutputFileName, MD5_Result);
+            if (M->Hashes_FromRAWcooked)
+                M->Hashes_FromRAWcooked->FromFile(OutputFileName, MD5_Result);
+            if (M->Hashes_FromAttachments)
+                M->Hashes_FromAttachments->FromFile(OutputFileName, MD5_Result);
+        }
+    }
+                
+    // Check file operation
     bool DataIsCheckedAndOk;
     if (File_Read.IsOpen())
     {
-        if (!Check(RawFrame, OutputFileName))
+        if (!CheckFile(RawFrame))
         {
             if (Mode[IsNotEnd] || Offset == File_Read.Buffer_Size)
                 return; // All is OK
@@ -187,9 +224,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
             user_mode NewMode = *UserMode;
             if (*UserMode == Ask && Ask_Callback)
             {
-                M->ProgressIndicator_Trigger();
-                NewMode = Ask_Callback(UserMode, OutputFileName, " and is not same", true);
-                M->ProgressIndicator_Trigger();
+                NewMode = Ask_Callback(UserMode, OutputFileName, " and is not same", true, M->ProgressIndicator_IsPaused, M->ProgressIndicator_IsEnd);
             }
             if (NewMode == AlwaysYes)
             {
@@ -231,13 +266,13 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
     else
         DataIsCheckedAndOk = false;
 
-    // Write operation
+    // Write file operation
     if (File_Write.IsOpen())
     {
         // Write in the created file or file with wrong data being replaced
         if (!DataIsCheckedAndOk)
         {
-            if (Write(RawFrame, OutputFileName))
+            if (WriteFile(RawFrame))
             {
                 if (Errors)
                     Errors->Error(IO_FileWriter, error::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
@@ -275,7 +310,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
 }
 
 //---------------------------------------------------------------------------
-bool frame_writer::Write(raw_frame* RawFrame, const string& OutputFileName)
+bool frame_writer::WriteFile(raw_frame* RawFrame)
 {
     if (RawFrame->Pre)
     {
@@ -283,19 +318,31 @@ bool frame_writer::Write(raw_frame* RawFrame, const string& OutputFileName)
             return true;
         Offset += RawFrame->Pre_Size;
     }
-    if (RawFrame->Buffer && File_Write.Write(RawFrame->Buffer, RawFrame->Buffer_Size))
-        return true;
-    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
-        if (RawFrame->Planes[p]->Buffer && File_Write.Write(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+    if (RawFrame->Buffer)
+    {
+        if (File_Write.Write(RawFrame->Buffer, RawFrame->Buffer_Size))
             return true;
-    if (RawFrame->Post && File_Write.Write(RawFrame->Post, RawFrame->Post_Size))
-        return true;
+        Offset += RawFrame->Buffer_Size;
+    }
+    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
+        if (RawFrame->Planes[p]->Buffer)
+        {
+            if (File_Write.Write(RawFrame->Planes[p]->Buffer, RawFrame->Planes[p]->Buffer_Size))
+                return true;
+            Offset += RawFrame->Planes[p]->Buffer_Size;
+        }
+    if (RawFrame->Post)
+    {
+        if (File_Write.Write(RawFrame->Post, RawFrame->Post_Size))
+            return true;
+        Offset += RawFrame->Post_Size;
+    }
 
     return false;
 }
 
 //---------------------------------------------------------------------------
-bool frame_writer::Check(raw_frame* RawFrame, const string& OutputFileName)
+bool frame_writer::CheckFile(raw_frame* RawFrame)
 {
     size_t Offset_Current = Offset;
     if (RawFrame->Pre)
@@ -337,6 +384,31 @@ bool frame_writer::Check(raw_frame* RawFrame, const string& OutputFileName)
     }
 
     Offset = Offset_Current;
+    return false;
+}
+
+
+//---------------------------------------------------------------------------
+bool frame_writer::CheckMD5(raw_frame* RawFrame)
+{
+    if (RawFrame->Pre)
+    {
+        MD5_Update((MD5_CTX*)MD5, RawFrame->Pre, (unsigned long)RawFrame->Pre_Size);
+    }
+    if (RawFrame->Buffer)
+    {
+        MD5_Update((MD5_CTX*)MD5, RawFrame->Buffer, (unsigned long)RawFrame->Buffer_Size);
+    }
+    for (size_t p = 0; p < RawFrame->Planes.size(); p++)
+        if (RawFrame->Planes[p]->Buffer)
+        {
+            MD5_Update((MD5_CTX*)MD5, RawFrame->Planes[p]->Buffer, (unsigned long)RawFrame->Planes[p]->Buffer_Size);
+        }
+    if (RawFrame->Post)
+    {
+        MD5_Update((MD5_CTX*)MD5, RawFrame->Post, (unsigned long)RawFrame->Post_Size);
+    }
+
     return false;
 }
 
@@ -511,6 +583,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
     TrackInfo_Current->Frame.RawFrame->Buffer_Size = Buffer_Current - TrackInfo_Current->Frame.RawFrame->Buffer;
 
     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+    FormatPath(OutputFileName);
 
     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
     TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
@@ -597,15 +670,22 @@ ELEMENT_CASE(     65C, Segment_Attachments_AttachedFile_FileData)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData)
+ELEMENT_CASE(    7261, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment)
 ELEMENT_CASE(    7273, Segment_Attachments_AttachedFile_FileData_RawCookedSegment)
 ELEMENT_CASE(    7274, Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
 ELEMENT_CASE(    7262, Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
+ELEMENT_END()
+
+ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment)
+ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash)
+ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
 ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData)
 ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_InData)
+ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName)
 ELEMENT_VOID(      30, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileSize)
 ELEMENT_VOID(       4, Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAdditionAfterData)
@@ -624,6 +704,7 @@ ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
 ELEMENT_VOID(       2, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_AfterData)
 ELEMENT_VOID(       1, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_BeforeData)
 ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_InData)
+ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName)
 ELEMENT_VOID(      70, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName)
 ELEMENT_VOID(      71, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion)
@@ -667,7 +748,9 @@ matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callb
     FrameWriter_Template(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source),
     Quiet(false),
     NoWrite(false),
-    NoOutputCheck(false)
+    NoOutputCheck(false),
+    Hashes_FromRAWcooked(new hashes(Errors_Source)),
+    Hashes_FromAttachments(new hashes(Errors_Source))
 {
 }
 
@@ -675,6 +758,8 @@ matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callb
 matroska::~matroska()
 {
     Shutdown();
+    delete Hashes_FromRAWcooked;
+    delete Hashes_FromAttachments;
 }
 
 //---------------------------------------------------------------------------
@@ -706,12 +791,18 @@ void matroska::Shutdown()
             }
 
             string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+            FormatPath(OutputFileName);
 
             //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
             TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotEnd] = false;
             TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
         }
     }
+
+    if (Hashes_FromRAWcooked)
+        Hashes_FromRAWcooked->Finish();
+    if (Hashes_FromAttachments)
+        Hashes_FromAttachments->Finish();
 
     FramesPool->shutdown();
     delete FramesPool;
@@ -828,6 +919,7 @@ void matroska::Segment_Attachments_AttachedFile()
 void matroska::Segment_Attachments_AttachedFile_FileName()
 {
     AttachedFile_FileName.assign((const char*)Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    FormatPath(AttachedFile_FileName);
 }
 
 //---------------------------------------------------------------------------
@@ -847,9 +939,22 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         // This is a RAWcooked file, not intended to be demuxed
         IsList = true;
         TrackInfo_Pos = (size_t)-1;
+
         return;
     }
 
+    // Test if it is hash file
+    if (!Hashes) // If hashes are provided from elsewhere, they were already tests, not doing the test twice
+    {
+        hashsum HashSum;
+        HashSum.HomePath = AttachedFile_FileName;
+        HashSum.List = Hashes_FromAttachments;
+        HashSum.Parse(Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+        if (HashSum.IsDetected())
+            Hashes_FromAttachments->Ignore(AttachedFile_FileName);
+    }
+
+    // Output file
     {
         raw_frame RawFrame;
         RawFrame.Pre = Buffer + Buffer_Offset;
@@ -859,13 +964,66 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         frame_writer FrameWriter(FrameWriter_Template);
         FrameWriter.FrameCall(&RawFrame, AttachedFile_FileName);
     }
+}
 
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment()
+{
+    IsList = true;
+    RAWcooked_FileNameIsValid = false;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash()
+{
+    if (!RAWcooked_FileNameIsValid)
+        return; // File name should come first. TODO: support when file name comes after
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+        return; // MD5 support only
+    Buffer_Offset++;
+
+    array<uint8_t, 16> Hash;
+    memcpy(Hash.data(), Buffer + Buffer_Offset, Hash.size());
+    Hashes_FromRAWcooked->FromHashFile(AttachedFile_FileName, Hash);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName()
+{
+    uint8_t* Output;
+    size_t Output_Size;
+    Uncompress(Output, Output_Size);
+    AttachedFile_FileName.assign((char*)Output, Output_Size);
+    delete[] Output; // TODO: avoid new/delete
+
+    RAWcooked_FileNameIsValid = true;
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock()
 {
     IsList = true;
+    RAWcooked_FileNameIsValid = false;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash()
+{
+    if (!RAWcooked_FileNameIsValid)
+        return; // File name should come first. TODO: support when file name comes after
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+        return; // MD5 support only
+    Buffer_Offset++;
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    TrackInfo_Current->DPX_Buffer_Count--; //TODO: right method for knowing the position
+
+    array<uint8_t, 16> Hash;
+    memcpy(Hash.data(), Buffer + Buffer_Offset, Hash.size());
+    Hashes_FromRAWcooked->FromHashFile(string((char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]), Hash);
+
+    TrackInfo_Current->DPX_Buffer_Count++;
 }
 
 //---------------------------------------------------------------------------
@@ -882,6 +1040,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileName
     }
 
     Uncompress(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
+    RAWcooked_FileNameIsValid = true;
 }
 
 
@@ -998,6 +1157,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
 
     SanitizeFileName(TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count]);
     TrackInfo_Current->DPX_Buffer_Count++;
+    RAWcooked_FileNameIsValid = true;
 }
 
 //---------------------------------------------------------------------------
@@ -1125,6 +1285,23 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
         TrackInfo.push_back(new trackinfo(FrameWriter_Template));
 }
 
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash()
+{
+    if (!RAWcooked_FileNameIsValid)
+        return; // File name should come first. TODO: support when file name comes after
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+        return; // MD5 support only
+    Buffer_Offset++;
+
+    trackinfo* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
+
+    array<uint8_t, 16> Hash;
+    memcpy(Hash.data(), Buffer + Buffer_Offset, Hash.size());
+    Hashes_FromRAWcooked->FromHashFile(string((char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]), Hash);
+}
+
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName()
 {
@@ -1142,6 +1319,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileName
 
     Uncompress(TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
     SanitizeFileName(TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+    RAWcooked_FileNameIsValid = true;
 }
 
 //---------------------------------------------------------------------------
@@ -1252,6 +1430,25 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_MaskBase
 void matroska::Segment_Cluster()
 {
     IsList = true;
+
+    // Check if Hashes check is useful
+    if (Hashes_FromRAWcooked)
+    {
+        Hashes_FromRAWcooked->WouldBeError = true;
+        if (!Hashes_FromRAWcooked->NoMoreHashFiles())
+        {
+            delete Hashes_FromRAWcooked;
+            Hashes_FromRAWcooked = nullptr;
+        }
+    }
+    if (Hashes_FromAttachments)
+    {
+        if (!Hashes_FromAttachments->NoMoreHashFiles())
+        {
+            delete Hashes_FromAttachments;
+            Hashes_FromAttachments = nullptr;
+        }
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -1300,7 +1497,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                             if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                             {
                                 dpx DPX;
-                                DPX.AcceptTruncated = true;
+                                DPX.Actions.set(Action_Encode);
+                                DPX.Actions.set(Action_AcceptTruncated);
                                 if (!DPX.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                 {
                                     if (!DPX.IsSupported())
@@ -1316,7 +1514,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 else
                                 {
                                     tiff TIFF;
-                                    TIFF.AcceptTruncated = true;
+                                    TIFF.Actions.set(Action_Encode);
+                                    TIFF.Actions.set(Action_AcceptTruncated);
                                     unsigned char* Frame_Buffer;
                                     size_t Frame_Buffer_Size;
                                     if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
@@ -1355,6 +1554,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                 {
 
                                     string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
+                                    FormatPath(OutputFileName);
 
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                                     TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
@@ -1376,7 +1576,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     if (TrackInfo_Current->Frame.RawFrame->Pre)
                                     {
                                         wav WAV;
-                                        WAV.AcceptTruncated = true;
+                                        WAV.Actions.set(Action_Encode);
+                                        WAV.Actions.set(Action_AcceptTruncated);
                                         if (!WAV.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                         {
                                             if (!WAV.IsSupported())
@@ -1391,7 +1592,8 @@ void matroska::Segment_Cluster_SimpleBlock()
                                         else
                                         {
                                             aiff AIFF;
-                                            AIFF.AcceptTruncated = true;
+                                            AIFF.Actions.set(Action_Encode);
+                                            AIFF.Actions.set(Action_AcceptTruncated);
                                             if (!AIFF.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
                                             {
                                                 if (!AIFF.IsSupported())
@@ -1446,6 +1648,7 @@ void matroska::Segment_Cluster_SimpleBlock()
 
                             {
                                 string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[0], TrackInfo_Current->DPX_FileName_Size[0]);
+                                FormatPath(OutputFileName);
 
                                 //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                                 TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
@@ -1673,19 +1876,6 @@ void matroska::ProgressIndicator_Show()
 }
 
 //---------------------------------------------------------------------------
-void matroska::ProgressIndicator_Trigger()
-{
-    if (ProgressIndicator_IsPaused)
-    {
-        ProgressIndicator_IsPaused = false;
-        return;
-    }
-    ProgressIndicator_IsPaused = true;
-    ProgressIndicator_IsEnd.notify_one();
-    cerr << "                                                            \r"; // Clean up output
-}
-
-//---------------------------------------------------------------------------
 void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
 {
     uint64_t RealBuffer_Size = Get_EB();
@@ -1722,14 +1912,6 @@ void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
 // https://snyk.io/research/zip-slip-vulnerability
 void matroska::SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size)
 {
-    // Use native path separator if it is not "/"
-    if (PathSeparator != '/')
-    {
-        for (size_t i = 0; i < FileName_Size; i++)
-            if (FileName[i] == '/')
-                FileName[i] = PathSeparator;
-    }
-
     // Replace illegal characters (on the target platform) by underscore
     // Note: the outpout is not exactly as the source content and information about the exact source file name is lost, this is a limitation of the target platform impossible to bypass
     #if defined(_WIN32) || defined(_WINDOWS)

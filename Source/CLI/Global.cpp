@@ -114,6 +114,13 @@ int global::SetEncode(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetHash(bool Value)
+{
+    Actions.set(Action_Hash, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
     cerr << "Error: option " << Option1;
@@ -322,6 +329,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     Quiet = false;
     Check = false;
     Actions.set(Action_Encode);
+    Hashes = hashes(&Errors);
     ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)
@@ -401,6 +409,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--hash") == 0)
+        {
+            int Value = SetHash(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--file") == 0)
         {
             int Value = SetAcceptFiles();
@@ -444,6 +458,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetEncode(false);
             if (Value)
                 return Value;
+        }
+        else if (strcmp(argv[i], "--no-hash") == 0)
+        {
+        int Value = SetEncode(false);
+        if (Value)
+            return Value;
         }
         else if (strcmp(argv[i], "--version") == 0)
         {
@@ -599,6 +619,9 @@ void global::ProgressIndicator_Show()
     unique_lock<mutex> Lock(Mutex);
     do
     {
+        if (ProgressIndicator_IsPaused)
+            continue;
+
         size_t ProgressIndicator_New = (size_t)(((float)ProgressIndicator_Current) * ProgressIndicator_Frequency / ProgressIndicator_Total);
         if (ProgressIndicator_New == ProgressIndicator_Value)
         {
