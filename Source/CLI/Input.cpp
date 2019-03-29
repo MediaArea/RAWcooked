@@ -25,6 +25,40 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Errors
+
+namespace fileinput_issue {
+
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    "Isn't a file missing? Unsupported gap in file names",
+};
+
+enum code : uint8_t
+{
+    FileMissing,
+    Max
+};
+
+namespace unsupported { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
+
+} // unsupported
+
+const char** ErrorTexts[] =
+{
+    nullptr,
+    unsupported::MessageText,
+    nullptr,
+};
+
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+
+} // fileinput_issue
+
+//---------------------------------------------------------------------------
 bool IsDir(const char* Name)
 {
     struct stat buffer;
@@ -60,7 +94,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, errors* Errors)
 {
     string FN(Files[AllFiles_Pos]);
     string Path;
@@ -147,6 +181,33 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
         FileName_Template = Path + Before + "%0" + Size + "d" + After;
     }
 
+    // Coherency test
+    if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size())
+    {
+        auto& File1 = Files[AllFiles_Pos - 1];
+        auto& File2 = Files[AllFiles_Pos];
+
+        if (!FN.empty() && File1.size() == File2.size() && !File2.compare(0, Path.size() + Before.size(), Path + Before) && !File2.compare(Path.size() + Before.size() + FN.size(), After.size(), After))
+        {
+            auto Number1 = stoull(FN);
+            size_t Number1_Pos;
+            auto Number2 = stoull(File2.substr(Path.size() + Before.size(), FN.size()), &Number1_Pos);
+            if (Number1_Pos == FN.size() && Number1 < Number2)
+            {
+                if (Errors)
+                {
+                    Errors->Error(IO_FileInput, error::Unsupported, (error::generic::code)fileinput_issue::unsupported::FileMissing, Before.substr(Path_Pos) + FN + After);
+                    if (Number1 + 1 != Number2)
+                    {
+                        auto FN2 = to_string(Number2 - 1);
+                        FN2.insert(0, FN.size() - FN2.size(), '0');
+                        Errors->Error(IO_FileInput, error::Unsupported, (error::generic::code)fileinput_issue::unsupported::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                    }
+                }
+            }
+        }
+
+    }
 }
 
 //---------------------------------------------------------------------------
