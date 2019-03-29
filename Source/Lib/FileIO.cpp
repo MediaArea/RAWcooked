@@ -199,7 +199,7 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
     #else
     int& P = (int&)Private;
     const int flags = O_WRONLY | O_CREAT | (RejectIfExists ? O_EXCL : 0) | (Truncate ? O_TRUNC : 0);
-    const mode_t Mode = S_IRUSR;
+    const mode_t Mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     P = open(FullName.c_str(), flags, Mode);
     if (P == -1)
     #endif
@@ -216,7 +216,7 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
                 #if defined(_WIN32) || defined(_WINDOWS)
                 if (mkdir(t.c_str()))
                 #else
-                if (mkdir(t.c_str(), 0755))
+                if (mkdir(t.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
                 #endif
                 {
                     Private = (void*)-1;
