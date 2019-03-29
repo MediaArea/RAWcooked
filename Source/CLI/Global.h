@@ -81,6 +81,7 @@ private:
     int SetConch(bool Value);
     int SetEncode(bool Value);
     int SetHash(bool Value);
+    int SetAll(bool Value);
 
     // Progress indicator
     thread*                     ProgressIndicator_Thread;

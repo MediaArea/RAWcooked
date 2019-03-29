@@ -297,6 +297,8 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         M.Quiet = Global.Quiet;
         M.NoWrite = Global.Check;
         M.NoOutputCheck = NoOutputCheck;
+        if (NoOutputCheck)
+            NoOutputCheck = M.Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was check by using hashes
         if (ParseInfo.ParseFile_Input(M))
         {
             ReturnValue = 1;

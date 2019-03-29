@@ -113,14 +113,14 @@ const char* errors::ErrorMessage()
                 {
                     if (Parsers[i].Codes[j][k].StringList)
                     {
-                        ErrorMessageCache += j == error::Invalid? "Invalid: " : "Error: ";
+                        ErrorMessageCache += j == error::Invalid? "Conformance issue: " : "Error: ";
                         ErrorMessageCache += AllErrorTexts[i][j][k];
                         ErrorMessageCache += '.';
                         ErrorMessageCache += '\n';
                         std::vector<string>& List = *Parsers[i].Codes[j][k].StringList;
                         for (size_t l = 0; l < List.size(); l++)
                         {
-                            ErrorMessageCache += j == error::Invalid ? "         " : "       ";
+                            ErrorMessageCache += "       ";
                             ErrorMessageCache += List[l];
                             ErrorMessageCache += '\n';
                         }

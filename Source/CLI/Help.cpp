@@ -101,6 +101,12 @@ ReturnValue Help(const char* Name)
     cout << "              to all prompts and run non-interactively." << endl;
     cout << endl;
     cout << "ACTIONS" << endl;
+    cout << "       --all" << endl;
+    cout << "              Same as --check --check-padding --conch --encode --hash" << endl;
+    cout << "       --none" << endl;
+    cout << "              Same as --no-check --no-check-padding --no-conch --no-encode" << endl;
+    cout << "              --no-hash" << endl;
+    cout << endl;
     cout << "       --check" << endl;
     cout << "              Check that the encoded file can be correctly decoded." << endl;
     cout << "              If input is raw content, encode then decode input and check" << endl;

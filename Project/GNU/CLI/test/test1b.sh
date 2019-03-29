@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# same as test1 except ' --check full -slices 4' option
+# same as test1 except ' --check-padding -slices 4' option
 
 PATH="${PWD}:$PATH"
 script_path="${PWD}/test"
@@ -27,7 +27,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        cmdline=$(${valgrind} rawcooked --file --check full -slices 4 -d "${file}" 2>${script_path}/stderr)
+        cmdline=$(${valgrind} rawcooked --file --check-padding -slices 4 -d "${file}" 2>${script_path}/stderr)
         result=$?
         stderr="$(<${script_path}/stderr)"
         rm -f ${script_path}/stderr

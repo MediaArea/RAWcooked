@@ -121,6 +121,22 @@ int global::SetHash(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetAll(bool Value)
+{
+    if (int ReturnValue = SetCheck(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetCheckPadding(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetConch(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetEncode(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetHash(Value))
+        return ReturnValue;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 {
     cerr << "Error: option " << Option1;
@@ -352,6 +368,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return 1;
             }
         }
+        else if (strcmp(argv[i], "--all") == 0)
+        {
+            int Value = SetAll(true);
+            if (Value)
+                return Value;
+        }
         else if ((strcmp(argv[i], "--attachment-max-size") == 0 || strcmp(argv[i], "-s") == 0))
         {
             if (i + 1 == argc)
@@ -461,9 +483,15 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if (strcmp(argv[i], "--no-hash") == 0)
         {
-        int Value = SetEncode(false);
-        if (Value)
-            return Value;
+            int Value = SetHash(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--none") == 0)
+        {
+            int Value = SetAll(false);
+            if (Value)
+                return Value;
         }
         else if (strcmp(argv[i], "--version") == 0)
         {
