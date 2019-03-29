@@ -36,6 +36,7 @@ enum parser
     IO_IntermediateWriter = Parser_Max,
     IO_FileWriter,
     IO_FileChecker,
+    IO_FileInput,
     IO_Hashes,
     IO_Max,
 };
