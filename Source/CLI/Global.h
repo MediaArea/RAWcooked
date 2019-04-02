@@ -54,6 +54,10 @@ public:
     hashes                      Hashes;
     errors                      Errors;
 
+    // Conformance check intermediary info
+    vector<double>              Durations;
+    vector<string>              Durations_FileName;
+
     // Options
     int ManageCommandLine(const char* argv[], int argc);
     int SetDefaults();
@@ -78,6 +82,7 @@ private:
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetCheckPadding(bool Value);
+    int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetEncode(bool Value);
     int SetHash(bool Value);

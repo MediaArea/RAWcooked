@@ -36,7 +36,6 @@ public:
     // Info
     size_t                      slice_x;
     size_t                      slice_y;
-    string*                     FrameRate;
 
     enum flavor : uint8_t
     {

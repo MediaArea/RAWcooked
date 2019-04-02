@@ -317,6 +317,9 @@ void wav::WAVE_data()
         uint64_t Size = Levels[Level].Offset_End - Buffer_Offset;
         if (Size % BlockAlign)
             Unsupported(unsupported::data_Size);
+
+        if (InputInfo && !InputInfo->SampleCount)
+            InputInfo->SampleCount = Size / BlockAlign;
     }
 
     // Can we compress?
@@ -446,6 +449,9 @@ void wav::WAVE_fmt_()
         return;
     }
     Flavor = WAV_Tested[Tested].Flavor;
+
+    if (InputInfo && !InputInfo->SampleRate)
+        InputInfo->SampleRate = SamplesPerSec;
 }
 
 //---------------------------------------------------------------------------

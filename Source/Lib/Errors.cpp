@@ -190,6 +190,20 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code, c
     List.push_back(String);
     if ((Type == error::Undecodable || Type == error::Unsupported) && !HasErrors_Value)
         HasErrors_Value = true;
+
+    switch (Type)
+    {
+        case error::Undecodable:
+        case error::Unsupported:
+            if (!HasErrors_Value)
+                HasErrors_Value = true;
+            break;
+        case error::Incoherent:
+        case error::Invalid:
+            if (!HasWarnings_Value)
+                HasWarnings_Value = true;
+            break;
+    }
 }
 
 //---------------------------------------------------------------------------

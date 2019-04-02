@@ -7,7 +7,9 @@
 //---------------------------------------------------------------------------
 #include "CLI/Input.h"
 #include "Lib/Config.h"
+#include "Lib/Input_Base.h"
 #include <iostream>
+#include <algorithm>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
     #include <io.h> // File existence
@@ -35,11 +37,13 @@ namespace incoherent
 static const char* MessageText[] =
 {
     "file names (gap in file names)",
+    "A/V sync (durations are different)",
 };
 
 enum code : uint8_t
 {
     FileMissing,
+    Duration,
     Max
 };
 
@@ -95,7 +99,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, errors* Errors)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos]);
     string Path;
@@ -183,7 +187,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     }
 
     // Coherency test
-    if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size())
+    if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size() && Actions[Action_Coherency])
     {
         auto& File1 = Files[AllFiles_Pos - 1];
         auto& File2 = Files[AllFiles_Pos];
@@ -356,4 +360,21 @@ int input::AnalyzeInputs(global& Global)
     }
 
     return 0;
+}
+
+//---------------------------------------------------------------------------
+void input::CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors)
+{
+    if (Durations.empty())
+        return;
+
+    auto minmax = minmax_element(Durations.begin(), Durations.end());
+    if (*minmax.first + 1 < *minmax.second) // Difference of 1 second, TODO: tweakable value
+    {
+        if (Errors)
+        {
+            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.first - Durations.begin()] + " (" + to_string(*minmax.first) + "s)");
+            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
+        }
+    }
 }
