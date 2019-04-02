@@ -96,6 +96,9 @@ private:
     size_t Level;
     bool IsList;
 
+    // Temp
+    uint32_t                    BlockAlign = 0;
+
 #define WAV_ELEMENT(_NAME) \
         void _NAME(); \
         call SubElements_##_NAME(uint64_t Name);

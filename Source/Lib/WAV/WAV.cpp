@@ -55,6 +55,7 @@ static const char* MessageText[] =
     "fmt SubFormat not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71",
     "fmt chunk not before data chunk",
     "Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)",
+    "data chunk size is not a multiple of BlockAlign",
 };
 
 enum code : uint8_t
@@ -70,6 +71,7 @@ enum code : uint8_t
     fmt__SubFormat,
     fmt__Location,
     Flavor,
+    data_Size,
     Max
 };
 
@@ -308,6 +310,14 @@ void wav::WAVE_data()
     if (!HasErrors() && Flavor == Flavor_Max)
         Unsupported(unsupported::fmt__Location);
 
+    // Coherency test
+    if (BlockAlign)
+    {
+        uint64_t Size = Levels[Level].Offset_End - Buffer_Offset;
+        if (Size % BlockAlign)
+            Unsupported(unsupported::data_Size);
+    }
+
     // Can we compress?
     if (!HasErrors())
         SetSupported();
@@ -357,7 +367,7 @@ void wav::WAVE_fmt_()
     uint16_t Channels = Get_L2();
     uint32_t SamplesPerSec = Get_L4();
     uint32_t AvgBytesPerSec = Get_L4();
-    uint16_t BlockAlign = Get_L2();
+    BlockAlign = Get_L2();
     uint16_t BitDepth = Get_L2();
 
     if (AvgBytesPerSec * 8 != Channels * BitDepth * SamplesPerSec)
