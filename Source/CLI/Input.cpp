@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "CLI/Input.h"
 #include "Lib/Config.h"
+#include "Lib/Input_Base.h"
 #include <iostream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
@@ -95,7 +96,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, errors* Errors)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos]);
     string Path;
@@ -183,7 +184,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     }
 
     // Coherency test
-    if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size())
+    if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size() && Actions[Action_Coherency])
     {
         auto& File1 = Files[AllFiles_Pos - 1];
         auto& File2 = Files[AllFiles_Pos];

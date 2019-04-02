@@ -78,6 +78,7 @@ private:
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetCheckPadding(bool Value);
+    int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetEncode(bool Value);
     int SetHash(bool Value);

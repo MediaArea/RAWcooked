@@ -100,6 +100,13 @@ int global::SetCheckPadding(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetCoherency(bool Value)
+{
+    Actions.set(Action_Coherency, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetConch(bool Value)
 {
     Actions.set(Action_Conch, Value);
@@ -126,6 +133,8 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetCheck(Value))
         return ReturnValue;
     if (int ReturnValue = SetCheckPadding(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetCoherency(Value))
         return ReturnValue;
     if (int ReturnValue = SetConch(Value))
         return ReturnValue;
@@ -345,6 +354,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     Quiet = false;
     Check = false;
     Actions.set(Action_Encode);
+    Actions.set(Action_Coherency);
     Hashes = hashes(&Errors);
     ProgressIndicator_Thread = NULL;
 
@@ -412,6 +422,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--coherency") == 0)
+        {
+            int Value = SetCoherency(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--conch") == 0)
         {
             int Value = SetConch(true);
@@ -468,6 +484,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetCheckPadding(false);
             if (Value)
                 return Value;
+        }
+        else if (strcmp(argv[i], "--no-coherency") == 0)
+        {
+        int Value = SetCoherency(false);
+        if (Value)
+            return Value;
         }
         else if (strcmp(argv[i], "--no-conch") == 0)
         {
