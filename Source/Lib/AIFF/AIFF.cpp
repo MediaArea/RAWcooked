@@ -66,6 +66,7 @@ const char** ErrorTexts[] =
     undecodable::MessageText,
     unsupported::MessageText,
     nullptr,
+    nullptr,
 };
 
 static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);

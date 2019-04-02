@@ -29,12 +29,12 @@
 
 namespace fileinput_issue {
 
-namespace unsupported
+namespace incoherent
 {
 
 static const char* MessageText[] =
 {
-    "Isn't a file missing? Unsupported gap in file names",
+    "file names (gap in file names)",
 };
 
 enum code : uint8_t
@@ -45,12 +45,13 @@ enum code : uint8_t
 
 namespace unsupported { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
 
-} // unsupported
+} // incoherent
 
 const char** ErrorTexts[] =
 {
     nullptr,
-    unsupported::MessageText,
+    nullptr,
+    incoherent::MessageText,
     nullptr,
 };
 
@@ -196,12 +197,12 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
             {
                 if (Errors)
                 {
-                    Errors->Error(IO_FileInput, error::Unsupported, (error::generic::code)fileinput_issue::unsupported::FileMissing, Before.substr(Path_Pos) + FN + After);
+                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
                     if (Number1 + 1 != Number2)
                     {
                         auto FN2 = to_string(Number2 - 1);
                         FN2.insert(0, FN.size() - FN2.size(), '0');
-                        Errors->Error(IO_FileInput, error::Unsupported, (error::generic::code)fileinput_issue::unsupported::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                        Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
                     }
                 }
             }

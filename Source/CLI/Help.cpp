@@ -128,6 +128,13 @@ ReturnValue Help(const char* Name)
     cout << "              non conform files." << endl;
     cout << "              Is default (it may change in the future)" << endl;
     cout << endl;
+    cout << "       --coherency" << endl;
+    cout << "              Coherency check of the package." << endl;
+    cout << "              Currently partially implemented." << endl;
+    cout << "              Is default (it may change in the future)" << endl;
+    cout << "       --no-coherency" << endl;
+    cout << "              Don't do coherency check (see above)." << endl;
+    cout << endl;
     cout << "       --conch" << endl;
     cout << "              Conformance check of the format, when supported." << endl;
     cout << "              Currently partially implemented for DPX." << endl;
