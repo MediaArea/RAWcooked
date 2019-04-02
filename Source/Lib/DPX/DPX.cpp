@@ -171,8 +171,7 @@ const size_t DPX_Tested_Size = sizeof(DPX_Tested) / sizeof(dpx_tested);
 
 //---------------------------------------------------------------------------
 dpx::dpx(errors* Errors_Source) :
-    input_base_uncompressed(Errors_Source, Parser_DPX, true),
-    FrameRate(nullptr)
+    input_base_uncompressed(Errors_Source, Parser_DPX, true)
 {
 }
 
@@ -266,7 +265,7 @@ void dpx::ParseBuffer()
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
    
-    if (IndustryHeaderSize && FrameRate)
+    if (IndustryHeaderSize && InputInfo)
     {
         Buffer_Offset = 1724;
         double FrameRate_Film = Get_XF4(); // Frame rate of original (frames/s) 
@@ -282,14 +281,7 @@ void dpx::ParseBuffer()
         //if (!FrameRate_Film && !FrameRate_Television)
         //    Unsupported(unsupported::FrameRate_Unavailable);
 
-        double FrameRateD = FrameRate_Film ? FrameRate_Film : FrameRate_Television;
-        if (FrameRateD)
-        {
-            stringstream ss;
-            ss.precision(11);
-            ss << FrameRateD;
-            *FrameRate = ss.str();
-        }
+        InputInfo->FrameRate = FrameRate_Film ? FrameRate_Film : FrameRate_Television;
     }
 
     // Supported?

@@ -44,6 +44,15 @@ enum info : uint8_t
 typedef uint8_t flavor;
 
 //---------------------------------------------------------------------------
+struct input_info
+{
+    double                      FrameRate = 0;
+    size_t                      FrameCount = 0;
+    double                      SampleRate = 0;
+    size_t                      SampleCount = 0;
+};
+
+//---------------------------------------------------------------------------
 class input_base
 {
 public:
@@ -65,6 +74,7 @@ public:
     bool                        IsDetected() { return Info[Info_IsDetected]; }
     bool                        IsSupported() { return Info[Info_IsSupported]; }
     bool                        HasErrors() { return Info[Info_HasErrors]; }
+    input_info*                 InputInfo = nullptr;
 
     // Common info
     parser                      ParserCode;
@@ -72,7 +82,6 @@ public:
 protected:
     virtual void                ParseBuffer() = 0;
     virtual void                BufferOverflow() = 0;
-
     filemap*                    FileMap;
     unsigned char*              Buffer;
     size_t                      Buffer_Size;

@@ -9,6 +9,7 @@
 #include "Lib/Config.h"
 #include "Lib/Input_Base.h"
 #include <iostream>
+#include <algorithm>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
     #include <io.h> // File existence
@@ -36,11 +37,13 @@ namespace incoherent
 static const char* MessageText[] =
 {
     "file names (gap in file names)",
+    "A/V sync (durations are different)",
 };
 
 enum code : uint8_t
 {
     FileMissing,
+    Duration,
     Max
 };
 
@@ -357,4 +360,21 @@ int input::AnalyzeInputs(global& Global)
     }
 
     return 0;
+}
+
+//---------------------------------------------------------------------------
+void input::CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors)
+{
+    if (Durations.empty())
+        return;
+
+    auto minmax = minmax_element(Durations.begin(), Durations.end());
+    if (*minmax.first + 1 < *minmax.second) // Difference of 1 second, TODO: tweakable value
+    {
+        if (Errors)
+        {
+            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.first - Durations.begin()] + " (" + to_string(*minmax.first) + "s)");
+            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
+        }
+    }
 }

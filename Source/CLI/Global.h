@@ -54,6 +54,10 @@ public:
     hashes                      Hashes;
     errors                      Errors;
 
+    // Conformance check intermediary info
+    vector<double>              Durations;
+    vector<string>              Durations_FileName;
+
     // Options
     int ManageCommandLine(const char* argv[], int argc);
     int SetDefaults();

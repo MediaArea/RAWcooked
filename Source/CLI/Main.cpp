@@ -75,7 +75,7 @@ struct parse_info
     string FileName_EndNumber;
     string Flavor;
     string Slices;
-    string FrameRate;
+    input_info InputInfo;
     bool   IsDetected;
     bool   Problem;
 
@@ -95,6 +95,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     SingleFile.Actions = Global.Actions;
     SingleFile.Hashes = &Global.Hashes;
     SingleFile.FileName = &RAWcooked.OutputFileName;
+    SingleFile.InputInfo = &InputInfo;
 
     // Parse
     SingleFile.Parse(FileMap);
@@ -140,8 +141,8 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     else
     {
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
-        size_t i_Max = RemovedFiles.size();
-        for (size_t i = 1; i < i_Max; i++)
+        SingleFile.InputInfo->FrameCount = RemovedFiles.size();
+        for (size_t i = 1; i < SingleFile.InputInfo->FrameCount; i++)
         {
             Name = &RemovedFiles[i];
             FileMap.Open_ReadMode(*Name);
@@ -151,7 +152,6 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             if (ParseFile_Input((input_base&)SingleFile))
                 return true;
         }
-
     }
 
     // License
@@ -166,9 +166,6 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 {
     // Init
     RAWcooked.ResetTrack();
-    map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
-    if (FrameRateFromOptions != Global.VideoInputOptions.end())
-        ParseInfo.FrameRate = FrameRateFromOptions->second;
 
     // WAV
     if (!ParseInfo.IsDetected)
@@ -190,7 +187,6 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     if (!ParseInfo.IsDetected)
     {
         dpx DPX(&Global.Errors);
-        DPX.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
         if (ParseInfo.ParseFile_Input(DPX, Input, Files_Pos))
             return 1;
 
@@ -206,7 +202,6 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     if (!ParseInfo.IsDetected)
     {
         tiff TIFF(&Global.Errors);
-        TIFF.FrameRate = ParseInfo.FrameRate.empty() ? &ParseInfo.FrameRate : NULL;
         if (ParseInfo.ParseFile_Input(TIFF, Input, Files_Pos))
             return 1;
 
@@ -265,10 +260,33 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         Stream.Problem = ParseInfo.Problem;
 
         Stream.Slices = ParseInfo.Slices;
-        if (!ParseInfo.FrameRate.empty())
-            Stream.FrameRate = ParseInfo.FrameRate;
+        map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
+        if (FrameRateFromOptions != Global.VideoInputOptions.end())
+        {
+            Stream.FrameRate = FrameRateFromOptions->second;
+            ParseInfo.InputInfo.FrameRate = stod(Stream.FrameRate);
+        }
+        else if (ParseInfo.InputInfo.FrameRate)
+            Stream.FrameRate = to_string(ParseInfo.InputInfo.FrameRate);
 
         Output.Streams.push_back(Stream);
+
+        if (Global.Actions[Action_Coherency])
+        {
+            // Duration
+            double Duration;
+            if (ParseInfo.InputInfo.SampleCount && ParseInfo.InputInfo.SampleRate)
+                Duration = ParseInfo.InputInfo.SampleCount / ParseInfo.InputInfo.SampleRate;
+            else if (ParseInfo.InputInfo.FrameCount && ParseInfo.InputInfo.FrameRate)
+                Duration = ParseInfo.InputInfo.FrameCount / ParseInfo.InputInfo.FrameRate;
+            else
+                Duration = 0;
+            if (Duration)
+            {
+                Global.Durations.push_back(Duration);
+                Global.Durations_FileName.push_back(RAWcooked.OutputFileName);
+            }
+        }
     }
 
     return 0;
@@ -378,6 +396,12 @@ int main(int argc, const char* argv[])
         if (Value = ParseFile(i))
             break;
     RAWcooked.Close();
+
+    // Coherency checks
+    if (Global.Actions[Action_Coherency])
+    {
+        input::CheckDurations(Global.Durations, Global.Durations_FileName, &Global.Errors);
+    }
 
     // Hashes
     if (Global.Actions[Action_Hash])

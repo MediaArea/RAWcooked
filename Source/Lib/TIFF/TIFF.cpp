@@ -161,8 +161,7 @@ struct tiff_tested TIFF_Tested[] =
 
 //---------------------------------------------------------------------------
 tiff::tiff(errors* Errors_Source) :
-    input_base_uncompressed(Errors_Source, Parser_TIFF, true),
-    FrameRate(NULL)
+    input_base_uncompressed(Errors_Source, Parser_TIFF, true)
 {
 }
 
