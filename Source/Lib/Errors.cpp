@@ -59,15 +59,17 @@ static const char* ErrorTypes_Strings[] =
 {
     "Error: undecodable",
     "Error: unsupported",
-    "Conformance issue:",
+    "Warning: incoherent",
+    "Warning: non-conforming",
 };
 static_assert(error::Type_Max == sizeof(ErrorTypes_Strings) / sizeof(const char*), IncoherencyMessage); \
 
 //---------------------------------------------------------------------------
 static const char* ErrorTypes_Infos[] =
 {
-    NULL,
+    nullptr,
     "Please contact info@mediaarea.net if you want support of such content",
+    "Incoherency in characteristics of files is detected",
     "At least 1 file is not conform to specifications",
 };
 static_assert(error::Type_Max == sizeof(ErrorTypes_Infos) / sizeof(const char*), IncoherencyMessage); \
@@ -113,7 +115,8 @@ const char* errors::ErrorMessage()
                 {
                     if (Parsers[i].Codes[j][k].StringList)
                     {
-                        ErrorMessageCache += j == error::Invalid? "Conformance issue: " : "Error: ";
+                        ErrorMessageCache += ErrorTypes_Strings[j];
+                        ErrorMessageCache += ' ';
                         ErrorMessageCache += AllErrorTexts[i][j][k];
                         ErrorMessageCache += '.';
                         ErrorMessageCache += '\n';
@@ -148,8 +151,19 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code)
         Codes.resize(Code + 1);
 
     Codes[Code].Count++;
-    if ((Type == error::Undecodable || Type == error::Unsupported) && !HasErrors_Value)
-        HasErrors_Value = true;
+    switch (Type)
+    {
+        case error::Undecodable:
+        case error::Unsupported:
+            if (!HasErrors_Value)
+                HasErrors_Value = true;
+            break;
+        case error::Incoherent:
+        case error::Invalid:
+            if (!HasWarnings_Value)
+                HasWarnings_Value = true;
+            break;
+    }
 }
 
 //---------------------------------------------------------------------------

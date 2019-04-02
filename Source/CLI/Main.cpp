@@ -391,6 +391,16 @@ int main(int argc, const char* argv[])
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
+    if (!Value && Global.Errors.HasWarnings())
+    {
+        cerr << Global.Errors.ErrorMessage() << endl;
+        cerr << "Do you want to continue despite warnings ? [y/N] ";
+        string Result;
+        getline(cin, Result);
+        if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
+            Value = 1;
+    }
+
     // FFmpeg
     if (!Value && Global.Actions[Action_Encode])
         Value = Output.Process(Global);
@@ -425,7 +435,7 @@ int main(int argc, const char* argv[])
     }
 
     // Global errors
-    if (Global.Errors.ErrorMessage())
+    if (Global.Errors.HasErrors())
     {
         cerr << Global.Errors.ErrorMessage() << endl;
         if (!Value)

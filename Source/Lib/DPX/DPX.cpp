@@ -110,10 +110,11 @@ const char** ErrorTexts[] =
 {
     undecodable::MessageText,
     unsupported::MessageText,
+    nullptr,
     invalid::MessageText,
 };
 
-//static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
 
 } // dpx_issue
 

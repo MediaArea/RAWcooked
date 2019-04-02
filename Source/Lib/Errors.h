@@ -47,6 +47,7 @@ namespace error
     {
         Undecodable,
         Unsupported,
+        Incoherent,
         Invalid,
         Type_Max
     };
@@ -61,6 +62,10 @@ namespace error
         enum code : uint8_t;
     }
     namespace unsupported
+    {
+        enum code : uint8_t;
+    }
+    namespace incoherent
     {
         enum code : uint8_t;
     }
@@ -94,6 +99,7 @@ public:
     void                        Error(parser Parser, error::type Type, error::generic::code Code);
     void                        Error(parser Parser, error::type Type, error::generic::code Code, const string& String);
     bool                        HasErrors() { return HasErrors_Value; }
+    bool                        HasWarnings() { return HasWarnings_Value; }
     void                        ClearErrors() { Parsers.clear(); }
 
 private:
@@ -110,6 +116,7 @@ private:
     string                      ErrorMessageCache;
     void                        DeleteStrings();
     bool                        HasErrors_Value = false;
+    bool                        HasWarnings_Value = false;
 };
 
 #endif
