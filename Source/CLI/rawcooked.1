@@ -73,6 +73,93 @@ Default name is \fI${Input}.rawcooked_reversibility_data\fR
 Do not show information related to RAWcooked.
 .br
 External encoder/decoder may need an additional option.
+.TP
+.B \-y
+Automatic yes to prompts.
+.br
+Assume \fIyes\fR as answer to all prompts and run non\-interactively.
+.TP
+.B \-n
+Automatic no to prompts.
+.br
+Assume \fIno\fR as answer to all prompts and run non\-interactively.
+.SS ACTIONS
+.TP
+.B \-\-all
+Same as \-\-check \-\-check\-padding \-\-coherency \-\-conch \-\-encode \-\-hash (see below)
+.TP
+.B \-\-none
+Same as \-\-no\-check \-\-no\-check\-padding \-\-no coherency \-\-no\-conch \-\-no\-encode (see below)
+.TP
+.B \-\-check
+Check that the encoded file can be correctly decoded.
+.br
+If input is raw content, encode then decode input and check that output is same as the input content.
+.br
+If input is a Matroska container, decode input and check that output is same as the decoded content.
+.TP
+.B \-\-no\-check
+Don't do checks (see above).
+.br
+Is default (it may change in the future).
+.TP
+.B \-\-check\-padding
+Do costly (in terms of analysis duration or bytes read) checks.
+.br
+It is slower but guaranties reversibility with e.g. DPX files with non zero padding bits.
+.TP
+.B \-\-no\-check\-padding
+Don't do costly (in terms of analysis duration or bytes read) checks.
+.br
+It is quicker but may lead to partial reversibility with non conform files.
+.br
+Is default (it may change in the future).
+.TP
+.B \-\-coherency
+Coherency check of the package.
+.br
+Currently partially implemented.
+.br
+Is default (it may change in the future)
+.TP
+.B \-\-no\-coherency
+Don't do coherency check (see above).
+.TP
+.B \-\-conch
+Conformance check of the format, when supported.
+.br
+Currently partially implemented for DPX.
+.TP
+.B \-\-no\-conch
+Don't do conformance check (see above).
+.br
+Is default (it may change in the future).
+.TP
+.B \-\-encode
+Encode audio-visual RAW data into a compressed stream.
+.br
+Is default
+.TP
+.B \-\-no\-encode
+Don't encode (see above).
+.TP
+.B \-\-hash
+Compute or test the hash of files.
+.br
+If input is raw content, do the hash and store hashes in RAWcooked metadata.
+.br
+If an hash file is in the raw content, test that the hash file is valid.
+.br
+If input is a Matroska container and RAWcooked metadata contains hashes, decode input and check hashes (issue considered as decoding error).
+.br
+If input is a Matroska container and with hash files in attachment, decode input and check hashes (issue considered as invalid data).
+.br
+Is default if input is a Matroska container and RAWcooked metadata contains hashes or if input is a Matroska container and with hash files in attachment (it may change in the future).
+.TP
+.B \-\-no\-hash
+Don't do compute or test of hash of files. (see above).
+.br
+Is default if input is raw content (it may change in the future).
 .SS INPUT RELATED OPTIONS
 .TP
 .B \-\-file
