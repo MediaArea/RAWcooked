@@ -73,6 +73,9 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     else
         Command += Global.BinName;
 
+    // Disable stdin for ffmpeg
+    Command += " -nostdin";
+
     // Info
     bool Problem = false;
 
