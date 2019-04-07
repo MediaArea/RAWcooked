@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
 
-PATH="${PWD}:$PATH"
+script_path="${PWD}/test"
+. ${script_path}/helpers.sh
 
-rcode=0
-
-output=$(${valgrind} rawcooked --version)
-
-# check valgrind
-if [ -n "${valgrind}" ] && [ -s "valgrind.log" ] ; then
-    cat valgrind.log >&${fd}
-    rcode=1
-fi
+run_rawcooked --version
 
 # check expected result
-if [[ ! "${output}" =~ ^RAWcooked\ ([0-9A-Za-z]+\.)+[0-9A-Za-z]+$ ]] ; then
-    rcode=1
+if [[ ! "${cmd_stdout}" =~ ^RAWcooked\ ([0-9A-Za-z]+\.)+[0-9A-Za-z]+$ ]] ; then
+    status=1
 fi
 
-exit ${rcode}
-
+exit ${status}
