@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
 
-PATH="${PWD}:$PATH"
+script_path="${PWD}/test"
+. ${script_path}/helpers.sh
 
-rcode=0
-
-stderr=$(${valgrind} rawcooked -d DoesNotExist/NotFound.dpx 2>&1 >/dev/null)
-result=$?
-
-# check valgrind
-if [ -n "${valgrind}" ] && [ -s "valgrind.log" ] ; then
-    cat valgrind.log >&${fd}
-    rcode=1
-fi
+run_rawcooked -d DoesNotExist/NotFound.dpx
 
 # check expected result
-if [ "${result}" -eq "0" ] && [ -z "${stderr}" ] ; then
-    rcode=1
+if [ "${cmd_status}" -eq "0" ] && [ -z "${cmd_stderr}" ] ; then
+    status=1
 fi
 
-exit ${rcode}
+clean
 
+exit ${status}
