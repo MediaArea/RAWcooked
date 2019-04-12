@@ -5,6 +5,7 @@
  */
 
 //---------------------------------------------------------------------------
+#define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #include "Lib/FileIO.h"
 #include <iostream>
 #include <sstream>
@@ -22,13 +23,6 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
-    #ifndef ftruncate
-        int ftruncate(int __fd, off_t __length)
-        {
-            errno = ENOSYS;
-            return -1;
-        }
-    #endif
 #endif
 //---------------------------------------------------------------------------
 
@@ -339,7 +333,7 @@ file::return_value file::SetEndOfFile()
     {
         return Error_FileWrite;
     }
-    if (!ftruncate(P, length))
+    if (ftruncate(P, length))
     #endif
     {
         return Error_FileWrite;
