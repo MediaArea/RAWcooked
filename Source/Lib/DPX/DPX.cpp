@@ -382,12 +382,12 @@ void dpx::ParseBuffer()
     if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = false;
-        RAWcooked->Before = Buffer;
-        RAWcooked->Before_Size = OffsetToData;
-        RAWcooked->After = Buffer + OffsetAfterData;
-        RAWcooked->After_Size = Buffer_Size - OffsetAfterData;
-        RAWcooked->In = In;
-        RAWcooked->In_Size = In_Size;
+        RAWcooked->BeforeData = Buffer;
+        RAWcooked->BeforeData_Size = OffsetToData;
+        RAWcooked->AfterData = Buffer + OffsetAfterData;
+        RAWcooked->AfterData_Size = Buffer_Size - OffsetAfterData;
+        RAWcooked->InData = In;
+        RAWcooked->InData_Size = In_Size;
         RAWcooked->FileSize = (uint64_t)-1;
         if (Actions[Action_Hash])
         {

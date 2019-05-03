@@ -262,12 +262,12 @@ void unknown::ParseBuffer()
     if (RAWcooked)
     {
         RAWcooked->Unique = true;
-        RAWcooked->Before = nullptr;
-        RAWcooked->Before_Size = 0;
-        RAWcooked->After = nullptr;
-        RAWcooked->After_Size = 0;
-        RAWcooked->In = nullptr;
-        RAWcooked->In_Size = 0;
+        RAWcooked->BeforeData = nullptr;
+        RAWcooked->BeforeData_Size = 0;
+        RAWcooked->AfterData = nullptr;
+        RAWcooked->AfterData_Size = 0;
+        RAWcooked->InData = nullptr;
+        RAWcooked->InData_Size = 0;
         RAWcooked->FileSize = (uint64_t)-1;
         if (Actions[Action_Hash])
         {

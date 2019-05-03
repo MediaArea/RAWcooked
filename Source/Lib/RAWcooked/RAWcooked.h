@@ -27,14 +27,14 @@ public:
 
     bool                        Unique; // If set, data is for the whole stream (unique file)
 
-    uint8_t*                    Before;
-    uint64_t                    Before_Size;
+    uint8_t*                    BeforeData;
+    uint64_t                    BeforeData_Size;
 
-    uint8_t*                    After;
-    uint64_t                    After_Size;
+    uint8_t*                    AfterData;
+    uint64_t                    AfterData_Size;
 
-    uint8_t*                    In;
-    uint64_t                    In_Size;
+    uint8_t*                    InData;
+    uint64_t                    InData_Size;
 
     md5*                        HashValue = nullptr;
     bool                        IsAttachment = false;

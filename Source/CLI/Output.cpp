@@ -19,7 +19,7 @@ int output::Process(global& Global)
     {
         cerr << "Error: no A/V content detected.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
         return 1;
-    }
+    } 
 
     return 0;
 }
