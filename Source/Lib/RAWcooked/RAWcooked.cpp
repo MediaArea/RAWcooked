@@ -545,6 +545,7 @@ void rawcooked::ResetTrack()
 //---------------------------------------------------------------------------
 void rawcooked::Close()
 {
+    File.SetEndOfFile();
     File.Close();
 }
 
