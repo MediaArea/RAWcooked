@@ -114,6 +114,8 @@ static size_t Size_EB(uint64_t Value)
     size_t S_l = 1;
     while (Value >> (S_l * 7))
         S_l++;
+    if (Value == (uint64_t)-1 >> ((sizeof(Value) - S_l) * 8 + S_l))
+        S_l++;
     return S_l;
 }
 
