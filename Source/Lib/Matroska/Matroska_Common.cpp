@@ -850,7 +850,10 @@ void matroska::ParseBuffer()
     {
         uint64_t Name = Get_EB();
         uint64_t Size = Get_EB();
-        Levels[Level].Offset_End = Buffer_Offset + Size;
+        if (Size <= Levels[Level - 1].Offset_End - Buffer_Offset)
+            Levels[Level].Offset_End = Buffer_Offset + Size;
+        else
+            Levels[Level].Offset_End = Levels[Level - 1].Offset_End;
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
         IsList = false;
         (this->*Call)();

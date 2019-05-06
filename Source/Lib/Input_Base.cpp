@@ -212,6 +212,8 @@ uint64_t input_base::Get_EB()
     TEST_BUFFEROVERFLOW(1);
 
     uint64_t ToReturn = Buffer[Buffer_Offset];
+    if (!ToReturn)
+        return (uint64_t)-1; // Out of specifications, consider the value as Unlimited
     uint64_t s = 0;
     while (!(ToReturn&(((uint64_t)1) << (7 - s))))
         s++;
