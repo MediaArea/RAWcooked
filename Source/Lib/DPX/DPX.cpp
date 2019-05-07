@@ -258,10 +258,15 @@ void dpx::ParseBuffer()
     uint16_t Packing = Get_X2();
     uint16_t Encoding = Get_X2();
     uint32_t OffsetToData = Get_X4();
-    if (OffsetToData < 1664 || OffsetToData > Buffer_Size)
-        Undecodable(undecodable::OffsetToData);
-    if (OffsetToImageData != OffsetToData)
-        Unsupported(unsupported::OffsetToImageData); // FFmpeg specific, it prioritizes OffsetToImageData over OffsetToData. TODO: remove this limitation when future internal encoder is used
+    if (OffsetToData)
+    {
+        if (OffsetToData < 1664 || OffsetToData > Buffer_Size)
+            Undecodable(undecodable::OffsetToData);
+        if (OffsetToImageData != OffsetToData)
+            Unsupported(unsupported::OffsetToImageData); // FFmpeg specific, it prioritizes OffsetToImageData over OffsetToData. TODO: remove this limitation when future internal encoder is used
+    }
+    else
+        OffsetToData = OffsetToImageData;
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
    
