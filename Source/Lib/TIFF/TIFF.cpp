@@ -636,12 +636,12 @@ void tiff::ParseBuffer()
     if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = false;
-        RAWcooked->Before = Buffer;
-        RAWcooked->Before_Size = StripOffsets[0];
-        RAWcooked->After = Buffer + Buffer_Size - EndOfImagePadding;
-        RAWcooked->After_Size = EndOfImagePadding;
-        RAWcooked->In = nullptr;
-        RAWcooked->In_Size = 0;
+        RAWcooked->BeforeData = Buffer;
+        RAWcooked->BeforeData_Size = StripOffsets[0];
+        RAWcooked->AfterData = Buffer + Buffer_Size - EndOfImagePadding;
+        RAWcooked->AfterData_Size = EndOfImagePadding;
+        RAWcooked->InData = nullptr;
+        RAWcooked->InData_Size = 0;
         RAWcooked->FileSize = Buffer_Size;
         if (Actions[Action_Hash])
         {

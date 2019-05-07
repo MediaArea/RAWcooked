@@ -212,6 +212,8 @@ uint64_t input_base::Get_EB()
     TEST_BUFFEROVERFLOW(1);
 
     uint64_t ToReturn = Buffer[Buffer_Offset];
+    if (!ToReturn)
+        return (uint64_t)-1; // Out of specifications, consider the value as Unlimited
     uint64_t s = 0;
     while (!(ToReturn&(((uint64_t)1) << (7 - s))))
         s++;
@@ -262,12 +264,12 @@ void unknown::ParseBuffer()
     if (RAWcooked)
     {
         RAWcooked->Unique = true;
-        RAWcooked->Before = nullptr;
-        RAWcooked->Before_Size = 0;
-        RAWcooked->After = nullptr;
-        RAWcooked->After_Size = 0;
-        RAWcooked->In = nullptr;
-        RAWcooked->In_Size = 0;
+        RAWcooked->BeforeData = nullptr;
+        RAWcooked->BeforeData_Size = 0;
+        RAWcooked->AfterData = nullptr;
+        RAWcooked->AfterData_Size = 0;
+        RAWcooked->InData = nullptr;
+        RAWcooked->InData_Size = 0;
         RAWcooked->FileSize = (uint64_t)-1;
         if (Actions[Action_Hash])
         {

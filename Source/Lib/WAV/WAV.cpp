@@ -330,12 +330,12 @@ void wav::WAVE_data()
     if (IsSupported() && RAWcooked)
     {
         RAWcooked->Unique = true;
-        RAWcooked->Before = Buffer;
-        RAWcooked->Before_Size = Buffer_Offset;
-        RAWcooked->After = Buffer + Levels[Level].Offset_End;
-        RAWcooked->After_Size = Buffer_Size - Levels[Level].Offset_End;
-        RAWcooked->In = nullptr;
-        RAWcooked->In_Size = 0;
+        RAWcooked->BeforeData = Buffer;
+        RAWcooked->BeforeData_Size = Buffer_Offset;
+        RAWcooked->AfterData = Buffer + Levels[Level].Offset_End;
+        RAWcooked->AfterData_Size = Buffer_Size - Levels[Level].Offset_End;
+        RAWcooked->InData = nullptr;
+        RAWcooked->InData_Size = 0;
         RAWcooked->FileSize = (uint64_t)-1;
         if (Actions[Action_Hash])
         {
