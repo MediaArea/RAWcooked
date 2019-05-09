@@ -1,9 +1,8 @@
 # Structure of RAWcooked reversibility data 
 
-Beside video and audio content, losslessly compressed with adapted lossless format, some sidecar data is needed for guaranteeing the reversibility to the original files.  
-RAWcooked reversibility data is built for a specific file, with specific options. In most cases, RAWcooked reversibility data is still usable after a remux (e.g. from Matroska (.mkv) to QuickTime (.mov) with RAWcooked reversibility data in a sidecar file) or transcode (e.g. FFV1 version 1 to FFV1 version 3, keeping the same tracks in the same order) but it is not guaranteed.
+To guarantee the reversibility to the original files you will require the some sidecar data. RAWcooked’s reversibility data is built for each specific file and with specific options. In most cases RAWcooked reversibility data is still usable after a remux (for example from Matroska .mkv to QuickTime .mov with RAWcooked reversibility data in a sidecar file) or after a transcode (such as FFV1 version 1 to FFV1 version 3, keeping the same tracks in the same order). This is not guaranteed for all cases.
 
-Reversibility data can be stored in e.g. a sidecar file, a container attachment or a chunk/atom/tag.  
+Reversibility data can be stored in a sidecar file, a container attachment or a chunk/atom/tag.
 
 ## Base design
 
@@ -26,14 +25,14 @@ Several elements may be found in "RawCookedTrack" or "RawCookedBlock".
 
 File name of the resulting file.  
 
-This element is a marker, indicating that any element after this element and before the next FileName element are related to this file.  
+This element is a marker indicating that any element after this element, and before the next FileName element, are related to this file. 
 
 #### DataSize
 
 Size of the data in the file. The total file size is BeforeData content size + DataSize + AfterData content size.  
 
 If not present, total file size is considered as unknown.  
-DataSize must be present for all corresponding FileName element in case there are several FileName elements. This is useful for knowing when the tool need to switch to the next file during demux.
+DataSize must be present for all corresponding FileName element in case there are several FileName elements. This is useful for knowing when the tool needs to switch to the next file during demux.
 
 Type: unsigned integer
 
