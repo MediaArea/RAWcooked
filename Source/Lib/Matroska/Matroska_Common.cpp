@@ -285,7 +285,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
 
         if (!Mode[IsNotEnd])
         {
-            // Set end of file if necesary
+            // Set end of file if necessary
             if (SizeOnDisk != (size_t)-1 && Offset != SizeOnDisk)
             {
                 if (File_Write.SetEndOfFile())
@@ -1471,7 +1471,7 @@ void matroska::Segment_Cluster_SimpleBlock()
         // Timestamp
         Block_Timestamp = (Buffer[Buffer_Offset + 1] << 8 || Buffer[Buffer_Offset + 2]);
 
-        // Load balacing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
+        // Load balancing between 2 frames (1 is parsed and 1 is written on disk), TODO: better handling
         if (!TrackInfo_Current->R_A)
         {
             TrackInfo_Current->R_A = new raw_frame;
@@ -1854,7 +1854,7 @@ void matroska::ProgressIndicator_Show()
                 cerr << ", ";
                 ShowRealTime(RealTime);
             }
-            cerr << "    "; // Clean up in case there is less content outputed than the previous time
+            cerr << "    "; // Clean up in case there is less content outputted than the previous time
 
             ProgressIndicator_Value = ProgressIndicator_New;
         }
@@ -1878,7 +1878,7 @@ void matroska::ProgressIndicator_Show()
     {
         ShowRealTime(RealTime);
     }
-    cerr << "                              \n"; // Clean up in case there is less content outputed than the previous time
+    cerr << "                              \n"; // Clean up in case there is less content outputted than the previous time
 }
 
 //---------------------------------------------------------------------------
@@ -1919,7 +1919,7 @@ void matroska::Uncompress(uint8_t* &Output, size_t &Output_Size)
 void matroska::SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size)
 {
     // Replace illegal characters (on the target platform) by underscore
-    // Note: the outpout is not exactly as the source content and information about the exact source file name is lost, this is a limitation of the target platform impossible to bypass
+    // Note: the output is not exactly as the source content and information about the exact source file name is lost, this is a limitation of the target platform impossible to bypass
     #if defined(_WIN32) || defined(_WINDOWS)
         for (size_t i = 0; i < FileName_Size; i++)
             if (FileName[i] == ':'
