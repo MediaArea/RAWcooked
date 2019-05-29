@@ -31,6 +31,24 @@
 
 namespace fileinput_issue {
 
+namespace undecodable
+{
+
+static const char* MessageText[] =
+{
+    "file (can not be open)",
+};
+
+enum code : uint8_t
+{
+    FileCanNotBeOpen,
+    Max
+};
+
+static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage);
+
+} // undecodable
+
 namespace incoherent
 {
 
@@ -53,7 +71,7 @@ namespace unsupported { static_assert(Max == sizeof(MessageText) / sizeof(const 
 
 const char** ErrorTexts[] =
 {
-    nullptr,
+    undecodable::MessageText,
     nullptr,
     incoherent::MessageText,
     nullptr,
@@ -377,4 +395,19 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
             Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
         }
     }
+}
+
+//---------------------------------------------------------------------------
+bool input::OpenInput(filemap& FileMap, const string& Name, errors* Errors)
+{
+    if (FileMap.Open_ReadMode(Name))
+    {
+        if (Errors)
+        {
+            Errors->Error(IO_FileInput, error::Undecodable, (error::generic::code)fileinput_issue::undecodable::FileCanNotBeOpen, Name);
+        }
+        return true;
+    }
+
+    return false;
 }
