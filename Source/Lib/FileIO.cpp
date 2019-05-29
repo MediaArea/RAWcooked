@@ -166,7 +166,7 @@ int filemap::Close()
             Buffer_Size = 0;
         }
         int& P = (int&)Private;
-        if (P == -1)
+        if (P != -1)
         {
             close(P);
         }
