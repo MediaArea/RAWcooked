@@ -28,6 +28,9 @@ public:
 
     // Checks
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);
+
+    // I/O
+    static bool OpenInput(filemap& FileMap, const string& Name, errors* Errors);
 };
 
 #endif

@@ -156,7 +156,11 @@ int filemap::Close()
         HANDLE& File = (HANDLE&)Private;
         if (File != INVALID_HANDLE_VALUE)
         {
-            CloseHandle(File);
+            if (CloseHandle(File) == 0)
+            {
+                Private = (void*)-1;
+                return 1;
+            }
         }
     #else
         if (Buffer)
@@ -166,9 +170,13 @@ int filemap::Close()
             Buffer_Size = 0;
         }
         int& P = (int&)Private;
-        if (P == -1)
+        if (P != -1)
         {
-            close(P);
+            if (close(P))
+            {
+                Private = (void*)-1;
+                return 1;
+            }
         }
     #endif
 

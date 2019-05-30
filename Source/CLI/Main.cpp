@@ -8,7 +8,6 @@
 #include "CLI/Global.h"
 #include "CLI/Input.h"
 #include "CLI/Output.h"
-#include "Lib/FileIO.h"
 #include "Lib/Matroska/Matroska_Common.h"
 #include "Lib/DPX/DPX.h"
 #include "Lib/TIFF/TIFF.h"
@@ -145,7 +144,8 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         for (size_t i = 1; i < SingleFile.InputInfo->FrameCount; i++)
         {
             Name = &RemovedFiles[i];
-            FileMap.Open_ReadMode(*Name);
+            if (input::OpenInput(FileMap, *Name, &Global.Errors))
+                return true;
             RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
             FormatPath(RAWcooked.OutputFileName);
 
@@ -345,8 +345,8 @@ int ParseFile(size_t Files_Pos)
     ParseInfo.Name = &Input.Files[Files_Pos];
 
     // Open file
-    if (int Value = ParseInfo.FileMap.Open_ReadMode(*ParseInfo.Name))
-        return Value;
+    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors))
+        return 1;
 
     // Compressed content
     if (int Value = ParseFile_Compressed(ParseInfo))
