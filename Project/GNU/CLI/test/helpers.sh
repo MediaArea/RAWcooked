@@ -15,7 +15,7 @@ case "${OSTYPE}" in
     darwin*|bsd*)
         fsize="stat -f %z"
         ;;
-  *)
+    *)
         fatal "internal" "unsupported platform"
         ;;
 esac
@@ -30,6 +30,8 @@ PATH="${PWD}:$PATH"
 files_path="${PWD}/test/TestingFiles"
 
 status=0
+
+timeout=480
 
 fatal() {
     local test="${1}"
@@ -197,18 +199,23 @@ run_rawcooked() {
         valgrind="valgrind --quiet --log-file=${temp}/valgrind"
     fi >/dev/null 2>&1
 
-    ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr"
+    (sleep 1 ; ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr") & local pid=${!}
+    (sleep ${timeout} && (kill -HUP ${pid} ; echo "command timeout: rawcooked $@" >&${fd})) 2>/dev/null & local watcher=${!}
+    wait ${pid} 2>/dev/null
     cmd_status="${?}"
+
+    kill -HUP ${watcher}
+
     cmd_stdout="$(<${temp}/stdout)"
     cmd_stderr="$(<${temp}/stderr)"
-
-    rm -fr "${temp}"
 
     # check valgrind
     if [ -n "${valgrind}" ] && [ -s "${temp}/valgrind" ] ; then
         cat "${temp}/valgrind" >&${fd}
         status=1
     fi
+
+    rm -fr "${temp}"
 
     return ${cmd_status}
 }
