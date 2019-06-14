@@ -196,7 +196,7 @@ run_rawcooked() {
 
     local valgrind=""
     if command -v valgrind && test -n "${VALGRIND}" ; then
-        valgrind="valgrind --quiet --log-file=${temp}/valgrind"
+        valgrind="valgrind --quiet --track-origins=yes --log-file=${temp}/valgrind"
     fi >/dev/null 2>&1
 
     (sleep 1 ; ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr") & local pid=${!}
