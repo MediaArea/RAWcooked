@@ -5,7 +5,9 @@
  */
 
 //---------------------------------------------------------------------------
-#define _GNU_SOURCE // Needed for ftruncate on GNU compiler
+#if !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
+#endif
 #include "Lib/FileIO.h"
 #include <iostream>
 #include <sstream>
@@ -27,7 +29,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName)
+int filemap::Open(const char* FileName, bool Write)
 {
     Close();
 
@@ -35,7 +37,7 @@ int filemap::Open_ReadMode(const char* FileName)
 
     #if defined(_WIN32) || defined(_WINDOWS)
         HANDLE& File = (HANDLE&)Private;
-        File = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        File = CreateFileA(FileName, Write ? (GENERIC_READ | GENERIC_WRITE) : (GENERIC_READ), FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         if (File != INVALID_HANDLE_VALUE)
         {
             DWORD FileSizeHigh;
@@ -46,7 +48,7 @@ int filemap::Open_ReadMode(const char* FileName)
                 if (Buffer_Size)
                 {
                     HANDLE& Mapping = (HANDLE&)Private2;
-                    Mapping = CreateFileMapping(File, 0, PAGE_READONLY, 0, 0, 0);
+                    Mapping = CreateFileMapping(File, 0, Write ? PAGE_READWRITE : PAGE_READONLY , 0, 0, 0);
                     if (Mapping)
                         FileIsOpen = true;
                     else
@@ -68,7 +70,7 @@ int filemap::Open_ReadMode(const char* FileName)
             FileIsOpen = false;
     #else
         int& P = (int&)Private;
-        P = open(FileName, O_RDONLY, 0);
+        P = open(FileName, Write ? O_RDWR : O_RDONLY, 0);
         if (P != -1)
         {
             struct stat Fstat;
@@ -89,7 +91,7 @@ int filemap::Open_ReadMode(const char* FileName)
     #endif
 
     if (FileIsOpen)
-        FileIsOpen = Remap() ? false : true;
+        FileIsOpen = Remap(Write) ? false : true;
 
     if (!FileIsOpen)
         return 1;
@@ -98,7 +100,7 @@ int filemap::Open_ReadMode(const char* FileName)
 }
 
 //---------------------------------------------------------------------------
-int filemap::Remap()
+int filemap::Remap(bool Write)
 {
     if (Buffer)
     {
@@ -115,7 +117,7 @@ int filemap::Remap()
 
     #if defined(_WIN32) || defined(_WINDOWS)
         HANDLE& Mapping = (HANDLE&)Private2;
-        Buffer = (unsigned char*)MapViewOfFile(Mapping, FILE_MAP_READ, 0, 0, 0);
+        Buffer = (unsigned char*)MapViewOfFile(Mapping, Write ? (FILE_MAP_READ | FILE_MAP_WRITE) : (FILE_MAP_READ), 0, 0, 0);
         if (!Buffer)
         {
             CloseHandle(Mapping);
@@ -128,7 +130,7 @@ int filemap::Remap()
         }
     #else
         int& P = (int&)Private;
-        Buffer = (unsigned char*)mmap(NULL, Buffer_Size, PROT_READ, MAP_FILE | MAP_PRIVATE, P, 0);
+        Buffer = (unsigned char*)mmap(NULL, Buffer_Size, Write ? (PROT_READ | PROT_WRITE) : (PROT_READ), MAP_SHARED, P, 0);
         if (Buffer == MAP_FAILED)
         {
             Buffer = NULL;

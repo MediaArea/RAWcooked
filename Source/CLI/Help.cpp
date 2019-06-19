@@ -143,6 +143,13 @@ ReturnValue Help(const char* Name)
     cout << "              Don't do conformance check (see above)." << endl;
     cout << "              Is default (it may change in the future)" << endl;
     cout << endl;
+    cout << "       --ecc" << endl;
+    cout << "              Add Error Correction Codes to the resulting Matroska file." << endl;
+    cout << "       --no-ecc" << endl;
+    cout << "              Don't add Error Correction Codes to the resulting Matroska file" << endl;
+    cout << "              (see above)." << endl;
+    cout << "              Is default (it may change in the future)" << endl;
+    cout << endl;
     cout << "       --encode" << endl;
     cout << "              Encode audio-visual RAW data into a compressed stream." << endl;
     cout << "              Is default" << endl;

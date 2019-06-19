@@ -56,10 +56,28 @@ static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 } // intermediatewrite_issue
 
 //---------------------------------------------------------------------------
+extern void Matroska_CRC32_Compute(uint32_t& CRC32, const uint8_t* Buffer_Current, const uint8_t* Buffer_End);
+static void CRC32_Fill(uint8_t* Buffer, size_t Buffer_Size)
+{
+    // Compute and fill CRC32
+    uint32_t CRC32Computed = 0xFFFFFFFF;
+    Matroska_CRC32_Compute(CRC32Computed, Buffer, Buffer + Buffer_Size);
+    CRC32Computed ^= 0xFFFFFFFF;
+    Buffer[-4] = (uint8_t)(CRC32Computed);
+    Buffer[-3] = (uint8_t)(CRC32Computed >> 8);
+    Buffer[-2] = (uint8_t)(CRC32Computed >> 16);
+    Buffer[-1] = (uint8_t)(CRC32Computed >> 24);
+}
+
+//---------------------------------------------------------------------------
 
 // Library name and version
 const char* LibraryName = "RAWcooked";
 const char* LibraryVersion = "18.10.1";
+
+// Global
+static const uint32_t CRC32 = 0x3F;
+static const uint32_t Void = 0x6C;
 
 // EBML
 static const uint32_t Name_EBML = 0x0A45DFA3;
@@ -93,14 +111,21 @@ static const uint32_t Name_RawCooked_FileHash = 0x20;
 static const uint32_t Name_RawCooked_FileSize = 0x30;
 static const uint32_t Name_RawCooked_MaskBaseFileSize = 0x31;     // In BlockGroup only
 static const uint32_t Name_RawCooked_MaskAdditionFileSize = 0x32; // In Track only
-// Global information
+// Segment information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;
 static const uint32_t Name_RawCooked_PathSeparator = 0x72;
+// Erasure
+static const uint32_t Name_Rawcooked_Erasure = 0x726365;   // "rce", RAWcooked global part, EBML class D
+static const uint32_t Name_Rawcooked_Erasure_ShardInfo = 0x726369;   // "rci", RAWcooked global part, EBML class D
+static const uint32_t Name_Rawcooked_Erasure_ShardHashes = 0x726368;   // "rch", RAWcooked global part, EBML class D
+static const uint32_t Name_Rawcooked_Erasure_ParityShards = 0x726370;   // "rcp", RAWcooked global part, EBML class D
+static const uint32_t Name_Rawcooked_Erasure_EbmlStartLocation = 0x726373;   // "rcs", RAWcooked global part, EBML class D
+static const uint32_t Name_Rawcooked_Erasure_ParityShardsLocation = 0x72636C;   // "rcl", RAWcooked global part, EBML class D
 // Parameters
 static const char* DocType = "rawcooked";
-static const uint8_t DocTypeVersion = 1;
-static const uint8_t DocTypeReadVersion = 1;
+static const uint64_t DocTypeVersion = 1;
+static const uint64_t DocTypeReadVersion = 1;
 
 //---------------------------------------------------------------------------
 enum hashformat
@@ -112,7 +137,7 @@ enum hashformat
 static size_t Size_EB(uint64_t Value)
 {
     size_t S_l = 1;
-    while (Value >> (S_l * 7))
+    while (S_l < 7 && Value >> (S_l * 7))
         S_l++;
     if (Value == (uint64_t)-1 >> ((sizeof(Value) - S_l) * 8 + S_l))
         S_l++;
@@ -120,10 +145,32 @@ static size_t Size_EB(uint64_t Value)
 }
 
 //---------------------------------------------------------------------------
+static void Write_EB(uint8_t* Buffer, size_t& Buffer_Offset, uint64_t Value)
+{
+    size_t S_l = Size_EB(Value);
+    uint64_t S2 = Value | (((uint64_t)1) << (S_l * 7));
+    while (S_l)
+    {
+        Buffer[Buffer_Offset] = (uint8_t)(S2 >> ((S_l - 1) * 8));
+        Buffer_Offset++;
+        S_l--;
+    }
+}
+
+//---------------------------------------------------------------------------
 static size_t Size_Number(uint64_t Value)
 {
     size_t S_l = 1;
-    while (Value >> (S_l * 8))
+    while (S_l < 7 && Value >> (S_l * 8))
+        S_l++;
+    return S_l;
+}
+
+//---------------------------------------------------------------------------
+static size_t Size_Number(int64_t Value)
+{
+    size_t S_l = 1;
+    while (S_l < 7 && Value >> (S_l * 8) == ((int64_t)-1) >> (S_l * 8))
         S_l++;
     return S_l;
 }
@@ -136,10 +183,11 @@ public:
     ~ebml_writer();
 
     // Types
-    void EB(uint64_t Size);
-    void Block(uint32_t Name, uint64_t Size, const uint8_t* Data);
+    void EB(uint64_t Value, size_t Length = (size_t)-1);
+    void Block(uint32_t Name, uint64_t Size, const uint8_t* Data, size_t BlockSize_Length = (size_t)-1);
     void String(uint32_t Name, const char* Data);
-    void Number(uint32_t Name, uint64_t Number);
+    void Number(uint32_t Name, uint64_t Number, size_t BlockSize_Length = (size_t)-1);
+    void Number(uint32_t Name, int64_t Number, size_t BlockSize_Length = (size_t)-1);
     void DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, uint64_t Size, const uint8_t* Data);
     void CompressableData(uint32_t Name, const uint8_t* Data, uint64_t Size, uint64_t CompressedSize);
 
@@ -153,37 +201,88 @@ public:
     size_t GetBufferSize();
 
 private:
-    std::vector<size_t> BlockSizes;
+    struct block_info
+    {
+        size_t Buffer_PreviousOffset = 0;
+        size_t Size = 0;
+        std::vector<block_info> Blocks;
+
+        size_t GetSize(size_t Level)
+        {
+            if (Level)
+                return Blocks.back().GetSize(Level - 1);
+            else
+                return  Blocks.back().Size;
+        }
+
+        void Remove(size_t Level)
+        {
+            if (Level)
+                return Blocks.back().Remove(Level - 1);
+            else
+                Blocks.pop_back();
+        }
+
+        void Begin(size_t Offset, size_t Level)
+        {
+            if (Level)
+                return Blocks.back().Begin(Offset, Level - 1);
+            else
+            {
+                Blocks.push_back(block_info());
+                Blocks.back().Buffer_PreviousOffset = Offset;
+            }
+        }
+
+        void End(size_t Offset, size_t Level)
+        {
+            if (Level)
+                return Blocks.back().End(Offset, Level - 1);
+            else
+            {
+                Blocks.back().Size = Offset - Blocks.back().Buffer_PreviousOffset;
+            }
+        }
+
+        void Set2ndPass()
+        {
+            Buffer_PreviousOffset = 0;
+            reverse(Blocks.begin(), Blocks.end()); // We'll decrement size for keeping track about where we are
+            for (auto Block : Blocks)
+                Block.Set2ndPass();
+        }
+    };
+    block_info BlockInfo;
+    size_t Level = (size_t)-1;
     uint8_t* Buffer = NULL;
-    size_t Buffer_PreviousOffset = 0;
     size_t Buffer_Offset = 0;
 };
 
 //---------------------------------------------------------------------------
-void ebml_writer::EB(uint64_t Size)
+void ebml_writer::EB(uint64_t Value, size_t S_l)
 {
-    size_t S_l = Size_EB(Size);
+    if (S_l > 7)
+        S_l = Size_EB(Value);
 
     if (Buffer)
     {
-        uint64_t S2 = Size | (((uint64_t)1) << (S_l * 7));
+        uint64_t S2 = Value | (((uint64_t)1) << (S_l * 7));
         while (S_l)
         {
             Buffer[Buffer_Offset] = (uint8_t)(S2 >> ((S_l - 1) * 8));
             Buffer_Offset++;
             S_l--;
         }
-
     }
     else
         Buffer_Offset += S_l;
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::Block(uint32_t Name, uint64_t Size, const uint8_t* Data)
+void ebml_writer::Block(uint32_t Name, uint64_t Size, const uint8_t* Data, size_t S_l)
 {
     EB(Name);
-    EB(Size);
+    EB(Size, S_l);
 
     if (Buffer)
     {
@@ -199,10 +298,32 @@ void ebml_writer::String(uint32_t Name, const char* Data)
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::Number(uint32_t Name, uint64_t Number)
+void ebml_writer::Number(uint32_t Name, uint64_t Number, size_t S_l)
 {
     EB(Name);
-    size_t S_l = Size_Number(Number);
+    if (S_l > 7)
+        S_l = Size_Number(Number);
+    EB(S_l);
+
+    if (Buffer)
+    {
+        while (S_l)
+        {
+            Buffer[Buffer_Offset] = (uint8_t)(Number >> ((S_l - 1) * 8));
+            Buffer_Offset++;
+            S_l--;
+        }
+    }
+    else
+        Buffer_Offset += S_l;
+}
+
+//---------------------------------------------------------------------------
+void ebml_writer::Number(uint32_t Name, int64_t Number, size_t S_l)
+{
+    EB(Name);
+    if (S_l > 7)
+        S_l = Size_Number(Number);
     EB(S_l);
 
     if (Buffer)
@@ -246,14 +367,17 @@ void ebml_writer::CompressableData(uint32_t Name, const uint8_t* Data, uint64_t 
 //---------------------------------------------------------------------------
 void ebml_writer::Block_Begin(uint32_t Name)
 {
+    Level++;
+
     EB(Name);
     if (Buffer)
     {
-        EB(BlockSizes.back());
-        BlockSizes.pop_back();
+        EB(BlockInfo.GetSize(Level));
     }
     else
-        Buffer_PreviousOffset = Buffer_Offset;
+    {
+        BlockInfo.Begin(Buffer_Offset, Level);
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -261,9 +385,15 @@ void ebml_writer::Block_End()
 {
     if (!Buffer)
     {
-        BlockSizes.push_back(Buffer_Offset - Buffer_PreviousOffset);
-        EB(Buffer_Offset - Buffer_PreviousOffset);
+        BlockInfo.End(Buffer_Offset, Level);
+        EB(BlockInfo.GetSize(Level));
     }
+    else
+    {
+        BlockInfo.Remove(Level);
+    }
+
+    Level--;
 }
 
 //---------------------------------------------------------------------------
@@ -272,9 +402,8 @@ void ebml_writer::Set2ndPass()
     if (Buffer)
         return;
 
-    reverse(BlockSizes.begin(), BlockSizes.end()); // We'll decrement size for keeping track about where we are
+    BlockInfo.Set2ndPass();
     Buffer = new uint8_t[Buffer_Offset];
-    Buffer_PreviousOffset = 0;
     Buffer_Offset = 0;
 }
 
@@ -310,6 +439,7 @@ rawcooked::rawcooked() :
 rawcooked::~rawcooked()
 {
     Close();
+    delete EbmlWriter;
 }
 
 //---------------------------------------------------------------------------
@@ -470,8 +600,8 @@ void rawcooked::Parse()
         {
             Writer.Block_Begin(Name_EBML);
             Writer.String(Name_EBML_Doctype, DocType);
-            Writer.Number(Name_EBML_DoctypeVersion, 1);
-            Writer.Number(Name_EBML_DoctypeReadVersion, 1);
+            Writer.Number(Name_EBML_DoctypeVersion, DocTypeVersion);
+            Writer.Number(Name_EBML_DoctypeReadVersion, DocTypeReadVersion);
             Writer.Block_End();
         }
 
@@ -568,11 +698,11 @@ void rawcooked::Delete()
 }
 
 //---------------------------------------------------------------------------
-void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
+void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, bool Append)
 {
     if (!File_WasCreated)
     {
-        bool RejectIfExists = (Mode && *Mode == AlwaysYes) ? false : true;
+        bool RejectIfExists = (Append || (Mode && *Mode == AlwaysYes)) ? false : true;
         if (file::return_value Result = File.Open_WriteMode(string(), FileName, RejectIfExists))
         {
             if (RejectIfExists && Result == file::Error_FileAlreadyExists && Mode && *Mode == Ask && Ask_Callback)
@@ -595,9 +725,141 @@ void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
                 return;
             }
         }
+        if (Append)
+        {
+            if (File.Seek(0, file::End))
+            {
+                if (Errors)
+                    Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileWrite, FileName);
+                return;
+            }
+        }
         File_WasCreated = true;
     }
 
     if (File.Write(Buffer, Buffer_Size))
         return;
+}
+
+//---------------------------------------------------------------------------
+void rawcooked::Erasure(hash_value* HashValues, uint8_t* ParityShards, size_t Buffer_Size)
+{
+    // Create
+    size_t DataHashes_Count = (Buffer_Size + 1024 * 1024 - 1) / (1024 * 1024);
+    size_t ParityHashes_Count = (DataHashes_Count + 284 - 1) / 248;
+    ParityHashes_Count *= 8;
+
+    size_t Offset;
+    size_t ShardInfo_Size = Size_EB(248) + Size_EB(8) + Size_EB(1024 * 1024) + Size_EB(0) + Size_EB(Buffer_Size);
+    uint8_t* ShardInfo = new uint8_t[ShardInfo_Size];
+    Offset = 0;
+    Write_EB(ShardInfo, Offset, 248);
+    Write_EB(ShardInfo, Offset, 8);
+    Write_EB(ShardInfo, Offset, 1024 * 1024);
+    Write_EB(ShardInfo, Offset, 0);
+    Write_EB(ShardInfo, Offset, Buffer_Size);
+    size_t ShardHashes_Size = Size_EB(0) + 16 * (DataHashes_Count + ParityHashes_Count);
+    uint8_t* ShardHashes = new uint8_t[ShardHashes_Size];
+    Offset = 0;
+    Write_EB(ShardHashes, Offset, 0);
+    for (size_t i = 0; i < DataHashes_Count; i++)
+    {
+        memcpy(ShardHashes + Offset, HashValues[i].Values, 16);
+        Offset += 16;
+    }
+    for (size_t i = 0; i < ParityHashes_Count; i++)
+    {
+        memcpy(ShardHashes + Offset, HashValues[DataHashes_Count + i].Values, 16);
+        Offset += 16;
+    }
+
+    delete EbmlWriter;
+    EbmlWriter = new ebml_writer;
+    auto& Writer = *EbmlWriter;
+    size_t Padding_Size, Padding_Size2;
+    vector<int64_t> Locations;
+    for (uint8_t Pass = 0; Pass < 2; Pass++)
+    {
+        // EBML header
+        if (!Pass)
+            Locations.push_back(Writer.GetBufferSize());
+        Writer.Block_Begin(Name_EBML);
+        Writer.String(Name_EBML_Doctype, DocType);
+        Writer.Number(Name_EBML_DoctypeVersion, DocTypeVersion);
+        Writer.Number(Name_EBML_DoctypeReadVersion, DocTypeReadVersion);
+        Writer.Block_End();
+
+        // Segment - before padding
+        Writer.Block_Begin(Name_RawCookedSegment);
+        Writer.String(Name_RawCooked_LibraryName, LibraryName);
+        Writer.String(Name_RawCooked_LibraryVersion, LibraryVersion);
+        Writer.Block_Begin(Name_Rawcooked_Erasure);
+        Writer.Block(Name_Rawcooked_Erasure_ShardInfo, ShardInfo_Size, ShardInfo);
+        Writer.Block(Name_Rawcooked_Erasure_ShardHashes, ShardHashes_Size, ShardHashes);
+
+        // Segment - padding
+        if (!Pass)
+            Padding_Size = 1024 * 1024 - ((Buffer_Size + Writer.GetBufferSize() + 12 /*TEMP*/ + Size_EB(Name_Rawcooked_Erasure_ParityShards) + Size_EB(ParityHashes_Count * 1024 * 1024)) % (1024 * 1024));
+        Writer.Block(Void, Padding_Size, ParityShards, 3); //TEMP ParityShards
+
+        // Segment - after padding
+        Writer.Block(Name_Rawcooked_Erasure_ParityShards, ParityHashes_Count * 1024 * 1024, ParityShards);
+        Writer.Block_End();
+        Writer.Block_End();
+        if (!Pass)
+            Locations.push_back(Writer.GetBufferSize());
+
+        for (uint8_t i = 0; i < 8 + 1; i++)
+        {
+            // EBML header
+            Writer.Block_Begin(Name_EBML);
+            Writer.String(Name_EBML_Doctype, DocType);
+            Writer.Number(Name_EBML_DoctypeVersion, DocTypeVersion);
+            Writer.Number(Name_EBML_DoctypeReadVersion, DocTypeReadVersion);
+            Writer.Block_End();
+
+            // Segment - before padding
+            Writer.Block_Begin(Name_RawCookedSegment);
+            Writer.String(Name_RawCooked_LibraryName, LibraryName);
+            Writer.String(Name_RawCooked_LibraryVersion, LibraryVersion);
+            Writer.Block_Begin(Name_Rawcooked_Erasure);
+            const uint32_t Zero = 0;
+            Writer.Block(CRC32, 4, (const uint8_t*)&Zero);
+            size_t CRC32_Start = Writer.GetBufferSize();
+            Writer.Block(Name_Rawcooked_Erasure_ShardInfo, ShardInfo_Size, ShardInfo);
+            Writer.Block(Name_Rawcooked_Erasure_ShardHashes, ShardHashes_Size, ShardHashes);
+
+            // Segment - padding
+            size_t LastPartBlockSize = (Size_EB(Name_Rawcooked_Erasure_EbmlStartLocation) + Size_EB(4) + 4);
+            if (!i && !Pass)
+                Padding_Size2 = 1024 * 1024 - ((Writer.GetBufferSize() - Locations[1] + 10 /*TEMP*/ + LastPartBlockSize * (1 + 8 + 1 + 1)) % (1024 * 1024));
+            Writer.Block(Void, Padding_Size2, ParityShards, 3); //TEMP ParityShards
+
+            // Segment - after padding
+            Writer.Number(Name_Rawcooked_Erasure_EbmlStartLocation, Pass ? (Locations[0] - Locations[1 + i + 1] + LastPartBlockSize * (1 + 8 + 1)) : 0, 4);
+            for (uint8_t j = 0; j < 8 + 1; j++)
+                Writer.Number(Name_Rawcooked_Erasure_EbmlStartLocation, Pass ? (Locations[1 + j] - Locations[1 + i + 1] + LastPartBlockSize * (1 + 8 - j)) : 0, 4);
+            Writer.Number(Name_Rawcooked_Erasure_ParityShardsLocation, Pass ? (Locations[1] - ParityHashes_Count * 1024 * 1024 - Locations[1 + i + 1]) : 0, 4);
+            Writer.Block_End();
+            Writer.Block_End();
+            if (!Pass)
+                Locations.push_back(Writer.GetBufferSize());
+            else
+                CRC32_Fill(Writer.GetBuffer() + CRC32_Start, Writer.GetBufferSize() - CRC32_Start); // Compute and fill CRC32
+        }
+
+        // Init 2nd pass
+        Writer.Set2ndPass();
+    }
+}
+
+//---------------------------------------------------------------------------
+void rawcooked::Erasure_AppendToFile()
+{
+    if (!EbmlWriter)
+        return; // Nothing to do
+
+    // Write
+    auto& Writer = *EbmlWriter;
+    WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize(), true);
 }

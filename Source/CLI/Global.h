@@ -86,6 +86,8 @@ private:
     int SetConch(bool Value);
     int SetEncode(bool Value);
     int SetHash(bool Value);
+    int SetEcc(bool Value);
+    int SetFix(bool Value);
     int SetAll(bool Value);
 
     // Progress indicator

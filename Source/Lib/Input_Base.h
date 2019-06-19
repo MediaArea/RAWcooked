@@ -29,6 +29,8 @@ enum action : uint8_t
     Action_Conch,
     Action_CheckPadding,
     Action_AcceptTruncated,
+    Action_Ecc,
+    Action_Fix,
     Action_Max
 };
 
@@ -101,6 +103,7 @@ protected:
     uint64_t                    Get_B8();
     long double                 Get_BF10();
     uint64_t                    Get_EB();
+    int64_t                     Get_BXs(size_t Size);
 
     // Error message
     void                        Undecodable(error::undecodable::code Code) { Error(error::Undecodable, (error::generic::code)Code); }

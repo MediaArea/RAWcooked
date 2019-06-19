@@ -11,6 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/FFV1/FFV1_Frame.h"
+#include "Lib/RAWcooked/RAWcooked.h"
 #include "Lib/Input_Base.h"
 #include "Lib/FileIO.h"
 #include <cstdint>
@@ -30,6 +31,7 @@ class matroska_mapping;
 class ThreadPool;
 class flac_info;
 class hashes;
+class ReedSolomon;
 
 class frame_writer
 {
@@ -90,6 +92,9 @@ public:
     bool                        NoOutputCheck;
     hashes*                     Hashes_FromRAWcooked;
     hashes*                     Hashes_FromAttachments;
+
+    // Erasure
+    void                        Erasure_Write(const char* FileName);
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
@@ -170,6 +175,15 @@ private:
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelWidth);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelHeight);
     MATROSKA_ELEMENT(Void);
+    MATROSKA_ELEMENT(Rawcooked_Segment);
+    MATROSKA_ELEMENT(Rawcooked_Segment_LibraryName);
+    MATROSKA_ELEMENT(Rawcooked_Segment_LibraryVersion);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure_EbmlStartLocation);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure_ShardHashes);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure_ShardInfo);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure_ParityShards);
+    MATROSKA_ELEMENT(Rawcooked_Segment_Erasure_ParityShardsLocation);
 
     enum format
     {
@@ -254,6 +268,63 @@ private:
     uint64_t                    Cluster_Timestamp;
     int16_t                     Block_Timestamp;
     friend class                frame_writer;
+
+    // Erasure code
+    size_t Buffer_Size_Matroska = 0;
+    bool   Matroska_ShouldBeParsed = false;
+    struct erasure_info
+    {
+        uint8_t dataShardCount = 0;
+        uint8_t parityShardCount = 0;
+        size_t shardSize = 0;
+        size_t erasureStart = 0;
+        size_t erasureLength = 0;
+    };
+    struct erasure
+    {
+        erasure_info Info;
+        rawcooked::hash_value Compute_MD5(uint8_t* Buffer, size_t Buffer_Size);
+    };
+    struct erasure_encode : public erasure
+    {
+        erasure_encode(erasure_info& Info);
+
+        ReedSolomon* RS = nullptr;
+        rawcooked::hash_value* HashValues = nullptr;
+        uint8_t* ParityShards = nullptr;
+
+        size_t Encode(uint8_t* Buffer, size_t Buffer_Max, size_t Offset);
+    };
+    struct erasure_check : public erasure
+    {
+        erasure_check(bool Write_Source = false, errors* Errors_Source = nullptr) :
+            Write(Write_Source),
+            Errors(Errors_Source)
+        {
+        }
+
+        bool Init();
+
+        // 
+        rawcooked::hash_value* HashValues = nullptr;
+        size_t HashValues_Size = 0; // In bytes
+        uint8_t* ParityShards = nullptr;
+        size_t ParityShards_Size = 0; // In bytes
+
+        //
+        size_t DataHashes_Count = 0;
+        size_t ParityHashes_Count = 0;
+
+        size_t Check(uint8_t* Buffer, size_t Buffer_Max, size_t Offset);
+
+    private:
+        errors* Errors;
+        bool Write;
+    };
+    erasure_encode* Erasure_Encode = nullptr;
+    erasure_check* Erasure_Check = nullptr;
+    rawcooked Erasure;
+    void Erasure_Init();
 
     //Utils
     bool GetFormatAndFlavor(trackinfo* TrackInfo, input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor);

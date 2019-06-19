@@ -232,6 +232,24 @@ uint64_t input_base::Get_EB()
     return ToReturn;
 }
 
+
+//---------------------------------------------------------------------------
+int64_t input_base::Get_BXs(size_t Size)
+{
+    TEST_BUFFEROVERFLOW(Size);
+
+    int64_t ToReturn = 0;
+    int64_t Mask = ((int64_t)-1) << (Size * 8);
+    while (Size)
+    {
+        ToReturn = (ToReturn << 8) | Buffer[Buffer_Offset];
+        Size--;
+        Buffer_Offset++;
+    }
+
+    return ToReturn | Mask;
+}
+
 //---------------------------------------------------------------------------
 void input_base::Error(error::type Type, error::generic::code Code)
 {

@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <string>
 using namespace std;
+class ebml_writer;
 //---------------------------------------------------------------------------
 
 class rawcooked
@@ -48,6 +49,14 @@ public:
     string                      OutputFileName;
     uint64_t                    FileSize;
 
+    // Erasure
+    struct hash_value
+    {
+        unsigned char Values[16];
+    };
+    void                        Erasure(hash_value* Hashes_Values, uint8_t* ParityShards, size_t Buffer_Size);
+    void                        Erasure_AppendToFile();
+
     // Errors
     user_mode*                  Mode = nullptr;
     ask_callback                Ask_Callback = nullptr;
@@ -60,7 +69,7 @@ private:
     file                        File;
     size_t                      BlockCount;
     bool                        File_WasCreated = false;
-    void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size);
+    void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size, bool Append = false);
 
     // First frame info
     uint8_t*                    FirstFrame_Before;
@@ -69,6 +78,9 @@ private:
     size_t                      FirstFrame_After_Size;
     uint8_t*                    FirstFrame_FileName;
     size_t                      FirstFrame_FileName_Size;
+
+    // Erasure
+    ebml_writer*                EbmlWriter = nullptr;
 };
 
 //---------------------------------------------------------------------------

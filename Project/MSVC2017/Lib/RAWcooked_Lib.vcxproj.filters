@@ -103,6 +103,12 @@
     <Filter Include="Header Files\HashSum">
       <UniqueIdentifier>{889f93d5-50da-4606-8480-a1ec82aa200f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Reed-Solomon">
+      <UniqueIdentifier>{bea62b93-d3d5-4cf1-a957-65810ce3ac52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\Reed-Solomon">
+      <UniqueIdentifier>{e97f8d7f-a3f3-4d1b-87c3-c17fcf86decf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -303,6 +309,15 @@
     <ClInclude Include="..\..\..\Source\Lib\HashSum\HashSum.h">
       <Filter>Header Files\HashSum</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Galois.h">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Matrix.h">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Reed-Solomon.h">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -439,6 +454,15 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\HashSum\HashSum.cpp">
       <Filter>Source Files\HashSum</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Galois.cpp">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Matrix.cpp">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Reed-Solomon.cpp">
+      <Filter>ThirdParty\Reed-Solomon</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

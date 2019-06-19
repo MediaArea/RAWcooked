@@ -128,6 +128,20 @@ int global::SetHash(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetEcc(bool Value)
+{
+    Actions.set(Action_Ecc, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetFix(bool Value)
+{
+    Actions.set(Action_Fix, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
     if (int ReturnValue = SetCheck(Value))
@@ -141,6 +155,10 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetEncode(Value))
         return ReturnValue;
     if (int ReturnValue = SetHash(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetEcc(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetFix(Value))
         return ReturnValue;
     return 0;
 }
@@ -441,9 +459,21 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Value;
             License.Feature(Feature_GeneralOptions);
         }
+        else if (strcmp(argv[i], "--ecc") == 0)
+        {
+            int Value = SetEcc(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--encode") == 0)
         {
             int Value = SetEncode(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--fix") == 0)
+        {
+            int Value = SetFix(true);
             if (Value)
                 return Value;
         }
@@ -497,11 +527,23 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--no-ecc") == 0)
+        {
+        int Value = SetEcc(false);
+        if (Value)
+            return Value;
+        }
         else if (strcmp(argv[i], "--no-encode") == 0)
         {
             int Value = SetEncode(false);
             if (Value)
                 return Value;
+        }
+        else if (strcmp(argv[i], "--no-fix") == 0)
+        {
+        int Value = SetFix(false);
+        if (Value)
+            return Value;
         }
         else if (strcmp(argv[i], "--no-hash") == 0)
         {
