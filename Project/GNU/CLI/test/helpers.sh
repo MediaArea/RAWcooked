@@ -199,12 +199,11 @@ run_rawcooked() {
         valgrind="valgrind --quiet --track-origins=yes --log-file=${temp}/valgrind"
     fi >/dev/null 2>&1
 
-    (sleep 0.1 ; ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr") & local pid=${!}
-    (sleep ${timeout} && (kill -HUP ${pid} ; echo "command timeout: rawcooked $@" >&${fd})) 2>/dev/null & local watcher=${!}
-    wait ${pid} 2>/dev/null
+    ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
+    sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
+    kill -CONT ${pid} ; wait ${pid}
     cmd_status="${?}"
-
-    kill -HUP ${watcher}
+    pkill -P ${watcher}
 
     cmd_stdout="$(<${temp}/stdout)"
     cmd_stderr="$(<${temp}/stderr)"
