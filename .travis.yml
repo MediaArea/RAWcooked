@@ -21,7 +21,7 @@ before_script:
          pushd Project/GNU/CLI/ &&
              git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git &&
              pushd FFmpeg &&
-                 ./configure --prefix=.. --disable-doc --disable-x86asm --disable-ffplay --disable-ffprobe --enable-static --disable-everything --enable-protocol=file --enable-indev=lavfi --enable-filter=testsrc,anoisesrc,scale,aresample --enable-demuxer=matroska,ffv1,flac,pcm_*,wav,aiff,image2 --enable-muxer=matroska,ffv1,flac,pcm_*,wav,aiff,image2,framemd5 --enable-encoder=rawvideo,dpx,tiff,ffv1,flac,pcm_* --enable-decoder=rawvideo,dpx,tiff,ffv1,flac,pcm_* &&
+                 ./configure --prefix=.. --disable-doc --disable-x86asm --disable-ffplay --disable-ffprobe --enable-static --disable-everything --enable-protocol=file --enable-indev=lavfi --enable-filter=color,testsrc,anoisesrc,scale,aresample --enable-demuxer=matroska,ffv1,flac,pcm_*,wav,aiff,image2 --enable-muxer=matroska,ffv1,flac,pcm_*,wav,aiff,image2,framemd5 --enable-encoder=rawvideo,dpx,tiff,ffv1,flac,pcm_* --enable-decoder=rawvideo,dpx,tiff,ffv1,flac,pcm_* &&
                  make &&
                  mv ffmpeg .. &&
              popd;
