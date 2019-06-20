@@ -28,10 +28,10 @@ while read line ; do
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         # check encoding
-        VALGRIND=1 run_rawcooked --file "${file}/"
+        VALGRIND=1 run_rawcooked --file "${files_path}/${path}/${file}"
 
         # check decoding
-        VALGRIND=1 run_rawcooked "${file}.mkv"
+        VALGRIND=1 run_rawcooked "${files_path}/${path}/${file}.mkv"
 
         clean
     popd >/dev/null 2>&1
