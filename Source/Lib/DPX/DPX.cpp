@@ -323,7 +323,6 @@ void dpx::ParseBuffer()
         slice_x <<= 1;
     if (Width >= 2880) // more than 3/2 of 1920, oversampled HD is not included
         slice_x <<= 1;
-    slice_y = slice_x;
     if (BitDepth > 10)
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
 
@@ -341,6 +340,14 @@ void dpx::ParseBuffer()
     }
     if (slice_x == 0)
         Unsupported(unsupported::PixelBoundaries);
+    slice_y = slice_x;
+    for (; slice_y; slice_y--)
+    {
+        if (Height % slice_y == 0)
+            break;
+    }
+    if (slice_x > slice_y * 3 / 2)
+        slice_x = slice_y; // We can not set x and y with FFmpeg, and FFmpeg behaves differently if x and y are too different, so we limit the difference between x and y
 
     // Computing OffsetAfterData
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
