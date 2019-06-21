@@ -206,6 +206,7 @@ private:
         size_t                  DPX_Buffer_Count;
         raw_frame*              R_A;
         raw_frame*              R_B;
+        input_base_uncompressed* DecodedFrameParser;
         flac_info*              FlacInfo;
         frame                   Frame;
         bool                    Unique;
@@ -234,6 +235,7 @@ private:
             DPX_Buffer_Count(0),
             R_A(nullptr),
             R_B(nullptr),
+            DecodedFrameParser(nullptr),
             FlacInfo(nullptr),
             Unique(false),
             Format(Format_None)
@@ -254,7 +256,9 @@ private:
     friend class                frame_writer;
 
     //Utils
-    void Uncompress(uint8_t* &Output, size_t &Output_Size);
+    bool GetFormatAndFlavor(trackinfo* TrackInfo, input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor);
+    void ParseDecodedFrame(trackinfo* TrackInfo);
+    void Uncompress(uint8_t*& Output, size_t& Output_Size);
     void SanitizeFileName(uint8_t* &FileName, size_t &FileName_Size);
     void RejectIncompatibleVersions();
     void ProcessCodecPrivate_FFV1();

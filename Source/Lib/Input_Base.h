@@ -59,7 +59,7 @@ public:
     // Constructor/Destructor
     input_base(parser ParserCode);
     input_base(errors* Errors, parser ParserCode);
-    ~input_base();
+    virtual ~input_base();
 
     // Config
     bitset<Action_Max>          Actions;
@@ -67,7 +67,7 @@ public:
     string*                     FileName = nullptr;
 
     // Parse
-    bool                        Parse(uint8_t* Buffer, size_t Buffer_Size) { return Parse(nullptr, Buffer, Buffer_Size); }
+    bool                        Parse(uint8_t* Buffer, size_t Buffer_Size, size_t FileSize = (size_t)-1) { return Parse(nullptr, Buffer, Buffer_Size, FileSize); }
     bool                        Parse(filemap& FileMap) { return Parse(&FileMap, FileMap.Buffer, FileMap.Buffer_Size); }
 
     // Info
@@ -83,6 +83,7 @@ protected:
     virtual void                ParseBuffer() = 0;
     virtual void                BufferOverflow() = 0;
     filemap*                    FileMap;
+    size_t                      FileSize;
     unsigned char*              Buffer;
     size_t                      Buffer_Size;
     size_t                      Buffer_Offset;
@@ -116,7 +117,7 @@ protected:
 
 protected:
     // Actions
-    bool                        Parse(filemap* FileMap, uint8_t* Buffer, size_t Buffer_Size);
+    bool                        Parse(filemap* FileMap, uint8_t* Buffer, size_t Buffer_Size, size_t FileSize = (size_t)-1);
     void                        Hash();
 
     // Errors
@@ -134,7 +135,7 @@ class uncompressed
 public:
     // Constructor/Destructor
     uncompressed(bool IsSequence = false);
-    ~uncompressed();
+    virtual ~uncompressed();
 
     // Info
     flavor                      Flavor;
@@ -151,6 +152,7 @@ public:
     // Constructor/Destructor
     input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(ParserCode), uncompressed(IsSequence) {}
     input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
+    virtual ~input_base_uncompressed() {}
 };
 
 
