@@ -685,7 +685,7 @@ void dpx::ConformanceCheck()
     if (TotalImageFileSize != Buffer_Size)
         Invalid(invalid::TotalImageFileSize);
     uint32_t DittoKey = Get_X4();
-    if (DittoKey > 1)
+    if (DittoKey > 1 && DittoKey != (uint32_t)-1)
         Invalid(invalid::DittoKey);
     Buffer_Offset = 770;
     uint16_t NumberOfElements = Get_X2();
