@@ -50,7 +50,7 @@ clean() {
             status=1
             return ${status}
         fi
-        git clean -fdx
+        git clean -fdx >/dev/null 2>&1
     popd >/dev/null 2>&1
 }
 
