@@ -9,34 +9,34 @@
 \fBrawcooked \fR[\fIoption\fR ...] (\fIfolder\fR | \fIfile\fR ...) [\fIoption\fR ...]
 .SH DESCRIPTION
 .TP
-\fBRAWcooked\fR easily encodes RAW audio-visual sequences into the Matroska container (MKV), using the video codec FFV1 for the image and the audio codec FLAC for the sound. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments. This allows for the management of these audio-visual file formats in an effective and transparent way (e.g. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e.g. to/from harddisk, over network or for backup on LTO).
+\fBRAWcooked\fR easily encodes RAW audio-visual sequences into a lossless video stream, reducing the file size by between one and two thirds. FFmpeg encodes the audio-visual data into a Matroska container (.mkv) using the video codec FFV1, and audio codec FLAC. The metadata accompanying the RAW data is fully preserved, along with additional sidecar files such as MD5 checksums, LUT or XML if desired. This allows for the management of these audio-visual file formats in an effective and transparent way. The lossless Matroska video stream can be played in VLC or MPV media players, and writing and retrieving from storage devices such as LTO is significantly quicker.
 .TP
-When needed, the uncompressed source is retrieved \fBbit-by-bit\fR, in a manner faster than uncompressed sources. 
+If you need to use the RAW source in its original form, one line of code will easily restore it \fBbit-by-bit\fR, faster than retrieving the same file from LTO tape storage.
 .TP
 .I folder
-Encodes with the FFV1 video codec all single-image video files in the \fIfolder\fR, encodes with the FLAC audio codec all audio files in the \fIfolder\fR, and muxes these into a Matroska container (.mkv).
+Every image file within the sequence's \fIfolder\fR is encoded into a single FFV1 video stream, and each audio track within the same \fIfolder\fR is encoded to the FLAC codec. Both the FFV1 and FLAC contents are then muxed into a single Matroska container (.mkv).
 .br
-The filenames of the single image files must end with a numbered sequence. \fBRAWcooked\fR will generate the regex to parse in the correct order all the frames in the folder.
+The image filenames must end in a complete number sequence, so that \fBRAWcooked\fR can parse each image within the sequence in the correct order.
 .TP
 .I file
 .B contains RAW data (e.g. a .dpx or .wav file):
 .br
-Encodes with the FFV1 video codec all single-image video files in the folder containing the \fIfile\fR, encodes with the FLAC audio codec all audio files in the folder containing the \fIfile\fR, and muxes these into a Matroska container (.mkv).
+Every image within a sequence folder containing the \fIfile\fR is encoded into a single FFV1 video stream, and each audio track within the folder containing the same \fIfile\fR is encoded to the FLAC codec. Both the FFV1 and FLAC contents are then muxed into a single Matroska container (.mkv).
 .br
-The filenames usually end with a numbered sequence. Enter one frame and the tool will generate the regex to parse all the frames in the folder.
+The image filenames must end in a complete number sequence. By entering one \fIfile\fR within this sequence \fBRAWcooked\fR will parse every image in the correct order.
 .TP
 .I file
 .B is a Matroska container (.mkv):
 .br
-Decodes back the video and the audio of \fIfile\fR to its original formats. All metadata accompanying the original data are preserved bit-by-bit.
+Decodes the Matroska file back to the original RAW image sequence, including restoration of the original metadata and sidecar files. It is important to stress that the encoded files can be fully decoded, and that this process will create bit-by-bit identical files to the originals. Not only is the image and audio content fully restored, but also all enclosed metadata and all of the file's characteristics. Therefore, an encoded and decoded RAW file cannot be differentiated from its original.
 .SH OPTIONS
 .SS GENERAL OPTIONS
 .TP
 .B --help \fR|\fB -h
-Displays a help message.
+Displays the help guide.
 .TP
 .B --version
-Displays the installed version.
+Tells you which installed version you are using.
 .TP
 .B --attachment-max-size \fIvalue\fR | \fB-s \fIvalue
 Set maximum size of attachments to \fIvalue\fR (in bytes).
@@ -44,11 +44,11 @@ Set maximum size of attachments to \fIvalue\fR (in bytes).
 The default value is \fI1048576\fR.
 .TP
 .B --check \fIvalue\fR
-Do or don't do costly (in terms of analysis duration or bytes read) checks.
+Switch the check function on or off. Be aware check function can be demanding of time and processor usage.
 .br
 \fIpartial\fR (or \fI0\fR) is quicker but may lead to partial reversibility with files that do not conform.
 .br
-\fIfull\fR (or \fI1\fR) is slower but  guaranties reversability with e.g. DPX files with non zero padding bits.
+\fIfull\fR (or \fI1\fR) is slower but guarantees reversibility, for example with DPX where the bits do not have any zero padding included.
 .br
 The default value is 'partial'.
 .TP
@@ -58,14 +58,14 @@ When an external encoder/decoder is used, display the command to launch instead 
 .B --output-name \fIvalue\fR | \fB-o \fIvalue
 Set the name of the output file or folder to \fIvalue\fR.
 .br
-Default value is \fI${Input}.mkv\fR (if input is a folder) or \fI${Input}.RAWcooked\fR (if input is a file).
+The default output value is opposite to the input. Expect \fI${Input}.mkv\fR if the input is a folder, or \fI${Input}.RAWcooked\fR if input is a file, such as a DPX.
 .TP
 .B --rawcooked-file-name \fIvalue\fR | \fB-r \fIvalue
 Set during encoding, or retrieve by decoding, the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR.
 .br
 The default name is \fI${Input}.rawcooked_reversibility_data\fR
 .br
-\fBNote:\fR If the \fBRAWcooked\fR reversibility data file is included in the output A/V file during the encoding, this file is deleted after encoding.
+\fBNote:\fR This file is deleted after encoding if the \fBRAWcooked\fR reversibility data file is embedded in the output Matroska wrapper during encoding.
 .br
 \fBNote:\fR Not yet implemented for decoding.
 .TP
@@ -94,7 +94,7 @@ Same as --no-check --no-check-padding --no coherency --no-conch --no-encode (see
 .B --check
 Check that the encoded file can be correctly decoded.
 .br
-If input is raw content, encode then decode input and check that output is same as the input content.
+If the input is raw content such as DPX, encode then decode the raw input, before checking that the original raw content and the decoded files are identical.
 .br
 If the input is a Matroska container, decode the input and check that the output is same as the decoded content.
 .TP
@@ -106,7 +106,7 @@ This is the default, but may change in the future.
 .B --check-padding
 Run padding checks. Be aware check function can be demanding of time and processor usage.
 .br
-It is slower but guaranties reversibility with e.g. DPX files with non zero padding bits.
+It is a slower process but guarantees reversibility, for example with DPX files that have bits with no zero padding.
 .TP
 .B --no-check-padding
 Do not run padding checks, as they are demanding of time and processor usage.
@@ -146,15 +146,15 @@ Do not carry out encode (see above).
 .B --hash
 Can be used to either compute, or test, the hash of files.
 .br
-If input is raw content, do the hash and store hashes in RAWcooked metadata.
+To compute a hash use with the audio-visual RAW data. A hash is generated and stored in the RAWcooked metadata.
 .br
-If an hash file is in the raw content, test that the hash file is valid.
+Repeat the command with the RAW data to test that the previously generated hash file is valid.
 .br
-If input is a Matroska container and RAWcooked metadata contains hashes, decode input and check hashes (issue considered as decoding error).
+If the input is a Matroska container with metadata that contains computed hashes then decode the Matroska input and check hashes. Any issue raised by the check is considered a decoding error.
 .br
-If input is a Matroska container and with hash files in attachment, decode input and check hashes (issue considered as invalid data).
+If the input is a Matroska container with computed hash files stored in an attachment, then decode the Matroska input and check hashes. Any issue raised by the check is considered as invalid data.
 .br
-Is default if input is a Matroska container and RAWcooked metadata contains hashes or if input is a Matroska container and with hash files in attachment (it may change in the future).
+This is default when the input is a Matroska container and RAWcooked metadata contains hashes, and when the input is a Matroska container with hash files in the attachment. This default may change in the future.
 .TP
 .B --no-hash
 Do not compute or test the hash of the file (see above).
@@ -172,22 +172,22 @@ Default frame rate value is found in the image file metadata, if available. Othe
 .SS ENCODING RELATED OPTIONS
 .TP
 .B -c:a \fIvalue
-Force the audio encoding format to \fIvalue\fR: \fIcopy\fR (copy PCM to PCM, without modification), \fIflac\fR.
+Use this command to force the audio encoding format to \fIvalue\fR: \fIcopy\fR (for example copy PCM to PCM, without modification), \fIFLAC\fR
 .br
 The default value is \fIFLAC\fR.
 .TP
 .B -c:v \fIvalue
-Force the video encoding format \fIvalue\fR: only \fIFFV1\fR is currently allowed.
+Force the video encoding format \fIvalue\fR: only \fIffv1\fR is currently allowed.
 .br
-The default value is \fIFFV1\fR.
+The default value is \fIffv1\fR.
 .TP
 .B -coder \fIvalue
-If video encoding format is \fIffv1\fR, set the coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table).
+If video encoding format is \fIffv1\fR, set the Coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table).
 .br
 The default value is \fI1\fR.
 .TP
 .B -context \fIvalue
-If video encoding format is \fIffv1\fR, set the context to \fIvalue\fR: \fI0\fR (small), \fI1\fR (large).
+If the video encoding format is \fIffv1\fR, set the Context to \fIvalue\fR: \fI0\fR (small), \fI1\fR (large).
 .br
 The default value is \fI0\fR.
 .TP
@@ -197,22 +197,22 @@ Set the container format to \fIvalue\fR: only \fImatroska\fR is currently allowe
 The default value is \fImatroska\fR.
 .TP
 .B -g \fIvalue
-If video encoding format is \fIffv1\fR, set the GOP size to \fIvalue\fR\: any integer >=1.
+If video encoding format is \fIffv1\fR, set the GOP size to \fIvalue\fR\: \fI1\fR (generates a strict intra-frame bitstream), \fI0\fR (allows adaptable context model across frames).
 .br
 The default value is \fI1\fR. Ensure you leave the setting at \fI1\fR for archival use.
 .TP
 .B -level \fIvalue
-If video encoding format is \fIffv1\fR, set the version to \fIvalue\fR: \fI0\fR, \fI1\fR, \fI3\fR.
+The video encoding format \fIffv1\fR can have Version set to \fIvalue\fR: \fI0\fR, \fI1\fR, \fI3\fR.
 .br
-Default value is \fI3\fR.
+The default value is the latest version \fI3\fR.
 .TP
 .B -slicecrc \fIvalue
-If video encoding format is \fIffv1\fR, set the CRC to \fIvalue\fR: \fI0\fR (CRC not present), \fI1\fR (CRC present).
+If video encoding format is \fIffv1\fR, you can set the CRC checksum to \fIvalue\fR: \fI0\fR (CRC checksums off), \fI1\fR (CRC checksum on).
 .br
 The default value is \fI1\fR.
 .TP
 .B -slices \fIvalue
-If video encoding format is \fIffv1\fR, set the count of slices to \fIvalue\fR: any integer >=1 and making sense (2, 4, 6, 9, 16, 24...).
+If the video encoding format is \fIffv1\fR, you can set the multithreaded encoding slices to \fIvalue\fR: any integer over 1 (it is recommended to use a figure divisible by your workstations CPU core processors such as 2, 4, 6, 9, 16, 24...).
 .br
 The default value is variable between \fI16\fR and \fI512\fR, depending on the video frame size and depth.
 .SH COPYRIGHT
