@@ -238,7 +238,16 @@ void input_base::Error(error::type Type, error::generic::code Code)
     if (HasBufferOverflow())
         return; // Next errors are not real, due to buffer overflow
     if (!HasErrors())
-        SetErrors();
+    {
+        switch (Type)
+        {
+            case error::Undecodable:
+            case error::Unsupported:
+                SetErrors();
+                break;
+            default:;
+        }
+    }
     if (Errors)
         Errors->Error(ParserCode, Type, Code);
 }
