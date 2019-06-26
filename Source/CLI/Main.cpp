@@ -418,11 +418,21 @@ int main(int argc, const char* argv[])
     if (!Value && Global.Errors.HasWarnings())
     {
         cerr << Global.Errors.ErrorMessage() << endl;
-        cerr << "Do you want to continue despite warnings ? [y/N] ";
-        string Result;
-        getline(cin, Result);
-        if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
-            Value = 1;
+        switch (Global.Mode)
+        {
+            case AlwaysNo: Value = 1; break;
+            case AlwaysYes: break;
+            default:
+                if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
+                 || (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
+                {
+                    cerr << "Do you want to continue despite warnings ? [y/N] ";
+                    string Result;
+                    getline(cin, Result);
+                    if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
+                        Value = 1;
+                }
+        }
     }
 
     // FFmpeg

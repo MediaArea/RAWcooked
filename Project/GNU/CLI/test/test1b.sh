@@ -18,7 +18,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        run_rawcooked --file --check-padding -slices 4 -d "${file}"
+        run_rawcooked -y --conch --file --check-padding -slices 4 -d "${file}"
 
         # check expected result
         if [ "${want}" == "fail" ] ; then
@@ -36,6 +36,7 @@ while read line ; do
             clean
             continue
         fi
+        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
 
         # check result file generation
         run_ffmpeg "${cmd_stdout}"
@@ -54,11 +55,20 @@ while read line ; do
         fi
 
         # check decoding
-        run_rawcooked "${file}.mkv"
+        run_rawcooked --conch "${file}.mkv"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
             clean
             continue
         fi
+
+        decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
+            echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
+            status=1
+            clean
+            continue
+        fi
+
         check_files "${file}" "${file}.mkv.RAWcooked/${file}"
         clean
     popd >/dev/null 2>&1

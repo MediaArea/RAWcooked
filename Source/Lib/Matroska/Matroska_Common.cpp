@@ -1502,60 +1502,14 @@ void matroska::Segment_Cluster_SimpleBlock()
                             }
                             if (TrackInfo_Current->DPX_Buffer_Pos == 0 && TrackInfo_Current->Frame.RawFrame->Pre)
                             {
-                                dpx DPX;
-                                DPX.Actions.set(Action_Encode);
-                                DPX.Actions.set(Action_AcceptTruncated);
-                                if (!DPX.Parse(TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size))
-                                {
-                                    if (!DPX.IsSupported())
-                                    {
-                                        Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+                                if (GetFormatAndFlavor(TrackInfo_Current, new dpx(Errors), raw_frame::Flavor_DPX))
+                                    if (GetFormatAndFlavor(TrackInfo_Current, new tiff(Errors), raw_frame::Flavor_TIFF))
                                         return;
-                                    }
-                                    TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_DPX;
-                                    TrackInfo_Current->R_A->Flavor_Private = DPX.Flavor;
-                                    TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_DPX;
-                                    TrackInfo_Current->R_B->Flavor_Private = DPX.Flavor;
-                                }
-                                else
-                                {
-                                    tiff TIFF;
-                                    TIFF.Actions.set(Action_Encode);
-                                    TIFF.Actions.set(Action_AcceptTruncated);
-                                    unsigned char* Frame_Buffer;
-                                    size_t Frame_Buffer_Size;
-                                    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
-                                    {
-                                        // TODO: more optimal method without allocation of the full file size and without new/delete
-                                        Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
-                                        Frame_Buffer = new uint8_t[Frame_Buffer_Size];
-                                        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-                                        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
-                                    }
-                                    else
-                                    {
-                                        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
-                                        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
-                                    }
-                                    bool TiffParseResult = TIFF.Parse(Frame_Buffer, Frame_Buffer_Size);
-                                    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
-                                        delete[] Frame_Buffer;
-                                    if (!TiffParseResult)
-                                    {
-                                        if (!TIFF.IsSupported())
-                                        {
-                                            Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
-                                            return;
-                                        }
-                                        TrackInfo_Current->R_A->Flavor = raw_frame::Flavor_TIFF;
-                                        TrackInfo_Current->R_A->Flavor_Private = TIFF.Flavor;
-                                        TrackInfo_Current->R_B->Flavor = raw_frame::Flavor_TIFF;
-                                        TrackInfo_Current->R_B->Flavor_Private = TIFF.Flavor;
-                                    }
-                                }
                             }
                             {
                                 TrackInfo_Current->Frame.Read_Buffer_Continue(Buffer + Buffer_Offset + 4, Levels[Level].Offset_End - Buffer_Offset - 4);
+                                if (TrackInfo_Current->Frame.RawFrame->Pre && (Actions[Action_Conch] || Actions[Action_Coherency]))
+                                    ParseDecodedFrame(TrackInfo_Current);
                                 if (TrackInfo_Current->DPX_FileName && TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count)
                                 {
 
@@ -1879,6 +1833,77 @@ void matroska::ProgressIndicator_Show()
         ShowRealTime(RealTime);
     }
     cerr << "                              \n"; // Clean up in case there is less content outputted than the previous time
+}
+
+//---------------------------------------------------------------------------
+bool matroska::GetFormatAndFlavor(trackinfo* TrackInfo_Current, input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor)
+{
+    PotentialParser->Actions.set(Action_Encode);
+    PotentialParser->Actions.set(Action_AcceptTruncated);
+    unsigned char* Frame_Buffer;
+    size_t Frame_Buffer_Size;
+    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
+    {
+        // TODO: more optimal method without allocation of the full file size and without new/delete
+        Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
+        Frame_Buffer = new uint8_t[Frame_Buffer_Size];
+        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+    }
+    else
+    {
+        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+    }
+    bool ParseResult = PotentialParser->Parse(Frame_Buffer, Frame_Buffer_Size);
+    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
+        delete[] Frame_Buffer;
+    if (ParseResult)
+    {
+        delete PotentialParser;
+        return true;
+    }
+
+    if (!PotentialParser->IsSupported())
+    {
+        delete PotentialParser;
+        Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
+        return true;
+    }
+    TrackInfo_Current->R_A->Flavor = Flavor;
+    TrackInfo_Current->R_A->Flavor_Private = PotentialParser->Flavor;
+    TrackInfo_Current->R_B->Flavor = Flavor;
+    TrackInfo_Current->R_B->Flavor_Private = PotentialParser->Flavor;
+
+    if (Actions[Action_Conch])
+        PotentialParser->Actions.set(Action_Conch);
+    if (Actions[Action_Coherency])
+        PotentialParser->Actions.set(Action_Coherency);
+    TrackInfo_Current->DecodedFrameParser = PotentialParser;
+    return false;
+}
+
+//---------------------------------------------------------------------------
+void matroska::ParseDecodedFrame(trackinfo* TrackInfo_Current)
+{
+    unsigned char* Frame_Buffer;
+    size_t Frame_Buffer_Size;
+    if (TrackInfo_Current->DPX_FileSize && TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos] != (uint64_t)-1)
+    {
+        // TODO: more optimal method without allocation of the full file size and without new/delete
+        Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
+        Frame_Buffer = new uint8_t[Frame_Buffer_Size];
+        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+    }
+    else
+    {
+        Frame_Buffer = TrackInfo_Current->Frame.RawFrame->Pre;
+        Frame_Buffer_Size = TrackInfo_Current->Frame.RawFrame->Pre_Size;
+    }
+    bool ParseResult = TrackInfo_Current->DecodedFrameParser->Parse(Frame_Buffer, Frame_Buffer_Size, TrackInfo_Current->Frame.RawFrame->GetTotalSize());
+    if (Frame_Buffer != TrackInfo_Current->Frame.RawFrame->Pre)
+        delete[] Frame_Buffer;
 }
 
 //---------------------------------------------------------------------------

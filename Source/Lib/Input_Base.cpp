@@ -35,10 +35,11 @@ input_base::~input_base()
 }
 
 //---------------------------------------------------------------------------
-bool input_base::Parse(filemap* FileMap_Source, uint8_t* Buffer_Source, size_t Buffer_Size_Source)
+bool input_base::Parse(filemap* FileMap_Source, uint8_t* Buffer_Source, size_t Buffer_Size_Source, size_t FileSize_Source)
 {
     ClearInfo();
     FileMap = FileMap_Source;
+    FileSize = FileSize_Source == (size_t)-1 ? Buffer_Size_Source : FileSize_Source;
     Buffer = Buffer_Source;
     Buffer_Size = Buffer_Size_Source;
     HashComputed = false;
@@ -237,7 +238,16 @@ void input_base::Error(error::type Type, error::generic::code Code)
     if (HasBufferOverflow())
         return; // Next errors are not real, due to buffer overflow
     if (!HasErrors())
-        SetErrors();
+    {
+        switch (Type)
+        {
+            case error::Undecodable:
+            case error::Unsupported:
+                SetErrors();
+                break;
+            default:;
+        }
+    }
     if (Errors)
         Errors->Error(ParserCode, Type, Code);
 }

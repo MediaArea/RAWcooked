@@ -19,7 +19,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        run_rawcooked --file -d ${file}
+        run_rawcooked -y --conch --file -d ${file}
         check_success "file rejected at input" "file accepted at input" || continue
 
         if [ "${file: -1}" == "/" ] ; then
@@ -38,6 +38,7 @@ while read line ; do
             clean
             continue
         fi
+        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
 
         run_ffmpeg "${cmd_stdout}"
 
@@ -69,9 +70,17 @@ while read line ; do
             continue
         fi
 
-        run_rawcooked "${file}.mkv"
+        run_rawcooked --conch "${file}.mkv"
         check_success "mkv decoding failed" "mkv decoded"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
+            clean
+            continue
+        fi
+
+        decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
+            echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
+            status=1
             clean
             continue
         fi
@@ -83,4 +92,3 @@ while read line ; do
 done < "${script_path}/test2.txt"
 
 exit ${status}
-
