@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="RAWcooked.rc" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Lib\RAWcooked_Lib.vcxproj">
       <Project>{9e97ce8a-1583-40f8-a7f3-a1c2b318aef5}</Project>
     </ProjectReference>
