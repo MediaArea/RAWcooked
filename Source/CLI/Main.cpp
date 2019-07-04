@@ -44,7 +44,7 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
     ProgressIndicator_IsPaused = true;
     ProgressIndicator_IsEnd.notify_one();
     cerr << "                                                            \r"; // Clean up output
-    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite ? [y/N] ";
+    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite? [y/N] ";
     getline(cin, Result);
     ProgressIndicator_IsPaused = false;
     ProgressIndicator_IsEnd.notify_one();
@@ -53,7 +53,7 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
 
     if (Mode && Always)
     {
-        cerr << "Use this choice for all other files ? [y/N] ";
+        cerr << "Use this choice for all other files? [y/N] ";
         getline(cin, Result);
         if (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y'))
             * Mode = NewMode;
@@ -316,7 +316,7 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         M.NoWrite = Global.Check;
         M.NoOutputCheck = NoOutputCheck;
         if (NoOutputCheck)
-            NoOutputCheck = M.Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was check by using hashes
+            NoOutputCheck = M.Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
         if (ParseInfo.ParseFile_Input(M))
         {
             ReturnValue = 1;
@@ -426,7 +426,7 @@ int main(int argc, const char* argv[])
                 if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
                  || (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
                 {
-                    cerr << "Do you want to continue despite warnings ? [y/N] ";
+                    cerr << "Do you want to continue despite warnings? [y/N] ";
                     string Result;
                     getline(cin, Result);
                     if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
