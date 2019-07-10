@@ -51,11 +51,11 @@ namespace undecodable
 
 static const char* MessageText[] =
 {
-    "can not create directory",
-    "can not create file",
+    "cannot create directory",
+    "cannot create file",
     "file already exists",
-    "can not write in the file",
-    "can not seek in the file",
+    "cannot write in the file",
+    "cannot seek in the file",
 };
 
 enum code : uint8_t
@@ -91,7 +91,7 @@ namespace undecodable
 
 static const char* MessageText[] =
 {
-    "can not open file for reading",
+    "cannot open file for reading",
     "files are not same",
 };
 
