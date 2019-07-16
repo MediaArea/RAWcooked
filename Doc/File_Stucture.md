@@ -119,22 +119,22 @@ Type: Compressed.
 ## Storage of sidecar data
 
 As a general rule, we try to populate sidecar data in a location suited to receive a description.  
-The description should contain the text "rawcooked_reversibility_data" or any variant (any letter as uppercase, a space instead of an underscore). The preferred form, when there is no constraint about any legacy systems, is "RAWcooked reversibility data".  
+The description should contain the text "rawcooked_reversibility_data" or a variation of this (letters can be uppercase or include a space instead of underscore). The preferred form, when there is no constraints from legacy systems, is "RAWcooked reversibility data".
 
 ### In a standalone file
 
-For a file name named "FileName.Ext", RAWcooked reversibility data should be in a sidecar file named "FileName.Ext.rawcooked_reversibility_data".  
-The file name does not matter except for automatic check of the presence of RAWcooked reversibility data, and the RAWcooked reversibility data file name can be provided to the demux tool if automatic detection should not work.  
+Using the name "FileName.Ext" as an example, RAWcooked reversibility data should be in a sidecar file named "FileName.Ext.rawcooked_reversibility_data".  
+The file name doesn't influence the automatic check for the presence of RAWcooked reversibility data, and the RAWcooked reversibility data file name can be provided to the demux tool if automatic detection does not work.  
 
 ### As container attachment
 
-RAWcooked reversibility data can be in a container attachment. In that case, attachment description should be "RAWcooked reversibility data".  
-In the case a file name is required for the attachment, it should be "rawcooked_reversibility_data".  
+RAWcooked reversibility data can be in a container attachment. If this is the case the attachment description should be "RAWcooked reversibility data".  
+If a file name is required for the attachment it should be "rawcooked_reversibility_data".  
 
 ### As atom/chunk/element defined by a UUID
 
-RAWcooked reversibility data can be in a container atom/chunk/element (or whatever is the name of a sub-element inside another element) defined by a UUID. In that case, UUID should be "(TODO)".  
+RAWcooked reversibility data can be in a container atom/chunk/element (or whatever the name of the sub-element is inside another element) defined by a UUID. If this is the case the UUID should be "(TODO)".  
 
 ### As atom/chunk/element defined by a 4CC
 
-RAWcooked reversibility data can be in a container atom/chunk/element (or whatever is the name of a sub-element inside another element) defined by a 4CC. In that case, UUID should be "RAWc".  
+RAWcooked reversibility data can be in a container atom/chunk/element (or whatever the name of the sub-element is inside another element) defined by a 4CC. If this is the case the UUID should be "RAWc".  
