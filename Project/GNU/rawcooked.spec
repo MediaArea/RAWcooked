@@ -36,8 +36,8 @@ dos2unix     *.txt
 %__chmod 644 *.html *.txt
 
 %build
-export CFLAGS="$RPM_OPT_FLAGS"
-export CXXFLAGS="$RPM_OPT_FLAGS"
+export CFLAGS="-g $RPM_OPT_FLAGS"
+export CXXFLAGS="-g $RPM_OPT_FLAGS"
 
 # build CLI
 pushd Project/GNU/CLI
