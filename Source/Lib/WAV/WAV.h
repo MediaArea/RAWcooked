@@ -60,7 +60,7 @@ public:
         PCM_96000_24_6_LE,
         Flavor_Max,
     };
-    enum endianess
+    enum endianness
     {
         BE, // Or Signed for 8-bit
         LE, // Or Unsigned for 8-bit
@@ -68,15 +68,15 @@ public:
 
     // Info about formats
     uint8_t BitDepth();
-    endianess Endianess();
+    endianness Endianness();
     static uint32_t SamplesPerSec(flavor Flavor);
     static const char* SamplesPerSec_String(flavor Flavor);
     static uint8_t BitDepth(flavor Flavor);
     static const char* BitDepth_String(flavor Flavor);
     static uint8_t Channels(flavor Flavor);
     static const char* Channels_String(flavor Flavor);
-    static endianess Endianess(flavor Flavor);
-    static const char* Endianess_String(flavor Flavor);
+    static endianness Endianness(flavor Flavor);
+    static const char* Endianness_String(flavor Flavor);
 
 private:
     void                        ParseBuffer();
