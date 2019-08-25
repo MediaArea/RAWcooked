@@ -22,11 +22,11 @@ namespace undecodable
 
 static const char* MessageText[] =
 {
-    "can not create directory",
-    "can not create file",
+    "cannot create directory",
+    "cannot create file",
     "file already exists",
-    "can not write in the file",
-    "can not remove file",
+    "cannot write to the file",
+    "cannot remove file",
 };
 
 enum code : uint8_t
@@ -68,10 +68,10 @@ static const uint32_t Name_EBML_DoctypeVersion = 0x0287;
 static const uint32_t Name_EBML_DoctypeReadVersion = 0x0285;
 
 // Top level
-static const uint32_t Name_RawCookedSegment = 0x7273; // "rs", RAWcooked Segment part
+static const uint32_t Name_RawCookedSegment = 0x7273;    // "rs", RAWcooked Segment part
 static const uint32_t Name_RawCookedAttachment = 0x7261; // "ra" RAWcooked Attachment part
-static const uint32_t Name_RawCookedTrack = 0x7274;   // "rt", RAWcooked Track part
-static const uint32_t Name_RawCookedBlock = 0x7262;   // "rb", RAWcooked BlockGroup part
+static const uint32_t Name_RawCookedTrack = 0x7274;      // "rt", RAWcooked Track part
+static const uint32_t Name_RawCookedBlock = 0x7262;      // "rb", RAWcooked BlockGroup part
 
 // File data
 static const uint32_t Name_RawCooked_BeforeData = 0x01;
@@ -240,7 +240,7 @@ void ebml_writer::CompressableData(uint32_t Name, const uint8_t* Data, uint64_t 
     if (CompressedSize)
         DataWithEncodedPrefix(Name, Size, CompressedSize, Data);
     else
-        DataWithEncodedPrefix(Name,     0,          Size, Data);
+        DataWithEncodedPrefix(Name,    0,           Size, Data);
 }
 
 //---------------------------------------------------------------------------
