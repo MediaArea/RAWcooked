@@ -47,7 +47,7 @@ public:
         Flavor_Max,
     };
 
-    enum endianess : uint8_t
+    enum endianness : uint8_t
     {
         LE,
         BE,
@@ -111,7 +111,7 @@ public:
     static const char* BitsPerSample_String(flavor Flavor);
     static sampleformat SampleFormat(flavor Flavor);
     static const char* SampleFormat_String(flavor Flavor);
-    static endianess Endianess(flavor Flavor);
+    static endianness Endianness(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
 
     // Specific parsing

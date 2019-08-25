@@ -58,7 +58,7 @@ public:
         Flavor_Max,
     };
 
-    enum endianess : uint8_t
+    enum endianness : uint8_t
     {
         LE,
         BE,
@@ -102,7 +102,7 @@ public:
     static const char* BitDepth_String(flavor Flavor);
     static packing Packing(flavor Flavor);
     static const char* Packing_String(flavor Flavor);
-    static endianess Endianess(flavor Flavor);
+    static endianness Endianness(flavor Flavor);
     static const char* Endianess_String(flavor Flavor);
 
 private:

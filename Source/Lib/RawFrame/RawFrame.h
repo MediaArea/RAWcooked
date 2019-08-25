@@ -19,7 +19,7 @@ using namespace std;
 class raw_frame
 {
 public:
-    uint64_t                    Flavor_Private; //Used by specialized flavor for marking the configuration of such flavor (e.g. endianess of DPX)
+    uint64_t                    Flavor_Private; //Used by specialized flavor for marking the configuration of such flavor (e.g. endianness of DPX)
     uint8_t*                    Pre;
     size_t                      Pre_Size;
     uint8_t*                    Post;

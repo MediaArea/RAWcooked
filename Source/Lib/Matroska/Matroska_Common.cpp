@@ -453,7 +453,7 @@ public:
     uint8_t channels;
     uint8_t bits_per_sample;
     uint8_t bits_per_sample_Input;
-    uint8_t Endianess;
+    uint8_t Endianness;
 };
 void matroska::FLAC_Read(uint8_t buffer[], size_t *bytes)
 {
@@ -497,7 +497,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
                 switch (TrackInfo_Current->FlacInfo->bits_per_sample_Input)
                 {
                     case 8:
-                        switch (TrackInfo_Current->FlacInfo->Endianess)
+                        switch (TrackInfo_Current->FlacInfo->Endianness)
                         {
                             case 0:
                                 for (size_t i = 0; i < blocksize; i++)
@@ -516,7 +516,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
                         }
                         break;
                     case 16:
-                        switch (TrackInfo_Current->FlacInfo->Endianess)
+                        switch (TrackInfo_Current->FlacInfo->Endianness)
                         {
                             case 0:
                                 for (size_t i = 0; i < blocksize; i++)
@@ -537,7 +537,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
                 }
             break;
         case 16:
-            switch (TrackInfo_Current->FlacInfo->Endianess)
+            switch (TrackInfo_Current->FlacInfo->Endianness)
             {
                 case 0:
                         for (size_t i = 0; i < blocksize; i++)
@@ -558,7 +558,7 @@ void matroska::FLAC_Write(const uint32_t* buffer[], size_t blocksize)
             }
             break;
         case 24:
-            switch (TrackInfo_Current->FlacInfo->Endianess)
+            switch (TrackInfo_Current->FlacInfo->Endianness)
             {
                 case 0:
                         for (size_t i = 0; i < blocksize; i++)
@@ -1545,7 +1545,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                                 Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
                                                 return;
                                             }
-                                            TrackInfo_Current->FlacInfo->Endianess = WAV.Endianess();
+                                            TrackInfo_Current->FlacInfo->Endianness = WAV.Endianness();
                                             if (WAV.BitDepth() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                                 TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
                                         }
@@ -1561,7 +1561,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                                                     Undecodable(undecodable::ReversibilityData_UnreadableFrameHeader);
                                                     return;
                                                 }
-                                                TrackInfo_Current->FlacInfo->Endianess = AIFF.Endianess();
+                                                TrackInfo_Current->FlacInfo->Endianness = AIFF.Endianness();
                                                 if (AIFF.sampleSize() == 8 && TrackInfo_Current->FlacInfo->bits_per_sample == 16)
                                                     TrackInfo_Current->FlacInfo->bits_per_sample = 8; // FFmpeg encoder converts 8-bit input to 16-bit output, forcing 8-bit ouptut in return
                                             }
