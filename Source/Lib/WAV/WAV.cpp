@@ -54,7 +54,7 @@ static const char* MessageText[] =
     "fmt ChannelMask",
     "fmt SubFormat not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71",
     "fmt chunk not before data chunk",
-    "Flavor (SamplesPerSec / BitDepth / Channels / Endianess combination)",
+    "Flavor (SamplesPerSec / BitDepth / Channels / Endianness combination)",
     "data chunk size is not a multiple of BlockAlign",
 };
 
@@ -100,7 +100,7 @@ struct wav_tested
     uint32_t                    SamplesPerSec;
     uint8_t                     BitDepth;
     uint8_t                     Channels;
-    wav::endianess              Endianess;
+    wav::endianness              Endianness;
     wav::flavor                 Flavor;
 };
 
@@ -288,9 +288,9 @@ uint8_t wav::BitDepth()
 }
 
 //---------------------------------------------------------------------------
-wav::endianess wav::Endianess()
+wav::endianness wav::Endianness()
 {
-    return WAV_Tested[Flavor].Endianess;
+    return WAV_Tested[Flavor].Endianness;
 }
 
 //---------------------------------------------------------------------------
@@ -358,14 +358,14 @@ void wav::WAVE_fmt_()
         return;
     }
 
-    endianess Endianess;
+    endianness Endianness;
     uint16_t FormatTag = Get_L2();
     if (FormatTag == 1 || FormatTag == 0xFFFE)
-        Endianess = LE;
+        Endianness = LE;
     else
     {
         Unsupported(unsupported::fmt__FormatTag);
-        Endianess = BE;
+        Endianness = BE;
     }
 
     uint16_t Channels = Get_L2();
@@ -440,7 +440,7 @@ void wav::WAVE_fmt_()
         if (WAV_Tested_Item.SamplesPerSec == SamplesPerSec
             && WAV_Tested_Item.BitDepth == BitDepth
             && WAV_Tested_Item.Channels == Channels
-            && WAV_Tested_Item.Endianess == Endianess)
+            && WAV_Tested_Item.Endianness == Endianness)
             break;
     }
     if (Tested >= WAV_Tested_Size)
@@ -623,13 +623,13 @@ const char* wav::Channels_String(wav::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-wav::endianess wav::Endianess(wav::flavor Flavor)
+wav::endianness wav::Endianness(wav::flavor Flavor)
 {
     return LE; //For the moment all is LE or Unsigned
 }
 const char* wav::Endianess_String(wav::flavor Flavor)
 {
-    wav::endianess Value = wav::Endianess(Flavor);
+    wav::endianness Value = wav::Endianness(Flavor);
     uint8_t BitDepth = wav::BitDepth(Flavor);
 
     switch (Value)
