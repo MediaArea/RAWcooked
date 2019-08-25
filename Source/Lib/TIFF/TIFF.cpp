@@ -69,7 +69,7 @@ static const char* MessageText[] =
     "IFD tag",
     "IFD unknown tag",
     "incoherent StripOffsets",
-    "Flavor (Descriptor / BitDepth / Packing / Endianess combination)",
+    "Flavor (Descriptor / BitDepth / Packing / Endianness combination)",
     "Pixels in slice not on a 32-bit boundary",
     "Internal error",
 };
@@ -125,7 +125,7 @@ struct tiff_info
     uint8_t                     SamplesPerPixel;
     uint8_t                     BitsPerSample;
     tiff::sampleformat          SampleFormat;
-    tiff::endianess             Endianess;
+    tiff::endianness            Endianness;
 
     bool operator == (tiff_info const &Value) const
     {
@@ -134,7 +134,7 @@ struct tiff_info
             && SamplesPerPixel == Value.SamplesPerPixel
             && BitsPerSample == Value.BitsPerSample
             && SampleFormat == Value.SampleFormat
-            && Endianess == Value.Endianess;
+            && Endianness == Value.Endianness;
     }
 };
 struct tiff_tested
@@ -405,7 +405,7 @@ void tiff::ParseBuffer()
     Info.SamplesPerPixel = 1;
     Info.BitsPerSample = 1;
     Info.SampleFormat = U;
-    Info.Endianess = IsBigEndian?BE:LE;
+    Info.Endianness = IsBigEndian?BE:LE;
 
     #define CASE_2(_ELEMENT, _VALUE) \
         case _ELEMENT: _VALUE = Get_Element(); break;
@@ -802,7 +802,7 @@ const char* tiff::SampleFormat_String(tiff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-tiff::endianess tiff::Endianess(tiff::flavor Flavor)
+tiff::endianness tiff::Endianness(tiff::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -812,12 +812,12 @@ tiff::endianess tiff::Endianess(tiff::flavor Flavor)
         case Raw_RGBA_16_U_LE:
                                         return LE;
         default:
-                                        return (tiff::endianess)-1;
+                                        return (tiff::endianness)-1;
     }
 }
-const char* tiff::Endianess_String(tiff::flavor Flavor)
+const char* tiff::Endianness_String(tiff::flavor Flavor)
 {
-    tiff::endianess Value = Endianess(Flavor);
+    tiff::endianness Value = Endianness(Flavor);
 
     switch (Value)
     {
@@ -843,7 +843,7 @@ string TIFF_Flavor_String(uint8_t Flavor)
         ToReturn += '/';
         ToReturn += Value;
     }
-    Value = tiff::Endianess_String((tiff::flavor)Flavor);
+    Value = tiff::Endianness_String((tiff::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
