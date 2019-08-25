@@ -54,7 +54,7 @@ static const char* MessageText[] =
     "End-of-line padding",
     "\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"",
     "\"Frame rate of original (frames/s)\" or \"Temporal sampling rate or frame rate (Hz)\" not present",
-    "Flavor (Descriptor / BitDepth / Packing / Endianess combination)",
+    "Flavor (Descriptor / BitDepth / Packing / Endianness combination)",
     "Pixels in slice not on a 32-bit boundary",
     "Internal error",
 };
@@ -128,7 +128,7 @@ struct dpx_tested
     dpx::descriptor             Descriptor;
     uint8_t                     BitDepth;
     dpx::packing                Packing;
-    dpx::endianess              Endianess;
+    dpx::endianness             Endianness;
     dpx::flavor                 Flavor;
 };
 
@@ -298,7 +298,7 @@ void dpx::ParseBuffer()
             && DPX_Tested_Item.Encoding == Encoding
             && DPX_Tested_Item.BitDepth == BitDepth
             && DPX_Tested_Item.Packing == Packing
-            && DPX_Tested_Item.Endianess == (IsBigEndian ? BE : LE))
+            && DPX_Tested_Item.Endianness == (IsBigEndian ? BE : LE))
             break;
     }
     if (Tested >= DPX_Tested_Size)
@@ -326,7 +326,7 @@ void dpx::ParseBuffer()
     if (BitDepth > 10)
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
 
-    // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
+    // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not across 2 32-bit words
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Slice_Multiplier == 0)
     {
@@ -618,7 +618,7 @@ const char* dpx::Packing_String(dpx::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-dpx::endianess dpx::Endianess(dpx::flavor Flavor)
+dpx::endianness dpx::Endianness(dpx::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -639,12 +639,12 @@ dpx::endianess dpx::Endianess(dpx::flavor Flavor)
         case Raw_RGBA_16_BE:
                                         return BE;
         default:
-                                        return (dpx::endianess)-1;
+                                        return (dpx::endianness)-1;
     }
 }
-const char* dpx::Endianess_String(dpx::flavor Flavor)
+const char* dpx::Endianness_String(dpx::flavor Flavor)
 {
-    dpx::endianess Value = Endianess(Flavor);
+    dpx::endianness Value = Endianness(Flavor);
 
     switch (Value)
     {
@@ -671,7 +671,7 @@ string DPX_Flavor_String(uint8_t Flavor)
         ToReturn += '/';
         ToReturn += Value;
     }
-    Value = dpx::Endianess_String((dpx::flavor)Flavor);
+    Value = dpx::Endianness_String((dpx::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
