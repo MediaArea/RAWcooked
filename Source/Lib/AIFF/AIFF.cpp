@@ -46,7 +46,7 @@ static const char* MessageText[] =
     // Unsupported
     "COMM compressionType not known PCM",
     "COMM chunk not before data chunk",
-    "Flavor (sampleRate / sampleSize / numChannels / Endianess combination)",
+    "Flavor (sampleRate / sampleSize / numChannels / Endianness combination)",
 };
 
 enum code : uint8_t
@@ -82,7 +82,7 @@ struct aiff_tested
     long double                 sampleRate;
     uint16_t                    sampleSize;
     uint16_t                    numChannels;
-    aiff::endianess             Endianess;
+    aiff::endianness            Endianness;
 };
 
 const size_t AIFF_Tested_Size = 45;
@@ -288,9 +288,9 @@ uint16_t aiff::sampleSize()
 }
 
 //---------------------------------------------------------------------------
-aiff::endianess aiff::Endianess()
+aiff::endianness aiff::Endianness()
 {
-    return AIFF_Tested[Flavor].Endianess;
+    return AIFF_Tested[Flavor].Endianness;
 }
 
 //---------------------------------------------------------------------------
@@ -323,7 +323,7 @@ void aiff::AIFF_COMM()
     uint32_t numSamplesFrames = Get_B4();
     uint16_t sampleSize = Get_B2();
     long double sampleRate = Get_BF10();
-    endianess Endianess = BE;
+    endianness Endianness = BE;
     bool compressionType_NotPcm = false; // PCM by default
 
     if (Levels[Level].Offset_End - Buffer_Offset)
@@ -336,7 +336,7 @@ void aiff::AIFF_COMM()
                                 break;
             case 0x72617720 : // raw
             case 0x736F7774 : // sowt
-                                Endianess = LE;
+                                Endianness = LE;
                                 break;
             default: 
                                 Unsupported(unsupported::COMM_compressionType_NotPcm);
@@ -355,7 +355,7 @@ void aiff::AIFF_COMM()
         if (AIFF_Tested_Item.sampleRate == sampleRate
             && AIFF_Tested_Item.sampleSize == sampleSize
             && AIFF_Tested_Item.numChannels == numChannels
-            && AIFF_Tested_Item.Endianess == Endianess)
+            && AIFF_Tested_Item.Endianness == Endianness)
             break;
     }
     if (Tested >= AIFF_Tested_Size)
@@ -623,7 +623,7 @@ const char* aiff::numChannels_String(aiff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-aiff::endianess aiff::Endianess(aiff::flavor Flavor)
+aiff::endianness aiff::Endianness(aiff::flavor Flavor)
 {
     switch (Flavor)
     {
@@ -675,12 +675,12 @@ aiff::endianess aiff::Endianess(aiff::flavor Flavor)
         case PCM_96000_16_6_LE:
                                         return LE; // Or Unsigned
         default:
-                                        return (endianess)-1;
+                                        return (endianness)-1;
     }
 }
-const char* aiff::Endianess_String(aiff::flavor Flavor)
+const char* aiff::Endianness_String(aiff::flavor Flavor)
 {
-    aiff::endianess Value = aiff::Endianess(Flavor);
+    aiff::endianness Value = aiff::Endianness(Flavor);
     uint16_t sampleSize = aiff::sampleSize(Flavor);
 
     switch (Value)
@@ -704,7 +704,7 @@ string AIFF_Flavor_String(uint8_t Flavor)
     ToReturn += "bit/";
     ToReturn += aiff::numChannels_String((aiff::flavor)Flavor);
     ToReturn += "ch";
-    const char* Value = aiff::Endianess_String((aiff::flavor)Flavor);
+    const char* Value = aiff::Endianness_String((aiff::flavor)Flavor);
     if (Value[0])
     {
         ToReturn += '/';
