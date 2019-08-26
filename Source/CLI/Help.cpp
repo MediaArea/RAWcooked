@@ -180,8 +180,7 @@ ReturnValue Help(const char* Name)
     cout << endl;
     cout << "       -c:v value" << endl;
     cout << "              Force the video encoding format value: only ffv1 is currently" << endl;
-    cout << "              allowed." << endl;
-    cout << "              Default value is ffv1." << endl;
+    cout << "              allowed, which is the default value." << endl;
     cout << endl;
     cout << "       -coder value" << endl;
     cout << "              If video encoding format is ffv1, set the coder to value: 0" << endl;
@@ -196,8 +195,7 @@ ReturnValue Help(const char* Name)
     cout << endl;
     cout << "       -format value" << endl;
     cout << "              Set the container format to value: only matroska is currently" << endl;
-    cout << "              allowed." << endl;
-    cout << "              Default value is matroska." << endl;
+    cout << "              allowed, which is the default value." << endl;
     cout << endl;
     cout << "       -g value" << endl;
     cout << "              If video encoding format is ffv1, set the GOP size to value any" << endl;
