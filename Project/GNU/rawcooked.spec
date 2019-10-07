@@ -23,6 +23,10 @@ BuildRequires:  automake
 BuildRequires:  autoconf
 BuildRequires:	dos2unix
 
+%if 0%{?rhel_version} >= 800 || 0%{?centos_version} >= 800
+BuildRequires:  gdb
+%endif
+
 %description
 rawcooked CLI (Command Line Interface)
 
