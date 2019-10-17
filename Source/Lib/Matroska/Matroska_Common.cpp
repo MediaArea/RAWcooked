@@ -1847,8 +1847,10 @@ bool matroska::GetFormatAndFlavor(trackinfo* TrackInfo_Current, input_base_uncom
         // TODO: more optimal method without allocation of the full file size and without new/delete
         Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
         Frame_Buffer = new uint8_t[Frame_Buffer_Size];
-        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+        if (TrackInfo_Current->Frame.RawFrame->Pre)
+            memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+        if (TrackInfo_Current->Frame.RawFrame->Post)
+            memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
     }
     else
     {
@@ -1893,8 +1895,10 @@ void matroska::ParseDecodedFrame(trackinfo* TrackInfo_Current)
         // TODO: more optimal method without allocation of the full file size and without new/delete
         Frame_Buffer_Size = TrackInfo_Current->DPX_FileSize[TrackInfo_Current->DPX_Buffer_Pos];
         Frame_Buffer = new uint8_t[Frame_Buffer_Size];
-        memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
-        memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
+        if (TrackInfo_Current->Frame.RawFrame->Pre)
+            memcpy(Frame_Buffer, TrackInfo_Current->Frame.RawFrame->Pre, TrackInfo_Current->Frame.RawFrame->Pre_Size);
+        if (TrackInfo_Current->Frame.RawFrame->Post)
+            memcpy(Frame_Buffer + Frame_Buffer_Size - TrackInfo_Current->Frame.RawFrame->Post_Size, TrackInfo_Current->Frame.RawFrame->Post, TrackInfo_Current->Frame.RawFrame->Post_Size);
     }
     else
     {
