@@ -68,6 +68,14 @@ ReturnValue Help(const char* Name)
     cout << "       --version" << endl;
     cout << "              Displays the installed version." << endl;
     cout << endl;
+    cout << "       --store-license value" << endl;
+    cout << "              Set the license key to value and store on hard drive." << endl;
+    cout << "              (license is stored in ~/.config/RAWcooked/Config.txt on Linux/Mac," << endl;
+    cout << "              %APPDATA%/RAWcooked/Config.txt on Windows)"  << endl;
+    cout << endl;
+    cout << "       --show-license" << endl;
+    cout << "              Displays information about the installed license." << endl;
+    cout << endl;
     cout << "       --attachment-max-size value | -s value" << endl;
     cout << "              Set maximum size of attachment to value (in bytes)." << endl;
     cout << "              Default value is 1048576." << endl;
