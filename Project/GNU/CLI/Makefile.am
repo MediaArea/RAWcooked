@@ -27,6 +27,9 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/TIFF/TIFF.cpp \
     ../../../Source/Lib/WAV/WAV.cpp \
+    ../../../Source/Lib/ThirdParty/Reed-Solomon/Galois.cpp \
+    ../../../Source/Lib/ThirdParty/Reed-Solomon/Matrix.cpp \
+    ../../../Source/Lib/ThirdParty/Reed-Solomon/Reed-Solomon.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/cpu.c \
@@ -59,7 +62,8 @@ AM_CPPFLAGS = -I../../../Source \
               -I../../../Source/Lib/ThirdParty/flac/src/libFLAC/include \
               -I../../../Source/Lib/ThirdParty/md5 \
               -I../../../Source/Lib/ThirdParty/thread-pool/include\
-              -I../../../Source/Lib/ThirdParty/zlib
+              -I../../../Source/Lib/ThirdParty/zlib \
+              -I../../../Source/Lib/ThirdParty
 
 AM_CXXFLAGS = -std=c++0x
 

@@ -28,10 +28,10 @@ public:
     size_t                      Buffer_Size = 0;
 
     // Actions
-    int                         Open_ReadMode(const char* FileName);
-    int                         Open_ReadMode(const string& FileName) { return Open_ReadMode(FileName.c_str()); }
+    int                         Open(const char* FileName, bool Write = false);
+    int                         Open(const string& FileName, bool Write = false) { return Open(FileName.c_str(), Write); }
     bool                        IsOpen() { return Private == (void*)-1 ? false : true; }
-    int                         Remap();
+    int                         Remap(bool Write = false);
     int                         Close();
 
 private:

@@ -42,6 +42,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Galois.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Matrix.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Reed-Solomon.h" />
     <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h" />
@@ -105,6 +108,9 @@
     <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Galois.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Matrix.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\Reed-Solomon\Reed-Solomon.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\TIFF\TIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\WAV\WAV.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c" />
@@ -214,7 +220,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib;../../../Source/Lib/ThirdParty</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -230,7 +236,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib;../../../Source/Lib/ThirdParty</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -248,7 +254,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib;../../../Source/Lib/ThirdParty</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -267,7 +273,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib;../../../Source/Lib/ThirdParty</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>

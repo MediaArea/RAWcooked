@@ -14,6 +14,7 @@
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/Config.h"
 #include "Lib/FileIO.h"
+#include "Reed-Solomon/Reed-Solomon.h"
 #include <cstdlib>
 #include <algorithm>
 #include <cstdio>
@@ -93,25 +94,47 @@ static const char* MessageText[] =
 {
     "cannot open file for reading",
     "files are not same",
+    "input file, it is corrupted, can not correct so many errors",
 };
 
 enum code : uint8_t
 {
     FileOpen,
     FileComparison,
+    Erasure_TooManyErrors,
+    Max
+};
+
+static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage);
+
+} // undecodable
+
+namespace invalid
+{
+
+static const char* MessageText[] =
+{
+    "input file, it is corrupted, use --fix for fixing it",
+    "input file, it is corrupted (parity part), use --fix for rebuilding",
+};
+
+enum code : uint8_t
+{
+    Erasure_DataCorrupted,
+    Erasure_ParityCorrupted,
     Max
 };
 
 namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
 
-} // unparsable
+} // invalid
 
 const char** ErrorTexts[] =
 {
     undecodable::MessageText,
     nullptr,
     nullptr,
-    nullptr,
+    invalid::MessageText,
 };
 
 static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
@@ -161,7 +184,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
         if (!Mode[NoOutputCheck] && !File_Write.IsOpen())
         {
             // File already exists, we want to check it
-            if (File_Read.Open_ReadMode(BaseDirectory + OutputFileName))
+            if (File_Read.Open(BaseDirectory + OutputFileName))
             {
                 Offset = (size_t)-1;
                 SizeOnDisk = (size_t)-1;
@@ -655,6 +678,7 @@ matroska::call matroska::SubElements_##_VALUE(uint64_t Name) \
 
 ELEMENT_BEGIN(_)
 ELEMENT_CASE( 8538067, Segment)
+ELEMENT_CASE(    7273, Rawcooked_Segment)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment)
@@ -736,6 +760,103 @@ ELEMENT_BEGIN(Segment_Tracks_TrackEntry_Video)
 ELEMENT_VOID(      30, Segment_Tracks_TrackEntry_Video_PixelWidth)
 ELEMENT_VOID(      3A, Segment_Tracks_TrackEntry_Video_PixelHeight)
 ELEMENT_END()
+
+ELEMENT_BEGIN(Rawcooked_Segment)
+ELEMENT_VOID(      70, Rawcooked_Segment_LibraryName)
+ELEMENT_VOID(      71, Rawcooked_Segment_LibraryVersion)
+ELEMENT_CASE(  726365, Rawcooked_Segment_Erasure)
+ELEMENT_END()
+
+ELEMENT_BEGIN(Rawcooked_Segment_Erasure)
+ELEMENT_VOID(  726368, Rawcooked_Segment_Erasure_ShardHashes)
+ELEMENT_VOID(  726369, Rawcooked_Segment_Erasure_ShardInfo)
+ELEMENT_VOID(  72636C, Rawcooked_Segment_Erasure_ParityShardsLocation)
+ELEMENT_VOID(  726370, Rawcooked_Segment_Erasure_ParityShards)
+ELEMENT_VOID(  726373, Rawcooked_Segment_Erasure_EbmlStartLocation)
+ELEMENT_END()
+
+//---------------------------------------------------------------------------
+// CRC_32_Table (Little Endian bitstream, )
+// The CRC in use is the IEEE-CRC-32 algorithm as used in the ISO 3309 standard and in section 8.1.1.6.2 of ITU-T recommendation V.42, with initial value of 0xFFFFFFFF. The CRC value MUST be computed on a little endian bitstream and MUST use little endian storage.
+// A CRC is computed like this:
+// Init: uint32_t CRC32 ^= 0;
+// for each data byte do
+//     CRC32=(CRC32>>8) ^ Mk_CRC32_Table[(CRC32&0xFF)^*Buffer_Current++];
+// End: CRC32 ^= 0;
+static const uint32_t Matroska_CRC32_Table[256] =
+{
+    0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
+    0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
+    0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
+    0x09B64C2B, 0x7EB17CBD, 0xE7B82D07, 0x90BF1D91,
+    0x1DB71064, 0x6AB020F2, 0xF3B97148, 0x84BE41DE,
+    0x1ADAD47D, 0x6DDDE4EB, 0xF4D4B551, 0x83D385C7,
+    0x136C9856, 0x646BA8C0, 0xFD62F97A, 0x8A65C9EC,
+    0x14015C4F, 0x63066CD9, 0xFA0F3D63, 0x8D080DF5,
+    0x3B6E20C8, 0x4C69105E, 0xD56041E4, 0xA2677172,
+    0x3C03E4D1, 0x4B04D447, 0xD20D85FD, 0xA50AB56B,
+    0x35B5A8FA, 0x42B2986C, 0xDBBBC9D6, 0xACBCF940,
+    0x32D86CE3, 0x45DF5C75, 0xDCD60DCF, 0xABD13D59,
+    0x26D930AC, 0x51DE003A, 0xC8D75180, 0xBFD06116,
+    0x21B4F4B5, 0x56B3C423, 0xCFBA9599, 0xB8BDA50F,
+    0x2802B89E, 0x5F058808, 0xC60CD9B2, 0xB10BE924,
+    0x2F6F7C87, 0x58684C11, 0xC1611DAB, 0xB6662D3D,
+    0x76DC4190, 0x01DB7106, 0x98D220BC, 0xEFD5102A,
+    0x71B18589, 0x06B6B51F, 0x9FBFE4A5, 0xE8B8D433,
+    0x7807C9A2, 0x0F00F934, 0x9609A88E, 0xE10E9818,
+    0x7F6A0DBB, 0x086D3D2D, 0x91646C97, 0xE6635C01,
+    0x6B6B51F4, 0x1C6C6162, 0x856530D8, 0xF262004E,
+    0x6C0695ED, 0x1B01A57B, 0x8208F4C1, 0xF50FC457,
+    0x65B0D9C6, 0x12B7E950, 0x8BBEB8EA, 0xFCB9887C,
+    0x62DD1DDF, 0x15DA2D49, 0x8CD37CF3, 0xFBD44C65,
+    0x4DB26158, 0x3AB551CE, 0xA3BC0074, 0xD4BB30E2,
+    0x4ADFA541, 0x3DD895D7, 0xA4D1C46D, 0xD3D6F4FB,
+    0x4369E96A, 0x346ED9FC, 0xAD678846, 0xDA60B8D0,
+    0x44042D73, 0x33031DE5, 0xAA0A4C5F, 0xDD0D7CC9,
+    0x5005713C, 0x270241AA, 0xBE0B1010, 0xC90C2086,
+    0x5768B525, 0x206F85B3, 0xB966D409, 0xCE61E49F,
+    0x5EDEF90E, 0x29D9C998, 0xB0D09822, 0xC7D7A8B4,
+    0x59B33D17, 0x2EB40D81, 0xB7BD5C3B, 0xC0BA6CAD,
+    0xEDB88320, 0x9ABFB3B6, 0x03B6E20C, 0x74B1D29A,
+    0xEAD54739, 0x9DD277AF, 0x04DB2615, 0x73DC1683,
+    0xE3630B12, 0x94643B84, 0x0D6D6A3E, 0x7A6A5AA8,
+    0xE40ECF0B, 0x9309FF9D, 0x0A00AE27, 0x7D079EB1,
+    0xF00F9344, 0x8708A3D2, 0x1E01F268, 0x6906C2FE,
+    0xF762575D, 0x806567CB, 0x196C3671, 0x6E6B06E7,
+    0xFED41B76, 0x89D32BE0, 0x10DA7A5A, 0x67DD4ACC,
+    0xF9B9DF6F, 0x8EBEEFF9, 0x17B7BE43, 0x60B08ED5,
+    0xD6D6A3E8, 0xA1D1937E, 0x38D8C2C4, 0x4FDFF252,
+    0xD1BB67F1, 0xA6BC5767, 0x3FB506DD, 0x48B2364B,
+    0xD80D2BDA, 0xAF0A1B4C, 0x36034AF6, 0x41047A60,
+    0xDF60EFC3, 0xA867DF55, 0x316E8EEF, 0x4669BE79,
+    0xCB61B38C, 0xBC66831A, 0x256FD2A0, 0x5268E236,
+    0xCC0C7795, 0xBB0B4703, 0x220216B9, 0x5505262F,
+    0xC5BA3BBE, 0xB2BD0B28, 0x2BB45A92, 0x5CB36A04,
+    0xC2D7FFA7, 0xB5D0CF31, 0x2CD99E8B, 0x5BDEAE1D,
+    0x9B64C2B0, 0xEC63F226, 0x756AA39C, 0x026D930A,
+    0x9C0906A9, 0xEB0E363F, 0x72076785, 0x05005713,
+    0x95BF4A82, 0xE2B87A14, 0x7BB12BAE, 0x0CB61B38,
+    0x92D28E9B, 0xE5D5BE0D, 0x7CDCEFB7, 0x0BDBDF21,
+    0x86D3D2D4, 0xF1D4E242, 0x68DDB3F8, 0x1FDA836E,
+    0x81BE16CD, 0xF6B9265B, 0x6FB077E1, 0x18B74777,
+    0x88085AE6, 0xFF0F6A70, 0x66063BCA, 0x11010B5C,
+    0x8F659EFF, 0xF862AE69, 0x616BFFD3, 0x166CCF45,
+    0xA00AE278, 0xD70DD2EE, 0x4E048354, 0x3903B3C2,
+    0xA7672661, 0xD06016F7, 0x4969474D, 0x3E6E77DB,
+    0xAED16A4A, 0xD9D65ADC, 0x40DF0B66, 0x37D83BF0,
+    0xA9BCAE53, 0xDEBB9EC5, 0x47B2CF7F, 0x30B5FFE9,
+    0xBDBDF21C, 0xCABAC28A, 0x53B39330, 0x24B4A3A6,
+    0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF,
+    0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94,
+    0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02Ef8D,
+};
+
+//---------------------------------------------------------------------------
+void Matroska_CRC32_Compute(uint32_t& CRC32, const uint8_t* Buffer_Current, const uint8_t* Buffer_End)
+{
+    while (Buffer_Current < Buffer_End)
+        CRC32 = (CRC32 >> 8) ^ Matroska_CRC32_Table[(CRC32 & 0xFF) ^ *Buffer_Current++];
+}
 
 //---------------------------------------------------------------------------
 // Glue
@@ -819,6 +940,305 @@ matroska::call matroska::SubElements_Void(uint64_t Name)
 }
 
 //---------------------------------------------------------------------------
+matroska::erasure_encode::erasure_encode(erasure_info& Info_)
+{
+    Info = Info_;
+
+    size_t DataHashes_Count = (Info.erasureLength + Info.shardSize - 1) / (Info.shardSize);
+    size_t ParityHashes_Count = (DataHashes_Count + Info.dataShardCount - 1) / Info.dataShardCount;
+    ParityHashes_Count *= Info.parityShardCount;
+
+    RS = new ReedSolomon(Info.dataShardCount, Info.parityShardCount);
+    HashValues = new rawcooked::hash_value[DataHashes_Count + ParityHashes_Count];
+    ParityShards = new uint8_t[ParityHashes_Count * Info.shardSize];
+}
+
+//---------------------------------------------------------------------------
+size_t matroska::erasure_encode::Encode(uint8_t* Buffer, size_t Buffer_Max, size_t Offset)
+{
+    // Init
+    uint8_t* Shards[256];
+    size_t Package_Pos = Offset / Info.shardSize / Info.dataShardCount;
+    size_t Hash_Pos = Package_Pos * (Info.dataShardCount + Info.parityShardCount);
+    size_t Parity_Pos = Package_Pos * Info.parityShardCount;
+
+    // Data shards init
+    for (uint8_t i = 0; i < Info.dataShardCount; i++)
+    {
+        size_t Size = Buffer_Max - Offset;
+        if (Size > Info.shardSize)
+            Size = Info.shardSize;
+
+        if (Size == Info.shardSize)
+        {
+            Shards[i] = Buffer + Offset;
+        }
+        else
+        {
+            Shards[i] = new uint8_t[Info.shardSize];
+            memcpy(Shards[i], Buffer + Offset, Size);
+            memset(Shards[i] + Size, 0x00, Info.shardSize - Size);
+        }
+
+        if (Size)
+        {
+            HashValues[Hash_Pos++] = Compute_MD5(Buffer + Offset, Size);
+            Offset += Size;
+        }
+    }
+
+    // Parity shards init
+    auto ParityShards_Begin = ParityShards + Parity_Pos * Info.shardSize;
+    auto ParityShards_Temp = ParityShards_Begin;
+    for (uint8_t i = 0; i < Info.parityShardCount; i++)
+    {
+        Shards[Info.dataShardCount + i] = ParityShards_Temp;
+        ParityShards_Temp += Info.shardSize;
+    }
+    memset(ParityShards_Begin, 0x00, ParityShards_Temp - ParityShards_Begin);
+
+    // Process
+    RS->encode(Shards, Info.shardSize);
+
+    // Store hashes
+    for (uint8_t i = 0; i < Info.parityShardCount; i++)
+    {
+        HashValues[Hash_Pos++] = Compute_MD5(Shards[Info.dataShardCount + i], Info.shardSize);
+    }
+
+    return Offset;
+}
+
+//---------------------------------------------------------------------------
+bool matroska::erasure_check::Init()
+{
+    DataHashes_Count = (Info.erasureLength + Info.shardSize - 1) / (Info.shardSize);
+    ParityHashes_Count = (DataHashes_Count + Info.dataShardCount - 1) / Info.dataShardCount;
+    ParityHashes_Count *= Info.parityShardCount;
+    if (16 * (DataHashes_Count + ParityHashes_Count) != HashValues_Size)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+size_t matroska::erasure_check::Check(uint8_t* Buffer, size_t Buffer_Max, size_t Offset)
+{
+    // Coherency
+    size_t isNOK = 0;
+    if (HashValues_Size != 16 * (DataHashes_Count + ParityHashes_Count))
+    {
+        isNOK = 1;
+    }
+    if (ParityShards_Size != Info.shardSize * ParityHashes_Count)
+    {
+        if (ParityShards_Size || !Info.shardSize || !ParityHashes_Count)
+            isNOK = 1;
+        else
+            ParityShards_Size = Info.shardSize * ParityHashes_Count;
+    }
+    if (isNOK)
+        return Offset; // TEMP TODO: Issues
+
+    // Init
+    size_t Offset_Base = Offset;
+    size_t Package_Pos = Offset / Info.shardSize / Info.dataShardCount;
+    size_t Hash_Pos = Package_Pos * (Info.dataShardCount + Info.parityShardCount);
+    size_t Parity_Pos = Package_Pos * Info.parityShardCount;
+
+    // Compute hash of data shards
+    std::vector<bool> shardPresent;
+    for (uint8_t i = 0; i < Info.dataShardCount; i++)
+    {
+        size_t Size = Buffer_Max - Offset;
+        if (Size > Info.shardSize)
+            Size = Info.shardSize;
+        if (!Size)
+            break;
+
+        shardPresent.push_back(memcmp(HashValues[Hash_Pos + i].Values, Compute_MD5(Buffer + Offset, Size).Values, 16) ? false : true);
+        if (!shardPresent.back())
+            isNOK++;
+        
+        Offset += Size;
+    }
+
+    //if (!isNOK)
+    //    return Offset; // All is fine
+
+    // Compute hash of parity shards
+    size_t dataShardTempCount = shardPresent.size();
+    shardPresent.resize(248, true);
+    for (uint8_t i = 0; i < Info.parityShardCount; i++)
+    {
+        shardPresent.push_back(memcmp(HashValues[Hash_Pos + dataShardTempCount + i].Values, Compute_MD5(ParityShards + (Parity_Pos + i) * Info.shardSize, Info.shardSize).Values, 16) ? false : true);
+        if (!shardPresent.back())
+            isNOK++;
+    }
+
+    if (isNOK)
+    {
+        if (isNOK > Info.parityShardCount)
+        {
+            if (Errors)
+            {
+                std::stringstream in, out;
+                in << std::hex << Offset_Base;
+                out << std::hex << Offset_Base + Info.dataShardCount * Info.shardSize - 1;
+                Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Erasure_TooManyErrors, "at 0x" + in.str() + "-0x" + out.str());
+            }
+
+            return (uint64_t)-1;
+        }
+
+        uint8_t** Shards = new uint8_t* [Info.dataShardCount + Info.parityShardCount];
+        Offset = Offset_Base;
+        
+        for (uint8_t i = 0; i < Info.dataShardCount; i++)
+        {
+            size_t Size = Buffer_Max - Offset;
+            if (Size > Info.shardSize)
+                Size = Info.shardSize;
+
+            if (Size == Info.shardSize)
+            {
+                Shards[i] = Buffer + Offset;
+            }
+            else
+            {
+                Shards[i] = new uint8_t[Info.shardSize];
+                memcpy(Shards[i], Buffer + Offset, Size);
+                memset(Shards[i] + Size, 0x00, Info.shardSize - Size);
+            }
+
+            Offset += Size;
+        }
+
+        for (uint8_t i = 0; i < Info.parityShardCount; i++)
+        {
+            Shards[Info.dataShardCount + i] = ParityShards + (Parity_Pos + i) * Info.shardSize ;
+        }
+
+        if (Write)
+        {
+            ReedSolomon RS(Info.dataShardCount, Info.parityShardCount);
+            if (!RS.repair(Shards, Info.shardSize, shardPresent))
+            {
+                if (Errors)
+                {
+                    std::stringstream in, out;
+                    in << std::hex << Offset_Base;
+                    out << std::hex << Offset_Base + Info.dataShardCount * Info.shardSize - 1;
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Erasure_TooManyErrors, "at 0x" + in.str() + "-0x" + out.str());
+                }
+
+                return (uint64_t)-1;
+            }
+        }
+        for (size_t i = 0; i < shardPresent.size(); i++)
+            if (!shardPresent[i])
+            {
+                if (i < Info.dataShardCount) // Data shard
+                {
+                    size_t Write_Offset = Offset_Base + i * Info.shardSize;
+                    size_t Write_Size = Buffer_Max - Write_Offset;
+                    if (Write_Size > Info.shardSize)
+                        Write_Size = Info.shardSize;
+
+                    if (Write)
+                    {
+                        memcpy(Buffer + Write_Offset, Shards[i], Write_Size);
+                    }
+                    else
+                    {
+                        if (Errors)
+                        {
+                            std::stringstream in, out;
+                            in << std::hex << Write_Offset;
+                            out << std::hex << Write_Offset + Write_Size - 1;
+                            Errors->Error(IO_FileChecker, error::Invalid, (error::generic::code)filechecker_issue::invalid::Erasure_DataCorrupted, "at 0x" + in.str() + "-0x" + out.str());
+                        }
+                    }
+                }
+                else // Parity shard
+                {
+                    size_t Offset_Temp = (Parity_Pos + i - Info.dataShardCount) * Info.shardSize;
+
+                    if (Write)
+                    {
+                        memcpy(ParityShards + Offset_Temp, Shards[i], Info.shardSize);
+                    }
+                    else
+                    {
+                        if (Errors)
+                        {
+                            std::stringstream in, out;
+                            in << std::hex << ParityShards - Buffer + Offset_Temp;
+                            out << std::hex << ParityShards - Buffer + Offset_Temp + Info.shardSize - 1;
+                            Errors->Error(IO_FileChecker, error::Invalid, (error::generic::code)filechecker_issue::invalid::Erasure_ParityCorrupted, "at 0x" + in.str() + "-0x" + out.str());
+                        }
+                    }
+                }
+            }
+
+        if (!Write)
+            return (uint64_t)-1;
+    }
+
+    return Offset;
+}
+
+//---------------------------------------------------------------------------
+rawcooked::hash_value matroska::erasure::Compute_MD5(uint8_t* Buffer, size_t Buffer_Size)
+{
+    MD5_CTX Hash;
+    MD5_Init(&Hash);
+    MD5_Update(&Hash, Buffer, (unsigned long)Buffer_Size);
+    rawcooked::hash_value HashValue;
+    MD5_Final(HashValue.Values, &Hash);
+    return HashValue;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Erasure_Init()
+{
+    if (Buffer_Size_Matroska)
+        return; // Already donc
+    Buffer_Size_Matroska = Levels[Level].Offset_End;
+
+    // Erasure encode?
+    if (!Erasure_Encode && Actions[Action_Ecc])
+    {
+        erasure_info Info;
+        Info.dataShardCount = 248;
+        Info.parityShardCount = 8;
+        Info.shardSize = 1024 * 1024;
+        Info.erasureStart = 0;
+        Info.erasureLength = Buffer_Size_Matroska;
+
+        Erasure_Encode = new erasure_encode(Info);
+    }
+
+    // Erasure check?
+    if (Buffer_Size_Matroska != Buffer_Size)
+    {
+        const uint8_t* SearchBuffer = Buffer + Buffer_Size - 4;
+        const uint8_t* MatroskaEnd = Buffer + Buffer_Size_Matroska;
+        for (; SearchBuffer >= MatroskaEnd; SearchBuffer--)
+        {
+            if (SearchBuffer[0] != 0x1A || SearchBuffer[1] != 0x45 || SearchBuffer[2] != 0xDF || SearchBuffer[3] != 0xA3)
+                continue;
+            Buffer_Offset = SearchBuffer - Buffer;
+            Levels[Level].Offset_End = Buffer_Offset;
+            Matroska_ShouldBeParsed = true;
+            break;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
 void matroska::ParseBuffer()
 {
     if (Buffer_Size < 4 || Buffer[0] != 0x1A || Buffer[1] != 0x45 || Buffer[2] != 0xDF || Buffer[3] != 0xA3)
@@ -845,15 +1265,47 @@ void matroska::ParseBuffer()
     Level++;
 
     size_t Buffer_Offset_LowerLimit = 0; // Used for indicating the system that we'll not need anymore memory below this value 
+    size_t Buffer_Offset_HigherLimit = 0; // Used for indicating the system that we didn't use memory beyond this value
+    size_t Erasure_Encode_Offset = 0;
+    size_t Erasure_Check_Offset = 0;
 
     while (Buffer_Offset < Buffer_Size)
     {
+        // Erasure encode
+        if (Erasure_Encode && Buffer_Size_Matroska && Buffer_Offset + 16 >= Erasure_Encode_Offset && Buffer_Offset < Buffer_Size_Matroska)
+        {
+            Erasure_Encode_Offset = Erasure_Encode->Encode(Buffer, Buffer_Size_Matroska, Erasure_Encode_Offset);
+            if (Buffer_Offset_HigherLimit < Erasure_Encode_Offset)
+                Buffer_Offset_HigherLimit = Erasure_Encode_Offset;
+        }
+
+        // Erasure check
+        if (Erasure_Check && Buffer_Size_Matroska && Buffer_Offset >= Erasure_Check_Offset && Buffer_Offset < Buffer_Size_Matroska)
+        {
+            Erasure_Check_Offset = Erasure_Check->Check(Buffer, Buffer_Size_Matroska, Erasure_Check_Offset);
+            if (Erasure_Check_Offset == (uint64_t)-1)
+                break; // Error detected, we stop
+            if (Buffer_Offset_HigherLimit < Erasure_Check_Offset)
+                Buffer_Offset_HigherLimit = Erasure_Check_Offset;
+        }
+
+        // Parse header
         uint64_t Name = Get_EB();
         uint64_t Size = Get_EB();
         if (Size <= Levels[Level - 1].Offset_End - Buffer_Offset)
             Levels[Level].Offset_End = Buffer_Offset + Size;
         else
             Levels[Level].Offset_End = Levels[Level - 1].Offset_End;
+
+        // Erasure encode
+        if (Erasure_Encode && Buffer_Size_Matroska && Levels[Level].Offset_End >= Erasure_Encode_Offset && Levels[Level].Offset_End < Buffer_Size_Matroska)
+        {
+            Erasure_Encode_Offset = Erasure_Encode->Encode(Buffer, Buffer_Size_Matroska, Erasure_Encode_Offset);
+            if (Buffer_Offset_HigherLimit < Erasure_Encode_Offset)
+                Buffer_Offset_HigherLimit = Erasure_Encode_Offset;
+        }
+
+        // Parse data
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
         IsList = false;
         (this->*Call)();
@@ -873,10 +1325,42 @@ void matroska::ParseBuffer()
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
         if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
         {
-            FileMap->Remap();
+            FileMap->Remap(Actions[Action_Fix]);
             Buffer = FileMap->Buffer;
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
+
+        if (Matroska_ShouldBeParsed && Buffer_Offset >= Buffer_Size)
+        {
+            Matroska_ShouldBeParsed = false;
+            Buffer_Offset = 0;
+            Buffer_Size = Buffer_Size_Matroska;
+            Levels[0].Offset_End = Buffer_Size;
+            Level = 1;
+
+            if (Erasure_Check)
+            {
+                if (Erasure_Check->Init())
+                {
+                    // TODO
+                    delete Erasure_Check;
+                    Erasure_Check = nullptr;
+                }
+
+                if (Erasure_Encode)
+                {
+                    delete Erasure_Encode;
+                    Erasure_Encode = nullptr;
+                }
+            }
+        }
+    }
+
+    // Erasure encode
+    if (Erasure_Encode)
+    {
+        Erasure.Erasure(Erasure_Encode->HashValues, Erasure_Encode->ParityShards, Buffer_Size);
+        delete[] Erasure_Encode->HashValues;
     }
 
     // Progress indicator
@@ -904,6 +1388,8 @@ void matroska::Void()
 void matroska::Segment()
 {
     SetDetected();
+    Erasure_Init();
+
     IsList = true;
 }
 
@@ -984,7 +1470,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
 {
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
         return; // MD5 support only
     Buffer_Offset++;
 
@@ -1017,7 +1503,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash
 {
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
         return; // MD5 support only
     Buffer_Offset++;
 
@@ -1297,7 +1783,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash
 {
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
         return; // MD5 support only
     Buffer_Offset++;
 
@@ -1717,6 +2203,104 @@ void matroska::Segment_Tracks_TrackEntry_Video_PixelHeight()
     TrackInfo_Current->Frame.SetHeight(Data);
 }
 
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment()
+{
+    IsList = true;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_LibraryName()
+{
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_LibraryVersion()
+{
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure()
+{
+    IsList = true;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure_EbmlStartLocation()
+{
+    size_t Size = Levels[Level].Offset_End - Buffer_Offset;
+    int64_t Data = Get_BXs(Size);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure_ShardHashes()
+{
+    uint64_t Kind = Get_EB();
+    size_t Size = (Levels[Level].Offset_End - Buffer_Offset);
+    if (Kind == 0 && !(Size % 16)) //MD5
+    {
+        if (!Erasure_Check)
+            Erasure_Check = new erasure_check(Actions[Action_Fix], Errors);
+        Erasure_Check->HashValues_Size = Size;
+        Erasure_Check->HashValues = new rawcooked::hash_value[Size / 16];
+        memcpy(Erasure_Check->HashValues, Buffer + Buffer_Offset, Size);
+        Buffer_Offset += Size;
+    }
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure_ShardInfo()
+{
+    uint64_t dataShardCount = Get_EB();
+    uint64_t parityShardCount = Get_EB();
+    uint64_t shardSize = Get_EB();
+    uint64_t erasureStart = Get_EB();
+    uint64_t erasureLength = Get_EB();
+
+    if (Buffer_Offset <= Levels[Level].Offset_End
+     && dataShardCount && dataShardCount <= 0xFF
+     && parityShardCount && parityShardCount <= 0xFF
+     && dataShardCount + parityShardCount <= 0x100
+     && erasureStart < Buffer_Size
+     && erasureLength < Buffer_Size
+     && erasureStart < Buffer_Size - erasureLength)
+    {
+        if (!Erasure_Check)
+            Erasure_Check = new erasure_check(Actions[Action_Fix], Errors);
+        Erasure_Check->Info.dataShardCount = (uint8_t)dataShardCount;
+        Erasure_Check->Info.parityShardCount = (uint8_t)parityShardCount;
+        Erasure_Check->Info.shardSize = shardSize;
+        Erasure_Check->Info.erasureStart = erasureStart;
+        Erasure_Check->Info.erasureLength = erasureLength;
+    }
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure_ParityShards()
+{
+    size_t Size = Levels[Level].Offset_End - Buffer_Offset;
+    if (!Erasure_Check)
+        Erasure_Check = new erasure_check(Actions[Action_Fix], Errors);
+    Erasure_Check->ParityShards = Buffer + Buffer_Offset;
+    Erasure_Check->ParityShards_Size = Size;
+    Buffer_Offset += Size;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Rawcooked_Segment_Erasure_ParityShardsLocation()
+{
+    size_t Size = Levels[Level].Offset_End - Buffer_Offset;
+    int64_t Data = Get_BXs(Size);
+
+    uint64_t Remaining = Buffer_Size - Buffer_Offset;
+    if ((Data <= 0 || (Remaining < INT64_MAX && Data < (int64_t)Remaining)) && (Data >= 0 || (Buffer_Offset >= (uint64_t)-Data)))
+    {
+        if (!Erasure_Check)
+            Erasure_Check = new erasure_check(Actions[Action_Fix], Errors);
+        Erasure_Check->ParityShards = Buffer + (size_t) (Buffer_Offset + Data);
+    }
+}
+
 //***************************************************************************
 // Utils
 //***************************************************************************
@@ -2053,4 +2637,11 @@ void matroska::ProcessFrame_FLAC()
         if (Pos == TrackInfo_Current->FlacInfo->Pos_Current)
             break;
     }
+}
+
+//---------------------------------------------------------------------------
+void matroska::Erasure_Write(const char* FileName)
+{
+    Erasure.FileName = FileName;
+    Erasure.Erasure_AppendToFile();
 }
