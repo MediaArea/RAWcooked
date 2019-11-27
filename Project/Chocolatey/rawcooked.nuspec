@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>rawcooked</id>
+    <title>RAWcooked</title>
+    <version>18.10.1</version>
+    <packageSourceUrl>https://github.com/MediaArea/RAWcooked/blob/master/Project/Chocolatey</packageSourceUrl>
+    <owners>MediaArea.net</owners>
+    <authors>MediaArea.net</authors>
+    <projectUrl>https://mediaarea.net/RAWcooked</projectUrl>
+    <copyright>© 2019 MediaArea.net</copyright>
+    <licenseUrl>https://github.com/MediaArea/RAWcooked/blob/master/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/MediaArea/RAWcooked</projectSourceUrl>
+    <docsUrl>https://mediaarea.net/RAWcooked/man</docsUrl>
+    <bugTrackerUrl>https://github.com/MediaArea/RAWcooked/issues</bugTrackerUrl>
+    <tags>rawcooked dpx ffv1 raw</tags>
+    <summary>Encode and decode audio-visual RAW data with Matroska, FFV1 and FLAC</summary>
+    <description><![CDATA[
+RAWcooked encodes audio-visual RAW data into the Matroska container (MKV), using the video codec FFV1 for the image and the audio codec FLAC for the sound. The metadata accompanying the RAW data are preserved, and sidecar files, like MD5, LUT or XML, can be added into the Matroska container as attachments. This allows for the management of these audio-visual file formats in an effective and transparent way (e.g. native playback in VLC), while saving typically between one to two thirds of the needed storage, and speeding up file writing and reading (e.g. to/from harddisk, over network or for backup on LTO). When needed, the uncompressed source is retrieved bit-by-bit, in a manner faster than uncompressed sources.
+
+## Notes
+* 64 bits only package.
+]]></description>
+    <language>en-US</language>
+    <dependencies>
+      <dependency id="ffmpeg" version="4.1.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
