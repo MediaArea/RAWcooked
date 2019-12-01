@@ -374,7 +374,7 @@ void rawcooked::Parse()
         {
             ToStore_FileName = new uint8_t[FileName_Size];
             memcpy(ToStore_FileName, FileName, FileName_Size);
-            for (size_t i = 0; i < FileName_Size || i < FirstFrame_FileName_Size; i++)
+            for (size_t i = 0; i < FileName_Size && i < FirstFrame_FileName_Size; i++)
                 ToStore_FileName[i] -= FirstFrame_FileName[i];
             IsUsingMask_FileName = true;
         }
@@ -382,7 +382,7 @@ void rawcooked::Parse()
         {
             ToStore_Before = new uint8_t[BeforeData_Size];
             memcpy(ToStore_Before, BeforeData, BeforeData_Size);
-            for (size_t i = 0; i < BeforeData_Size || i < FirstFrame_Before_Size; i++)
+            for (size_t i = 0; i < BeforeData_Size && i < FirstFrame_Before_Size; i++)
                 ToStore_Before[i] -= FirstFrame_Before[i];
             IsUsingMask_BeforeData = true;
         }
@@ -390,7 +390,7 @@ void rawcooked::Parse()
         {
             ToStore_After = new uint8_t[AfterData_Size];
             memcpy(ToStore_After, AfterData, AfterData_Size);
-            for (size_t i = 0; i < AfterData_Size || i < FirstFrame_After_Size; i++)
+            for (size_t i = 0; i < AfterData_Size && i < FirstFrame_After_Size; i++)
                 ToStore_After[i] -= FirstFrame_After[i];
             IsUsingMask_AfterData = true;
         }

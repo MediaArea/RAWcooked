@@ -1157,7 +1157,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
 
     if (TrackInfo_Current->Mask_FileName)
     {
-        for (size_t i = 0; i < TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_FileName_Size; i++)
+        for (size_t i = 0; i < TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count] && i < TrackInfo_Current->Mask_FileName_Size; i++)
             TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_FileName[i];
     }
 
@@ -1185,7 +1185,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
 
     if (TrackInfo_Current->Mask_Before)
     {
-        for (size_t i = 0; i < TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_Before_Size; i++)
+        for (size_t i = 0; i < TrackInfo_Current->DPX_Before_Size[TrackInfo_Current->DPX_Buffer_Count] && i < TrackInfo_Current->Mask_Before_Size; i++)
             TrackInfo_Current->DPX_Before[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_Before[i];
     }
 
@@ -1211,7 +1211,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
 
     if (TrackInfo_Current->Mask_After)
     {
-        for (size_t i = 0; i < TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_After_Size; i++)
+        for (size_t i = 0; i < TrackInfo_Current->DPX_After_Size[TrackInfo_Current->DPX_Buffer_Count] && i < TrackInfo_Current->Mask_After_Size; i++)
             TrackInfo_Current->DPX_After[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_After[i];
     }
 
@@ -1237,7 +1237,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_MaskAddi
 
     if (TrackInfo_Current->Mask_In)
     {
-        for (size_t i = 0; i < TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Count] || i < TrackInfo_Current->Mask_In_Size; i++)
+        for (size_t i = 0; i < TrackInfo_Current->DPX_In_Size[TrackInfo_Current->DPX_Buffer_Count] && i < TrackInfo_Current->Mask_In_Size; i++)
             TrackInfo_Current->DPX_In[TrackInfo_Current->DPX_Buffer_Count][i] += TrackInfo_Current->Mask_In[i];
     }
 
