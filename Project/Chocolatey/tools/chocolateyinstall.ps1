@@ -1,0 +1,11 @@
+﻿$ErrorActionPreference = 'Stop';
+
+$packageArgs = @{
+  PackageName    = "${env:ChocolateyPackageName}"
+  Url64bit       = "https://mediaarea.net/download/binary/rawcooked/${env:ChocolateyPackageVersion}/RAWcooked_CLI_${env:ChocolateyPackageVersion}_Windows_x64.zip"
+  Checksum64     = '0000000000000000000000000000000000000000000000000000000000000000'
+  ChecksumType64 = 'sha256'
+  UnzipLocation = "$(split-path -parent $MyInvocation.MyCommand.Definition)\rawcooked"
+}
+
+Install-ChocolateyZipPackage @packageArgs
