@@ -115,6 +115,12 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Command += " -" + Option->first + ' ' + Option->second;
         }
 
+        // Force input format
+        if (!Streams[i].Flavor.compare(0, 4, "DPX/"))
+            Command += " -f image2 -c:v dpx";
+        if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
+            Command += " -f image2 -c:v tiff";
+
         // FileName_StartNumber (if needed)
         if (!Streams[i].FileName_StartNumber.empty())
         {
