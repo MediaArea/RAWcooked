@@ -103,6 +103,9 @@
     <Filter Include="Header Files\HashSum">
       <UniqueIdentifier>{889f93d5-50da-4606-8480-a1ec82aa200f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ThirdParty\alphanum">
+      <UniqueIdentifier>{e6e2d687-de90-4eec-b4bd-195f49589be0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
@@ -302,6 +305,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\HashSum\HashSum.h">
       <Filter>Header Files\HashSum</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp">
+      <Filter>ThirdParty\alphanum</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -42,6 +42,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp" />
     <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h" />

@@ -8,6 +8,7 @@
 #include "CLI/Input.h"
 #include "Lib/Config.h"
 #include "Lib/Input_Base.h"
+#include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include <iostream>
 #include <algorithm>
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -120,7 +121,6 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos]);
-    string Path;
     string After;
     string Before;
 
@@ -141,13 +141,13 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     }
 
     size_t AllFiles_PosToDelete = AllFiles_Pos + 1;
-    size_t KeepFirst = 1;
+    bool KeepFirst = true;
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
         for (;;)
         {
-            RemovedFiles.push_back(Path + Before + FN + After);
+            RemovedFiles.push_back(Before + FN + After);
             FileName_EndNumber = FN;
             size_t i = FN.size() - 1;
             for (;;)
@@ -159,10 +159,13 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                 }
                 FN[i] = '0';
                 if (!i)
+                {
+                    FN.insert(0, 1, '1');
                     break;
+                }
                 i--;
             }
-            string FullPath = Path + Before + FN + After;
+            string FullPath = Before + FN + After;
 
             if (CheckIfFilesExist)
             {
@@ -173,14 +176,18 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
             else
             {
                 // Test from already created files list
-                if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
+                if (AllFiles_PosToDelete >= Files.size() || FullPath != Files[AllFiles_PosToDelete])
                 {
                     // Remove files from the list (except the first one, used for loop increment)
                     Files.erase(Files.begin() + AllFiles_Pos + KeepFirst, Files.begin() + AllFiles_PosToDelete);
-                    KeepFirst = 0;
+                    if (KeepFirst)
+                    {
+                        AllFiles_Pos++;
+                        KeepFirst = false;
+                    }
 
                     // Check if there is more from the sequence
-                    while (AllFiles_Pos < Files.size() && FullPath > Files[AllFiles_Pos])
+                    while (AllFiles_Pos < Files.size() && doj::alphanum_comp(FullPath, Files[AllFiles_Pos]) > 0)
                         AllFiles_Pos++; // Skipping files not in the expected order
                     if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
                         break;
@@ -200,36 +207,56 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     }
     else
     {
-        char Size = '0' + (char)FN.size();
-        FileName_Template = Path + Before + "%0" + Size + "d" + After;
+        char Size = '0' + (char)FileName_StartNumber.size();
+        FileName_Template = Before + "%0" + Size + "d" + After;
     }
 
     // Coherency test
     if (!CheckIfFilesExist && AllFiles_Pos && AllFiles_Pos < Files.size() && Actions[Action_Coherency])
     {
-        auto& File1 = Files[AllFiles_Pos - 1];
-        auto& File2 = Files[AllFiles_Pos];
-
-        if (!FN.empty() && File1.size() == File2.size() && !File2.compare(0, Path.size() + Before.size(), Path + Before) && !File2.compare(Path.size() + Before.size() + FN.size(), After.size(), After))
+        for (auto AllFiles_Pos_Next = AllFiles_Pos; AllFiles_Pos_Next < Files.size(); AllFiles_Pos_Next++)
         {
-            auto Number1 = stoull(FN);
-            size_t Number1_Pos;
-            auto Number2 = stoull(File2.substr(Path.size() + Before.size(), FN.size()), &Number1_Pos);
-            if (Number1_Pos == FN.size() && Number1 < Number2)
+            auto& File2 = Files[AllFiles_Pos_Next];
+            if (!File2.compare(0, Before.size(), Before)) // Same start
             {
-                if (Errors)
+                if (File2.size() < Before.size() + FN.size() + After.size()) // Not enough characters for storing the expected string
+                    continue;
+                auto End = File2.size() - After.size();
+                if (File2.compare(End, After.size(), After)) // Not same end
+                    continue;
+                auto TestDigit = Before.size();
+                do
                 {
-                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
-                    if (Number1 + 1 != Number2)
+                    const auto& Char = File2[TestDigit];
+                    if (Char < '0' || Char > '9')
+                        break;
+                    TestDigit++;
+                }
+                while (TestDigit < End);
+                if (TestDigit == End)
+                {
+                    auto Number1 = stoull(FN);
+                    auto Number2 = stoull(File2.substr(Before.size(), TestDigit - Before.size()));
+                    if (Number1 < Number2)
                     {
-                        auto FN2 = to_string(Number2 - 1);
-                        FN2.insert(0, FN.size() - FN2.size(), '0');
-                        Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                        if (Errors)
+                        {
+                            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
+                            if (Number1 + 1 != Number2)
+                            {
+                                auto FN2 = to_string(Number2 - 1);
+                                if (FN.size() > FN2.size())
+                                    FN2.insert(0, FN.size() - FN2.size(), '0');
+                                if (Number1 + 2 != Number2)
+                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, "...");
+                                Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                            }
+                        }
                     }
+                    break;
                 }
             }
         }
-
     }
 }
 
