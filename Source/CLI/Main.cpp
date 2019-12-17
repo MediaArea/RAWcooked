@@ -75,16 +75,12 @@ struct parse_info
     string Flavor;
     string Slices;
     input_info InputInfo;
-    bool   IsDetected;
-    bool   Problem;
+    size_t FrameCount = 0;
+    bool   IsDetected = false;
+    bool   Problem = false;
 
     bool ParseFile_Input(input_base& Input);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
-
-    parse_info():
-        IsDetected(false),
-        Problem(false)
-    {}
 };
 
 //---------------------------------------------------------------------------
@@ -134,7 +130,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     // Management
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
-        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, Global.Actions, &Global.Errors);
+        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FrameCount, FileName_StartNumber, FileName_EndNumber, Global.Actions, &Global.Errors);
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
@@ -268,6 +264,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         }
         else if (ParseInfo.InputInfo.FrameRate)
             Stream.FrameRate = to_string(ParseInfo.InputInfo.FrameRate);
+        Stream.FrameCount = ParseInfo.InputInfo.FrameCount;
 
         Output.Streams.push_back(Stream);
 

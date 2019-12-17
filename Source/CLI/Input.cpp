@@ -117,10 +117,9 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, bitset<Action_Max> const& Actions, errors* Errors)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, size_t& FrameCount, string& FileName_StartNumber, string& FileName_EndNumber, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos]);
-    string Path;
     string After;
     string Before;
 
@@ -141,13 +140,13 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     }
 
     size_t AllFiles_PosToDelete = AllFiles_Pos + 1;
-    size_t KeepFirst = 1;
+    bool KeepFirst = true;
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
         for (;;)
         {
-            RemovedFiles.push_back(Path + Before + FN + After);
+            RemovedFiles.push_back(Before + FN + After);
             FileName_EndNumber = FN;
             size_t i = FN.size() - 1;
             for (;;)
@@ -162,7 +161,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                     break;
                 i--;
             }
-            string FullPath = Path + Before + FN + After;
+            string FullPath = Before + FN + After;
 
             if (CheckIfFilesExist)
             {
@@ -173,11 +172,15 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
             else
             {
                 // Test from already created files list
-                if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
+                if (AllFiles_PosToDelete >= Files.size() || FullPath != Files[AllFiles_PosToDelete])
                 {
                     // Remove files from the list (except the first one, used for loop increment)
                     Files.erase(Files.begin() + AllFiles_Pos + KeepFirst, Files.begin() + AllFiles_PosToDelete);
-                    KeepFirst = 0;
+                    if (KeepFirst)
+                    {
+                        AllFiles_Pos++;
+                        KeepFirst = false;
+                    }
 
                     // Check if there is more from the sequence
                     while (AllFiles_Pos < Files.size() && FullPath > Files[AllFiles_Pos])
@@ -193,15 +196,16 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
         }
     }
 
-    if (RemovedFiles.empty())
+    FrameCount = RemovedFiles.size();
+    if (!FrameCount)
     {
         RemovedFiles.push_back(Files[AllFiles_Pos]);
         FileName_Template = Files[AllFiles_Pos];
     }
     else
     {
-        char Size = '0' + (char)FN.size();
-        FileName_Template = Path + Before + "%0" + Size + "d" + After;
+        char Size = '0' + (char)FileName_StartNumber.size();
+        FileName_Template = Before + "%0" + Size + "d" + After;
     }
 
     // Coherency test
@@ -210,11 +214,11 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
         auto& File1 = Files[AllFiles_Pos - 1];
         auto& File2 = Files[AllFiles_Pos];
 
-        if (!FN.empty() && File1.size() == File2.size() && !File2.compare(0, Path.size() + Before.size(), Path + Before) && !File2.compare(Path.size() + Before.size() + FN.size(), After.size(), After))
+        if (!FN.empty() && File1.size() == File2.size() && !File2.compare(0, + Before.size(), Before) && !File2.compare(Before.size() + FN.size(), After.size(), After))
         {
             auto Number1 = stoull(FN);
             size_t Number1_Pos;
-            auto Number2 = stoull(File2.substr(Path.size() + Before.size(), FN.size()), &Number1_Pos);
+            auto Number2 = stoull(File2.substr(Before.size(), FN.size()), &Number1_Pos);
             if (Number1_Pos == FN.size() && Number1 < Number2)
             {
                 if (Errors)

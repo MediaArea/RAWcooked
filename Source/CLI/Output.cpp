@@ -141,9 +141,20 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         for (size_t i = 0; i < Streams.size(); i++)
         {
             stringstream t;
-            t << MapPos++;
+            t << MapPos;
             Command += " -map ";
             Command += t.str();
+
+            // Force frame count
+            if (Streams[i].FrameCount)
+            {
+                Command += " -frames:";
+                Command += to_string(i);
+                Command += ' ';
+                Command += to_string(Streams[i].FrameCount);
+            }
+
+            MapPos++;
         }
     }
     else
