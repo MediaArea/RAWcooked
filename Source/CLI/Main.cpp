@@ -461,6 +461,8 @@ int main(int argc, const char* argv[])
 
             // Remove directory name (already in RAWcooked file data)
             size_t Path_Pos = Global.OutputFileName.find_last_of("/\\");
+            if (Path_Pos == Global.OutputFileName.size() - 1 && Global.OutputFileName.size() > 1)
+                Path_Pos = Global.OutputFileName.find_last_of("/\\", Global.OutputFileName.size() - 2); // Ignore the trailing path separator
             if (Path_Pos == (size_t)-1)
                 Path_Pos = 0;
             Global.OutputFileName.resize(Path_Pos);
