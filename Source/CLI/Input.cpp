@@ -38,11 +38,13 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file (can not be open)",
+    "file names (sequence names e.g. 09 and 9)",
 };
 
 enum code : uint8_t
 {
     FileCanNotBeOpen,
+    FileNameSequence,
     Max
 };
 
@@ -188,7 +190,47 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
 
                     // Check if there is more from the sequence
                     while (AllFiles_Pos < Files.size() && doj::alphanum_comp(FullPath, Files[AllFiles_Pos]) > 0)
+                    {
+                        // Test of unsupported file names e.g. 09 and 9 in the list
+                        size_t Pos1 = FN.size();
+                        size_t j = Pos1 - 1;
+                        for (;;)
+                        {
+                            switch (FN[j])
+                            {
+                                case '0':
+                                    break;
+                                case '1':
+                                    Pos1 = j;
+                                    break;
+                                default:
+                                    Pos1 = FN.size();
+                                    j = 0;
+                            }
+                            if (!j)
+                                break;
+                            j--;
+                        }
+                        if (Pos1 < FN.size())
+                        {
+                            string FN2;
+                            Pos1++;
+                            FN2.resize(Pos1, '0');
+                            FN2.resize(FN.size(), '9');
+                            auto FN3 = FN2;
+                            while (!FN3.empty() && FN3[0] == '0')
+                            {
+                                FN3.erase(0, 1);
+                                if (Before + FN3 + After == Files[AllFiles_Pos])
+                                {
+                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN2 + After);
+                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN3 + After);
+                                }
+                            }
+                        }
+
                         AllFiles_Pos++; // Skipping files not in the expected order
+                    }
                     if (AllFiles_Pos >= Files.size() || FullPath != Files[AllFiles_Pos])
                         break;
 

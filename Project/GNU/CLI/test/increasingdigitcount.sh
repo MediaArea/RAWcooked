@@ -108,6 +108,13 @@ pushd "${files_path}" >/dev/null 2>&1
     run_rawcooked --conch "${file}"
     check_failure "check failed due to incomplete dpx sequence" "check succeded despite incomplete dpx sequence (5)"
 
+    file=sequence6
+    mkdir "${file}"
+    ffmpeg -nostdin -f lavfi -i testsrc=duration=0.160:size=16x16 -start_number 8 "${file}/%01d.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
+    ffmpeg -nostdin -f lavfi -i testsrc=duration=0.080:size=16x16 -start_number 8 "${file}/%02d.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
+    run_rawcooked --check "${file}"
+    check_failure "check failed on unsupported file names e.g. 09 and 9 in the list" "check succeded on unsupported file names e.g. 09 and 9 in the list"
+
     clean
 popd >/dev/null 2>&1
 
