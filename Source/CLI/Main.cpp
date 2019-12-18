@@ -16,6 +16,7 @@
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/RawFrame/RawFrame.h"
 #include "Lib/RAWcooked/RAWcooked.h"
+#include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include <map>
 #include <sstream>
 #include <cstdio>
@@ -387,7 +388,8 @@ int main(int argc, const char* argv[])
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
-    sort(Input.Files.begin(), Input.Files.end());
+    sort(Input.Files.begin(), Input.Files.end(),
+        [](const string& l, const string& r) {return doj::alphanum_comp(l, r) < 0; });
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
