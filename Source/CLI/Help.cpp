@@ -113,7 +113,7 @@ ReturnValue Help(const char* Name)
     cout << "              Same as --check --check-padding --coherency --conch --encode" << endl;
     cout << "              --hash" << endl;
     cout << "       --none" << endl;
-    cout << "              Same as --no-check --no-check-padding --no coherency --no-conch" << endl;
+    cout << "              Same as --no-check --no-check-padding --no-coherency --no-conch" << endl;
     cout << "              --no-encode --no-hash" << endl;
     cout << endl;
     cout << "       --check" << endl;
