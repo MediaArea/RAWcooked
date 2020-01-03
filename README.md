@@ -8,7 +8,7 @@ RAWcooked is ready for production. As with any other tool, keep doing basic chec
 
 ## Website
 
-Information on this project, including builds for different platforms, can be found at <https://mediaarea.net/RAWcooked>.
+Information on this project and builds for different platforms can be found at <https://mediaarea.net/RAWcooked>.
 
 ## License
 
