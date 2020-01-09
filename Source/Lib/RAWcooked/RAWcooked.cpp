@@ -11,50 +11,6 @@
 #include <algorithm>
 #include <cstring>
 using namespace std;
-
-//---------------------------------------------------------------------------
-// Errors
-
-namespace intermediatewrite_issue {
-
-namespace undecodable
-{
-
-static const char* MessageText[] =
-{
-    "cannot create directory",
-    "cannot create file",
-    "file already exists",
-    "cannot write to the file",
-    "cannot remove file",
-};
-
-enum code : uint8_t
-{
-    CreateDirectory,
-    FileCreate,
-    FileAlreadyExists,
-    FileWrite,
-    FileRemove,
-    Max
-};
-
-namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }
-
-} // unparsable
-
-const char** ErrorTexts[] =
-{
-    undecodable::MessageText,
-    nullptr,
-    nullptr,
-    nullptr,
-};
-
-static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
-
-} // intermediatewrite_issue
-
 //---------------------------------------------------------------------------
 
 // Library name and version
@@ -542,62 +498,4 @@ void rawcooked::Parse()
 void rawcooked::ResetTrack()
 {
     BlockCount = 0;
-}
-
-//---------------------------------------------------------------------------
-void rawcooked::Close()
-{
-    File.SetEndOfFile();
-    File.Close();
-}
-
-//---------------------------------------------------------------------------
-void rawcooked::Delete()
-{
-    if (!File_WasCreated)
-        return;
-
-    // Delete the temporary file
-    int Result = remove(FileName.c_str());
-    if (Result)
-    {
-        if (Errors)
-            Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileRemove, FileName);
-        return;
-    }
-}
-
-//---------------------------------------------------------------------------
-void rawcooked::WriteToDisk(uint8_t* Buffer, size_t Buffer_Size)
-{
-    if (!File_WasCreated)
-    {
-        bool RejectIfExists = (Mode && *Mode == AlwaysYes) ? false : true;
-        if (file::return_value Result = File.Open_WriteMode(string(), FileName, RejectIfExists))
-        {
-            if (RejectIfExists && Result == file::Error_FileAlreadyExists && Mode && *Mode == Ask && Ask_Callback)
-            {
-                user_mode NewMode = Ask_Callback(Mode, FileName, string(), false, *ProgressIndicator_IsPaused, *ProgressIndicator_IsEnd);
-                if (NewMode == AlwaysYes)
-                    Result = File.Open_WriteMode(string(), FileName, false);
-            }
-
-            if (Result)
-            {
-                if (Errors)
-                    switch (Result)
-                    {
-                        case file::Error_CreateDirectory:       Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::CreateDirectory, FileName); break;
-                        case file::Error_FileCreate:            Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileCreate, FileName); break;
-                        case file::Error_FileAlreadyExists:     Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileAlreadyExists, FileName); break;
-                        default:                                Errors->Error(IO_IntermediateWriter, error::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileWrite, FileName); break;
-                    }
-                return;
-            }
-        }
-        File_WasCreated = true;
-    }
-
-    if (File.Write(Buffer, Buffer_Size))
-        return;
 }

@@ -53,6 +53,7 @@ public:
     user_mode                   Mode = Ask;
     hashes                      Hashes;
     errors                      Errors;
+    ask_callback                Ask_Callback = nullptr;
 
     // Conformance check intermediary info
     vector<double>              Durations;
@@ -82,6 +83,7 @@ private:
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetCheckPadding(bool Value);
+    int SetAcceptGaps(bool Value);
     int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetEncode(bool Value);

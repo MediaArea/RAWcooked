@@ -309,6 +309,9 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp">
       <Filter>ThirdParty\alphanum</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\IntermediateWrite.h">
+      <Filter>Header Files\RAWcooked</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
@@ -445,6 +448,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\HashSum\HashSum.cpp">
       <Filter>Source Files\HashSum</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\IntermediateWrite.cpp">
+      <Filter>Source Files\RAWcooked</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
