@@ -28,6 +28,7 @@ enum action : uint8_t
     Action_Coherency,
     Action_Conch,
     Action_CheckPadding,
+    Action_AcceptGaps,
     Action_AcceptTruncated,
     Action_Max
 };

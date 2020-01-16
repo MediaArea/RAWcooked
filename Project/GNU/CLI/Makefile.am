@@ -23,6 +23,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Input_Base.cpp \
     ../../../Source/Lib/License.cpp \
     ../../../Source/Lib/Matroska/Matroska_Common.cpp \
+    ../../../Source/Lib/RAWcooked/IntermediateWrite.cpp \
     ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/RawFrame/RawFrame.cpp \
     ../../../Source/Lib/TIFF/TIFF.cpp \
@@ -67,7 +68,7 @@ man1_MANS = ../../../Source/CLI/rawcooked.1
 
 AM_TESTS_FD_REDIRECT = 9>&2
 
-TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/reversibilityfile.sh test/multiple.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/slices.sh test/notfound.sh test/version.sh
+TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/reversibilityfile.sh test/multiple.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/gaps.sh test/slices.sh test/notfound.sh test/version.sh
 
 TESTING_DIR = test/TestingFiles
 

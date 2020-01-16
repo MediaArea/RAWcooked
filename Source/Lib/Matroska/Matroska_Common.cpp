@@ -226,7 +226,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
             user_mode NewMode = *UserMode;
             if (*UserMode == Ask && Ask_Callback)
             {
-                NewMode = Ask_Callback(UserMode, OutputFileName, " and is not same", true, M->ProgressIndicator_IsPaused, M->ProgressIndicator_IsEnd);
+                NewMode = Ask_Callback(UserMode, OutputFileName, " and is not same", true, &M->ProgressIndicator_IsPaused, &M->ProgressIndicator_IsEnd);
             }
             if (NewMode == AlwaysYes)
             {

@@ -10,8 +10,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "Lib/Errors.h"
-#include "Lib/FileIO.h"
+#include "Lib/RAWcooked/IntermediateWrite.h"
 #include <condition_variable>
 #include <cstdint>
 #include <cstddef>
@@ -19,7 +18,7 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
-class rawcooked
+class rawcooked : public intermediate_write
 {
 public:
                                 rawcooked();
@@ -41,26 +40,13 @@ public:
 
     void                        Parse();
     void                        ResetTrack();
-    void                        Close();
-    void                        Delete();
 
-    string                      FileName;
     string                      OutputFileName;
     uint64_t                    FileSize;
 
-    // Errors
-    user_mode*                  Mode = nullptr;
-    ask_callback                Ask_Callback = nullptr;
-    bool*                       ProgressIndicator_IsPaused = nullptr;
-    condition_variable*         ProgressIndicator_IsEnd = nullptr;
-    errors*                     Errors = nullptr;
-
 private:
     // File IO
-    file                        File;
     size_t                      BlockCount;
-    bool                        File_WasCreated = false;
-    void WriteToDisk(uint8_t* Buffer, size_t Buffer_Size);
 
     // First frame info
     uint8_t*                    FirstFrame_Before;

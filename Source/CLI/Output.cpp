@@ -6,6 +6,8 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Output.h"
+#include "Lib/RAWcooked/IntermediateWrite.h"
+#include <cmath>
 #include <iostream>
 #include <sstream>
 //---------------------------------------------------------------------------
@@ -66,6 +68,16 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         else
             Global.VideoInputOptions["framerate"] = "24"; // Forcing framerate to 24 in case nothing is available in the input files and command line. TODO: find some autodetect of frame rate based on audio duration
     }
+    else
+    {
+        // Looking if any video stream has a gaps in file names
+        for (auto& Stream : Streams)
+            if (!Stream.FileList.empty()) //Check if it is a template
+            {
+                cerr << "Error: -framerate option is not supported by FFmpeg with concat files.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
+                return 1;
+            }
+    }
 
     string Command;
     if (Global.BinName.empty())
@@ -87,6 +99,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
 
     // Input
+    vector<intermediate_write*> FilesToRemove;
     for (size_t i = 0; i < Streams.size(); i++)
     {
         // Info
@@ -100,7 +113,10 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
             else
             {
                 cerr << "  " << Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-                cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber << ')' << endl;
+                cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber;
+                if (!Streams[i].FileList.empty())
+                    cerr << ", with gaps";
+                cerr << ')' << endl;
             }
             cerr << "  " << Streams[i].Flavor << endl;
             if (Streams[i].Problem)
@@ -109,29 +125,129 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         if (Streams[i].Problem)
             Problem = true;
 
-        if (!Streams[i].Slices.empty())
+        if (Streams[i].FileList.empty()) //Check if it is a template
         {
-            for (map<string, string>::iterator Option = Global.VideoInputOptions.begin(); Option != Global.VideoInputOptions.end(); Option++)
-                Command += " -" + Option->first + ' ' + Option->second;
+            // Input options
+            if (!Streams[i].Slices.empty())
+            {
+                for (map<string, string>::iterator Option = Global.VideoInputOptions.begin(); Option != Global.VideoInputOptions.end(); Option++)
+                    Command += " -" + Option->first + ' ' + Option->second;
+            }
+
+            // Force input format
+            if (!Streams[i].Flavor.compare(0, 4, "DPX/"))
+                Command += " -f image2 -c:v dpx";
+            if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
+                Command += " -f image2 -c:v tiff";
+
+            // FileName_StartNumber (if needed)
+            if (!Streams[i].FileName_StartNumber.empty())
+            {
+                Command += " -start_number ";
+                Command += Streams[i].FileName_StartNumber;
+            }
+
+            // FileName_Template (is the file name if no sequence detected)
+            Command += " -i \"";
+            Command += Streams[i].FileName_Template.empty() ? Streams[i].FileName : Streams[i].FileName_Template;
+            Command += "\"";
+        }
+        else // It is a list of files
+        {
+            // Input options
+            if (!Streams[i].Slices.empty())
+            {
+                for (map<string, string>::iterator Option = Global.VideoInputOptions.begin(); Option != Global.VideoInputOptions.end(); Option++)
+                {
+                    if (Option->first == "framerate")
+                    {
+                        // -framerate option is not supported by FFmpeg concat filter, we need to force duration for each frame
+                        // But duration is currently discarded by FFmpeg concat filter :(
+                        // We keep it as it is needed for catching all input files
+                        char* FrameRate_End;
+                        auto FrameRate_Num = strtod(Option->second.c_str(), &FrameRate_End);
+                        decltype(FrameRate_Num) FrameRate_Den;
+                        if (FrameRate_End != Option->second.c_str() && *FrameRate_End == '/')
+                            FrameRate_Den = strtod(FrameRate_End + 1, &FrameRate_End);
+                        else
+                            FrameRate_Den = 1;
+                        if (!FrameRate_Num || !FrameRate_Den || FrameRate_Num / FrameRate_Den <= 0.5 || FrameRate_Num / FrameRate_Den > 1000 || FrameRate_End != Option->second.c_str() + Option->second.size())
+                        {
+                            cerr << "Error: issue with frame rate " << Option->second << ".\nPlease contact info@mediaarea.net if you want support of such content." << endl;
+                            return 1;
+                        }
+                        if (FrameRate_Num / FrameRate_Den != 25)
+                        {
+                            int FrameTimeStamp_Stored = 0;
+                            decltype(FrameRate_Num) FrameTimeStamp_Num = 0;
+
+                            auto& FileList = Streams[i].FileList;
+                            decltype(Streams[i].FileList) FileList_Temp;
+                            FileList_Temp.reserve(FileList.size());
+                            for (size_t i = 0; i < FileList.size();)
+                            {
+                                auto j = FileList.find('\n', i);
+                                if (j == string::npos)
+                                    j = FileList.size();
+                                FileList_Temp += "file '";
+                                FileList_Temp.append(FileList, i, j - i);
+                                i = j + 1;
+                                FileList_Temp += "'\nduration ";
+
+                                FrameTimeStamp_Num += FrameRate_Den;
+                                auto Duration_Temp = int(round(FrameTimeStamp_Num / FrameRate_Num * 1000000)) - FrameTimeStamp_Stored;
+                                FileList_Temp += '0' + Duration_Temp / 1000000;
+                                FileList_Temp += '.';
+                                FileList_Temp += '0' + (Duration_Temp / 100000) % 10;
+                                FileList_Temp += '0' + (Duration_Temp / 10000) % 10;
+                                FileList_Temp += '0' + (Duration_Temp / 1000) % 10;
+                                FileList_Temp += '0' + (Duration_Temp / 100) % 10;
+                                FileList_Temp += '0' + (Duration_Temp / 10) % 10;
+                                FileList_Temp += '0' + Duration_Temp % 10;
+                                FileList_Temp += '\n';
+
+                                FrameTimeStamp_Stored += Duration_Temp;
+                                if (FrameTimeStamp_Stored >= 1000000)
+                                {
+                                    FrameTimeStamp_Stored -= 1000000;
+                                    FrameTimeStamp_Num -= FrameRate_Num;
+                                }
+                            }
+                            FileList = FileList_Temp;
+                        }
+                    }
+                    else
+                        Command += " -" + Option->first + ' ' + Option->second;
+                }
+            }
+
+            // Force input format
+            Command += " -f concat -safe 0";
+            if (!Streams[i].Flavor.compare(0, 4, "DPX/"))
+                Command += " -c:v dpx";
+            if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
+                Command += " -c:v tiff";
+
+            // Write the list of files
+            auto FileList_File = new intermediate_write;
+            FileList_File->FileName = Global.rawcooked_reversibility_data_FileName;
+            FileList_File->FileName += '.';
+            FileList_File->FileName += to_string(i);
+            FileList_File->FileName += ".FileList.txt";
+            FileList_File->Errors = &Global.Errors;
+            FileList_File->Mode = &Global.Mode;
+            FileList_File->Ask_Callback = Global.Ask_Callback;
+            FileList_File->WriteToDisk((uint8_t*)Streams[i].FileList.c_str(), Streams[i].FileList.size());
+            FileList_File->Close();
+            FilesToRemove.push_back(FileList_File);
+
+            Command += " -i \"";
+            Command += FileList_File->FileName;
+            Command += '\"';
         }
 
-        // Force input format
-        if (!Streams[i].Flavor.compare(0, 4, "DPX/"))
-            Command += " -f image2 -c:v dpx";
-        if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
-            Command += " -f image2 -c:v tiff";
-
-        // FileName_StartNumber (if needed)
-        if (!Streams[i].FileName_StartNumber.empty())
-        {
-            Command += " -start_number ";
-            Command += Streams[i].FileName_StartNumber;
-        }
-
-        // FileName_Template (is the file name if no sequence detected)
-        Command += " -i \"";
-        Command += Streams[i].FileName_Template.empty() ? Streams[i].FileName : Streams[i].FileName_Template;
-        Command += "\"";
+        if (Global.Errors.HasErrors())
+            return 1;
     }
 
     // Map when there are several streams
@@ -212,6 +328,18 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Value++; // On Unix-like systems, exit status code is sometimes casted to 8-bit long, and system() returns a value multiple of 0x100 when e.g. the command does not exist. We increment the value by 1 in order to have cast to 8-bit not 0 (which can be considered as "OK" by some commands e.g. appending " && echo OK")
         #endif
 
+        // Delete temporary files
+        for (auto FileToRemove: FilesToRemove)
+        {
+            if (FileToRemove->Delete())
+            {
+                if (!Value) // Prioritizing FFmpeg error code
+                    Value = 1;
+            }
+            delete FileToRemove;
+        }
+        FilesToRemove.clear();
+    
         return Value;
     }
 

@@ -24,6 +24,7 @@ struct stream
     string                      FileName_Template;
     string                      FileName_StartNumber;
     string                      FileName_EndNumber;
+    string                      FileList;
     string                      Flavor;
     string                      Slices;
     string                      FrameRate;

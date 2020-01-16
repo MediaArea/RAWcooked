@@ -100,6 +100,13 @@ int global::SetCheckPadding(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetAcceptGaps(bool Value)
+{
+    Actions.set(Action_AcceptGaps, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetCoherency(bool Value)
 {
     Actions.set(Action_Coherency, Value);
@@ -133,6 +140,8 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetCheck(Value))
         return ReturnValue;
     if (int ReturnValue = SetCheckPadding(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetAcceptGaps(Value))
         return ReturnValue;
     if (int ReturnValue = SetCoherency(Value))
         return ReturnValue;
@@ -419,6 +428,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--check-padding") == 0)
         {
             int Value = SetCheckPadding(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--accept-gaps") == 0)
+        {
+            int Value = SetAcceptGaps(true);
             if (Value)
                 return Value;
         }

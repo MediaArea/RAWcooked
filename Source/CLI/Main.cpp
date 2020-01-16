@@ -36,19 +36,23 @@ rawcooked RAWcooked;
 
 //---------------------------------------------------------------------------
 // Ask user about overwriting files
-user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool& ProgressIndicator_IsPaused, condition_variable& ProgressIndicator_IsEnd)
+user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool* ProgressIndicator_IsPaused, condition_variable* ProgressIndicator_IsEnd)
 {
     if (Mode && *Mode != Ask)
         return *Mode;
 
     string Result;
-    ProgressIndicator_IsPaused = true;
-    ProgressIndicator_IsEnd.notify_one();
+    if (ProgressIndicator_IsPaused)
+        *ProgressIndicator_IsPaused = true;
+    if (ProgressIndicator_IsEnd)
+        ProgressIndicator_IsEnd->notify_one();
     cerr << "                                                            \r"; // Clean up output
     cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite? [y/N] ";
     getline(cin, Result);
-    ProgressIndicator_IsPaused = false;
-    ProgressIndicator_IsEnd.notify_one();
+    if (ProgressIndicator_IsPaused)
+        *ProgressIndicator_IsPaused = false;
+    if (ProgressIndicator_IsEnd)
+        ProgressIndicator_IsEnd->notify_one();
     cerr << "                                                            \r"; // Clean up output
     user_mode NewMode = (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')) ? AlwaysYes : AlwaysNo;
 
@@ -73,6 +77,7 @@ struct parse_info
     string FileName_Template;
     string FileName_StartNumber;
     string FileName_EndNumber;
+    string FileList;
     string Flavor;
     string Slices;
     input_info InputInfo;
@@ -135,7 +140,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     // Management
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
-        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, Global.Actions, &Global.Errors);
+        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, FileList, Global.Actions, &Global.Errors);
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
@@ -256,6 +261,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             Stream.FileName_Template = ParseInfo.FileName_Template;
             Stream.FileName_StartNumber = ParseInfo.FileName_StartNumber;
             Stream.FileName_EndNumber = ParseInfo.FileName_EndNumber;
+            Stream.FileList = ParseInfo.FileList;
         }
         Stream.Flavor = ParseInfo.Flavor;
         Stream.Problem = ParseInfo.Problem;
@@ -381,6 +387,9 @@ int ParseFile(size_t Files_Pos)
 //---------------------------------------------------------------------------
 int main(int argc, const char* argv[])
 {
+    // Global configuration
+    Global.Ask_Callback = Ask_Callback;
+    
     // Manage command line
     if (int Value = Global.ManageCommandLine(argv, argc))
         return Value;

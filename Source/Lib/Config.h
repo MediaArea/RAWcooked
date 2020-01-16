@@ -31,7 +31,7 @@ enum user_mode
     AlwaysNo,
     AlwaysYes,
 };
-typedef user_mode(*ask_callback)(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool& ProgressIndicator_IsPaused, condition_variable& ProgressIndicator_IsEnd);
+typedef user_mode(*ask_callback)(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool* ProgressIndicator_IsPaused, condition_variable* ProgressIndicator_IsEnd);
 
 
 //---------------------------------------------------------------------------
