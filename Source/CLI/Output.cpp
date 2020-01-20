@@ -68,16 +68,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         else
             Global.VideoInputOptions["framerate"] = "24"; // Forcing framerate to 24 in case nothing is available in the input files and command line. TODO: find some autodetect of frame rate based on audio duration
     }
-    else
-    {
-        // Looking if any video stream has a gaps in file names
-        for (auto& Stream : Streams)
-            if (!Stream.FileList.empty()) //Check if it is a template
-            {
-                cerr << "Error: -framerate option is not supported by FFmpeg with concat files.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
-                return 1;
-            }
-    }
 
     string Command;
     if (Global.BinName.empty())
@@ -161,9 +151,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 {
                     if (Option->first == "framerate")
                     {
-                        // -framerate option is not supported by FFmpeg concat filter, we need to force duration for each frame
-                        // But duration is currently discarded by FFmpeg concat filter :(
-                        // We keep it as it is needed for catching all input files
+                        Command += " -r " + Option->second;
+
                         char* FrameRate_End;
                         auto FrameRate_Num = strtod(Option->second.c_str(), &FrameRate_End);
                         decltype(FrameRate_Num) FrameRate_Den;
