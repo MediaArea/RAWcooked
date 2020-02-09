@@ -3,6 +3,11 @@
 script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
+# test disabled on Windows (chmod operation not permitted)
+if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
+    exit 77
+fi
+
 test="overwrite"
 
 # local helper functions

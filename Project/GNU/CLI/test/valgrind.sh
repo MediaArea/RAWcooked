@@ -6,7 +6,7 @@ script_path="${PWD}/test"
 test="valgrind"
 
 # test disabled on macOS due to this bug: https://bugs.kde.org/show_bug.cgi?id=349128
-if [[ "${OSTYPE}" == "darwin"* ]] ; then
+if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
     exit 77
 fi
 

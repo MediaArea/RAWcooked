@@ -8,6 +8,11 @@ else
     fatal "internal" "command not found for md5sum" >&${fd}
 fi >/dev/null 2>&1
 
+WSL=
+if grep -q Microsoft /proc/version; then
+  WSL=1
+fi
+
 case "${OSTYPE}" in
     linux*)
         fsize="stat -c %s"
@@ -25,7 +30,7 @@ if (command exec >&9) ; then
     fd=9
 fi >/dev/null 2>&1
 
-PATH="${PWD}:$PATH"
+export PATH="${PWD}:$PATH"
 
 files_path="${PWD}/test/TestingFiles"
 
@@ -195,18 +200,24 @@ run_rawcooked() {
     local temp="$(mktemp -d -t 'rawcooked_testsuite.XXXXXX')"
 
     local valgrind=""
-    if command -v valgrind && test -n "${VALGRIND}" ; then
+    if command -v valgrind && test -z "${WSL}" && test -n "${VALGRIND}" ; then
         valgrind="valgrind --quiet --track-origins=yes --log-file=${temp}/valgrind"
     fi >/dev/null 2>&1
 
-    ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
-    sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
-    kill -CONT ${pid} ; wait ${pid}
-    cmd_status="${?}"
-    pkill -P ${watcher}
-
-    cmd_stdout="$(<${temp}/stdout)"
-    cmd_stderr="$(<${temp}/stderr)"
+    if test -z "${WSL}" ; then
+        ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
+        sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
+        kill -CONT ${pid} ; wait ${pid}
+        cmd_status="${?}"
+        pkill -P ${watcher}
+        cmd_stdout="$(<${temp}/stdout)"
+        cmd_stderr="$(<${temp}/stderr)"
+    else
+        rawcooked ${@////\\} >"${temp}/stdout" 2>"${temp}/stderr"
+        cmd_status="${?}"
+        cmd_stdout="$(tr -d '\r' <${temp}/stdout)"
+        cmd_stderr="$(tr -d '\r' <${temp}/stderr)"
+    fi
 
     # check valgrind
     if [ -n "${valgrind}" ] && [ -s "${temp}/valgrind" ] ; then

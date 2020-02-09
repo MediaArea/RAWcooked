@@ -42,21 +42,10 @@ while read line ; do
         fi
 
         # run analysis
-        run_rawcooked -y --conch --file -d ${file_input}
+        run_rawcooked -y --conch --file ${file_input}
         check_success "file rejected at input" "file accepted at input" || continue
 
-        # check result file generation
-        if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
-            echo "NOK: ${test}, reversibility_data is missing" >&${fd}
-            status=1
-            clean
-            continue
-        fi
         source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
-
-        run_ffmpeg "${cmd_stdout}"
-
-        rm -f "${file}.rawcooked_reversibility_data"
 
         if [ ! -e "${file}.mkv" ] ; then
             echo "NOK: ${test}, mkv not generated" >&${fd}
