@@ -1,0 +1,67 @@
+image: Visual Studio 2019
+
+configuration:
+  - Release
+
+platform:
+  - x64
+
+build:
+  project: Project\MSVC2019\RAWcooked.sln
+  verbosity: quiet
+
+before_test:
+- ps: |
+    git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles.git Project/GNU/CLI/test/TestingFiles
+    Invoke-WebRequest https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip -OutFile ffmpeg-latest-win64-static.zip
+    Expand-Archive ffmpeg-latest-win64-static.zip -DestinationPath .
+    Copy-Item ffmpeg-latest-win64-static/bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg
+    Copy-Item ffmpeg-latest-win64-static/bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg.exe
+    Copy-Item Project/MSVC2019/x64/Release/RAWcooked.exe -Destination Project/GNU/CLI/rawcooked
+
+test_script:
+- ps: |
+    $fail = false
+
+    function Run-Test {
+        $name = $args[0]
+
+        Write-Host "Running test: $name"
+
+        Add-AppveyorTest -Name $name -Framework custom -FileName $name.sh -Outcome Running
+
+        $measure = Measure-Command { Invoke-Expression "wsl test/`$name.sh ; `$result = `$?" -OutVariable output -ErrorVariable errors }
+
+        Write-Host "StdOut:"
+        Write-Host ($output | Out-String)
+
+        Write-Host "StdErr:"
+        Write-Host ($errors | Out-String)
+
+        if ($result) {
+            Update-AppveyorTest -Name $name -Framework custom -FileName $name.sh -Duration $measure.TotalMilliseconds -StdOut ($output  | Out-String) -StdErr ($errors | Out-String) -Outcome Passed
+        }
+        else {
+            Update-AppveyorTest -Name $name -Framework custom -FileName $name.sh -Duration $measure.TotalMilliseconds -StdOut ($output  | Out-String) -StdErr ($errors | Out-String) -Outcome Failed
+            $script:fail = true
+        }
+
+        return $result
+    }
+
+    Set-Location Project/GNU/CLI
+    $env:Path += ";$(Get-Location)"
+
+    Run-Test test1
+    Run-Test test2
+    Run-Test test3
+    Run-Test version
+    Run-Test notfound
+    Run-Test multiple
+    Run-Test gaps
+    Run-Test increasingdigitcount
+
+    if ($fail) {
+        Exit $fail
+    }
+
