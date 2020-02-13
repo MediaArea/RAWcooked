@@ -43,7 +43,7 @@ test_script:
         }
         else {
             Update-AppveyorTest -Name $name -Framework custom -FileName $name.sh -Duration $measure.TotalMilliseconds -StdOut ($output  | Out-String) -StdErr ($errors | Out-String) -Outcome Failed
-            $script:fail = true
+            Set-Variable -scope Script -Name "fail" -Value true
         }
 
         return $result
@@ -61,7 +61,7 @@ test_script:
     Run-Test gaps
     Run-Test increasingdigitcount
 
-    if ($fail) {
+    if ($fail -eq $true) {
         Exit $fail
     }
 
