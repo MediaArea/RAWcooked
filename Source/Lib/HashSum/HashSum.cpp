@@ -60,8 +60,8 @@ const char** ErrorTexts[] =
 {
     undecodable::MessageText,
     nullptr,
-    invalid::MessageText,
     nullptr,
+    invalid::MessageText,
 };
 
 static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
@@ -104,6 +104,22 @@ void hashes::Ignore(string const& FileName)
 }
 
 //---------------------------------------------------------------------------
+void hashes::RemoveEmptyFiles()
+{
+    md5 EmptyMD5 = { 0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e };
+
+    auto List_FromHashFiles_Size = List_FromHashFiles.size();
+    for (size_t i = 0; i < List_FromHashFiles_Size; i++)
+    {
+        if (List_FromHashFiles[i].MD5 == EmptyMD5)
+        {
+            List_FromHashFiles.erase(List_FromHashFiles.begin() + i);
+            List_FromHashFiles_Size--;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
 void hashes::FromFile(string const& FileName, md5 const& MD5)
 {
     // Hash files maybe not yet there, we wait if we don't know that files are not all there
@@ -124,7 +140,7 @@ void hashes::FromFile(string const& FileName, md5 const& MD5)
         if (find(HashFiles.begin(), HashFiles.end(), FileName) == HashFiles.end())
         {
             if (Errors)
-                Errors->Error(IO_Hashes, WouldBeError ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileMissing : (error::generic::code)hashes_issue::invalid::FileHashMissing, FileName);
+                Errors->Error(IO_Hashes, CheckFromFiles ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileMissing : (error::generic::code)hashes_issue::invalid::FileHashMissing, FileName);
         }
     }
     else
@@ -135,7 +151,7 @@ void hashes::FromFile(string const& FileName, md5 const& MD5)
             if (File->MD5 != MD5)
             {
                 if (Errors)
-                    Errors->Error(IO_Hashes, WouldBeError ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileComparison : (error::generic::code)hashes_issue::invalid::FileHashComparison, FileName);
+                    Errors->Error(IO_Hashes, CheckFromFiles ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileComparison : (error::generic::code)hashes_issue::invalid::FileHashComparison, FileName);
             }
         }
     }
@@ -173,7 +189,7 @@ void hashes::Finish()
         if (!HashItem.Flags[hashes::value::Flag_IsFound])
         {
             if (Errors)
-                Errors->Error(IO_Hashes, WouldBeError ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileExtra : (error::generic::code)hashes_issue::invalid::FileHashExtra, HashItem.Name);
+                Errors->Error(IO_Hashes, CheckFromFiles ? error::Undecodable : error::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileExtra : (error::generic::code)hashes_issue::invalid::FileHashExtra, HashItem.Name);
         }
     }
 }
@@ -308,4 +324,5 @@ void hashsum::ParseBuffer()
     // Detected
     SetDetected();
     SetSupported();
+    RegisterAsAttachment();
 }

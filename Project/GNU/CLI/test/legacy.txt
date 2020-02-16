@@ -1,0 +1,10 @@
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.mkv --check
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.mkv --check -o ./
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200215.mkv --check
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200215.mkv --check -o ./
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200215all.mkv --check
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200215all.mkv --check -o ./
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200219.mkv --check
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200219.mkv --check -o ./
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200219all.mkv --check
+BuggyPackages/CompatibleVersion/RAWcooked_18.10.1/18.10.1.20200219all.mkv --check -o ./

@@ -91,14 +91,28 @@ namespace undecodable
 
 static const char* MessageText[] =
 {
-    "cannot open file for reading",
     "files are not same",
+    "missing attachments in compressed file",
+    "extra attachments in compressed file",
+    "missing attachments in source (extra attachments in compressed file)",
+    "extra attachments in source (missing attachments in compressed file)",
+    "missing frame in compressed file",
+    "extra frame in compressed file",
+    "missing frame in source (extra frames in compressed file)",
+    "extra frame in source (missing frames in compressed file)",
 };
 
 enum code : uint8_t
 {
-    FileOpen,
     FileComparison,
+    Attachment_Compressed_Missing,
+    Attachment_Compressed_Extra,
+    Attachment_Source_Missing,
+    Attachment_Source_Extra,
+    Frame_Compressed_Missing,
+    Frame_Compressed_Extra,
+    Frame_Source_Missing,
+    Frame_Source_Extra,
     Max
 };
 
@@ -166,7 +180,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame, const string& OutputFileName)
                 Offset = (size_t)-1;
                 SizeOnDisk = (size_t)-1;
                 if (Errors)
-                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileOpen, OutputFileName);
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Source_Missing, OutputFileName);
                 return;
             }
             SizeOnDisk = File_Read.Buffer_Size;
@@ -682,6 +696,7 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment)
 ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName)
+ELEMENT_VOID(      30, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileSize)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedBlock)
@@ -768,14 +783,11 @@ matroska::~matroska()
 //---------------------------------------------------------------------------
 void matroska::Shutdown()
 {
-    if (!FramesPool)
-        return;
-
     for (size_t i = 0; i < TrackInfo.size(); i++)
     {
         trackinfo* TrackInfo_Current = TrackInfo[i];
 
-        if (TrackInfo_Current->Unique)
+        if (TrackInfo_Current->Unique && TrackInfo_Current->Frame.RawFrame)
         {
             TrackInfo_Current->Frame.RawFrame->Buffer = Buffer + Buffer_Offset;
             TrackInfo_Current->Frame.RawFrame->Buffer_Size = 0;
@@ -800,16 +812,111 @@ void matroska::Shutdown()
             TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotEnd] = false;
             TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
         }
+
+        // Checks
+        if (Errors)
+        {
+            if (!TrackInfo_Current->Unique && TrackInfo_Current->DPX_Buffer_Pos > TrackInfo_Current->DPX_Buffer_Count)
+            {
+                string OutputInfo = "Track " + to_string(i) + ", " + to_string(TrackInfo_Current->DPX_Buffer_Pos - TrackInfo_Current->DPX_Buffer_Count) + " frames";
+                if (TrackInfo_Current->DPX_Buffer_Count)
+                {
+                    string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count - 1], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count - 1]);
+                    FormatPath(OutputFileName);
+                    OutputInfo += " after ";
+                    OutputInfo += OutputFileName;
+                }
+                Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Compressed_Extra, OutputInfo);
+            }
+            if (TrackInfo_Current->DPX_Buffer_Pos < TrackInfo_Current->DPX_Buffer_Count)
+            {
+                string OutputFileName = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Pos], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Pos]);
+                FormatPath(OutputFileName);
+                Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Compressed_Missing, OutputFileName);
+                if (TrackInfo_Current->DPX_Buffer_Count - TrackInfo_Current->DPX_Buffer_Pos > 1)
+                {
+                    if (TrackInfo_Current->DPX_Buffer_Count - TrackInfo_Current->DPX_Buffer_Pos > 2)
+                    {
+                        Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Compressed_Missing, "...");
+                    }
+                    string OutputFileName2 = string((const char*)TrackInfo_Current->DPX_FileName[TrackInfo_Current->DPX_Buffer_Count - 1], TrackInfo_Current->DPX_FileName_Size[TrackInfo_Current->DPX_Buffer_Count - 1]);
+                    FormatPath(OutputFileName2);
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Compressed_Missing, OutputFileName2);
+                }
+            }
+        }
     }
 
     if (Hashes_FromRAWcooked)
+    {
+        if (ReversibilityCompat >= Compat_18_10_1)
+            Hashes_FromRAWcooked->RemoveEmptyFiles();
         Hashes_FromRAWcooked->Finish();
+    }
     if (Hashes_FromAttachments)
+    {
+        Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
+    }
 
-    FramesPool->shutdown();
-    delete FramesPool;
-    FramesPool = nullptr;
+    if (FramesPool)
+    {
+        FramesPool->shutdown();
+        delete FramesPool;
+        FramesPool = nullptr;
+    }
+
+    // Check
+    if (Errors)
+    {
+        bool ReversibilityFileHasNames = false;
+        for (const auto& AttachedFile : AttachedFiles)
+        {
+            if (AttachedFile.second.Flags[ReversibilityFileHasName])
+            {
+                if (ReversibilityCompat >= Compat_18_10_1 && !AttachedFile_FileNames_IsHash.empty()) // In previous versions hash files were not listed in reversibility file
+                {
+                    for (const auto& Name : AttachedFile_FileNames_IsHash)
+                        AttachedFiles[Name].Flags.set(ReversibilityFileHasName); // Fake
+                    AttachedFile_FileNames_IsHash.clear();
+                }
+
+                ReversibilityFileHasNames = true;
+                break;
+            }
+        }
+
+        for (const auto& AttachedFile : AttachedFiles)
+        {
+            if (AttachedFile.second.Flags[ReversibilityFileHasName])
+            {
+                if (AttachedFile.second.Flags[IsInFromAttachments])
+                {
+                    if (AttachedFile.second.Flags[ReversibilityFileHasSize] && AttachedFile.second.FileSizeFromReversibilityFile != AttachedFile.second.FileSizeFromAttachments)
+                        Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)(filechecker_issue::undecodable::FileComparison), AttachedFile.first);
+                }
+                else
+                {
+                    if (AttachedFile.second.Flags[ReversibilityFileHasSize] && AttachedFile.second.FileSizeFromReversibilityFile) // If no size info it is impossible to know if attachment should be present (size of 0) or not (size not of 0)
+                        Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)(filechecker_issue::undecodable::Attachment_Compressed_Missing), AttachedFile.first);
+                }
+            }
+            else
+            {
+                if (AttachedFile.second.Flags[IsInFromAttachments])
+                {
+                    if (ReversibilityFileHasNames)
+                        Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)(filechecker_issue::undecodable::Attachment_Compressed_Extra), AttachedFile.first);
+                }
+                else
+                {
+                    // Should never happen
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)(filechecker_issue::undecodable::Attachment_Compressed_Missing), AttachedFile.first);
+                    Errors->Error(IO_FileChecker, error::Undecodable, (error::generic::code)(filechecker_issue::undecodable::Attachment_Compressed_Extra), AttachedFile.first);
+                }
+            }
+        }
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -950,14 +1057,18 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
     }
 
     // Test if it is hash file
-    if (!Hashes) // If hashes are provided from elsewhere, they were already tests, not doing the test twice
+    //if (!Hashes) // If hashes are provided from elsewhere, they were already tests, not doing the test twice. TODO: test is removed because we need to know if hte file is an hash for older versions, in the future it should be set back for performance
     {
         hashsum HashSum;
         HashSum.HomePath = AttachedFile_FileName;
         HashSum.List = Hashes_FromAttachments;
         HashSum.Parse(Buffer + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
         if (HashSum.IsDetected())
-            Hashes_FromAttachments->Ignore(AttachedFile_FileName);
+        {
+            if (Hashes_FromAttachments)
+                Hashes_FromAttachments->Ignore(AttachedFile_FileName);
+            AttachedFile_FileNames_IsHash.insert(AttachedFile_FileName);
+        }
     }
 
     // Output file
@@ -970,19 +1081,23 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         frame_writer FrameWriter(FrameWriter_Template);
         FrameWriter.FrameCall(&RawFrame, AttachedFile_FileName);
     }
+
+    auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
+    AttachedFile.FileSizeFromAttachments = Levels[Level].Offset_End - Buffer_Offset;
+    AttachedFile.Flags.set(IsInFromAttachments);
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment()
 {
     IsList = true;
-    RAWcooked_FileNameIsValid = false;
+    AttachedFile_FileName.clear();
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash()
 {
-    if (!RAWcooked_FileNameIsValid)
+    if (AttachedFile_FileName.empty())
         return; // File name should come first. TODO: support when file name comes after
     if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
         return; // MD5 support only
@@ -1001,8 +1116,42 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
     Uncompress(Output, Output_Size);
     AttachedFile_FileName.assign((char*)Output, Output_Size);
     delete[] Output; // TODO: avoid new/delete
+    if (AttachedFile_FileName.empty())
+        return; // Not valid, ignoring
 
-    RAWcooked_FileNameIsValid = true;
+    auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
+    AttachedFile.Flags.set(ReversibilityFileHasName);
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileSize()
+{
+    if (AttachedFile_FileName.empty())
+        return; // File name should come first. TODO: support when file name comes after
+    uint64_t Size = Levels[Level].Offset_End - Buffer_Offset;
+    if (Size > 8)
+        return; // Not supported
+
+    uint64_t FileSize = 0;
+    for (; Size; Size--)
+    {
+        FileSize <<= 8;
+        FileSize |= Buffer[Buffer_Offset++];
+    }
+    auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
+    AttachedFile.FileSizeFromReversibilityFile = FileSize;
+    AttachedFile.Flags.set(ReversibilityFileHasSize);
+
+    // File with a size of 0 are not in attachment, it is created here
+    if (!FileSize)
+    {
+        raw_frame RawFrame;
+        RawFrame.Pre = Buffer + Buffer_Offset;
+        RawFrame.Pre_Size = 0;
+
+        frame_writer FrameWriter(FrameWriter_Template);
+        FrameWriter.FrameCall(&RawFrame, AttachedFile_FileName);
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -1519,10 +1668,9 @@ void matroska::Segment_Cluster_SimpleBlock()
                                     //FramesPool->submit(WriteFrameCall, Buffer[Buffer_Offset] & 0x7F, TrackInfo_Current->Frame.RawFrame, WriteFrameCall_Opaque); //TODO: looks like there is some issues with threads and small tasks
                                     TrackInfo_Current->FrameWriter.FrameCall(TrackInfo_Current->Frame.RawFrame, OutputFileName);
                                 }
-                                else
+                                else if (TrackInfo_Current->DPX_Buffer_Count)
                                     Undecodable(undecodable::ReversibilityData_FrameCount);
                             }
-                            TrackInfo_Current->DPX_Buffer_Pos++;
                             break;
             case Format_FLAC:
                             if (!TrackInfo_Current->FrameWriter.Mode[frame_writer::IsNotBegin])
@@ -1625,6 +1773,7 @@ void matroska::Segment_Cluster_SimpleBlock()
                             break;
                 default:;
         }
+        TrackInfo_Current->DPX_Buffer_Pos++;
     }
 }
 
@@ -1994,6 +2143,12 @@ void matroska::RejectIncompatibleVersions()
     {
         std::cerr << RAWcooked_LibraryName << "version " << RAWcooked_LibraryVersion << " is not supported, exiting" << std::endl;
         exit(1);
+    }
+
+    if (RAWcooked_LibraryName == "RAWcooked" && !RAWcooked_LibraryVersion.empty())
+    {
+        if (RAWcooked_LibraryVersion < "18.10.1.20200219")
+            ReversibilityCompat = Compat_18_10_1;
     }
 }
 

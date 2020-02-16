@@ -154,6 +154,9 @@ public:
     input_base_uncompressed(parser ParserCode, bool IsSequence = false) : input_base(ParserCode), uncompressed(IsSequence) {}
     input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
     virtual ~input_base_uncompressed() {}
+
+protected:
+    void                        RegisterAsAttachment();
 };
 
 

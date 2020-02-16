@@ -40,15 +40,14 @@ typedef std::array<uint8_t, 16> md5;
 
 //---------------------------------------------------------------------------
 // Platform specific
+inline void FormatPath(string& s)
+{
+    string::size_type i = 0;
+    while ((i = s.find('\\', i)) != string::npos)
+        s[i++] = '/';
+}
 #if defined(_WIN32) || defined(_WINDOWS)
-    inline void FormatPath(string& s)
-    {
-        string::size_type i = 0;
-        while ((i = s.find('\\', i)) != string::npos)
-            s[i++] = '/';
-    }
     static const char PathSeparator = '\\';
 #else
-    inline void FormatPath(string& s) {}
     static const char PathSeparator = '/';
 #endif

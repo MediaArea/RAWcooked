@@ -14,7 +14,7 @@ if grep -q Microsoft /proc/version; then
 fi
 
 case "${OSTYPE}" in
-    linux*)
+    linux*|cygwin*)
         fsize="stat -c %s"
         ;;
     darwin*|bsd*)
@@ -169,7 +169,7 @@ check_directories() {
     local directory2="${2}"
     local files
 
-    files=$(find "${directory1}" -type f  ! -empty -print)
+    files=$(find "${directory1}" -type f -print)
 
     for f in ${files} ; do
         if [ ! -e  "${directory2}/${f}" ] ; then

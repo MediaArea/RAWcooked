@@ -255,6 +255,14 @@ case_4() {
     done
 }
 
+case_5() {
+    # corrupt last attachment
+    local attachments_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.txt | wc -l)" || fatal "internal" "unable to list attachments files"
+    if [ "${attachments_count}" -gt "0" ] ; then
+        echo "attachment X" > ${file}.mkv.RAWcooked/${file}/$((attachments_count)).txt || fatal "internal" "unable to update file"
+    fi
+}
+
 access_readonly() {
     chmod -R 0440 "${file}.mkv.RAWcooked/${file}/"* || fatal "internal" "chmod command failed"
 }
@@ -335,13 +343,14 @@ command_y() {
 
 pushd "${files_path}" >/dev/null 2>&1
     files="1 2 3 4"
-    cases="normal 1 2 3 4"
+    cases="normal 1 2 3 4 5"
     accesses="normal readonly none"
     commands="n y"
 
     for file in ${files} ; do
         file_${file}
         for case in ${cases} ; do
+            ([ "${case}" == "5" ] && [ "${file}" != "4" ] ) && continue
             for access in ${accesses} ; do
                 for command in ${commands} ; do
                     command_${command}
