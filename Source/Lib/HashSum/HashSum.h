@@ -57,6 +57,7 @@ public:
     void                        ResetHashFile(size_t OldSize); // Indicate that the new hash file is buggy, discard its content, use value from NewHashFile()
     void                        FromHashFile(string const& FileName, md5 const& MD5);
     void                        Ignore(string const& FileName);
+    void                        RemoveEmptyFiles();
     bool                        NoMoreHashFiles() { if (!IsSorted) NoMoreHashFiles_Internal(); return !List_FromHashFiles.empty(); } // Return true if Hashes are useful
     void                        FromFile(string const& FileName, md5 const& MD5);
     void                        Finish();

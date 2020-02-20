@@ -13,7 +13,10 @@
 #include "Lib/FFV1/FFV1_Frame.h"
 #include "Lib/Input_Base.h"
 #include "Lib/FileIO.h"
+#include <bitset>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -132,6 +135,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileSize);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_AfterData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock_BeforeData);
@@ -246,6 +250,27 @@ private:
     size_t                      TrackInfo_Pos;
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
+    enum flags
+    {
+        IsInFromAttachments, // Has both name and size
+        ReversibilityFileHasName,
+        ReversibilityFileHasSize,
+        Flags_Max
+    };
+    struct attached_file
+    {
+        uint64_t                FileSizeFromReversibilityFile = 0;
+        uint64_t                FileSizeFromAttachments = 0;
+        bitset<Flags_Max>       Flags;
+    };
+    map<string, attached_file>  AttachedFiles;
+    set<string>                 AttachedFile_FileNames_IsHash; // Store the files detected as being hash file
+    enum reversibility_compat
+    {
+        Compat_Modern,
+        Compat_18_10_1,
+    };
+    reversibility_compat        ReversibilityCompat = Compat_Modern;
     ThreadPool*                 FramesPool;
     frame_writer                FrameWriter_Template;
     condition_variable          ProgressIndicator_IsEnd;
@@ -253,7 +278,7 @@ private:
     bool                        RAWcooked_FileNameIsValid;
     uint64_t                    Cluster_Timestamp;
     int16_t                     Block_Timestamp;
-    friend class                frame_writer;
+    friend class                frame_writer;  
 
     //Utils
     bool GetFormatAndFlavor(trackinfo* TrackInfo, input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor);

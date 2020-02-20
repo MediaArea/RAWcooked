@@ -48,7 +48,7 @@ static const uint32_t Name_RawCooked_FileHash = 0x20;
 // File number metadata
 static const uint32_t Name_RawCooked_FileSize = 0x30;
 static const uint32_t Name_RawCooked_MaskBaseFileSize = 0x31;     // In BlockGroup only
-static const uint32_t Name_RawCooked_MaskAdditionFileSize = 0x32; // In Track only
+static const uint32_t Name_RawCooked_MaskAdditionFileSize = 0x31; // In Track only
 // Global information
 static const uint32_t Name_RawCooked_LibraryName = 0x70;
 static const uint32_t Name_RawCooked_LibraryVersion = 0x71;

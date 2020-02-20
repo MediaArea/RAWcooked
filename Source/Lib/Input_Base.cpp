@@ -269,7 +269,12 @@ uncompressed::~uncompressed()
 void unknown::ParseBuffer()
 {
     SetDetected();
+    RegisterAsAttachment();
+}
 
+//---------------------------------------------------------------------------
+void input_base_uncompressed::RegisterAsAttachment()
+{
     // Write RAWcooked file
     if (RAWcooked)
     {
@@ -280,7 +285,7 @@ void unknown::ParseBuffer()
         RAWcooked->AfterData_Size = 0;
         RAWcooked->InData = nullptr;
         RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = (uint64_t)-1;
+        RAWcooked->FileSize = FileSize;
         if (Actions[Action_Hash])
         {
             Hash();

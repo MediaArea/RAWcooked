@@ -50,7 +50,7 @@ while read line ; do
         rm -f "${file}.mkv"
 
         # check result files
-        files="$(find * -path ${file}.mkv.RAWcooked -prune -o -type f ! -empty -print)"
+        files="$(find * -path ${file}.mkv.RAWcooked -prune -o -type f -print)"
 
         for f in ${files} ; do
             if [ ! -e  "${file}.mkv.RAWcooked/${f}" ] ; then
