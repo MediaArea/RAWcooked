@@ -727,7 +727,7 @@ void global::ProgressIndicator_Show()
 
             ProgressIndicator_Value = ProgressIndicator_New;
         }
-    } while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, ProgressIndicator_Current != ProgressIndicator_Total);
+    } while (ProgressIndicator_Current != ProgressIndicator_Total);
 
     // Show summary
     cerr << '\r';
