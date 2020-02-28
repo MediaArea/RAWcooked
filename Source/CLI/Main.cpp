@@ -404,7 +404,7 @@ int main(int argc, const char* argv[])
     RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
     int Value = 0;
     for (int i = 0; i < Input.Files.size(); i++)
-        if (Value = ParseFile(i))
+        if (Value == ParseFile(i))
             break;
     RAWcooked.Close();
 
