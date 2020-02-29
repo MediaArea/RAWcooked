@@ -1962,7 +1962,7 @@ void matroska::ProgressIndicator_Show()
             ProgressIndicator_Value = ProgressIndicator_New;
         }
     }
-    while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, Buffer_Offset != Buffer_Size);
+    while (Buffer_Offset != Buffer_Size);
 
     // Show summary
     steady_clock::time_point Clock_Current = steady_clock::now();
