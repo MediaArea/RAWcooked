@@ -583,7 +583,6 @@ void tiff::ParseBuffer()
         slice_x <<= 1;
     if (Width >= 2880) // more than 3/2 of 1920, oversampled HD is not included
         slice_x <<= 1;
-    slice_y = slice_x;
     if (Info.BitsPerSample > 10)
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
 
@@ -594,16 +593,12 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::InternalError);
         return;
     }
-    for (; slice_x; slice_x--)
-    {
-        if (Width % (slice_x * Slice_Multiplier) == 0)
-            break;
-    }
-    if (slice_x == 0)
+    if (Slice_Multiplier > 1)
     {
         Unsupported(unsupported::PixelBoundaries);
         return;
     }
+    slice_y = slice_x;
 
     // Computing EndOfImagePadding
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);
