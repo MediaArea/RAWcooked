@@ -326,28 +326,25 @@ void dpx::ParseBuffer()
     if (BitDepth > 10)
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
 
-    // Computing which slice count is suitable // TODO: smarter algo, currently only computing in order to have pixels not accross 2 32-bit words
+    // Computing which slice count is suitable
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Slice_Multiplier == 0)
     {
         Unsupported(unsupported::InternalError);
         return;
     }
-    for (; slice_x; slice_x--)
+    if (Slice_Multiplier > 1)
     {
-        if (Width % (slice_x * Slice_Multiplier) == 0)
-            break;
+        // Temporary limitation because the decoder does not support yet the merge of data from 2 slices in one DPX block
+        for (; slice_x; slice_x--)
+        {
+            if (Width % (slice_x * Slice_Multiplier) == 0)
+                break;
+        }
+        if (slice_x == 0)
+            Unsupported(unsupported::PixelBoundaries);
     }
-    if (slice_x == 0)
-        Unsupported(unsupported::PixelBoundaries);
     slice_y = slice_x;
-    for (; slice_y; slice_y--)
-    {
-        if (Height % slice_y == 0)
-            break;
-    }
-    if (slice_x > slice_y * 3 / 2)
-        slice_x = slice_y; // We can not set x and y with FFmpeg, and FFmpeg behaves differently if x and y are too different, so we limit the difference between x and y
 
     // Computing OffsetAfterData
     size_t ContentSize_Multiplier = BitsPerBlock((flavor)Flavor);

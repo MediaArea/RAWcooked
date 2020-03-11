@@ -49,7 +49,7 @@ while read line ; do
         continue
     fi
 
-    pushd "${files_path}"
+    pushd "${files_path}" >/dev/null 2>&1
         # generate test file
         run_ffmpeg ffmpeg -f lavfi -i color=c=black:s=${x}x${y} -pix_fmt ${f} -vframes 1 ${file}
 
@@ -87,6 +87,14 @@ while read line ; do
         if ! is_valid "${count}" ; then
             echo "NOK: ${test}/${file}, slices count: ${count} not supported by ffmpeg"
             status=1
+        fi
+
+        run_ffmpeg "${cmd_stdout}"
+        run_rawcooked --check "${file}.mkv"
+        if ! check_success "mkv decoding failed for file ${file}.mkv" "mkv decoded" ; then
+            clean
+            popd
+            continue
         fi
 
         clean
