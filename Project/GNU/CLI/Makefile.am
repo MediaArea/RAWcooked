@@ -7,27 +7,20 @@ rawcooked_SOURCES = \
     ../../../Source/CLI/Input.cpp \
     ../../../Source/CLI/Main.cpp \
     ../../../Source/CLI/Output.cpp \
-    ../../../Source/Lib/AIFF/AIFF.cpp \
-    ../../../Source/Lib/CRC32/ZenCRC32.cpp \
-    ../../../Source/Lib/DPX/DPX.cpp \
-    ../../../Source/Lib/Errors.cpp \
-    ../../../Source/Lib/FileIO.cpp \
-    ../../../Source/Lib/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
-    ../../../Source/Lib/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
-    ../../../Source/Lib/FFV1/FFV1_Frame.cpp \
-    ../../../Source/Lib/FFV1/FFV1_Parameters.cpp \
-    ../../../Source/Lib/FFV1/FFV1_RangeCoder.cpp \
-    ../../../Source/Lib/FFV1/FFV1_Slice.cpp \
-    ../../../Source/Lib/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
-    ../../../Source/Lib/HashSum/HashSum.cpp \
-    ../../../Source/Lib/Input_Base.cpp \
-    ../../../Source/Lib/License.cpp \
-    ../../../Source/Lib/Matroska/Matroska_Common.cpp \
-    ../../../Source/Lib/RAWcooked/IntermediateWrite.cpp \
-    ../../../Source/Lib/RAWcooked/RAWcooked.cpp \
-    ../../../Source/Lib/RawFrame/RawFrame.cpp \
-    ../../../Source/Lib/TIFF/TIFF.cpp \
-    ../../../Source/Lib/WAV/WAV.cpp \
+    ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
+    ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Frame.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Parameters.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_RangeCoder.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Slice.cpp \
+    ../../../Source/Lib/CoDec/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
+    ../../../Source/Lib/CoDec/Wrapper.cpp \
+    ../../../Source/Lib/Compressed/Matroska/Matroska.cpp \
+    ../../../Source/Lib/Compressed/RAWcooked/IntermediateWrite.cpp \
+    ../../../Source/Lib/Compressed/RAWcooked/RAWcooked.cpp \
+    ../../../Source/Lib/Compressed/RAWcooked/Reversibility.cpp \
+    ../../../Source/Lib/Compressed/RAWcooked/Track.cpp \
+    ../../../Source/Lib/License/License.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/cpu.c \
@@ -53,7 +46,19 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/zlib/inftrees.c \
     ../../../Source/Lib/ThirdParty/zlib/trees.c \
     ../../../Source/Lib/ThirdParty/zlib/uncompr.c \
-    ../../../Source/Lib/ThirdParty/zlib/zutil.c
+    ../../../Source/Lib/ThirdParty/zlib/zutil.c \
+    ../../../Source/Lib/Uncompressed/AIFF/AIFF.cpp \
+    ../../../Source/Lib/Uncompressed/DPX/DPX.cpp \
+    ../../../Source/Lib/Uncompressed/HashSum/HashSum.cpp \
+    ../../../Source/Lib/Uncompressed/TIFF/TIFF.cpp \
+    ../../../Source/Lib/Uncompressed/WAV/WAV.cpp \
+    ../../../Source/Lib/Utils/CRC32/ZenCRC32.cpp \
+    ../../../Source/Lib/Utils/Errors/Errors.cpp \
+    ../../../Source/Lib/Utils/FileIO/FileChecker.cpp \
+    ../../../Source/Lib/Utils/FileIO/FileIO.cpp \
+    ../../../Source/Lib/Utils/FileIO/FileWriter.cpp \
+    ../../../Source/Lib/Utils/FileIO/Input_Base.cpp \
+    ../../../Source/Lib/Utils/RawFrame/RawFrame.cpp
 
 AM_CPPFLAGS = -I../../../Source \
               -I../../../Source/Lib/ThirdParty/flac/include \

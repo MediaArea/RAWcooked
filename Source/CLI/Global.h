@@ -12,8 +12,8 @@
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
 #include "Lib/Config.h"
-#include "Lib/HashSum/HashSum.h"
-#include "Lib/License.h"
+#include "Lib/Uncompressed/HashSum/HashSum.h"
+#include "Lib/License/License.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -30,7 +30,7 @@ public:
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
     size_t                      AttachmentMaxSize;
-    string                      rawcooked_reversibility_data_FileName;
+    string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
     string                      FrameMd5FileName;
     string                      BinName;

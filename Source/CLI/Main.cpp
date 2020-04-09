@@ -8,14 +8,14 @@
 #include "CLI/Global.h"
 #include "CLI/Input.h"
 #include "CLI/Output.h"
-#include "Lib/Matroska/Matroska_Common.h"
-#include "Lib/DPX/DPX.h"
-#include "Lib/TIFF/TIFF.h"
-#include "Lib/WAV/WAV.h"
-#include "Lib/AIFF/AIFF.h"
-#include "Lib/FFV1/FFV1_Frame.h"
-#include "Lib/RawFrame/RawFrame.h"
-#include "Lib/RAWcooked/RAWcooked.h"
+#include "Lib/Compressed/Matroska/Matroska.h"
+#include "Lib/Uncompressed/DPX/DPX.h"
+#include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/WAV/WAV.h"
+#include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/CoDec/FFV1/FFV1_Frame.h"
+#include "Lib/Utils/RawFrame/RawFrame.h"
+#include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include <map>
 #include <sstream>
@@ -369,12 +369,12 @@ int ParseFile(size_t Files_Pos)
 
     // Attachments
     size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
-    if (ParseInfo.FileMap.Buffer_Size >= AttachmentSizeFinal)
+    if (ParseInfo.FileMap.Size() >= AttachmentSizeFinal)
     {
         cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
         return 1;
     }
-    if (ParseInfo.FileMap.Buffer_Size) // Ignoring file with size of 0
+    if (!ParseInfo.FileMap.Empty()) // Ignoring file with size of 0
     {
         attachment Attachment;
         Attachment.FileName_In = *ParseInfo.Name;
@@ -401,11 +401,14 @@ int main(int argc, const char* argv[])
         [](const string& l, const string& r) {return doj::alphanum_comp(l, r) < 0; });
 
     // Parse files
-    RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
+    RAWcooked.FileName = Global.rawcooked_reversibility_FileName;
     int Value = 0;
-    for (int i = 0; i < Input.Files.size(); i++)
-        if (Value = ParseFile(i))
+    for (size_t i = 0; i < Input.Files.size(); i++)
+    {
+        Value = ParseFile(i);
+        if (Value)
             break;
+    }
     RAWcooked.Close();
 
     // Coherency checks
