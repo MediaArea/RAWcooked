@@ -32,6 +32,7 @@ public:
     size_t                      AttachmentMaxSize;
     string                      rawcooked_reversibility_data_FileName;
     string                      OutputFileName;
+    string                      FrameMd5FileName;
     string                      BinName;
     string                      LicenseKey;
     bool                        IgnoreLicenseKey;
@@ -44,6 +45,7 @@ public:
     bool                        OutputFileName_IsProvided;
     bool                        Quiet;
     bool                        Check;
+    bool                        FrameMd5;
     bitset<Action_Max>          Actions;
 
     // Intermediate info
@@ -87,6 +89,8 @@ private:
     int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetEncode(bool Value);
+    int SetFrameMd5(bool Value);
+    int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
     int SetAll(bool Value);
 

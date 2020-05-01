@@ -128,6 +128,20 @@ int global::SetEncode(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetFrameMd5(bool Value)
+{
+    FrameMd5 = true;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetFrameMd5FileName(const char* FileName)
+{
+    FrameMd5FileName = FileName;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetHash(bool Value)
 {
     Actions.set(Action_Hash, Value);
@@ -362,6 +376,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     OutputFileName_IsProvided = false;
     Quiet = false;
     Check = false;
+    FrameMd5 = false;
     Actions.set(Action_Encode);
     Actions.set(Action_Coherency);
     Hashes = hashes(&Errors);
@@ -459,6 +474,20 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--encode") == 0)
         {
             int Value = SetEncode(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--framemd5") == 0)
+        {
+            int Value = SetFrameMd5(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--framemd5-name") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetFrameMd5FileName(argv[++i]);
             if (Value)
                 return Value;
         }
