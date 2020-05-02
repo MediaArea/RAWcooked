@@ -293,6 +293,24 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     Command += Global.OutputFileName;
     Command += '\"';
 
+    if (Global.FrameMd5)
+    {
+        if (Global.FrameMd5FileName.empty())
+        {
+            Global.FrameMd5FileName = FileName;
+            if (Global.FrameMd5FileName.back() == '/'
+            #if defined(_WIN32) || defined(_WINDOWS)
+                || Global.FrameMd5FileName.back() == '\\'
+            #endif // defined(_WIN32) || defined(_WINDOWS)
+                )
+                Global.FrameMd5FileName.pop_back();
+            Global.FrameMd5FileName += ".framemd5";
+        }
+        Command += " -f framemd5 \"";
+        Command += Global.FrameMd5FileName;
+        Command += '\"';
+    }
+
     // Info
     if (Problem)
     {

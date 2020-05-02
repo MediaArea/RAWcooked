@@ -166,6 +166,21 @@ This is default when the input is a Matroska container and RAWcooked metadata co
 Do not compute or test the hash of the file (see above).
 .br
 This is default when the input is RAW content, but may change in the future.
+.TP
+.B --framemd5
+Compute the framemd5 of input frames and store it to a sidecar file.
+.br
+See FFmpeg framemd5 documentation for more information.
+.TP
+.B --framemd5-name \fIvalue\fR
+Set the name of the framemd5 file to \fIvalue\fR.
+.br
+Default value is \fI${Input}.framemd5\fR.
+.TP
+.B --no-framemd5
+Do not compute of framemd5 of input frames. (see above)."
+.br
+Is default.
 .SS INPUT RELATED OPTIONS
 .TP
 .B --file

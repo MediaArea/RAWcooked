@@ -172,6 +172,16 @@ ReturnValue Help(const char* Name)
     cout << "              Don't do compute or test of hash of files. (see above)." << endl;
     cout << "              Is default if input is raw content (it may change in the future)" << endl;
     cout << endl;
+    cout << "       --framemd5" << endl;
+    cout << "              Compute the framemd5 of input frames and store it to a sidecar file." << endl;
+    cout << "              See FFmpeg framemd5 documentation for more information." << endl;
+    cout << "       --framemd5-name value" << endl;
+    cout << "              Set the name of the framemd5 file to value." << endl;
+    cout << "              Default value is ${Input}.framemd5." << endl;
+    cout << "       --no-framemd5" << endl;
+    cout << "              Don't do compute of framemd5 of input frames. (see above)." << endl;
+    cout << "              Is default." << endl;
+    cout << endl;
     cout << "INPUT RELATED OPTIONS" << endl;
     cout << "       --file" << endl;
     cout << "              Unlock compression of files (e.g. a .dpx or .wav)." << endl;
