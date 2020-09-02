@@ -51,3 +51,16 @@ inline void FormatPath(string& s)
 #else
     static const char PathSeparator = '/';
 #endif
+
+//---------------------------------------------------------------------------
+// Common types - Endianess info
+enum class endianness : bool
+{
+    LE, // Or Unsigned for 8-bit
+    BE, // Or Signed for 8-bit
+};
+
+//---------------------------------------------------------------------------
+// Enums
+#define ENUM_BEGIN(_NAME) static const size_t __##_NAME##_line = __LINE__; enum class _NAME {
+#define ENUM_END(_NAME) }; static const size_t _NAME##_Max = __LINE__ - __##_NAME##_line - 1;

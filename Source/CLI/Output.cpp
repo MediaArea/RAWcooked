@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Output.h"
-#include "Lib/RAWcooked/IntermediateWrite.h"
+#include "Lib/Compressed/RAWcooked/IntermediateWrite.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -81,7 +81,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     // Info
     bool Problem = false;
 
-    if (Streams.size() > 2 && !Global.License.IsSupported(Feature_MultipleTracks))
+    if (Streams.size() > 2 && !Global.License.IsSupported(feature::MultipleTracks))
     {
         if (!Global.Quiet)
             cerr << "*** More than 2 tracks is not supported by the current license key. ***" << endl;
@@ -219,14 +219,14 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
 
             // Write the list of files
             auto FileList_File = new intermediate_write;
-            FileList_File->FileName = Global.rawcooked_reversibility_data_FileName;
+            FileList_File->FileName = Global.rawcooked_reversibility_FileName;
             FileList_File->FileName += '.';
             FileList_File->FileName += to_string(i);
             FileList_File->FileName += ".FileList.txt";
             FileList_File->Errors = &Global.Errors;
             FileList_File->Mode = &Global.Mode;
             FileList_File->Ask_Callback = Global.Ask_Callback;
-            FileList_File->WriteToDisk((uint8_t*)Streams[i].FileList.c_str(), Streams[i].FileList.size());
+            FileList_File->WriteToDisk((const uint8_t*)Streams[i].FileList.c_str(), Streams[i].FileList.size());
             FileList_File->Close();
             FilesToRemove.push_back(FileList_File);
 
@@ -277,7 +277,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
     stringstream t;
     t << MapPos++;
-    Command += " -attach \"" + Global.rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
+    Command += " -attach \"" + Global.rawcooked_reversibility_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
         Global.OutputFileName = FileName;

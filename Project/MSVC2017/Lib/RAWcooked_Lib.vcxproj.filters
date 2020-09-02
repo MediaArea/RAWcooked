@@ -13,71 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\FFV1">
-      <UniqueIdentifier>{edaa0440-2432-4980-95ae-471735b429c7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\FFV1">
-      <UniqueIdentifier>{9927d355-950b-40b4-9d99-f81dc3c6a728}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\BitStream">
-      <UniqueIdentifier>{95e010b9-9b10-4b47-a357-25736324231f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\CRC32">
-      <UniqueIdentifier>{c792f75b-e47c-41d7-bce8-66a90df874cd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\CRC32">
-      <UniqueIdentifier>{afc4de72-ec4b-436f-943a-0f50243220f4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Matroska">
-      <UniqueIdentifier>{4c7becaf-2b6a-42cd-abf2-d65dc7d32511}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Matroska">
-      <UniqueIdentifier>{bd5ed8d3-19fb-452e-b96c-594944c2cc8f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\RawFrame">
-      <UniqueIdentifier>{be89bd39-d1a7-4adc-9a79-168b6b60d477}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\RawFrame">
-      <UniqueIdentifier>{f1ffc5f0-e21b-49eb-ae71-0fcca242d3a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\FrameHash">
-      <UniqueIdentifier>{30782949-bf6f-4dba-9d1e-0d7f5ac4b1ed}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ThirdParty">
       <UniqueIdentifier>{14d4d37c-77ab-4463-bd6d-2103b8785e2d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\DPX">
-      <UniqueIdentifier>{a9a17abe-9c4b-48f9-9193-30b60eb38fc0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\RAWcooked">
-      <UniqueIdentifier>{c3e2c1bc-a03b-4f71-992b-f95b5806d46c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\RAWcooked">
-      <UniqueIdentifier>{88504ec6-4042-49ff-9bac-a60b15353367}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\FFV1\Coder">
-      <UniqueIdentifier>{bc3a0f91-332b-443e-b823-0822fd6f5014}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\FFV1\Coder">
-      <UniqueIdentifier>{71d1e08b-131b-4959-b2fb-a30fa1aaae07}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\FFV1\Transform">
-      <UniqueIdentifier>{45f585d5-4f80-4957-9e57-c19baa0083bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\FFV1\Transform">
-      <UniqueIdentifier>{480db659-e3a9-4e5a-bb1c-1240ebb4cc80}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ThirdParty\thread-pool">
       <UniqueIdentifier>{ce93a161-8199-4205-9b5e-d6957352bd49}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\DPX">
-      <UniqueIdentifier>{5154ec89-4df8-41dc-88cd-9f7fb3ea2f31}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\WAV">
-      <UniqueIdentifier>{c0f1c942-c682-441f-b78d-18043ec4b2eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\WAV">
-      <UniqueIdentifier>{e92f4c0c-4015-4076-8d5d-ec6dafb5e905}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\zlib">
       <UniqueIdentifier>{7600ed4d-f620-4716-9226-25d0256084bf}</UniqueIdentifier>
@@ -85,76 +25,175 @@
     <Filter Include="ThirdParty\flac">
       <UniqueIdentifier>{57b8e003-f051-4de2-904b-ec5d41c0a70d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\TIFF">
-      <UniqueIdentifier>{d8501450-01e7-412c-84bd-de0b5552626a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\TIFF">
-      <UniqueIdentifier>{cc49955e-4176-4119-be35-f8b659796662}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\AIFF">
-      <UniqueIdentifier>{6bd79131-9aa6-420c-9eae-442d147ffd12}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\AIFF">
-      <UniqueIdentifier>{0dcc0039-defc-4688-b2d7-d14d80faffbb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\HashSum">
-      <UniqueIdentifier>{437bf470-6fdd-48a5-97dd-774ee75b1fd0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\HashSum">
-      <UniqueIdentifier>{889f93d5-50da-4606-8480-a1ec82aa200f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ThirdParty\alphanum">
       <UniqueIdentifier>{e6e2d687-de90-4eec-b4bd-195f49589be0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CoDec">
+      <UniqueIdentifier>{57a65f5e-d6c3-41cf-b398-94aa44291c07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CoDec\FFV1">
+      <UniqueIdentifier>{edaa0440-2432-4980-95ae-471735b429c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CoDec\FFV1\Coder">
+      <UniqueIdentifier>{71d1e08b-131b-4959-b2fb-a30fa1aaae07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CoDec\FFV1\Transform">
+      <UniqueIdentifier>{480db659-e3a9-4e5a-bb1c-1240ebb4cc80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils">
+      <UniqueIdentifier>{82dbca5c-f362-4212-94c0-56c9829d3d95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils\CRC32">
+      <UniqueIdentifier>{c792f75b-e47c-41d7-bce8-66a90df874cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils\Errors">
+      <UniqueIdentifier>{a8dbe375-6f21-4253-b9f0-7e690f182052}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils\FileIO">
+      <UniqueIdentifier>{880ac494-f3ff-4fda-b577-2aceb098e428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\License">
+      <UniqueIdentifier>{e3654c06-9fcc-46e2-8cf6-a402d1287c0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CoDec">
+      <UniqueIdentifier>{f3ffd16b-8d50-478c-9256-002fa8a1486c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CoDec\FFV1">
+      <UniqueIdentifier>{9927d355-950b-40b4-9d99-f81dc3c6a728}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CoDec\FFV1\Coder">
+      <UniqueIdentifier>{bc3a0f91-332b-443e-b823-0822fd6f5014}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CoDec\FFV1\Transform">
+      <UniqueIdentifier>{45f585d5-4f80-4957-9e57-c19baa0083bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\License">
+      <UniqueIdentifier>{53629ff8-ea0c-4d07-87ec-c475aba31d59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils">
+      <UniqueIdentifier>{423d16ef-7494-4767-9941-21911bc4d3ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\CRC32">
+      <UniqueIdentifier>{afc4de72-ec4b-436f-943a-0f50243220f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\Errors">
+      <UniqueIdentifier>{766afc2e-0551-4b00-a4e5-991c23d13649}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\FileIO">
+      <UniqueIdentifier>{eb1a8aa1-1968-4445-81b1-e1be33824bbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed">
+      <UniqueIdentifier>{a5e4b085-778f-443d-b7c0-d7945d9a9c20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\WAV">
+      <UniqueIdentifier>{e92f4c0c-4015-4076-8d5d-ec6dafb5e905}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\TIFF">
+      <UniqueIdentifier>{cc49955e-4176-4119-be35-f8b659796662}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\DPX">
+      <UniqueIdentifier>{a9a17abe-9c4b-48f9-9193-30b60eb38fc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\AIFF">
+      <UniqueIdentifier>{0dcc0039-defc-4688-b2d7-d14d80faffbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Compressed">
+      <UniqueIdentifier>{b00dc050-88bf-4a98-b450-55e6ab5252a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Compressed\RAWcooked">
+      <UniqueIdentifier>{c3e2c1bc-a03b-4f71-992b-f95b5806d46c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Compressed\Matroska">
+      <UniqueIdentifier>{4c7becaf-2b6a-42cd-abf2-d65dc7d32511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\HashSum">
+      <UniqueIdentifier>{889f93d5-50da-4606-8480-a1ec82aa200f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\RawFrame">
+      <UniqueIdentifier>{f1ffc5f0-e21b-49eb-ae71-0fcca242d3a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils\RawFrame">
+      <UniqueIdentifier>{be89bd39-d1a7-4adc-9a79-168b6b60d477}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\BitStream">
+      <UniqueIdentifier>{95e010b9-9b10-4b47-a357-25736324231f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Compressed">
+      <UniqueIdentifier>{1e691e2f-4c77-4e2f-9156-fcc3b65d6117}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Compressed\RAWcooked">
+      <UniqueIdentifier>{88504ec6-4042-49ff-9bac-a60b15353367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Compressed\Matroska">
+      <UniqueIdentifier>{bd5ed8d3-19fb-452e-b96c-594944c2cc8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed">
+      <UniqueIdentifier>{a23e45b9-6298-41eb-bca3-6a801f65e34f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\AIFF">
+      <UniqueIdentifier>{6bd79131-9aa6-420c-9eae-442d147ffd12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\DPX">
+      <UniqueIdentifier>{5154ec89-4df8-41dc-88cd-9f7fb3ea2f31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\TIFF">
+      <UniqueIdentifier>{d8501450-01e7-412c-84bd-de0b5552626a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\WAV">
+      <UniqueIdentifier>{c0f1c942-c682-441f-b78d-18043ec4b2eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\HashSum">
+      <UniqueIdentifier>{437bf470-6fdd-48a5-97dd-774ee75b1fd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils\Buffer">
+      <UniqueIdentifier>{56157e64-cae9-4303-8afc-226380ab1406}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Source\Lib\BitStream\BitStream.h">
-      <Filter>Header Files\BitStream</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h">
+      <Filter>Header Files\Utils\BitStream</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\CRC32\ZenCRC32.h">
-      <Filter>Header Files\CRC32</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.h">
+      <Filter>Header Files\Utils\CRC32</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.h">
-      <Filter>Header Files\FFV1</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Slice.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\Matroska\Matroska_Common.h">
-      <Filter>Header Files\Matroska</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Compressed\Matroska\Matroska.h">
+      <Filter>Header Files\Compressed\Matroska</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.h">
-      <Filter>Header Files\FFV1</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.h">
-      <Filter>Header Files\FFV1</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_RangeCoder.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.h">
-      <Filter>Header Files\FFV1</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\RawFrame\RawFrame.h">
-      <Filter>Header Files\RawFrame</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h">
+      <Filter>Header Files\Utils\RawFrame</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FrameHash\FrameHash_MD5.h">
-      <Filter>Header Files\FrameHash</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.h">
+      <Filter>Header Files\Uncompressed\DPX</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\DPX\DPX.h">
-      <Filter>Header Files\DPX</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.h">
+      <Filter>Header Files\Compressed\RAWcooked</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.h">
-      <Filter>Header Files\RAWcooked</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_GolombRice.h">
+      <Filter>Header Files\CoDec\FFV1\Coder</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.h">
-      <Filter>Header Files\FFV1\Coder</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_RangeCoder.h">
+      <Filter>Header Files\CoDec\FFV1\Coder</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.h">
-      <Filter>Header Files\FFV1\Coder</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder.h">
+      <Filter>Header Files\CoDec\FFV1\Coder</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder.h">
-      <Filter>Header Files\FFV1\Coder</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.h">
-      <Filter>Header Files\FFV1\Transform</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\Transform\FFV1_Transform_JPEG2000RCT.h">
+      <Filter>Header Files\CoDec\FFV1\Transform</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h">
       <Filter>ThirdParty\thread-pool</Filter>
@@ -162,8 +201,8 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h">
       <Filter>ThirdParty\thread-pool</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\WAV\WAV.h">
-      <Filter>Header Files\WAV</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.h">
+      <Filter>Header Files\Uncompressed\WAV</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.h">
       <Filter>ThirdParty\zlib</Filter>
@@ -197,9 +236,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.h">
       <Filter>ThirdParty\zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\FileIO.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h">
       <Filter>ThirdParty\flac</Filter>
@@ -285,73 +321,94 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\Input_Base.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.h">
+      <Filter>Header Files\Uncompressed\TIFF</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\License.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h">
+      <Filter>Header Files\Uncompressed\AIFF</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\License_Internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\TIFF\TIFF.h">
-      <Filter>Header Files\TIFF</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\AIFF\AIFF.h">
-      <Filter>Header Files\AIFF</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\Errors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\HashSum\HashSum.h">
-      <Filter>Header Files\HashSum</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\HashSum\HashSum.h">
+      <Filter>Header Files\Uncompressed\HashSum</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp">
       <Filter>ThirdParty\alphanum</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\RAWcooked\IntermediateWrite.h">
-      <Filter>Header Files\RAWcooked</Filter>
+    <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.h">
+      <Filter>Header Files\Compressed\RAWcooked</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License\License.h">
+      <Filter>Header Files\License</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\License\License_Internal.h">
+      <Filter>Header Files\License</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\Errors\Errors.h">
+      <Filter>Header Files\Utils\Errors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\FileIO\FileIO.h">
+      <Filter>Header Files\Utils\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\FileIO\Input_Base.h">
+      <Filter>Header Files\Utils\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\FileIO\FileChecker.h">
+      <Filter>Header Files\Utils\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\FileIO\FileWriter.h">
+      <Filter>Header Files\Utils\FileIO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h">
+      <Filter>Header Files\Compressed\RAWcooked</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h">
+      <Filter>Header Files\Compressed\RAWcooked</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\Buffer\Buffer.h">
+      <Filter>Header Files\Utils\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\Wrapper.h">
+      <Filter>Header Files\CoDec</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\Lib\CRC32\ZenCRC32.cpp">
-      <Filter>Source Files\CRC32</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp">
+      <Filter>Source Files\Utils\CRC32</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Slice.cpp">
-      <Filter>Source Files\FFV1</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Slice.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\Matroska\Matroska_Common.cpp">
-      <Filter>Source Files\Matroska</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Compressed\Matroska\Matroska.cpp">
+      <Filter>Source Files\Compressed\Matroska</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Parameters.cpp">
-      <Filter>Source Files\FFV1</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_RangeCoder.cpp">
-      <Filter>Source Files\FFV1</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_RangeCoder.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\FFV1_Frame.cpp">
-      <Filter>Source Files\FFV1</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\RawFrame\RawFrame.cpp">
-      <Filter>Source Files\RawFrame</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.cpp">
+      <Filter>Source Files\Utils\RawFrame</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\RAWcooked.cpp">
-      <Filter>Source Files\RAWcooked</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.cpp">
+      <Filter>Source Files\Compressed\RAWcooked</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_GolombRice.cpp">
-      <Filter>Source Files\FFV1\Coder</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_GolombRice.cpp">
+      <Filter>Source Files\CoDec\FFV1\Coder</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\Coder\FFV1_Coder_RangeCoder.cpp">
-      <Filter>Source Files\FFV1\Coder</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_RangeCoder.cpp">
+      <Filter>Source Files\CoDec\FFV1\Coder</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp">
-      <Filter>Source Files\FFV1\Transform</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp">
+      <Filter>Source Files\CoDec\FFV1\Transform</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\DPX\DPX.cpp">
-      <Filter>Source Files\DPX</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.cpp">
+      <Filter>Source Files\Uncompressed\DPX</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\WAV\WAV.cpp">
-      <Filter>Source Files\WAV</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.cpp">
+      <Filter>Source Files\Uncompressed\WAV</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c">
       <Filter>ThirdParty\zlib</Filter>
@@ -385,9 +442,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\zutil.c">
       <Filter>ThirdParty\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\FileIO.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c">
       <Filter>ThirdParty\flac</Filter>
@@ -431,26 +485,44 @@
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\Input_Base.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.cpp">
+      <Filter>Source Files\Uncompressed\TIFF</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\License.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp">
+      <Filter>Source Files\Uncompressed\AIFF</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\TIFF\TIFF.cpp">
-      <Filter>Source Files\TIFF</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\HashSum\HashSum.cpp">
+      <Filter>Source Files\Uncompressed\HashSum</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\AIFF\AIFF.cpp">
-      <Filter>Source Files\AIFF</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.cpp">
+      <Filter>Source Files\Compressed\RAWcooked</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\Errors.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\Errors\Errors.cpp">
+      <Filter>Source Files\Utils\Errors</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\HashSum\HashSum.cpp">
-      <Filter>Source Files\HashSum</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\FileIO.cpp">
+      <Filter>Source Files\Utils\FileIO</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\RAWcooked\IntermediateWrite.cpp">
-      <Filter>Source Files\RAWcooked</Filter>
+    <ClCompile Include="..\..\..\Source\Lib\License\License.cpp">
+      <Filter>Source Files\License</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\Input_Base.cpp">
+      <Filter>Source Files\Utils\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\FileWriter.cpp">
+      <Filter>Source Files\Utils\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\FileChecker.cpp">
+      <Filter>Source Files\Utils\FileIO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp">
+      <Filter>Source Files\Compressed\RAWcooked</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp">
+      <Filter>Source Files\Compressed\RAWcooked</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\Wrapper.cpp">
+      <Filter>Source Files\CoDec</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

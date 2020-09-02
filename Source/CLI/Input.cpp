@@ -7,7 +7,7 @@
 //---------------------------------------------------------------------------
 #include "CLI/Input.h"
 #include "Lib/Config.h"
-#include "Lib/Input_Base.h"
+#include "Lib/Utils/FileIO/Input_Base.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include <iostream>
 #include <algorithm>
@@ -80,7 +80,7 @@ const char** ErrorTexts[] =
     nullptr,
 };
 
-static_assert(error::Type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
+static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
 
 } // fileinput_issue
 
@@ -224,8 +224,8 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                                 FN3.erase(0, 1);
                                 if (Before + FN3 + After == Files[AllFiles_Pos])
                                 {
-                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN2 + After);
-                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN3 + After);
+                                    Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN2 + After);
+                                    Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN3 + After);
                                 }
                             }
                         }
@@ -264,15 +264,15 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                                     {
                                         if (Actions[Action_Coherency] && !Actions[Action_AcceptGaps] && Errors)
                                         {
-                                            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
+                                            Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
                                             if (Number1 + 1 != Number2)
                                             {
                                                 auto FN2 = to_string(Number2 - 1);
                                                 if (FN.size() > FN2.size())
                                                     FN2.insert(0, FN.size() - FN2.size(), '0');
                                                 if (Number1 + 2 != Number2)
-                                                    Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, "...");
-                                                Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                                                    Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, "...");
+                                                Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
                                             }
                                         }
                                         FN = File2.substr(Before.size(), TestDigit - Before.size());
@@ -384,7 +384,7 @@ int input::AnalyzeInputs(global& Global)
     Global.HasAtLeastOneDir = false;
     Global.HasAtLeastOneFile = false;
     bool HasMoreThanOneFile = false;
-    for (int i = 0; i < Global.Inputs.size(); i++)
+    for (size_t i = 0; i < Global.Inputs.size(); i++)
     {
         if (IsDir(Global.Inputs[i].c_str()))
         {
@@ -425,20 +425,20 @@ int input::AnalyzeInputs(global& Global)
     }
 
     // RAWcooked reversibility data file name
-    if (Global.rawcooked_reversibility_data_FileName.empty())
+    if (Global.rawcooked_reversibility_FileName.empty())
     {
         if (Global.OutputFileName.empty())
-            Global.rawcooked_reversibility_data_FileName = string(Global.Inputs[0]);
+            Global.rawcooked_reversibility_FileName = string(Global.Inputs[0]);
         else
-            Global.rawcooked_reversibility_data_FileName = Global.OutputFileName;
-        if (Global.rawcooked_reversibility_data_FileName[Global.rawcooked_reversibility_data_FileName.size() - 1] == '/' || Global.rawcooked_reversibility_data_FileName[Global.rawcooked_reversibility_data_FileName.size() - 1] == '\\')
-            Global.rawcooked_reversibility_data_FileName.pop_back();
-        Global.rawcooked_reversibility_data_FileName += ".rawcooked_reversibility_data";
+            Global.rawcooked_reversibility_FileName = Global.OutputFileName;
+        if (Global.rawcooked_reversibility_FileName[Global.rawcooked_reversibility_FileName.size() - 1] == '/' || Global.rawcooked_reversibility_FileName[Global.rawcooked_reversibility_FileName.size() - 1] == '\\')
+            Global.rawcooked_reversibility_FileName.pop_back();
+        Global.rawcooked_reversibility_FileName += ".rawcooked_reversibility_data";
     }
 
     // Global path position
     Global.Path_Pos_Global = (size_t)-1;
-    for (int i = 0; i < Files.size(); i++)
+    for (size_t i = 0; i < Files.size(); i++)
     {
         size_t Path_Pos;
         DetectPathPos(Files[i], Path_Pos);
@@ -474,8 +474,8 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
     {
         if (Errors)
         {
-            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.first - Durations.begin()] + " (" + to_string(*minmax.first) + "s)");
-            Errors->Error(IO_FileInput, error::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
+            Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.first - Durations.begin()] + " (" + to_string(*minmax.first) + "s)");
+            Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
         }
     }
 }
@@ -487,7 +487,7 @@ bool input::OpenInput(filemap& FileMap, const string& Name, errors* Errors)
     {
         if (Errors)
         {
-            Errors->Error(IO_FileInput, error::Undecodable, (error::generic::code)fileinput_issue::undecodable::FileCanNotBeOpen, Name);
+            Errors->Error(IO_FileInput, error::type::Undecodable, (error::generic::code)fileinput_issue::undecodable::FileCanNotBeOpen, Name);
         }
         return true;
     }
