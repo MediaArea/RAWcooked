@@ -62,5 +62,5 @@ enum class endianness : bool
 
 //---------------------------------------------------------------------------
 // Enums
-#define ENUM_BEGIN(_NAME) static const size_t __##_NAME##_line = __LINE__; enum class _NAME {
+#define ENUM_BEGIN(_NAME) static const size_t __##_NAME##_line = __LINE__; enum class _NAME : uint8_t {
 #define ENUM_END(_NAME) }; static const size_t _NAME##_Max = __LINE__ - __##_NAME##_line - 1;

@@ -887,7 +887,7 @@ bool track_info::ParseDecodedFrame(input_base_uncompressed* Parser)
     auto FrameParser = Parser ? Parser : DecodedFrameParser;
     if (!FrameParser)
         return true;
-    auto FileSize = ReversibilityData->GetFileSize();
+    auto FileSize = ReversibilityData->FileSize();
     if (FileSize && FileSize != (uint64_t)-1)
     {
         auto Pre_Size = RawFrame->Pre().Size();
@@ -966,7 +966,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
 //---------------------------------------------------------------------------
 void matroska::StoreFromCurrentToEndOfElement(buffer &Output)
 {
-    Output.CopyExpand(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    Output.Create(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
 }
 
 //---------------------------------------------------------------------------

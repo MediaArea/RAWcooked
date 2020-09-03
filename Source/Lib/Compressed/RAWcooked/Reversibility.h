@@ -46,7 +46,7 @@ public:
     size_t                      Count() const;
     size_t                      RemainingCount() const;
     size_t                      ExtraCount() const;
-    uint64_t                    GetFileSize() const;
+    uint64_t                    FileSize() const;
 
 private:
     struct data

@@ -15,7 +15,7 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
-struct buffer_base
+class buffer_base
 {
 public:
     const uint8_t* Data() const
@@ -26,6 +26,11 @@ public:
     const uint8_t& operator [] (size_t n) const
     {
         return Data_[n];
+    }
+
+    explicit operator bool () const
+    {
+        return Data_ && Size_;
     }
 
     size_t Size() const
@@ -44,7 +49,7 @@ public:
     }
 
 protected:
-    buffer_base() = delete;
+    buffer_base() = default;
     buffer_base(const uint8_t* NewData, size_t NewSize) :
         Data_(NewData),
         Size_(NewSize)
@@ -87,22 +92,24 @@ protected:
     }
 
 private:
-    const uint8_t* Data_;
-    size_t Size_;
+    const uint8_t*              Data_ = nullptr;
+    size_t                      Size_ = 0;
 };
 
-struct buffer : buffer_base
+class buffer : public buffer_base
 {
+public:
     buffer() :
         buffer_base(nullptr, 0)
     {}
-    buffer(const buffer& Buffer) = delete;
+    buffer(const buffer_base& Buffer) = delete;
     buffer(buffer&& Buffer) :
         buffer_base(Buffer.Data(), Buffer.Size())
     {
         Buffer.ClearBase();
     }
 
+    buffer& operator = (buffer_base& Buffer) = delete;
     buffer& operator = (buffer&& Buffer)
     {
         if (this == &Buffer)
@@ -130,6 +137,11 @@ struct buffer : buffer_base
 #pragma GCC diagnostic pop
 #endif
 
+    uint8_t& operator [] (size_t n)
+    {
+        return Data()[n];
+    }
+
     void Create(size_t NewSize)
     {
         delete[] Data();
@@ -139,6 +151,15 @@ struct buffer : buffer_base
             return;
         }
         AssignBase(new uint8_t[NewSize], NewSize);
+    }
+    void Create(const uint8_t* NewData, size_t NewSize)
+    {
+        Create(NewSize);
+        memcpy(Data(), NewData, Size());
+    }
+    void Create(const buffer_base& Buffer_Source)
+    {
+        Create(Buffer_Source.Data(), Buffer_Source.Size());
     }
 
     size_t CopyLimit(size_t Offset, const buffer_base& Buffer_Source)
@@ -156,12 +177,6 @@ struct buffer : buffer_base
     size_t CopyLimit(const buffer_base& Buffer_Source)
     {
         return CopyLimit(0, Buffer_Source);
-    }
-
-    void CopyExpand(const uint8_t* NewData, size_t NewSize)
-    {
-        Create(NewSize);
-        memcpy(Data(), NewData, Size());
     }
 
     void SetZero()
@@ -203,10 +218,26 @@ struct buffer : buffer_base
         delete[] Data();
         ClearBase();
     }
+
+    friend class buffer_or_view;
 };
 
-struct buffer_view : buffer_base
+class buffer_copy : public buffer
 {
+public:
+    buffer_copy(const uint8_t* Data, size_t Size)
+    {
+        Create(Data, Size);
+    }
+    buffer_copy(const buffer_base& Buffer)
+    {
+        Create(Buffer);
+    }
+};
+
+class buffer_view : public buffer_base
+{
+public:
     buffer_view() :
         buffer_base(nullptr, 0)
     {}
@@ -247,8 +278,9 @@ struct buffer_view : buffer_base
     }
 };
 
-struct buffer_or_view : buffer_base
+class buffer_or_view : public buffer_base
 {
+public:
     buffer_or_view() :
         buffer_base(nullptr, 0)
     {}
@@ -264,6 +296,12 @@ struct buffer_or_view : buffer_base
     buffer_or_view(const buffer_view& Buffer) :
         buffer_base(Buffer.Data(), Buffer.Size())
     {}
+    buffer_or_view(buffer&& Buffer) :
+        buffer_base(Buffer.Data(), Buffer.Size()),
+        IsOwned_(true)
+    {
+        Buffer.ClearBase();
+    }
     buffer_or_view(buffer_or_view&& Buffer) :
         buffer_base(Buffer.Data(), Buffer.Size()),
         IsOwned_(Buffer.IsOwned_)
