@@ -49,12 +49,9 @@ private:
     size_t                      BlockCount;
 
     // First frame info
-    uint8_t*                    FirstFrame_Before;
-    size_t                      FirstFrame_Before_Size;
-    uint8_t*                    FirstFrame_After;
-    size_t                      FirstFrame_After_Size;
-    uint8_t*                    FirstFrame_FileName;
-    size_t                      FirstFrame_FileName_Size;
+    buffer                      FirstFrame_Before;
+    buffer                      FirstFrame_After;
+    buffer                      FirstFrame_FileName;
 };
 
 //---------------------------------------------------------------------------
