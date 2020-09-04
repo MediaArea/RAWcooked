@@ -8,6 +8,7 @@
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
 #include "Lib/Compressed/RAWcooked/Track.h"
 #include <cstring>
+#include "zlib.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -46,7 +47,7 @@ using namespace reversibility_issue;
 // Compressed file can holds directory traversal filenames (e.g. ../../evil.sh)
 // Not created by the encoder, but a malevolent person could craft such file
 // https://snyk.io/research/zip-slip-vulnerability
-void SanitizeFileName(buffer& FileName)
+static void SanitizeFileName(buffer& FileName)
 {
     auto FileName_Size = FileName.Size();
     auto FileName_Data = FileName.Data();
@@ -92,6 +93,50 @@ void SanitizeFileName(buffer& FileName)
 }
 
 //---------------------------------------------------------------------------
+static bool Uncompress(const buffer_view& In, buffer& Out)
+{
+    // Size in EBML style
+    auto Data = In.Data();
+    auto Size = In.Size();
+    decltype(Size) Offset = 0;
+    uint64_t UncompressedSize = Data[0];
+    if (!UncompressedSize)
+        return true; // Out of specifications
+    uint64_t s = 0;
+    while (!(UncompressedSize & (((uint64_t)1) << (7 - s))))
+        s++;
+    UncompressedSize ^= (((uint64_t)1) << (7 - s));
+    if (1 + s > Size)
+        return true; // Problem
+    while (s)
+    {
+        UncompressedSize <<= 8;
+        Offset++;
+        s--;
+        UncompressedSize |= Data[Offset];
+    }
+    Offset++;
+
+    // Read buffer
+    if (UncompressedSize)
+    {
+        // Uncompressed
+        Out.Create(UncompressedSize);
+
+        uLongf t = (uLongf)UncompressedSize;
+        if (uncompress((Bytef*)Out.Data(), &t, (const Bytef*)Data + Offset, (uLong)(Size - Offset)) < 0 || t != UncompressedSize)
+            return true; // Problem
+    }
+    else
+    {
+        // Not compressed
+        Out.Create(Data + Offset, Size - Offset);
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
 void reversibility::NewFrame()
 {
     Pos_ = Count_;
@@ -99,17 +144,24 @@ void reversibility::NewFrame()
 }
 
 //---------------------------------------------------------------------------
-void reversibility::StartParsing()
+void reversibility::StartParsing(const uint8_t* BaseData)
 {
     Pos_ = 0;
     if (!Count_ && Unique_)
         Count_++;
+    SetBaseData(BaseData);
 }
 
 //---------------------------------------------------------------------------
 void reversibility::NextFrame()
 {
     Pos_++;
+}
+
+//---------------------------------------------------------------------------
+void reversibility::SetBaseData(const uint8_t* BaseData)
+{
+    BaseData_ = BaseData;
 }
 
 //---------------------------------------------------------------------------
@@ -155,34 +207,36 @@ size_t reversibility::ExtraCount() const
 }
 
 //---------------------------------------------------------------------------
-void reversibility::SetDataMask(element Element, buffer&& Buffer)
+void reversibility::SetDataMask(element Element, const buffer_view& Buffer)
 {
-    Data_[(size_t)Element].SetDataMask(move(Buffer));
+    Data_[(size_t)Element].SetDataMask(Buffer);
 }
 
 //---------------------------------------------------------------------------
-void reversibility::SetData(element Element, buffer&& Buffer, bool AddMask)
+void reversibility::SetData(element Element, size_t Offset, size_t Size, bool AddMask)
 {
-    Data_[(size_t)Element].SetData(Pos_, move(Buffer), AddMask);
+    Data_[(size_t)Element].SetData(Pos_, Offset, Size, AddMask);
+}
+
+//---------------------------------------------------------------------------
+buffer reversibility::Data(element Element) const
+{
+    auto Content = Data(Element, Pos_);
 
     if (Element == element::FileName)
-        Data_[(size_t)element::FileName].SanitizeFileName(Pos_);
+        SanitizeFileName(Content);
+
+    return Content;
 }
 
 //---------------------------------------------------------------------------
-buffer_view reversibility::Data(element Element) const
-{
-    return move(Data(Element, Pos_));
-}
-
-//---------------------------------------------------------------------------
-buffer_view reversibility::Data(element Element, size_t Pos) const
+buffer reversibility::Data(element Element, size_t Pos) const
 {
     const auto ElementS = (size_t)Element;
     if (ElementS >= element_Max || Pos >= Count_)
-        return buffer_view();
+        return buffer();
     const auto& Data = Data_[ElementS];
-    return Data.Data(Pos);
+    return Data.Data(BaseData_, Pos);
 }
 
 //---------------------------------------------------------------------------
@@ -204,19 +258,19 @@ reversibility::data::~data()
     // In order to speed up a bit the memory management, we avoid the buffer constructor
     // so we need to manually call the destructor here.
     // Check also SetData().
-    for (size_t i = 0; i < MaxCount_; i++)
-        Content_[i].Clear();
+    //for (size_t i = 0; i < MaxCount_; i++)
+    //    Content_[i].Clear();
     delete[](uint8_t*)Content_;
 }
 
 //---------------------------------------------------------------------------
-void reversibility::data::SetDataMask(buffer&& Buffer)
+void reversibility::data::SetDataMask(const buffer_view& Buffer)
 {
-    Mask_ = move(Buffer);
+    Uncompress(Buffer, Mask_);
 }
 
 //---------------------------------------------------------------------------
-void reversibility::data::SetData(size_t Pos, buffer&& Buffer, bool AddMask)
+void reversibility::data::SetData(size_t Pos, size_t Offset, size_t Size, bool AddMask)
 {
     if (Pos >= MaxCount_)
     {
@@ -256,36 +310,31 @@ void reversibility::data::SetData(size_t Pos, buffer&& Buffer, bool AddMask)
         }
     }
 
-    Content_[Pos] = move(Buffer);
+    Content_[Pos].Offset = Offset;
+    Content_[Pos].Size = Size;
+    Content_[Pos].AddMask = AddMask;
+}
 
-    if (AddMask)
+//---------------------------------------------------------------------------
+buffer reversibility::data::Data(const uint8_t* BaseData, size_t Pos) const
+{
+    // Uncompress
+    buffer Content;
+    if (Pos >= MaxCount_ || !BaseData || Uncompress(buffer_view(BaseData + Content_[Pos].Offset, Content_[Pos].Size), Content))
+        return Content;
+
+    // Add mask
+    if (Content_[Pos].AddMask)
     {
         auto Mask_Size = Mask_.Size();
         auto Mask_Data = Mask_.Data();
-        if (!Mask_Size)
-            return;
-
-        auto Content_Size = Content_[Pos].Size();
-        auto Content_Data = Content_[Pos].Data();
+        auto Content_Size = Content.Size();
+        auto Content_Data = Content.Data();
         for (size_t i = 0; i < Content_Size && i < Mask_Size; i++)
             Content_Data[i] += Mask_Data[i];
     }
-}
 
-//---------------------------------------------------------------------------
-buffer_view reversibility::data::Data(size_t Pos) const
-{
-    if (Pos >= MaxCount_)
-        return buffer_view();
-    return buffer_view(Content_[Pos]);
-}
-
-//---------------------------------------------------------------------------
-void reversibility::data::SanitizeFileName(size_t Pos)
-{
-    if (Pos >= MaxCount_)
-        return;
-    ::SanitizeFileName(Content_[Pos]);
+    return Content;
 }
 
 //---------------------------------------------------------------------------

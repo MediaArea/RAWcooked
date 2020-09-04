@@ -61,7 +61,6 @@ enum class format_kind
 };
 
 //---------------------------------------------------------------------------
-void SanitizeFileName(buffer& FileName);
 format Format_FromCodecID(const char* Name);
 format_kind FormatKind(format Format);
 base_wrapper* CreateWrapper(format Format);
@@ -83,7 +82,7 @@ public:
 
     bool                        ParseDecodedFrame(input_base_uncompressed* Parser = nullptr);
 
-    bool                        Init();
+    bool                        Init(const uint8_t* BaseData);
     input_base_uncompressed*    InitOutput_Find();
     input_base_uncompressed*    InitOutput(input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor);
     bool                        Process(const uint8_t* Data, size_t Size);

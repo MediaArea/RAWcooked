@@ -17,14 +17,14 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-bool track_info::Init()
+bool track_info::Init(const uint8_t* BaseData)
 {
     if (RawFrame)
         return false; // Already done
     RawFrame = new raw_frame;
     RawFrame->FrameProcess = FrameWriter;
 
-    ReversibilityData->StartParsing();
+    ReversibilityData->StartParsing(BaseData);
     RawFrame->SetPre(ReversibilityData->Data(reversibility::element::BeforeData));
     RawFrame->SetPost(ReversibilityData->Data(reversibility::element::AfterData));
 

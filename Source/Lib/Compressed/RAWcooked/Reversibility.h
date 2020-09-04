@@ -26,19 +26,20 @@ public:
     ENUM_END(element)
 
     // Actions - Storing
+    void                        SetBaseData(const uint8_t* BaseData);
     void                        SetUnique();
     void                        NewFrame();
-    void                        SetDataMask(element Element, buffer&& Buffer);
-    void                        SetData(element Element, buffer&& Buffer, bool AddMask);
+    void                        SetDataMask(element Element, const buffer_view& Buffer);
+    void                        SetData(element Element, size_t Offset, size_t Size, bool AddMask);
     void                        SetFileSize(uint64_t Value);
 
     // Actions - Parsing
-    void                        StartParsing();
+    void                        StartParsing(const uint8_t* BaseData);
     void                        NextFrame();
 
     // Data
-    buffer_view                 Data(element Element) const;
-    buffer_view                 Data(element Element, size_t Pos) const;
+    buffer                      Data(element Element) const;
+    buffer                      Data(element Element, size_t Pos) const;
 
     // Info
     bool                        Unique() const;
@@ -54,18 +55,21 @@ private:
         ~data();
 
         // Set
-        void                    SetDataMask(buffer&& Buffer);
-        void                    SetData(size_t Pos, buffer&& Buffer, bool AddMask);
+        void                    SetDataMask(const buffer_view& Buffer);
+        void                    SetData(size_t Pos, size_t Offset, size_t Size, bool AddMask);
 
         // Get
-        buffer_view             Data(size_t Pos) const;
-
-        // Options
-        void                    SanitizeFileName(size_t Pos);
+        buffer                  Data(const uint8_t* BaseData, size_t Pos) const;
 
     private:
         buffer                  Mask_;
-        buffer*                 Content_ = nullptr;
+        struct offset_size
+        {
+            size_t              Offset;
+            size_t              Size;
+            bool                AddMask;
+        };
+        offset_size*            Content_;
         size_t                  MaxCount_ = 0;
     };
     data                        Data_[element_Max];
@@ -88,6 +92,7 @@ private:
 
     size_t                      Pos_ = 0;
     size_t                      Count_ = 0;
+    const uint8_t*              BaseData_ = nullptr;
     bool                        Unique_ = false;
 };
 

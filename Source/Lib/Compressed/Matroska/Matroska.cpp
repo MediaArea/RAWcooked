@@ -344,6 +344,9 @@ void matroska::ParseBuffer()
         {
             FileMap->Remap();
             Buffer = *FileMap;
+            for (const auto& TrackInfo_Current : TrackInfo)
+                if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
+                    TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
     }
@@ -658,7 +661,7 @@ void matroska::Segment_Cluster()
 
     // Init
     for (const auto& TrackInfo_Current : TrackInfo)
-        if (TrackInfo_Current && TrackInfo_Current->Init())
+        if (TrackInfo_Current && TrackInfo_Current->Init(Buffer.Data()))
         {
             //TODO handle errors
         }
@@ -936,9 +939,6 @@ void matroska::Uncompress(buffer& Output)
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type)
 {
-    buffer Buffer;
-    Uncompress(Buffer);
-
     auto& ReversibilityData = TrackInfo[TrackInfo_Pos]->ReversibilityData;
 
     switch (Element)
@@ -952,7 +952,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
     switch (Type)
     {
         case type::Track_MaskBase:
-            ReversibilityData->SetDataMask(Element, move(Buffer));
+            ReversibilityData->SetDataMask(Element, buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
             return;
         case type::Track_:
             ReversibilityData->SetUnique();
@@ -960,7 +960,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
         default:;
     }
 
-    ReversibilityData->SetData(Element, move(Buffer), Type == type::Block_MaskAddition);
+    ReversibilityData->SetData(Element, Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset, Type == type::Block_MaskAddition);
 }
 
 //---------------------------------------------------------------------------
