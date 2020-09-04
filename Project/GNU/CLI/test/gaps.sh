@@ -32,6 +32,12 @@ pushd "${files_path}" >/dev/null 2>&1
     check_success "check failed on dpx gaps with -n and --accepts-gaps options" "check succeded on dpx gaps with -n and --accept-gaps option"
     rm -f "${file}.mkv"
 
+    outdir=gaps1output
+    mkdir -p "${outfile}"
+    run_rawcooked -n --accept-gaps --check "${file}" -o "${outdir}/${file}.mkv"
+    check_success "check failed on dpx gaps with -n and --accepts-gaps and -o options" "check succeded on dpx gaps with -n and --accept-gaps and -o options"
+    rm -f "${outdir}/${file}.mkv"
+
     clean
 popd >/dev/null 2>&1
 

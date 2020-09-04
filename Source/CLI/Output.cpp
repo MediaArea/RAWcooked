@@ -10,6 +10,12 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#if defined(_WIN32) || defined(_WINDOWS)
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h>
+#endif
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -173,12 +179,31 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                             auto& FileList = Streams[i].FileList;
                             decltype(Streams[i].FileList) FileList_Temp;
                             FileList_Temp.reserve(FileList.size());
+                            char* CurrentPath = nullptr;
                             for (size_t i = 0; i < FileList.size();)
                             {
                                 auto j = FileList.find('\n', i);
                                 if (j == string::npos)
                                     j = FileList.size();
                                 FileList_Temp += "file '";
+#if defined(_WIN32) || defined(_WINDOWS)
+                                if (i + 2 < FileList.size() && FileList[i + 1] != ':' && FileList[i + 2] != PathSeparator && !CurrentPath)
+#else
+                                if (FileList[i] != PathSeparator && !CurrentPath)
+#endif
+                                {
+                                    CurrentPath = new char[FILENAME_MAX];
+                                    if (!getcwd(CurrentPath, FILENAME_MAX))
+                                    {
+                                        delete CurrentPath;
+                                        CurrentPath = nullptr;
+                                    }
+                                }
+                                if (CurrentPath)
+                                {
+                                    FileList_Temp.append(CurrentPath);
+                                    FileList_Temp.append(1, PathSeparator);
+                                }
                                 FileList_Temp.append(FileList, i, j - i);
                                 i = j + 1;
                                 FileList_Temp += "'\nduration ";
@@ -202,6 +227,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                                     FrameTimeStamp_Num -= FrameRate_Num;
                                 }
                             }
+                            delete[] CurrentPath;
                             FileList = FileList_Temp;
                         }
                     }
