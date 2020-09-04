@@ -85,6 +85,109 @@ static size_t Size_Number(uint64_t Value)
 }
 
 //---------------------------------------------------------------------------
+class masked_buffer : public buffer_base
+{
+public:
+    masked_buffer() {}
+    masked_buffer(const buffer_base& Content, const buffer_base& Mask = buffer()) { if (Content) Assign(Content, Mask); }
+    ~masked_buffer();
+
+    void                        Assign(const buffer_base& Content, const buffer_base& Mask = buffer());
+
+    bool                        IsUsingMask() const;
+
+private:
+    bool                        IsUsingMask_ = false;
+};
+
+//---------------------------------------------------------------------------
+masked_buffer::~masked_buffer()
+{
+    if (IsUsingMask_)
+        delete[] Data();
+}
+
+//---------------------------------------------------------------------------
+void masked_buffer::Assign(const buffer_base& Content, const buffer_base& Mask)
+{
+
+    if (!Mask)
+    {
+        AssignBase(Content);
+        IsUsingMask_ = false;
+        return;
+    }
+
+    auto Size = Content.Size();
+    uint8_t* Data = new uint8_t[Size];
+    memcpy(Data, Content.Data(), Size);
+    for (size_t i = 0; i < Size && i < Mask.Size(); i++)
+        Data[i] -= Mask[i];
+    AssignBase(Data, Size);
+    IsUsingMask_ = true;
+}
+
+//---------------------------------------------------------------------------
+bool masked_buffer::IsUsingMask() const
+{
+    return IsUsingMask_;
+}
+
+//---------------------------------------------------------------------------
+class compressed_buffer : public buffer_base
+{
+public:
+    compressed_buffer() : buffer_base() {}
+    compressed_buffer(const masked_buffer& Buffer) : buffer_base() { if (Buffer) Assign(Buffer); }
+    ~compressed_buffer();
+
+    void                        Assign(const masked_buffer& Buffer);
+
+    size_t                      UncompressedSize() const;
+
+private:
+    size_t                      UncompressedSize_ = 0;
+};
+
+//---------------------------------------------------------------------------
+compressed_buffer::~compressed_buffer()
+{
+    if (UncompressedSize_)
+        delete[] Data();
+}
+
+//---------------------------------------------------------------------------
+void compressed_buffer::Assign(const masked_buffer& Buffer)
+{
+    if (!Buffer)
+    {
+        ClearBase();
+        return;
+    }
+
+    auto Data = new uint8_t[Buffer.Size()];
+    uLongf destLen = (uLongf)Buffer.Size();
+    if (compress((Bytef*)Data, &destLen, (const Bytef*)Buffer.Data(), (uLong)Buffer.Size()) < 0)
+    {
+        // Uncompressed
+        delete[] Data;
+        AssignBase(Buffer);
+        UncompressedSize_ = 0;
+        return;
+    }
+
+    // Compressed
+    AssignBase(Data, destLen);
+    UncompressedSize_ = Buffer.Size();
+}
+
+//---------------------------------------------------------------------------
+size_t compressed_buffer::UncompressedSize() const
+{
+    return UncompressedSize_;
+}
+
+//---------------------------------------------------------------------------
 class ebml_writer
 {
 public:
@@ -96,8 +199,8 @@ public:
     void Block(uint32_t Name, uint64_t Size, const uint8_t* Data);
     void String(uint32_t Name, const char* Data);
     void Number(uint32_t Name, uint64_t Number);
-    void DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, uint64_t Size, const uint8_t* Data);
-    void CompressableData(uint32_t Name, const uint8_t* Data, uint64_t Size, uint64_t CompressedSize);
+    void DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, const buffer_base& Data);
+    void CompressableData(uint32_t Name, const compressed_buffer& Buffer);
 
     // Blocks
     void Block_Begin(uint32_t Name);
@@ -110,7 +213,7 @@ public:
 
 private:
     std::vector<size_t> BlockSizes;
-    uint8_t* Buffer = NULL;
+    uint8_t* Buffer = nullptr;
     size_t Buffer_PreviousOffset = 0;
     size_t Buffer_Offset = 0;
 };
@@ -175,28 +278,25 @@ void ebml_writer::Number(uint32_t Name, uint64_t Number)
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, uint64_t Size, const uint8_t* Data)
+void ebml_writer::DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, const buffer_base& Data)
 {
     EB(Name);
-    EB(Size_EB(Prefix) + Size);
+    EB(Size_EB(Prefix) + Data.Size());
     EB(Prefix);
 
     if (Buffer)
     {
-        memcpy(Buffer + Buffer_Offset, Data, Size);
+        memcpy(Buffer + Buffer_Offset, Data.Data(), Data.Size());
     }
-    Buffer_Offset += Size;
+    Buffer_Offset += Data.Size();
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::CompressableData(uint32_t Name, const uint8_t* Data, uint64_t Size, uint64_t CompressedSize)
+void ebml_writer::CompressableData(uint32_t Name, const compressed_buffer& Data)
 {
-    if (!Size)
+    if (!Data)
         return;
-    if (CompressedSize)
-        DataWithEncodedPrefix(Name, Size, CompressedSize, Data);
-    else
-        DataWithEncodedPrefix(Name,    0,           Size, Data);
+    DataWithEncodedPrefix(Name, Data.UncompressedSize(), Data);
 }
 
 //---------------------------------------------------------------------------
@@ -278,148 +378,35 @@ void rawcooked::Parse()
     // If not doing this, files are not considered as in a sub-directory when encoded with a Windows platform then decoded with a Unix-based platform.
     // FormatPath(OutputFileName); // Already done elsewhere
 
-    // Create or Use mask
-    uint8_t* FileName = (uint8_t*)OutputFileName.c_str();
-    size_t FileName_Size = OutputFileName.size();
-    uint8_t* ToStore_FileName = FileName;
-    const uint8_t* ToStore_Before = BeforeData;
-    const uint8_t* ToStore_After = AfterData;
-    const uint8_t* ToStore_In = InData;
-    bool IsUsingMask_FileName = false;
-    bool IsUsingMask_BeforeData = false;
-    bool IsUsingMask_AfterData = false;
-    if (!Unique)
+    // FileName
+    auto FileNameData = (const uint8_t*)OutputFileName.c_str();
+    auto FileNameData_Size = OutputFileName.size();
+
+    // Create mask when needed
+    if (!Unique && !BlockCount)
     {
-        if (!BlockCount)
-        {
-            if (FileName && FileName_Size)
-            {
-                FirstFrame_FileName = new uint8_t[FileName_Size];
-                memcpy(FirstFrame_FileName, FileName, FileName_Size);
-                FirstFrame_FileName_Size = FileName_Size;
-            }
-            else
-            {
-                FirstFrame_FileName = NULL;
-                FirstFrame_FileName_Size = 0;
-            }
-            if (BeforeData && BeforeData_Size)
-            {
-                FirstFrame_Before = new uint8_t[BeforeData_Size];
-                memcpy(FirstFrame_Before, BeforeData, BeforeData_Size);
-                FirstFrame_Before_Size = BeforeData_Size;
-            }
-            else
-            {
-                FirstFrame_Before = NULL;
-                FirstFrame_Before_Size = 0;
-            }
-            if (AfterData && AfterData_Size)
-            {
-                FirstFrame_After = new uint8_t[AfterData_Size];
-                memcpy(FirstFrame_After, AfterData, AfterData_Size);
-                FirstFrame_After_Size = AfterData_Size;
-            }
-            else
-            {
-                FirstFrame_After = NULL;
-                FirstFrame_After_Size = 0;
-            }
-        }
-        if (FileName && FirstFrame_FileName)
-        {
-            uint8_t* Temp = new uint8_t[FileName_Size];
-            memcpy(Temp, FileName, FileName_Size);
-            for (size_t i = 0; i < FileName_Size && i < FirstFrame_FileName_Size; i++)
-                Temp[i] -= FirstFrame_FileName[i];
-            ToStore_FileName = Temp;
-            IsUsingMask_FileName = true;
-        }
-        if (BeforeData && FirstFrame_Before)
-        {
-            uint8_t* Temp = new uint8_t[BeforeData_Size];
-            memcpy(Temp, BeforeData, BeforeData_Size);
-            for (size_t i = 0; i < BeforeData_Size && i < FirstFrame_Before_Size; i++)
-                Temp[i] -= FirstFrame_Before[i];
-            ToStore_Before = Temp;
-            IsUsingMask_BeforeData = true;
-        }
-        if (AfterData && FirstFrame_After)
-        {
-            uint8_t* Temp = new uint8_t[AfterData_Size];
-            memcpy(Temp, AfterData, AfterData_Size);
-            for (size_t i = 0; i < AfterData_Size && i < FirstFrame_After_Size; i++)
-                Temp[i] -= FirstFrame_After[i];
-            ToStore_After = Temp;
-            IsUsingMask_AfterData = true;
-        }
+        FirstFrame_FileName.Create(FileNameData, FileNameData_Size);
+        FirstFrame_Before.Create(BeforeData, BeforeData_Size);
+        FirstFrame_After.Create(AfterData, AfterData_Size);
     }
 
+    // Apply mask when useful
+    masked_buffer Masked_MaskFileName(Unique ? buffer_view() : buffer_view(FirstFrame_FileName));
+    masked_buffer Masked_MaskBefore(Unique ? buffer_view() : buffer_view(FirstFrame_Before));
+    masked_buffer Masked_MaskAfter(Unique ? buffer_view() : buffer_view(FirstFrame_After));
+    masked_buffer Masked_FileName(buffer_view(FileNameData, FileNameData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_FileName));
+    masked_buffer Masked_Before(buffer_view(BeforeData, BeforeData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_Before));
+    masked_buffer Masked_After(buffer_view(AfterData, AfterData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_After));
+    masked_buffer Masked_In(buffer_view(InData, InData_Size));
+
     // Test if it can be compressed
-    uint8_t* Compressed_MaskFileName = NULL;
-    uLongf Compressed_MaskFileName_Size = 0;
-    if (!Unique && FirstFrame_FileName)
-    {
-        Compressed_MaskFileName = new uint8_t[FirstFrame_FileName_Size];
-        Compressed_MaskFileName_Size = (uLongf)FirstFrame_FileName_Size;
-        if (compress((Bytef*)Compressed_MaskFileName, &Compressed_MaskFileName_Size, (const Bytef*)FirstFrame_FileName, (uLong)FirstFrame_FileName_Size) < 0)
-        {
-            Compressed_MaskFileName = FirstFrame_FileName;
-            Compressed_MaskFileName_Size = 0;
-        }
-    }
-    uint8_t* Compressed_FileName = new uint8_t[FileName_Size];
-    uLongf Compressed_FileName_Size = (uLongf)FileName_Size;
-    if (compress((Bytef*)Compressed_FileName, &Compressed_FileName_Size, (const Bytef*)ToStore_FileName, (uLong)FileName_Size) < 0)
-    {
-        Compressed_FileName = ToStore_FileName;
-        Compressed_FileName_Size = 0;
-    }
-    uint8_t* Compressed_MaskBeforeData = NULL;
-    uLongf Compressed_MaskBeforeData_Size = 0;
-    if (!Unique && FirstFrame_Before)
-    {
-        Compressed_MaskBeforeData = new uint8_t[FirstFrame_Before_Size];
-        Compressed_MaskBeforeData_Size = (uLongf)FirstFrame_Before_Size;
-        if (compress((Bytef*)Compressed_MaskBeforeData, &Compressed_MaskBeforeData_Size, (const Bytef*)FirstFrame_Before, (uLong)FirstFrame_Before_Size) < 0)
-        {
-            Compressed_MaskBeforeData = FirstFrame_Before;
-            Compressed_MaskBeforeData_Size = 0;
-        }
-    }
-    const uint8_t* Compressed_BeforeData = new uint8_t[BeforeData_Size];
-    uLongf Compressed_BeforeData_Size = (uLongf)BeforeData_Size;
-    if (compress((Bytef*)Compressed_BeforeData, &Compressed_BeforeData_Size, (const Bytef*)ToStore_Before, (uLong)BeforeData_Size) < 0)
-    {
-        Compressed_BeforeData = ToStore_Before;
-        Compressed_BeforeData_Size = 0;
-    }
-    const uint8_t* Compressed_MaskAfterData = NULL;
-    uLongf Compressed_MaskAfterData_Size = 0;
-    if (!Unique && FirstFrame_After)
-    {
-        Compressed_MaskAfterData = new uint8_t[FirstFrame_After_Size];
-        Compressed_MaskAfterData_Size = (uLongf)FirstFrame_After_Size;
-        if (compress((Bytef*)Compressed_MaskAfterData, &Compressed_MaskAfterData_Size, (const Bytef*)FirstFrame_After, (uLong)FirstFrame_After_Size) < 0)
-        {
-            Compressed_MaskAfterData = FirstFrame_After;
-            Compressed_MaskAfterData_Size = 0;
-        }
-    }
-    const uint8_t* Compressed_AfterData = new uint8_t[AfterData_Size];
-    uLongf Compressed_AfterData_Size = (uLongf)AfterData_Size;
-    if (compress((Bytef*)Compressed_AfterData, &Compressed_AfterData_Size, (const Bytef*)ToStore_After, (uLong)AfterData_Size) < 0)
-    {
-        Compressed_AfterData = ToStore_After;
-        Compressed_AfterData_Size = 0;
-    }
-    const uint8_t* Compressed_InData = new uint8_t[InData_Size];
-    uLongf Compressed_InData_Size = (uLongf)InData_Size;
-    if (compress((Bytef*)Compressed_InData, &Compressed_InData_Size, (const Bytef*)ToStore_In, (uLong)InData_Size) < 0)
-    {
-        Compressed_InData = ToStore_In;
-        Compressed_InData_Size = 0;
-    }
+    compressed_buffer Compressed_MaskFileName(Masked_MaskFileName);
+    compressed_buffer Compressed_MaskBefore(Masked_MaskBefore);
+    compressed_buffer Compressed_MaskAfter(Masked_MaskAfter);
+    compressed_buffer Compressed_FileName(Masked_FileName);
+    compressed_buffer Compressed_Before(Masked_Before);
+    compressed_buffer Compressed_After(Masked_After);
+    compressed_buffer Compressed_In(Masked_In);
 
     ebml_writer Writer;
     for (uint8_t Pass = 0; Pass < 2; Pass++)
@@ -448,11 +435,11 @@ void rawcooked::Parse()
         {
             Writer.Block_Begin(IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack);
             if (!Unique && FirstFrame_FileName)
-                Writer.CompressableData(Name_RawCooked_MaskBaseFileName, Compressed_MaskFileName, FirstFrame_FileName_Size, Compressed_MaskFileName_Size);
+                Writer.CompressableData(Name_RawCooked_MaskBaseFileName, Compressed_MaskFileName);
             if (!Unique && FirstFrame_Before)
-                Writer.CompressableData(Name_RawCooked_MaskBaseBeforeData, Compressed_MaskBeforeData, FirstFrame_Before_Size, Compressed_MaskBeforeData_Size);
+                Writer.CompressableData(Name_RawCooked_MaskBaseBeforeData, Compressed_MaskBefore);
             if (!Unique && FirstFrame_After)
-                Writer.CompressableData(Name_RawCooked_MaskBaseAfterData, Compressed_MaskAfterData, FirstFrame_After_Size, Compressed_MaskAfterData_Size);
+                Writer.CompressableData(Name_RawCooked_MaskBaseAfterData, Compressed_MaskAfter);
             if (!Unique)
                 Writer.Block_End();
         }
@@ -462,12 +449,12 @@ void rawcooked::Parse()
             Writer.Block_Begin(Name_RawCookedBlock);
 
         // Common to track and block parts
-        Writer.CompressableData(IsUsingMask_FileName ? Name_RawCooked_MaskAdditionFileName : Name_RawCooked_FileName, Compressed_FileName, FileName_Size, Compressed_FileName_Size);
-        Writer.CompressableData(IsUsingMask_BeforeData ? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, Compressed_BeforeData, BeforeData_Size, Compressed_BeforeData_Size);
-        Writer.CompressableData(IsUsingMask_AfterData ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, Compressed_AfterData, AfterData_Size, Compressed_AfterData_Size);
-        Writer.CompressableData(Name_RawCooked_InData, Compressed_InData, InData_Size, Compressed_InData_Size);
+        Writer.CompressableData(Masked_FileName.IsUsingMask() ? Name_RawCooked_MaskAdditionFileName : Name_RawCooked_FileName, Compressed_FileName);
+        Writer.CompressableData(Masked_Before.IsUsingMask() ? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, Compressed_Before);
+        Writer.CompressableData(Masked_After.IsUsingMask() ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, Compressed_After);
+        Writer.CompressableData(Name_RawCooked_InData, Compressed_In);
         if (HashValue)
-            Writer.DataWithEncodedPrefix(Name_RawCooked_FileHash, HashFormat_MD5, HashValue->size(), HashValue->data());
+            Writer.DataWithEncodedPrefix(Name_RawCooked_FileHash, HashFormat_MD5, buffer_view(HashValue->data(), HashValue->size()));
         if (FileSize != (uint64_t)-1)
             Writer.Number(Name_RawCooked_FileSize, FileSize);
         Writer.Block_End();
@@ -479,22 +466,6 @@ void rawcooked::Parse()
     // Write
     WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize());
     BlockCount++;
-
-    // Clean up
-    if (Compressed_FileName_Size)
-        delete[] Compressed_FileName;
-    if (Compressed_BeforeData_Size)
-        delete[] Compressed_BeforeData;
-    if (Compressed_AfterData_Size)
-        delete[] Compressed_AfterData;
-    if (Compressed_InData_Size)
-        delete[] Compressed_InData;
-    if (IsUsingMask_FileName)
-        delete[] ToStore_FileName;
-    if (IsUsingMask_BeforeData)
-        delete[] ToStore_Before;
-    if (IsUsingMask_AfterData)
-        delete[] ToStore_After;
 }
 
 //---------------------------------------------------------------------------

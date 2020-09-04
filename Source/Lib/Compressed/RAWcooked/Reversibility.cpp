@@ -192,7 +192,7 @@ void reversibility::SetFileSize(uint64_t Value)
 }
 
 //---------------------------------------------------------------------------
-uint64_t reversibility::GetFileSize() const
+uint64_t reversibility::FileSize() const
 {
     return FileSize_.Data(Pos_);
 }
@@ -240,14 +240,17 @@ void reversibility::data::SetData(size_t Pos, buffer&& Buffer, bool AddMask)
                 NewMaxCount *= 4;
             auto NewSizeInBytes = NewMaxCount * sizeof(std::remove_pointer<decltype(Content_)>::type);
             auto NewContent = (decltype(Content_))new uint8_t[NewSizeInBytes];
+            size_t OldSizeInBytes;
             if (Content_)
             {
-                auto OldSizeInBytes = MaxCount_ * sizeof(std::remove_pointer<decltype(Content_)>::type);
+                OldSizeInBytes = MaxCount_ * sizeof(std::remove_pointer<decltype(Content_)>::type);
                 NewSizeInBytes -= OldSizeInBytes;
                 memcpy((uint8_t*)NewContent, Content_, OldSizeInBytes);
-                memset((uint8_t*)NewContent + OldSizeInBytes, 0, NewSizeInBytes);
-                delete[] (uint8_t*)Content_;
+                delete[](uint8_t*)Content_;
             }
+            else
+                OldSizeInBytes = 0;
+            memset((uint8_t*)NewContent + OldSizeInBytes, 0, NewSizeInBytes);
             Content_ = NewContent;
             MaxCount_ = NewMaxCount;
         }
