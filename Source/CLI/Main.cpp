@@ -84,7 +84,7 @@ struct parse_info
     bool   IsDetected;
     bool   Problem;
 
-    bool ParseFile_Input(input_base& Input);
+    bool ParseFile_Input(input_base& Input, bool OverrideCheckPadding = false);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
 
     parse_info():
@@ -94,10 +94,12 @@ struct parse_info
 };
 
 //---------------------------------------------------------------------------
-bool parse_info::ParseFile_Input(input_base& SingleFile)
+bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPadding)
 {
     // Init
     SingleFile.Actions = Global.Actions;
+    if (OverrideCheckPadding)
+        SingleFile.Actions.set(Action_CheckPadding);
     SingleFile.Hashes = &Global.Hashes;
     SingleFile.FileName = &RAWcooked.OutputFileName;
     SingleFile.InputInfo = &InputInfo;
@@ -132,7 +134,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     FormatPath(RAWcooked.OutputFileName);
 
     // Parse
-    if (ParseFile_Input((input_base&)SingleFile))
+    if (ParseFile_Input((input_base&)SingleFile, !Global.Actions[Action_CheckPadding]))
         return true;
     if (!IsDetected)
         return false;
@@ -145,6 +147,38 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         RemovedFiles.push_back(*Name);
     else
     {
+        // OverrideCheckPadding info
+        bool OverrideCheckPadding = !Global.Actions[Action_CheckPadding] && SingleFile.RAWcooked && SingleFile.RAWcooked->InData;
+        if (OverrideCheckPadding) // There are non-zero padding bits
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Info: non-zero padding bits found in first file,\n"
+                 << "      forcing the check of padding bits for all files.\n" << endl;
+        }
+        else if (SingleFile.MayHavePaddingBits() && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
+        {
+            Global.ProgressIndicator_Stop();
+            if (Global.Check)
+            {
+                cerr << "Info: data can contain non-zero padding bits, padding bits will be\n"
+                        "      checked only during reversibility check so after encoding,\n"
+                        "      and will throw an error if non-zero padding bits are found\n"
+                        "      at this moment, and in that case you'll have to re-encode with\n"
+                        "      --check-padding option.\n" << endl;
+            }
+            else
+            {
+                cerr << "Error: data may contain non-zero padding bits but padding would never\n"
+                        "       be tested with the current options, there is a risk of non-\n"
+                        "       reversibility, use --no-check-padding for explicitely indicate\n"
+                        "       that you are fine with that else use --check-padding for checking\n"
+                        "       the padding bits before encoding, or alternatively use --check for\n"
+                        "       checking padding bits after encoding (you'll have to re-encode\n"
+                        "       with --check-padding option if non-zero padding bits are found).\n" << endl;
+                return true;
+            }
+        }
+
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
         for (size_t i = 1; i < SingleFile.InputInfo->FrameCount; i++)
@@ -155,7 +189,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
             FormatPath(RAWcooked.OutputFileName);
 
-            if (ParseFile_Input((input_base&)SingleFile))
+            if (ParseFile_Input((input_base&)SingleFile, OverrideCheckPadding))
                 return true;
         }
     }

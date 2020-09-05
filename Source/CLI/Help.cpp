@@ -113,7 +113,7 @@ ReturnValue Help(const char* Name)
     cout << "              Same as --check --check-padding --coherency --conch --encode" << endl;
     cout << "              --hash" << endl;
     cout << "       --none" << endl;
-    cout << "              Same as --no-check --no-check-padding --no-coherency --no-conch" << endl;
+    cout << "              Same as --no-check --no-coherency --no-conch" << endl;
     cout << "              --no-encode --no-hash" << endl;
     cout << endl;
     cout << "       --check" << endl;
@@ -130,12 +130,17 @@ ReturnValue Help(const char* Name)
     cout << "              Do costly (in terms of analysis duration or bytes read) checks." << endl;
     cout << "              It is slower but guaranties reversibility with e.g." << endl;
     cout << "              DPX files with non zero padding bits." << endl;
+    cout << "              This option is forced if non-zero padding bits are found in the" << endl;
+    cout << "              first image of a sequence." << endl;
     cout << "       --no-check-padding" << endl;
     cout << "              Don't do costly (in terms of analysis duration or bytes read)" << endl;
     cout << "              checks." << endl;
     cout << "              It is quicker but may lead to partial reversibility with" << endl;
     cout << "              non conform files." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
+    cout << "              This option is ignored if non-zero padding bits are found in the" << endl;
+    cout << "              first image of a sequence." << endl;
+    cout << "              By default the program will stop if --check is not" << endl;
+    cout << "              used at the same time (it may change in the future)." << endl;
     cout << endl;
     cout << "       --coherency" << endl;
     cout << "              Coherency check of the package." << endl;

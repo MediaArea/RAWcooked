@@ -42,7 +42,7 @@ while read line ; do
         fi
 
         # run analysis
-        run_rawcooked -y --conch --file ${file_input}
+        run_rawcooked -y --conch --no-check-padding --file ${file_input}
         check_success "file rejected at input" "file accepted at input" || continue
 
         source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")

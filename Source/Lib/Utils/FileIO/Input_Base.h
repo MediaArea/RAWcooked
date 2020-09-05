@@ -28,6 +28,7 @@ enum action : uint8_t
     Action_Coherency,
     Action_Conch,
     Action_CheckPadding,
+    Action_CheckPaddingOptionIsSet,
     Action_AcceptGaps,
     Action_AcceptTruncated,
     Action_Max
@@ -144,6 +145,9 @@ public:
     // Common info
     bool                        IsSequence;
     rawcooked*                  RAWcooked = nullptr;
+
+    // Features
+    virtual bool                MayHavePaddingBits() { return false; }
 };
 
 class input_base_uncompressed : public input_base, public uncompressed
