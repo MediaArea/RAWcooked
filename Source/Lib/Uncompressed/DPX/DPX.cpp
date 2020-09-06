@@ -445,7 +445,7 @@ void dpx::ParseBuffer()
     size_t In_Size = 0;
     if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding])
     {
-        if ((Info.BitDepth == 10 || Info.BitDepth == 12) && Info.Packing == packing::MethodA)
+        if (MayHavePaddingBits())
         {
             size_t Step = Info.BitDepth == 10 ? 4 : 2;
             bool IsNOK = false;
@@ -550,6 +550,18 @@ void dpx::ConformanceCheck()
         HeaderCopy_Info--;
         HeaderCopy_Info |= (HasEncoding ? 1 : 0) << 12;
     }
+}
+
+//---------------------------------------------------------------------------
+bool dpx::MayHavePaddingBits()
+{
+    if ((flavor)Flavor == (flavor)-1)
+        return false;
+
+    auto Flavor_BitDepth = DPX_Tested[(size_t)Flavor].BitDepth;
+    auto Flavor_Packing = DPX_Tested[(size_t)Flavor].Packing;
+
+    return (Flavor_BitDepth == 10 || Flavor_BitDepth == 12) && Flavor_Packing == packing::MethodA;
 }
 
 //---------------------------------------------------------------------------

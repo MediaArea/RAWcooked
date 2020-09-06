@@ -54,6 +54,9 @@ public:
         Raw_RGBA_16_BE,
     ENUM_END(flavor)
 
+    // Features
+    bool                        MayHavePaddingBits();
+
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
