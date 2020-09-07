@@ -441,27 +441,31 @@ void dpx::ParseBuffer()
         SetSupported();
 
     // Testing padding bits
-    uint8_t* In = nullptr;
-    size_t In_Size = 0;
-    if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding])
+    if (IsSupported() && MayHavePaddingBits() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
     {
-        if (MayHavePaddingBits())
+        uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
+        uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
+        size_t i = OffsetToData;
+        if (IsBigEndian)
+            i += Step - 1;
+        for (; i < OffsetAfterData; i += Step)
+            if (Buffer[i] & Mask)
+                break;
+        if (i < OffsetAfterData)
         {
-            size_t Step = Info.BitDepth == 10 ? 4 : 2;
-            bool IsNOK = false;
-            for (size_t i = OffsetToData + (IsBigEndian ? (Step - 1) : 0); i < OffsetAfterData; i += Step)
-                if (Buffer[i] & 0x3)
-                    IsNOK = true;
-            if (IsNOK)
-            {
-                In_Size = OffsetAfterData - OffsetToData;
-                In = new uint8_t[In_Size];
-                memset(In, 0x00, In_Size);
-                for (size_t i = (IsBigEndian ? (Step - 1) : 0); i < In_Size; i += Step)
-                    In[i] = Buffer[OffsetToData + i] & 0x3;
-            }
+            // Non-zero padding bit found, storing data
+            auto Temp_Size = OffsetAfterData - OffsetToData;
+            if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
+                In.Create(Temp_Size);
+            memset(In.Data(), 0x00, Temp_Size);
+            for (; i < OffsetAfterData; i += Step)
+                In[i - OffsetToData] = Buffer[i] & Mask;
         }
+        else
+            In.Clear();
     }
+    else
+        In.Clear();
 
     // Write RAWcooked file
     if (IsSupported() && RAWcooked)
@@ -471,8 +475,8 @@ void dpx::ParseBuffer()
         RAWcooked->BeforeData_Size = OffsetToData;
         RAWcooked->AfterData = Buffer.Data() + OffsetAfterData;
         RAWcooked->AfterData_Size = Buffer.Size() - OffsetAfterData;
-        RAWcooked->InData = In;
-        RAWcooked->InData_Size = In_Size;
+        RAWcooked->InData = In.Data();
+        RAWcooked->InData_Size = In.Size();
         RAWcooked->FileSize = (uint64_t)-1;
         if (Actions[Action_Hash])
         {
@@ -484,9 +488,6 @@ void dpx::ParseBuffer()
         RAWcooked->IsAttachment = false;
         RAWcooked->Parse();
     }
-
-    // Clean up
-    delete[] In;
 
     if (Actions[Action_Conch])
         ConformanceCheck();
