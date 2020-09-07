@@ -485,6 +485,9 @@ void dpx::ParseBuffer()
         RAWcooked->Parse();
     }
 
+    // Clean up
+    delete[] In;
+
     if (Actions[Action_Conch])
         ConformanceCheck();
 }
