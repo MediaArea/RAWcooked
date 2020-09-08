@@ -72,6 +72,9 @@ private:
     // Comparison
     uint8_t*                    HeaderCopy = NULL;
     uint64_t                    HeaderCopy_Info; // 0-11: buffer size - 1, 12: ignore offsets to data image 
+
+    // Temp
+    buffer                      In;
 };
 
 string DPX_Flavor_String(uint8_t Flavor);

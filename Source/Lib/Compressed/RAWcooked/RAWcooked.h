@@ -24,16 +24,16 @@ public:
                                 rawcooked();
                                 ~rawcooked();
 
-    bool                        Unique; // If set, data is for the whole stream (unique file)
+    bool                        Unique = false; // If set, data is for the whole stream (unique file)
 
-    const uint8_t*              BeforeData;
-    uint64_t                    BeforeData_Size;
+    const uint8_t*              BeforeData = nullptr;
+    uint64_t                    BeforeData_Size = 0;
 
-    const uint8_t*              AfterData;
-    uint64_t                    AfterData_Size;
+    const uint8_t*              AfterData = nullptr;
+    uint64_t                    AfterData_Size = 0;
 
-    const uint8_t*              InData;
-    uint64_t                    InData_Size;
+    const uint8_t*              InData = nullptr;
+    uint64_t                    InData_Size = 0;
 
     md5*                        HashValue = nullptr;
     bool                        IsAttachment = false;
@@ -42,16 +42,12 @@ public:
     void                        ResetTrack();
 
     string                      OutputFileName;
-    uint64_t                    FileSize;
+    uint64_t                    FileSize = 0;
 
 private:
-    // File IO
-    size_t                      BlockCount;
-
-    // First frame info
-    buffer                      FirstFrame_Before;
-    buffer                      FirstFrame_After;
-    buffer                      FirstFrame_FileName;
+    // Private
+    class private_data;
+    private_data* const          Data_;
 };
 
 //---------------------------------------------------------------------------

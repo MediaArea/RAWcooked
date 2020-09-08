@@ -85,100 +85,91 @@ static size_t Size_Number(uint64_t Value)
 }
 
 //---------------------------------------------------------------------------
-class masked_buffer : public buffer_base
-{
-public:
-    masked_buffer() {}
-    masked_buffer(const buffer_base& Content, const buffer_base& Mask = buffer()) { if (Content) Assign(Content, Mask); }
-    ~masked_buffer();
-
-    void                        Assign(const buffer_base& Content, const buffer_base& Mask = buffer());
-
-    bool                        IsUsingMask() const;
-
-private:
-    bool                        IsUsingMask_ = false;
-};
-
-//---------------------------------------------------------------------------
-masked_buffer::~masked_buffer()
-{
-    if (IsUsingMask_)
-        delete[] Data();
-}
-
-//---------------------------------------------------------------------------
-void masked_buffer::Assign(const buffer_base& Content, const buffer_base& Mask)
-{
-
-    if (!Mask)
-    {
-        AssignBase(Content);
-        IsUsingMask_ = false;
-        return;
-    }
-
-    auto Size = Content.Size();
-    uint8_t* Data = new uint8_t[Size];
-    memcpy(Data, Content.Data(), Size);
-    for (size_t i = 0; i < Size && i < Mask.Size(); i++)
-        Data[i] -= Mask[i];
-    AssignBase(Data, Size);
-    IsUsingMask_ = true;
-}
-
-//---------------------------------------------------------------------------
-bool masked_buffer::IsUsingMask() const
-{
-    return IsUsingMask_;
-}
-
-//---------------------------------------------------------------------------
 class compressed_buffer : public buffer_base
 {
 public:
     compressed_buffer() : buffer_base() {}
-    compressed_buffer(const masked_buffer& Buffer) : buffer_base() { if (Buffer) Assign(Buffer); }
+    compressed_buffer(const buffer_base& Content, const buffer_base& Mask = buffer()) : buffer_base() { if (Content) Assign(Content, Mask); }
     ~compressed_buffer();
 
-    void                        Assign(const masked_buffer& Buffer);
+    void                        Assign(const buffer_base& Content, const buffer_base& Mask);
 
+    bool                        IsUsingMask() const;
     size_t                      UncompressedSize() const;
 
 private:
-    size_t                      UncompressedSize_ = 0;
+    buffer                      Masked; // Size is the max size
+    buffer                      Compressed; // Size is the max size
+    uLongf                      UncompressedSize_ = 0;
+    bool                        IsUsingMask_ = false;
 };
 
 //---------------------------------------------------------------------------
 compressed_buffer::~compressed_buffer()
 {
-    if (UncompressedSize_)
-        delete[] Data();
 }
 
 //---------------------------------------------------------------------------
-void compressed_buffer::Assign(const masked_buffer& Buffer)
+void compressed_buffer::Assign(const buffer_base& Content, const buffer_base& Mask)
 {
-    if (!Buffer)
+    // If empty
+    if (!Content)
     {
         ClearBase();
+        UncompressedSize_ = 0;
+        IsUsingMask_ = false;
         return;
     }
 
-    auto Data = new uint8_t[Buffer.Size()];
-    uLongf destLen = (uLongf)Buffer.Size();
-    if (compress((Bytef*)Data, &destLen, (const Bytef*)Buffer.Data(), (uLong)Buffer.Size()) < 0)
+    // Mask
+    auto Content_Size = Content.Size();
+    const uint8_t* Temp;
+    if (!Mask.Empty())
     {
-        // Uncompressed
-        delete[] Data;
-        AssignBase(Buffer);
+        if (Content_Size > Masked.Size())
+            Masked.Create(Content_Size);
+        for (size_t i = 0; i < Content_Size && i < Mask.Size(); i++)
+            Masked[i] = Content[i] - Mask[i]; // Inverse apply mask
+        if (Content_Size > Mask.Size())
+            memcpy(Masked.Data() + Mask.Size(), Content.Data() + Mask.Size(), Content_Size - Mask.Size());
+        Temp = Masked.Data();
+        IsUsingMask_ = true;
+    }
+    else
+    {
+        Temp = Content.Data();
+        IsUsingMask_ = false;
+    }
+
+    // Compression
+    if (Content_Size > (uLongf)-1) // Unlikely
+    {
+        AssignBase(Content);
         UncompressedSize_ = 0;
         return;
     }
+    if (Content_Size > Compressed.Size())
+        Compressed.Create(Content_Size);
+    UncompressedSize_ = (uLongf)Content_Size;
+    auto dest = (Bytef*)Compressed.Data();
+    auto destLen = UncompressedSize_;
+    auto src = (const Bytef*)Temp;
+    auto srcLen = (uLong)Content.Size();
+    if (compress(dest, &destLen, src, srcLen) < 0)
+    {
+        // Uncompressed
+        AssignBase(src, srcLen);
+        UncompressedSize_ = 0;
+        return;
+    }
+    AssignBase(dest, destLen); // External size is the compressed size, not the maximal buffer size
+    UncompressedSize_ = srcLen;
+}
 
-    // Compressed
-    AssignBase(Data, destLen);
-    UncompressedSize_ = Buffer.Size();
+//---------------------------------------------------------------------------
+bool compressed_buffer::IsUsingMask() const
+{
+    return IsUsingMask_;
 }
 
 //---------------------------------------------------------------------------
@@ -207,6 +198,7 @@ public:
     void Block_End();
     
     // Buffer
+    void Set1stPass();
     void Set2ndPass();
     uint8_t* GetBuffer();
     size_t GetBufferSize();
@@ -216,6 +208,8 @@ private:
     uint8_t* Buffer = nullptr;
     size_t Buffer_PreviousOffset = 0;
     size_t Buffer_Offset = 0;
+    size_t Buffer_MaxSize = 0;
+    bool   IsSecondPass_ = false;
 };
 
 //---------------------------------------------------------------------------
@@ -223,7 +217,7 @@ void ebml_writer::EB(uint64_t Size)
 {
     size_t S_l = Size_EB(Size);
 
-    if (Buffer)
+    if (IsSecondPass_)
     {
         uint64_t S2 = Size | (((uint64_t)1) << (S_l * 7));
         while (S_l)
@@ -244,7 +238,7 @@ void ebml_writer::Block(uint32_t Name, uint64_t Size, const uint8_t* Data)
     EB(Name);
     EB(Size);
 
-    if (Buffer)
+    if (IsSecondPass_)
     {
         memcpy(Buffer + Buffer_Offset, Data, Size);
     }
@@ -264,7 +258,7 @@ void ebml_writer::Number(uint32_t Name, uint64_t Number)
     size_t S_l = Size_Number(Number);
     EB(S_l);
 
-    if (Buffer)
+    if (IsSecondPass_)
     {
         while (S_l)
         {
@@ -284,7 +278,7 @@ void ebml_writer::DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, const bu
     EB(Size_EB(Prefix) + Data.Size());
     EB(Prefix);
 
-    if (Buffer)
+    if (IsSecondPass_)
     {
         memcpy(Buffer + Buffer_Offset, Data.Data(), Data.Size());
     }
@@ -303,7 +297,7 @@ void ebml_writer::CompressableData(uint32_t Name, const compressed_buffer& Data)
 void ebml_writer::Block_Begin(uint32_t Name)
 {
     EB(Name);
-    if (Buffer)
+    if (IsSecondPass_)
     {
         EB(BlockSizes.back());
         BlockSizes.pop_back();
@@ -315,7 +309,7 @@ void ebml_writer::Block_Begin(uint32_t Name)
 //---------------------------------------------------------------------------
 void ebml_writer::Block_End()
 {
-    if (!Buffer)
+    if (!IsSecondPass_)
     {
         BlockSizes.push_back(Buffer_Offset - Buffer_PreviousOffset);
         EB(Buffer_Offset - Buffer_PreviousOffset);
@@ -323,15 +317,27 @@ void ebml_writer::Block_End()
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::Set2ndPass()
+void ebml_writer::Set1stPass()
 {
-    if (Buffer)
-        return;
-
-    reverse(BlockSizes.begin(), BlockSizes.end()); // We'll decrement size for keeping track about where we are
-    Buffer = new uint8_t[Buffer_Offset];
+    BlockSizes.clear();
     Buffer_PreviousOffset = 0;
     Buffer_Offset = 0;
+    IsSecondPass_ = false;
+}
+
+//---------------------------------------------------------------------------
+void ebml_writer::Set2ndPass()
+{
+    reverse(BlockSizes.begin(), BlockSizes.end()); // We'll decrement size for keeping track about where we are
+    if (Buffer_Offset > Buffer_MaxSize)
+    {
+        delete[] Buffer;
+        Buffer = new uint8_t[Buffer_Offset];
+        Buffer_MaxSize = Buffer_Offset;
+    }
+    Buffer_PreviousOffset = 0;
+    Buffer_Offset = 0;
+    IsSecondPass_ = true;
 }
 
 //---------------------------------------------------------------------------
@@ -353,12 +359,60 @@ ebml_writer::~ebml_writer()
 }
 
 //---------------------------------------------------------------------------
+ENUM_BEGIN(element)
+MaskFileName,
+MaskBefore,
+MaskAfter,
+FileName,
+Before,
+After,
+In,
+ENUM_END(element)
+
+//---------------------------------------------------------------------------
+class rawcooked::private_data
+{
+public:
+    // File IO
+    size_t                      BlockCount = 0;
+
+    // First frame info
+    buffer                      FirstFrame[3];
+
+    // Analysis
+    void                        Parse(element Element, const buffer_base& Content, const buffer_base& Mask = buffer());
+    const compressed_buffer&    Compressed(element Element);
+    bool                        IsUsingMask(element Element);
+
+    // Write
+    ebml_writer                 Writer;
+
+private:
+    compressed_buffer           Buffers[element_Max];
+};
+
+//---------------------------------------------------------------------------
+void rawcooked::private_data::Parse(element Element, const buffer_base& Content, const buffer_base& Mask)
+{
+    auto& Buffer = Buffers[(size_t)Element];
+    Buffer.Assign(Content, Mask);
+}
+
+//---------------------------------------------------------------------------
+const compressed_buffer& rawcooked::private_data::Compressed(element Element)
+{
+    return Buffers[(size_t)Element];
+}
+
+//---------------------------------------------------------------------------
+bool rawcooked::private_data::IsUsingMask(element Element)
+{
+    return Buffers[(size_t)Element].IsUsingMask();
+}
+
+//---------------------------------------------------------------------------
 rawcooked::rawcooked() :
-    Unique(false),
-    InData(NULL),
-    InData_Size(0),
-    FileSize((uint64_t)-1),
-    BlockCount(0)
+    Data_(new private_data)
 {
 }
 
@@ -366,6 +420,7 @@ rawcooked::rawcooked() :
 rawcooked::~rawcooked()
 {
     Close();
+    delete Data_;
 }
 
 //---------------------------------------------------------------------------
@@ -382,33 +437,29 @@ void rawcooked::Parse()
     auto FileNameData = (const uint8_t*)OutputFileName.c_str();
     auto FileNameData_Size = OutputFileName.size();
 
+    // Temp
+    auto& BlockCount = Data_->BlockCount;
+    auto& FirstFrame = Data_->FirstFrame;
+
     // Create mask when needed
     if (!Unique && !BlockCount)
     {
-        FirstFrame_FileName.Create(FileNameData, FileNameData_Size);
-        FirstFrame_Before.Create(BeforeData, BeforeData_Size);
-        FirstFrame_After.Create(AfterData, AfterData_Size);
+        FirstFrame[(size_t)element::MaskFileName].Create(FileNameData, FileNameData_Size);
+        FirstFrame[(size_t)element::MaskBefore].Create(BeforeData, BeforeData_Size);
+        FirstFrame[(size_t)element::MaskAfter].Create(AfterData, AfterData_Size);
     }
 
-    // Apply mask when useful
-    masked_buffer Masked_MaskFileName(Unique ? buffer_view() : buffer_view(FirstFrame_FileName));
-    masked_buffer Masked_MaskBefore(Unique ? buffer_view() : buffer_view(FirstFrame_Before));
-    masked_buffer Masked_MaskAfter(Unique ? buffer_view() : buffer_view(FirstFrame_After));
-    masked_buffer Masked_FileName(buffer_view(FileNameData, FileNameData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_FileName));
-    masked_buffer Masked_Before(buffer_view(BeforeData, BeforeData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_Before));
-    masked_buffer Masked_After(buffer_view(AfterData, AfterData_Size), Unique ? buffer_view() : buffer_view(FirstFrame_After));
-    masked_buffer Masked_In(buffer_view(InData, InData_Size));
+    // Apply mask and/or compress when useful
+    Data_->Parse(element::MaskFileName, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
+    Data_->Parse(element::MaskBefore, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
+    Data_->Parse(element::MaskAfter, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
+    Data_->Parse(element::FileName, buffer_view(FileNameData, FileNameData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
+    Data_->Parse(element::Before, buffer_view(BeforeData, BeforeData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
+    Data_->Parse(element::After, buffer_view(AfterData, AfterData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
+    Data_->Parse(element::In, buffer_view(InData, InData_Size));
 
-    // Test if it can be compressed
-    compressed_buffer Compressed_MaskFileName(Masked_MaskFileName);
-    compressed_buffer Compressed_MaskBefore(Masked_MaskBefore);
-    compressed_buffer Compressed_MaskAfter(Masked_MaskAfter);
-    compressed_buffer Compressed_FileName(Masked_FileName);
-    compressed_buffer Compressed_Before(Masked_Before);
-    compressed_buffer Compressed_After(Masked_After);
-    compressed_buffer Compressed_In(Masked_In);
-
-    ebml_writer Writer;
+    auto& Writer = Data_->Writer;;
+    Writer.Set1stPass();
     for (uint8_t Pass = 0; Pass < 2; Pass++)
     {
         // EBML header
@@ -434,12 +485,12 @@ void rawcooked::Parse()
         if (!BlockCount)
         {
             Writer.Block_Begin(IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack);
-            if (!Unique && FirstFrame_FileName)
-                Writer.CompressableData(Name_RawCooked_MaskBaseFileName, Compressed_MaskFileName);
-            if (!Unique && FirstFrame_Before)
-                Writer.CompressableData(Name_RawCooked_MaskBaseBeforeData, Compressed_MaskBefore);
-            if (!Unique && FirstFrame_After)
-                Writer.CompressableData(Name_RawCooked_MaskBaseAfterData, Compressed_MaskAfter);
+            if (!Unique && FirstFrame[(size_t)element::MaskFileName])
+                Writer.CompressableData(Name_RawCooked_MaskBaseFileName, Data_->Compressed(element::MaskFileName));
+            if (!Unique && FirstFrame[(size_t)element::MaskBefore])
+                Writer.CompressableData(Name_RawCooked_MaskBaseBeforeData, Data_->Compressed(element::MaskBefore));
+            if (!Unique && FirstFrame[(size_t)element::MaskAfter])
+                Writer.CompressableData(Name_RawCooked_MaskBaseAfterData, Data_->Compressed(element::MaskAfter));
             if (!Unique)
                 Writer.Block_End();
         }
@@ -449,10 +500,10 @@ void rawcooked::Parse()
             Writer.Block_Begin(Name_RawCookedBlock);
 
         // Common to track and block parts
-        Writer.CompressableData(Masked_FileName.IsUsingMask() ? Name_RawCooked_MaskAdditionFileName : Name_RawCooked_FileName, Compressed_FileName);
-        Writer.CompressableData(Masked_Before.IsUsingMask() ? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, Compressed_Before);
-        Writer.CompressableData(Masked_After.IsUsingMask() ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, Compressed_After);
-        Writer.CompressableData(Name_RawCooked_InData, Compressed_In);
+        Writer.CompressableData(Data_->IsUsingMask(element::FileName) ? Name_RawCooked_MaskAdditionFileName : Name_RawCooked_FileName, Data_->Compressed(element::FileName));
+        Writer.CompressableData(Data_->IsUsingMask(element::Before) ? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, Data_->Compressed(element::Before));
+        Writer.CompressableData(Data_->IsUsingMask(element::After) ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, Data_->Compressed(element::After));
+        Writer.CompressableData(Name_RawCooked_InData, Data_->Compressed(element::In));
         if (HashValue)
             Writer.DataWithEncodedPrefix(Name_RawCooked_FileHash, HashFormat_MD5, buffer_view(HashValue->data(), HashValue->size()));
         if (FileSize != (uint64_t)-1)
@@ -460,16 +511,17 @@ void rawcooked::Parse()
         Writer.Block_End();
 
         // Init 2nd pass
-        Writer.Set2ndPass();
+        if (!Pass)
+            Writer.Set2ndPass();
     }
 
     // Write
     WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize());
-    BlockCount++;
+    Data_->BlockCount++;
 }
 
 //---------------------------------------------------------------------------
 void rawcooked::ResetTrack()
 {
-    BlockCount = 0;
+    Data_->BlockCount = 0;
 }
