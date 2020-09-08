@@ -98,6 +98,11 @@ static bool Uncompress(const buffer_view& In, buffer& Out)
     // Size in EBML style
     auto Data = In.Data();
     auto Size = In.Size();
+    if (!Size)
+    {
+        Out.Clear();
+        return false;
+    }
     decltype(Size) Offset = 0;
     uint64_t UncompressedSize = Data[0];
     if (!UncompressedSize)
