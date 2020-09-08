@@ -53,8 +53,10 @@ test_script:
     $env:Path += ";$(Get-Location)"
 
     Run-Test test1
+    Run-Test test1b
     Run-Test test2
     Run-Test test3
+    Run-Test paddingbits
     Run-Test version
     Run-Test notfound
     Run-Test check
