@@ -171,7 +171,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         else if (SingleFile.MayHavePaddingBits() && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
         {
             Global.ProgressIndicator_Stop();
-            if (Global.Check)
+            if (Global.Actions[Action_Check])
             {
                 cerr << "Info: data can contain non-zero padding bits, padding bits will be\n"
                         "      checked only during reversibility check so after encoding,\n"
@@ -362,7 +362,7 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
     // Matroska
     int ReturnValue = 0;
-    bool NoOutputCheck = Global.Check && !Global.OutputFileName_IsProvided;
+    bool NoOutputCheck = Global.Actions[Action_Check] && !Global.OutputFileName_IsProvided;
     if (!ParseInfo.IsDetected)
     {
         // Threads
@@ -385,8 +385,8 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
-        M->NoWrite = Global.Check;
-        M->NoOutputCheck = NoOutputCheck;
+        M->NoWrite = Global.Actions[Action_Check];
+        M->NoOutputCheck = Global.Actions[Action_Check];
         if (NoOutputCheck)
             NoOutputCheck = M->Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
         if (ParseInfo.ParseFile_Input(*M))
@@ -400,12 +400,12 @@ int ParseFile_Compressed(parse_info& ParseInfo)
     // End
     if (ParseInfo.IsDetected && !Global.Quiet)
     {
-        if (!Global.Check)
+        if (!Global.Actions[Action_Check])
             cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
         else if (!Global.Errors.HasErrors())
             cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, no issue detected." << endl;
     }
-    if (Global.Check && Global.Errors.HasErrors())
+    if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
         cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, issues detected, see below." << endl;
 
     return ReturnValue;
@@ -505,7 +505,7 @@ int main(int argc, const char* argv[])
             case AlwaysYes: break;
             default:
                 if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
-                 || (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
+                 || (Global.Actions[Action_Check] && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
                 {
                     cerr << "Do you want to continue despite warnings? [y/N] ";
                     string Result;
@@ -525,7 +525,7 @@ int main(int argc, const char* argv[])
         RAWcooked.Delete();
 
     // Check result
-    if (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
+    if (Global.Actions[Action_Check] && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
     {
         parse_info ParseInfo;
         Value = ParseInfo.FileMap.Open_ReadMode(Global.OutputFileName);

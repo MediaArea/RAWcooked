@@ -418,7 +418,7 @@ int input::AnalyzeInputs(global& Global)
         return 1;
     }
 
-    if (Global.Check && HasMoreThanOneFile)
+    if (Global.Actions[Action_Check] && HasMoreThanOneFile)
     {
         cerr << "Error: \" --check\" feature is implemented only for 1 input.\nPlease contact info@mediaarea.net if you want support of such input." << endl;
         return 1;

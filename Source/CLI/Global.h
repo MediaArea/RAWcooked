@@ -44,8 +44,6 @@ public:
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
     bool                        Quiet;
-    bool                        Check;
-    bool                        FrameMd5;
     bitset<Action_Max>          Actions;
 
     // Intermediate info

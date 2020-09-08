@@ -322,7 +322,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     Command += Global.OutputFileName;
     Command += '\"';
 
-    if (Global.FrameMd5)
+    if (Global.Actions[Action_FrameMd5])
     {
         if (Global.FrameMd5FileName.empty())
         {
