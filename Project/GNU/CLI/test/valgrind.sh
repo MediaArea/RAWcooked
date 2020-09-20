@@ -15,6 +15,7 @@ type -p valgrind >/dev/null 2>&1 || fatal "${test}" "valgrind command not found"
 while read line ; do
     path="$(echo "${line}" | cut -d' ' -f1)"
     file="$(echo "${line}" | cut -s -d' ' -f2)"
+    opts="$(echo "${line}" | cut -s -d' ' -f3-)"
 
     if [ -z "${file}" ] ; then
         file="../$(basename ${path})"
@@ -28,7 +29,7 @@ while read line ; do
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         # check encoding
-        VALGRIND=1 run_rawcooked --file "${files_path}/${path}/${file}"
+        VALGRIND=1 run_rawcooked ${opts} --file "${files_path}/${path}/${file}"
 
         # check decoding
         VALGRIND=1 run_rawcooked "${files_path}/${path}/${file}.mkv"

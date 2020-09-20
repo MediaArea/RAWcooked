@@ -1,1 +1,2 @@
 Formats/DPX/Flavors/RGBA_8_Packed_BE 8bit_a.dpx
+Formats/WAV/Flavors/44100_16_1_LE 44100_16_1_LE.wav -c:a copy
