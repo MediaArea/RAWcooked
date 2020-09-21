@@ -73,6 +73,18 @@ file_4() {
     run_rawcooked -o 4.mkv.RAWcooked.orig 4.mkv || fatal "internal" "rawcooked command failed"
 }
 
+# file_5: four pcm
+file_5() {
+    mkdir 5
+    ffmpeg -nostdin -f lavfi -i anoisesrc=duration=2 5/1.wav >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
+    ffmpeg -nostdin -f lavfi -i anoisesrc=duration=2 5/2.wav >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
+    ffmpeg -nostdin -f lavfi -i anoisesrc=duration=2 5/3.wav >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
+    ffmpeg -nostdin -f lavfi -i anoisesrc=duration=2 5/4.wav >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
+
+    run_rawcooked -c:a copy 5 || fatal "internal" "rawcooked command failed"
+    run_rawcooked -o 5.mkv.RAWcooked.orig 5.mkv || fatal "internal" "rawcooked command failed"
+}
+
 # case_1 remove one file for each file type
 case_1() {
 
@@ -342,7 +354,7 @@ command_y() {
 }
 
 pushd "${files_path}" >/dev/null 2>&1
-    files="1 2 3 4"
+    files="1 2 3 4 5"
     cases="normal 1 2 3 4 5"
     accesses="normal readonly none"
     commands="n y"

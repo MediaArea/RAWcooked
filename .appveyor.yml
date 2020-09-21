@@ -56,6 +56,7 @@ test_script:
     Run-Test test1b
     Run-Test test2
     Run-Test test3
+    Run-Test pcm
     Run-Test paddingbits
     Run-Test version
     Run-Test notfound
