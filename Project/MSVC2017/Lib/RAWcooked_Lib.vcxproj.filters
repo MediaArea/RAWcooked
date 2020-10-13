@@ -148,6 +148,12 @@
     <Filter Include="Header Files\Utils\Buffer">
       <UniqueIdentifier>{56157e64-cae9-4303-8afc-226380ab1406}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Uncompressed\EXR">
+      <UniqueIdentifier>{1c19204a-4553-4ffa-a28d-3845c589e947}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Uncompressed\EXR">
+      <UniqueIdentifier>{a2799b00-8701-4fd0-9657-36a4e798c82c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h">
@@ -369,6 +375,9 @@
     <ClInclude Include="..\..\..\Source\Lib\CoDec\Wrapper.h">
       <Filter>Header Files\CoDec</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h">
+      <Filter>Header Files\Uncompressed\EXR</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp">
@@ -523,6 +532,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\Wrapper.cpp">
       <Filter>Source Files\CoDec</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.cpp">
+      <Filter>Source Files\Uncompressed\EXR</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

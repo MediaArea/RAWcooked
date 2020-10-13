@@ -8,6 +8,7 @@
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include <algorithm>
 //---------------------------------------------------------------------------
 
@@ -26,6 +27,7 @@ void raw_frame::Create(size_t colorspace_type, size_t width, size_t height, size
         case flavor::FFmpeg: FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
         case flavor::DPX: DPX_Create(colorspace_type, width, height); break;
         case flavor::TIFF: TIFF_Create(colorspace_type, width, height); break;
+        case flavor::EXR: EXR_Create(colorspace_type, width, height); break;
         case flavor::None:;
     }
 }
@@ -76,6 +78,17 @@ void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height)
     {
         case 1: // JPEG2000-RCT --> RGB
                 Planes_.push_back(new plane(width, height, tiff::BytesPerBlock((tiff::flavor)Flavor_Private), tiff::PixelsPerBlock((tiff::flavor)Flavor_Private)));
+        default: ;
+    }
+}
+
+//---------------------------------------------------------------------------
+void raw_frame::EXR_Create(size_t colorspace_type, size_t width, size_t height)
+{
+    switch (colorspace_type)
+    {
+        case 1: // JPEG2000-RCT --> RGB
+                Planes_.push_back(new plane(width, height, exr::BytesPerBlock((exr::flavor)Flavor_Private), exr::PixelsPerBlock((exr::flavor)Flavor_Private), 8));
         default: ;
     }
 }

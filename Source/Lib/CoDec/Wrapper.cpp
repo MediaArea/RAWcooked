@@ -8,6 +8,7 @@
 #include "Lib/CoDec/Wrapper.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"

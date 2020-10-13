@@ -12,6 +12,7 @@
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 //---------------------------------------------------------------------------
@@ -158,6 +159,7 @@ input_base_uncompressed* track_info::InitOutput_Find()
     case format_kind::video:
         TEST_OUTPUT(dpx, DPX);
         TEST_OUTPUT(tiff, TIFF);
+        TEST_OUTPUT(exr, EXR);
         break;
     case format_kind::audio:
         TEST_OUTPUT(wav, None);

@@ -407,7 +407,7 @@ void slice::SliceContent_LineThenPlane()
         sample[x][1] = NULL;
     }
 
-    transform_jpeg2000rct Transform(RawFrame, P->bits_per_raw_sample, y, x);
+    transform_jpeg2000rct Transform(RawFrame, P->bits_per_raw_sample, y, x, w, h);
 
     for (size_t y = 0; y < h; y++)
     {
