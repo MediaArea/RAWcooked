@@ -64,6 +64,7 @@ test_script:
     Run-Test legacy
     Run-Test multiple
     Run-Test gaps
+    Run-Test framerate
     Run-Test increasingdigitcount
 
     if ($fail -eq $true) {
