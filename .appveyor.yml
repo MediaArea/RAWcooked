@@ -12,7 +12,7 @@ build:
 
 before_test:
 - ps: |
-    git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles.git Project/GNU/CLI/test/TestingFiles
+    git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles-Light.git Project/GNU/CLI/test/TestingFiles
     Invoke-WebRequest https://www.mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Windows_Static_x64.zip -OutFile FFmpeg_Bin_Latest_Windows_Static_x64.zip
     Expand-Archive FFmpeg_Bin_Latest_Windows_Static_x64.zip -DestinationPath .
     Copy-Item bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg

@@ -36,7 +36,7 @@ files_path="${PWD}/test/TestingFiles"
 
 status=0
 
-timeout=480
+timeout=30
 
 fatal() {
     local test="${1}"

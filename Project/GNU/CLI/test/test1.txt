@@ -62,7 +62,6 @@ Formats/DPX/Flavors/RGBA_16_FilledA_BE/checkerboard_1080p_nuke_bigendian_16bit_a
 Formats/DPX/Flavors/RGBA_16_FilledA_BE/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.dpx pass
 Formats/DPX/Flavors/RGBA_16_FilledA_LE/checkerboard_1080p_nuke_littleendian_16bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_16_Packed_BE/16bit_a.dpx pass
-Formats/DPX/Flavors/RGBA_16_Packed_BE/16bit_a.2.dpx pass
 Formats/DPX/Flavors/RGB_8_Packed_BE/8bit.dpx pass
 Formats/DPX/Flavors/RGB_8_Packed_BE/checkerboard_1080p_nuke_bigendian_8bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_8_Packed_LE/checkerboard_1080p_nuke_littleendian_8bit_noalpha.dpx pass
