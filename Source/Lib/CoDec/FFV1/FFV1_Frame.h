@@ -24,7 +24,7 @@ class ffv1_frame
 {
 public:
     // Constructor/Destructor
-    ffv1_frame();
+    ffv1_frame(ThreadPool* Pool);
     ~ffv1_frame();
 
     // External metadata

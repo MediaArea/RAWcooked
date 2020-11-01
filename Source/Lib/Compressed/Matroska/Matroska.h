@@ -41,7 +41,7 @@ class frame_writer;
 class matroska : public input_base
 {
 public:
-    matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, errors* Errors = nullptr);
+    matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, ThreadPool* Pool, errors* Errors = nullptr);
     ~matroska();
 
     void                        Shutdown();

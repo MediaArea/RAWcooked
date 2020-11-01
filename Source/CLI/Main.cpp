@@ -17,6 +17,7 @@
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
+#include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
 #include <map>
 #include <sstream>
 #include <cstdio>
@@ -364,16 +365,36 @@ int ParseFile_Compressed(parse_info& ParseInfo)
     bool NoOutputCheck = Global.Check && !Global.OutputFileName_IsProvided;
     if (!ParseInfo.IsDetected)
     {
-        matroska M(OutputDirectoryName, &Global.Mode, Ask_Callback, &Global.Errors);
-        M.Quiet = Global.Quiet;
-        M.NoWrite = Global.Check;
-        M.NoOutputCheck = NoOutputCheck;
+        // Threads
+        unsigned threads;
+        auto OutputOptions_Threads = Global.OutputOptions.find("threads");
+        if (OutputOptions_Threads != Global.OutputOptions.end())
+            threads = stoul(OutputOptions_Threads->second);
+        else
+            threads = 0;
+        if (!threads)
+            threads = thread::hardware_concurrency();
+        ThreadPool* Thread_Pool;
+        if (threads > 1)
+        {
+            Thread_Pool = new ThreadPool(threads);
+            Thread_Pool->init();
+        }
+        else
+            Thread_Pool = nullptr;
+
+        matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
+        M->Quiet = Global.Quiet;
+        M->NoWrite = Global.Check;
+        M->NoOutputCheck = NoOutputCheck;
         if (NoOutputCheck)
-            NoOutputCheck = M.Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
-        if (ParseInfo.ParseFile_Input(M))
+            NoOutputCheck = M->Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
+        if (ParseInfo.ParseFile_Input(*M))
         {
             ReturnValue = 1;
         }
+        delete M;
+        delete Thread_Pool;
     }
 
     // End

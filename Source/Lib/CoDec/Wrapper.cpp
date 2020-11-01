@@ -64,6 +64,10 @@ void audio_wrapper::SetEndianness(endianness Endianness)
 class ffv1_wrapper : public video_wrapper
 {
 public:
+    //Constructor/Destructor
+    ffv1_wrapper(ThreadPool* Pool);
+    ~ffv1_wrapper();
+
     // Config
     void                        SetWidth(uint32_t Width);
     void                        SetHeight(uint32_t Height);
@@ -73,34 +77,46 @@ public:
     void                        OutOfBand(const uint8_t* Data, size_t Size);
 
 private:
-    ffv1_frame                  Ffv1Frame;
+    ffv1_frame*                 Ffv1Frame;
 };
+
+//---------------------------------------------------------------------------
+ffv1_wrapper::ffv1_wrapper(ThreadPool* Pool) :
+    Ffv1Frame(new ffv1_frame(Pool))
+{
+}
+
+//---------------------------------------------------------------------------
+ffv1_wrapper::~ffv1_wrapper()
+{
+    delete Ffv1Frame;
+}
 
 //---------------------------------------------------------------------------
 void ffv1_wrapper::SetWidth(uint32_t Width)
 {
-    Ffv1Frame.SetWidth(Width);
+    Ffv1Frame->SetWidth(Width);
 }
 
 //---------------------------------------------------------------------------
 void ffv1_wrapper::SetHeight(uint32_t Height)
 {
-    Ffv1Frame.SetHeight(Height);
+    Ffv1Frame->SetHeight(Height);
 }
 
 //---------------------------------------------------------------------------
 void ffv1_wrapper::Process(const uint8_t* Data, size_t Size)
 {
-    Ffv1Frame.RawFrame = RawFrame;
-    Ffv1Frame.Process(Data, Size);
+    Ffv1Frame->RawFrame = RawFrame;
+    Ffv1Frame->Process(Data, Size);
     RawFrame->Process();
 }
 
 //---------------------------------------------------------------------------
 void ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
 {
-    Ffv1Frame.RawFrame = RawFrame;
-    Ffv1Frame.OutOfBand(Data, Size);
+    Ffv1Frame->RawFrame = RawFrame;
+    Ffv1Frame->OutOfBand(Data, Size);
 }
 
 //---------------------------------------------------------------------------
@@ -342,11 +358,12 @@ void pcm_wrapper::Process(const uint8_t* Data, size_t Size)
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-base_wrapper* CreateWrapper(format Format)
+#define CREATEWRAPPER_THREADED(_NAME, _FLAVOR, _THREAD) case format::_FLAVOR: return new _NAME##_wrapper(_THREAD);
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool)
 {
     switch (Format)
     {
-    CREATEWRAPPER(ffv1, FFV1);
+    CREATEWRAPPER_THREADED(ffv1, FFV1, Pool);
     CREATEWRAPPER(flac, FLAC);
     CREATEWRAPPER(pcm, PCM);
     case format::None:

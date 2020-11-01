@@ -178,11 +178,12 @@ void matroska_ProgressIndicator_Show(matroska* M)
 }
 
 //---------------------------------------------------------------------------
-matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, errors* Errors_Source) :
+matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, ThreadPool* Pool, errors* Errors_Source) :
     input_base(Errors_Source, Parser_Matroska),
     Hashes_FromRAWcooked(new hashes(Errors_Source)),
     Hashes_FromAttachments(new hashes(Errors_Source)),
-    FrameWriter_Template(new frame_writer(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source))
+    FrameWriter_Template(new frame_writer(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source)),
+    FramesPool(Pool)
 {
 }
 
@@ -224,7 +225,6 @@ void matroska::Shutdown()
     if (FramesPool)
     {
         FramesPool->shutdown();
-        delete FramesPool;
         FramesPool = nullptr;
     }
 
@@ -591,15 +591,9 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 {
     IsList = true;
 
-    if (!FramesPool)
-    {
-        FramesPool = new ThreadPool(1);
-        FramesPool->init();
-    }
-
     TrackInfo_Pos++;
     if (TrackInfo_Pos >= TrackInfo.size())
-        TrackInfo.push_back(new track_info(FrameWriter_Template, Actions, Errors));
+        TrackInfo.push_back(new track_info(FrameWriter_Template, Actions, Errors, FramesPool));
 }
 
 
@@ -716,7 +710,7 @@ void matroska::Segment_Tracks_TrackEntry()
 
     TrackInfo_Pos++;
     if (TrackInfo_Pos >= TrackInfo.size())
-        TrackInfo.push_back(new track_info(FrameWriter_Template, Actions, Errors));
+        TrackInfo.push_back(new track_info(FrameWriter_Template, Actions, Errors, FramesPool));
 }
 
 //---------------------------------------------------------------------------

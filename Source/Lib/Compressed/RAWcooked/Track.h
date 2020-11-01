@@ -63,7 +63,7 @@ enum class format_kind
 //---------------------------------------------------------------------------
 format Format_FromCodecID(const char* Name);
 format_kind FormatKind(format Format);
-base_wrapper* CreateWrapper(format Format);
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool);
 class reversibility;
 
 //---------------------------------------------------------------------------
@@ -73,9 +73,9 @@ class track_info : public input_base
 public:
     reversibility*         ReversibilityData = nullptr;
 
-    track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors);
-    track_info(const frame_writer* FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors) :
-        track_info(*FrameWriter_Source, Actions, Errors)
+    track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool);
+    track_info(const frame_writer* FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool) :
+        track_info(*FrameWriter_Source, Actions, Errors, Pool)
     {
     }
     ~track_info();
@@ -94,6 +94,7 @@ public:
     void                        SetHeight(uint32_t NewHeight) { Height = NewHeight; }
 
 private:
+    ThreadPool*                 Pool = nullptr;
     frame_writer*               FrameWriter = nullptr;
     input_base_uncompressed*    DecodedFrameParser = nullptr;
     base_wrapper*               Wrapper = nullptr;

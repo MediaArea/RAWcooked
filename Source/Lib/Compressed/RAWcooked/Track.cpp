@@ -34,7 +34,7 @@ bool track_info::Init(const uint8_t* BaseData)
 
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format);
+        Wrapper = CreateWrapper(Format, Pool);
         if (!Wrapper)
             return true;
     }
@@ -139,7 +139,7 @@ bool track_info::OutOfBand(const uint8_t* Data, size_t Size)
     // Parse
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format);
+        Wrapper = CreateWrapper(Format, Pool);
         if (!Wrapper)
             return true;
     }
@@ -258,10 +258,11 @@ void track_info::End(size_t i)
 
 //---------------------------------------------------------------------------
 //
-track_info::track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors) :
+track_info::track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool_) :
     input_base(Errors, Parser_ReversibilityData),
     ReversibilityData(new reversibility()),
-    FrameWriter(new frame_writer(FrameWriter_Source))
+    FrameWriter(new frame_writer(FrameWriter_Source)),
+    Pool(Pool_)
 {
     input_base::Actions = Actions;
 }
