@@ -80,4 +80,4 @@ TESTING_DIR = test/TestingFiles
 clone_testing_files: $(TESTING_DIR)
 
 $(TESTING_DIR):
-	git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles-Light.git test/TestingFiles
+	git clone --depth=1 https://github.com/MediaArea/RAWCooked-RegressionTestingFiles-Light.git test/TestingFiles

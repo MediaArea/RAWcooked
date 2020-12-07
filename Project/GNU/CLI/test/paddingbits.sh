@@ -14,9 +14,9 @@ while read line ; do
     pushd "${files_path}/${path}" >/dev/null 2>&1
         if [ "${filetomodify}" != "X" ] ; then
           filenametomodify=$(ls ${file} | sed -n ${filetomodify}p)
-          chmod u+w ${file}/${filenametomodify} || echo "chmod issue"
-          truncate --size=-1 ${file}/${filenametomodify} || echo "truncate issue"
-          printf "\x5f" >> ${file}/${filenametomodify} || echo "printf issue"
+          chmod u+w ${file}/${filenametomodify} || fatal "${test}" "internal: chmod issue"
+          truncate -s -1 ${file}/${filenametomodify} 2> $fd || fatal "${test}" "internal: truncate issue"
+          printf "\x5f" >> ${file}/${filenametomodify} || echo fatal "${test}" "internal: printf issue"
         fi
         
         run_rawcooked -y $options "${file}"
