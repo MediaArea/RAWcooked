@@ -113,7 +113,19 @@ bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPaddi
         IsDetected = true;
 
     if (Global.Errors.HasErrors())
+    {
+        if (strstr(Global.Errors.ErrorMessage(), "becoming too big"))
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Error: the reversibility file is becoming unexpectedly big.\n"
+                    "       FFmpeg, used for muxing the output, has some issues with big\n"
+                    "       attachments, and such big reversibility file is not expected\n"
+                    "       with such compression, we prefer to be safe and we reject the\n"
+                    "       compression.\n"
+                    "       Please contact info@mediaarea.net if you want support of such input." << endl;
+        }
         return true;
+    }
     return false;
 }
 
