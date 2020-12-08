@@ -36,6 +36,7 @@ public:
     bool*                       ProgressIndicator_IsPaused = nullptr;
     condition_variable*         ProgressIndicator_IsEnd = nullptr;
     errors*                     Errors = nullptr;
+    void                        SetErrorFileBecomingTooBig();
 
     // File IO
     void WriteToDisk(const uint8_t* Buffer, size_t Buffer_Size);

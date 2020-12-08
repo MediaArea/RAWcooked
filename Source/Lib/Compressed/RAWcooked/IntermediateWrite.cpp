@@ -24,6 +24,7 @@ static const char* MessageText[] =
     "file already exists",
     "cannot write to the file",
     "cannot remove file",
+    "file is becoming too big",
 };
 
 enum code : uint8_t
@@ -33,6 +34,7 @@ enum code : uint8_t
     FileAlreadyExists,
     FileWrite,
     FileRemove,
+    FileBecomingTooBig,
     Max
 };
 
@@ -88,6 +90,15 @@ bool intermediate_write::Delete()
     }
 
     return false;
+}
+
+//---------------------------------------------------------------------------
+void intermediate_write::SetErrorFileBecomingTooBig()
+{
+    if (Errors)
+    {
+        Errors->Error(IO_IntermediateWriter, error::type::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileBecomingTooBig, FileName);
+    }
 }
 
 //---------------------------------------------------------------------------

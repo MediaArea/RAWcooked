@@ -383,6 +383,7 @@ public:
     void                        Parse(element Element, const buffer_base& Content, const buffer_base& Mask = buffer());
     const compressed_buffer&    Compressed(element Element);
     bool                        IsUsingMask(element Element);
+    long long                   TotalSize = 0;
 
     // Write
     ebml_writer                 Writer;
@@ -518,6 +519,13 @@ void rawcooked::Parse()
     // Write
     WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize());
     Data_->BlockCount++;
+
+    // Handle too big output files
+    Data_->TotalSize += Writer.GetBufferSize();
+    if (Data_->TotalSize > 0x10000000) // TODO: add an option for avoiding this hard coded value; this value is from FFmpeg (prevent read by FFmpeg, with >= 0x40000000 older FFmpeg create invalid files)
+    {
+        SetErrorFileBecomingTooBig();
+    }
 }
 
 //---------------------------------------------------------------------------
