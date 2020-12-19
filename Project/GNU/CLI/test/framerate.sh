@@ -21,9 +21,9 @@ while read line ; do
         run_rawcooked -framerate ${rate} --no-check-padding --file "${file}"
         check_success "file rejected at input" "file accepted at input"
 
-        framerate=$(ffmpeg -hide_banner -i "${file}.mkv" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:.\+,' | cut -d, -f5)
+        framerate=$(ffmpeg -hide_banner -i "${file}.mkv" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:.\+,' | sed -En 's/.*,([0-9]+)fps,.*/\1/p')
 
-        if [ "${framerate}" != "${rate}fps" ] ; then
+        if [ "${framerate}" != "${rate}" ] ; then
             echo "NOK: ${test}/${file}, wrong output framerate, requested: ${rate}, got: ${framerate}" >&${fd}
             status=1
         fi
