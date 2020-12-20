@@ -170,7 +170,7 @@ run_rawcooked() {
     fi >/dev/null 2>&1
 
     if test -z "${WSL}" ; then
-        ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
+        ${valgrind} rawcooked -threads 1 $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
         sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
         kill -CONT ${pid} ; wait ${pid}
         cmd_status="${?}"
