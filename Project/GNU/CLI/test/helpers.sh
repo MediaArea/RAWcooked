@@ -107,41 +107,6 @@ check_failure() {
     return ${local_status}
 }
 
-check_framemd5() {
-    local raw="${1}"
-    local mkv="${2}"
-    local local_status=0
-
-    local media=$(ffmpeg -hide_banner -i "${raw}" 2>&1 </dev/null | tr -d ' ' | grep -m1 '^Stream#.\+:.\+' | cut -d ':' -f 3)
-    if [ "${media}" == "Video" ] ; then
-        pixfmt=$(ffmpeg -hide_banner -i "${raw}" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Video:.\+,' | cut -d, -f2)
-        ffmpeg -i "${raw}" -f framemd5 "${raw}.framemd5" </dev/null >/dev/null 2>&1
-        ffmpeg -i "${mkv}" -pix_fmt ${pixfmt} -f framemd5 "${mkv}.framemd5" </dev/null >/dev/null 2>&1
-    elif [ "${media}" == "Audio" ] ; then
-        pcmfmt=$(ffmpeg -hide_banner -i "${raw}" 2>&1 </dev/null | tr -d ' ' | grep -m1 'Stream#.\+:.\+:Audio:' | grep -o 'pcm_[[:alnum:]]\+')
-        ffmpeg -i "${raw}" -c:a ${pcmfmt} -f framemd5 "${raw}.framemd5" </dev/null >/dev/null 2>&1
-        ffmpeg -i "${mkv}" -c:a ${pcmfmt} -f framemd5 "${mkv}.framemd5" </dev/null >/dev/null 2>&1
-    else
-        echo "NOK: ${test}/${file}, stream format not recognized" >&${fd}
-        rm -f "${raw}.framemd5" "${mkv}.framemd5"
-        status=1
-        local_status=1
-        return ${local_status}
-    fi
-
-    framemd5_a="$(grep -m1 -o '[0-9a-f]\{32\}' "${raw}.framemd5")"
-    framemd5_b="$(grep -m1 -o '[0-9a-f]\{32\}' "${mkv}.framemd5")"
-    rm -f "${raw}.framemd5" "${mkv}.framemd5"
-
-    if [ -z "${framemd5_a}" ] || [ -z "${framemd5_b}" ] || [ "${framemd5_a}" != "${framemd5_b}" ] ; then
-        echo "NOK: ${test}/${file}, framemd5 mismatch" >&${fd}
-        status=1
-        local_status=1
-    fi
-
-    return ${local_status}
-}
-
 check_files() {
     local original="${1}"
     local decoded="${2}"
@@ -205,7 +170,7 @@ run_rawcooked() {
     fi >/dev/null 2>&1
 
     if test -z "${WSL}" ; then
-        ${valgrind} rawcooked $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
+        ${valgrind} rawcooked -threads 1 $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
         sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
         kill -CONT ${pid} ; wait ${pid}
         cmd_status="${?}"

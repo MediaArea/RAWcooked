@@ -64,13 +64,13 @@ static inline uint32_t BigEndian2int24u(const uint8_t* B)
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-ffv1_frame::ffv1_frame() :
+ffv1_frame::ffv1_frame(ThreadPool* Pool_) :
     // Decoded frame
     RawFrame(NULL),
     // Temp
     KeyFrame_IsPresent(false),
     Slices(NULL),
-    Pool(NULL)
+    Pool(Pool_)
 {
     E.AssignStateTransitions(default_state_transitions);
 }
@@ -78,11 +78,6 @@ ffv1_frame::ffv1_frame() :
 //---------------------------------------------------------------------------
 ffv1_frame::~ffv1_frame()
 {
-    if (Pool)
-    {
-        Pool->shutdown();
-        delete Pool;
-    }
     Clear();
 }
 
@@ -144,7 +139,7 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
     {
         if (P.ConfigurationRecord_IsPresent)
             return true; //There is a problem
-        
+
         // No slice in this stream, fake 1 slice
         Slices = new slice_struct[1];
         memset(Slices, 0x00, sizeof(slice_struct));
@@ -154,7 +149,7 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
 
     // keyframe
     uint8_t State = states_default;
-    bool keyframe= E.b(State);
+    bool keyframe = E.b(State);
     if (P.ConfigurationRecord_IsPresent && P.intra && !keyframe)
         return P.Error("FFV1-FRAME-key_frame-ISNOTINTRA:1");
     if (keyframe)
@@ -176,13 +171,13 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)
         {
-            if (Slices_BufferPos<P.TailSize)
+            if (Slices_BufferPos < P.TailSize)
                 return true; //There is a problem
 
             size_t Size = BigEndian2int24u(Buffer + (size_t)Slices_BufferPos - P.TailSize);
             Size += P.TailSize;
 
-            if (Size>Slices_BufferPos)
+            if (Size > Slices_BufferPos)
                 return true; //There is a problem
             Slices_BufferPos -= Size;
 
@@ -207,16 +202,19 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         Slice_Content->Init(Buffer, Buffer_Size, keyframe, true, RawFrame);
     }
 
-    if (!Pool)
+    if (Pool)
     {
-        Pool = new ThreadPool(Slices_Size + 1);
-        Pool->init();
+        std::vector<std::future<int>> Futures;
+        for (size_t i = Slices_Size; i <= Slices_Size; i--)
+            Futures.push_back(Pool->submit(Frame_Thread, Slices[i].Content));
+        for (size_t i = Slices_Size; i <= Slices_Size; i--) // TODO: don't wait for the parsing of the frame before peeking the next frame
+            Futures[i].get();
     }
-    std::vector<std::future<int>> Futures;
-    for (size_t i = Slices_Size; i <= Slices_Size; i--)
-        Futures.push_back(Pool->submit(Frame_Thread, Slices[i].Content));
-    for (size_t i = Slices_Size; i <= Slices_Size; i--) // TODO: don't wait for the parsing of the frame before peeking the next frame
-        Futures[i].get();
+    else
+    {
+        for (size_t i = Slices_Size; i <= Slices_Size; i--)
+            Frame_Thread(Slices[i].Content);
+    }
 
     return false;
 }

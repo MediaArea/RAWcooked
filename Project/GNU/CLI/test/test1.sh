@@ -46,12 +46,6 @@ while read line ; do
             continue
         fi
 
-        # check framemd5
-        if ! check_framemd5 "${file}" "${file}.mkv" ; then
-            clean
-            continue
-        fi
-
         # check decoding
         run_rawcooked --conch "${file}.mkv"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
