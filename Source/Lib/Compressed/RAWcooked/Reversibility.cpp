@@ -238,7 +238,7 @@ buffer reversibility::Data(element Element) const
 buffer reversibility::Data(element Element, size_t Pos) const
 {
     const auto ElementS = (size_t)Element;
-    if (ElementS >= element_Max || Pos >= Count_)
+    if (ElementS >= element_Max)
         return buffer();
     const auto& Data = Data_[ElementS];
     return Data.Data(BaseData_, Pos);

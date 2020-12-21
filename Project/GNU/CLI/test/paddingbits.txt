@@ -2,19 +2,26 @@ Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X fail
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check-padding
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check --hash
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check --check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --all
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check --no-check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV X pass --check --no-check-padding --quick-check-padding   
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --check-padding
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check --hash
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --check --check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --all
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check --no-check-padding --quick-check-padding  
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check-padding
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --hash
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --all
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 fail --check --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --no-check-padding --quick-check-padding 

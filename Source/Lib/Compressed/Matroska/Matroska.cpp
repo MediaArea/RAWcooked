@@ -417,6 +417,9 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         // This is a RAWcooked file, not intended to be demuxed
         IsList = true;
         TrackInfo_Pos = (size_t)-1;
+        for (const auto& TrackInfo_Current : TrackInfo)
+            if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
+                TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
 
         return;
     }
@@ -430,6 +433,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         HashSum.Parse(buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
         if (HashSum.IsDetected())
         {
+            if (Hashes_FromRAWcooked)
+                Hashes_FromRAWcooked->Ignore(AttachedFile_FileName);
             if (Hashes_FromAttachments)
                 Hashes_FromAttachments->Ignore(AttachedFile_FileName);
             AttachedFile_FileNames_IsHash.insert(AttachedFile_FileName);
@@ -464,7 +469,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
 {
     if (AttachedFile_FileName.empty())
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
         return; // MD5 support only
     Buffer_Offset++;
 
@@ -531,7 +536,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash
 {
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
         return; // MD5 support only
     Buffer_Offset++;
 
@@ -539,7 +544,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash
 
     array<uint8_t, 16> Hash;
     memcpy(Hash.data(), Buffer.Data() + Buffer_Offset, Hash.size());
-    Hashes_FromRAWcooked->FromHashFile(TrackInfo_Current->ReversibilityData->Data(reversibility::element::FileName, TrackInfo_Current->ReversibilityData->Count()), Hash);
+    Hashes_FromRAWcooked->FromHashFile(TrackInfo_Current->ReversibilityData->Data(reversibility::element::FileName, TrackInfo_Current->ReversibilityData->Count() - 1), Hash);
 }
 
 //---------------------------------------------------------------------------
@@ -602,7 +607,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash
 {
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
-    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x00)
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || (Buffer[Buffer_Offset] != 0x00 && Buffer[Buffer_Offset] != 0x80)) // Is expected to be EBML encoded but some older version writes only 0x00
         return; // MD5 support only
     Buffer_Offset++;
 

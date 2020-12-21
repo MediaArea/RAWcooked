@@ -363,6 +363,7 @@ int ParseFile_Compressed(parse_info& ParseInfo)
     // Matroska
     int ReturnValue = 0;
     bool NoOutputCheck = Global.Actions[Action_Check] && !Global.OutputFileName_IsProvided;
+    bool HasCheckedReversibility = !NoOutputCheck;
     if (!ParseInfo.IsDetected)
     {
         // Threads
@@ -386,13 +387,13 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
         M->NoWrite = Global.Actions[Action_Check];
-        M->NoOutputCheck = Global.Actions[Action_Check];
-        if (NoOutputCheck)
-            NoOutputCheck = M->Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
+        M->NoOutputCheck = NoOutputCheck;
         if (ParseInfo.ParseFile_Input(*M))
         {
             ReturnValue = 1;
         }
+        if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
+            HasCheckedReversibility = true;
         delete M;
         delete Thread_Pool;
     }
@@ -403,10 +404,10 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         if (!Global.Actions[Action_Check])
             cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
         else if (!Global.Errors.HasErrors())
-            cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, no issue detected." << endl;
+            cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, no issue detected." << endl;
     }
     if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
-        cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, issues detected, see below." << endl;
+        cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, issues detected, see below." << endl;
 
     return ReturnValue;
 }
@@ -534,7 +535,7 @@ int main(int argc, const char* argv[])
             // Configure for a 2nd pass
             ParseInfo.Name = NULL;
             Global.OutputFileName = Global.Inputs[0];
-            if (!Global.Actions[Action_Hash])
+            if (!Global.Actions[Action_Hash]) // If hashes are present in the file, output is checked by using hashes
                 Global.OutputFileName_IsProvided = true;
             RAWcooked.OutputFileName.clear();
 
