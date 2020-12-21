@@ -67,6 +67,15 @@ int global::SetAcceptFiles()
 int global::SetCheck(bool Value)
 {
     Actions.set(Action_Check, Value);
+    Actions.set(Action_CheckOptionIsSet);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetQuickCheck()
+{
+    Actions.set(Action_Check, false);
+    Actions.set(Action_CheckOptionIsSet, false);
     return 0;
 }
 
@@ -88,7 +97,7 @@ int global::SetCheck(const char* Value, int& i)
         return 0;
     }
 
-    Actions.set(Action_Check);
+    SetCheck(true);
     return 0;
 }
 
@@ -160,7 +169,7 @@ int global::SetHash(bool Value)
 //---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
-    if (int ReturnValue = SetCheck(Value))
+    if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitely set no check
         return ReturnValue;
     if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitely set no check padding
         return ReturnValue;
@@ -562,6 +571,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--none") == 0)
         {
             int Value = SetAll(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--quick-check") == 0)
+        {
+            int Value = SetQuickCheck();
             if (Value)
                 return Value;
         }

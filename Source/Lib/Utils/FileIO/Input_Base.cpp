@@ -219,6 +219,7 @@ uint64_t input_base::Get_EB()
         s++;
     ToReturn ^= (((uint64_t)1) << (7 - s));
     TEST_BUFFEROVERFLOW(1 + s);
+    uint64_t UnknownValue = (((uint64_t)1) << ((s + 1) * 7)) - 1;
     while (s)
     {
         ToReturn <<= 8;
@@ -226,6 +227,8 @@ uint64_t input_base::Get_EB()
         s--;
         ToReturn |= Buffer[Buffer_Offset];
     }
+    if (ToReturn==UnknownValue)
+        ToReturn=(uint64_t)-1; // Unknown size
     Buffer_Offset++;
 
     return ToReturn;

@@ -32,7 +32,9 @@ enum action : uint8_t
     Action_AcceptGaps,
     Action_AcceptTruncated,
     Action_Check,
+    Action_CheckOptionIsSet,
     Action_FrameMd5,
+    Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
     Action_Max
 };
 

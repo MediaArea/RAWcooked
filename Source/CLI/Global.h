@@ -82,6 +82,7 @@ private:
     int SetAcceptFiles();
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
+    int SetQuickCheck();
     int SetCheckPadding(bool Value);
     int SetQuickCheckPadding();
     int SetAcceptGaps(bool Value);

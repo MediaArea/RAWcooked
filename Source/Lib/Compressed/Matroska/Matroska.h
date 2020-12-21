@@ -180,6 +180,7 @@ private:
     void                        Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type);
     void                        StoreFromCurrentToEndOfElement(buffer& Output);
     void                        RejectIncompatibleVersions();
+    bool                        UnknownSize(uint64_t Name, uint64_t Size);
 };
 
 //---------------------------------------------------------------------------
