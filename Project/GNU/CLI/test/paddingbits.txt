@@ -10,9 +10,11 @@ Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --no-check-padding
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 pass --check --check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check --no-check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 2 fail --check --no-check-padding --quick-check-padding  
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check-padding
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --check-padding 
-Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --no-check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 fail --check --no-check-padding 
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --no-check-padding --quick-check-padding 

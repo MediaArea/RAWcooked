@@ -31,7 +31,7 @@ while read line ; do
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         # integrated check
-        run_rawcooked --check ${file_input}
+        run_rawcooked --check --check-padding ${file_input}
         check_success "integrated check failed" "integrated check checked"
         rm  "${file}.mkv"
         if ! contains "Reversability was checked, no issue detected." "${cmd_stdout}" ; then
@@ -42,7 +42,7 @@ while read line ; do
         fi
 
         # run analysis
-        run_rawcooked -y --conch --no-check-padding --file ${file_input}
+        run_rawcooked -y --conch --check-padding --file ${file_input}
         check_success "file rejected at input" "file accepted at input" || continue
 
         source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")

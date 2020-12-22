@@ -113,17 +113,18 @@ This is the default, but may change in the future.
 Run padding checks. Be aware check function can be demanding of time and processor usage.
 .br
 It is a slower process but guarantees reversibility, for example with DPX files that have bits with no zero padding.
+.TP
+.B --quick-check-padding
+Switch to --check-padding or --no-check-padding depending on what is found in the first image.
 .br
-This option is forced if non-zero padding bits are found in the first image of a sequence.
+The program will stop with an error code if --check is not used at the same time and zero-padding bits are in the content, asking to choose what to do.
+.br
+This is the default, but may change in the future.
 .TP
 .B --no-check-padding
 Do not run padding checks, as they are demanding of time and processor usage.
 .br
 This method is quicker, but be aware it may lead to partial reversibility with files that do no conform.
-.br
-This option is ignored if non-zero padding bits are found in the first image of a sequence.
-.br
-By default the program will stop if --check is not used at the same time, but may change in the future.
 .TP
 .B --coherency
 Checks that the package and contents are coherent.

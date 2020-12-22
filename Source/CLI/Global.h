@@ -85,6 +85,7 @@ private:
     int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetCheckPadding(bool Value);
+    int SetQuickCheckPadding();
     int SetAcceptGaps(bool Value);
     int SetCoherency(bool Value);
     int SetConch(bool Value);

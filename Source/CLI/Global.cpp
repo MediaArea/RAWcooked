@@ -75,14 +75,14 @@ int global::SetCheck(const char* Value, int& i)
 {
     if (Value && (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0))
     {
-        Actions.reset(Action_CheckPadding);
+        SetCheckPadding(false);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --no-check-padding\" instead.\n" << endl;
         return 0;
     }
     if (Value && (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0))
     {
-        Actions.set(Action_CheckPadding);
+        SetCheckPadding(true);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --check-padding\" instead.\n" << endl;
         return 0;
@@ -96,7 +96,15 @@ int global::SetCheck(const char* Value, int& i)
 int global::SetCheckPadding(bool Value)
 {
     Actions.set(Action_CheckPadding, Value);
-    Actions.set(Action_CheckPaddingOptionIsSet, true);
+    Actions.set(Action_CheckPaddingOptionIsSet);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetQuickCheckPadding()
+{
+    Actions.set(Action_CheckPadding, false);
+    Actions.set(Action_CheckPaddingOptionIsSet, false);
     return 0;
 }
 
@@ -556,6 +564,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--none") == 0)
         {
             int Value = SetAll(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--quick-check-padding") == 0)
+        {
+            int Value = SetQuickCheckPadding();
             if (Value)
                 return Value;
         }

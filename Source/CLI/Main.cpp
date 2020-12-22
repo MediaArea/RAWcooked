@@ -147,7 +147,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     FormatPath(RAWcooked.OutputFileName);
 
     // Parse
-    if (ParseFile_Input((input_base&)SingleFile, !Global.Actions[Action_CheckPadding]))
+    if (ParseFile_Input((input_base&)SingleFile, !Global.Actions[Action_CheckPaddingOptionIsSet]))
         return true;
     if (!IsDetected)
         return false;
