@@ -526,7 +526,7 @@ int main(int argc, const char* argv[])
         RAWcooked.Delete();
 
     // Check result
-    if (Global.Actions[Action_Check] && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
+    if (!Global.DisplayCommand && (!Global.Actions[Action_CheckOptionIsSet] || Global.Actions[Action_Check]) && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
     {
         parse_info ParseInfo;
         Value = ParseInfo.FileMap.Open_ReadMode(Global.OutputFileName);
@@ -548,7 +548,14 @@ int main(int argc, const char* argv[])
             Global.OutputFileName.resize(Path_Pos);
 
             // Parse (check mode)
+            Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
             Value = ParseFile_Compressed(ParseInfo);
+            if (!Value && !ParseInfo.IsDetected)
+            {
+                cout << '\n' << "Error: " << Global.OutputFileName <<endl;
+                cout <<         "       output file can not be checked! Is it fine?" << endl;
+                Value = 1;
+            }
         }
     }
 

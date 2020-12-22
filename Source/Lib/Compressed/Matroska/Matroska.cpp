@@ -38,11 +38,15 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file smaller than expected",
+    "segment size is set as unknown, maybe due to partial encoding",
+    "segment end offset is bigger than file size, maybe due to truncated file",
 };
 
 enum code : uint8_t
 {
     BufferOverflow,
+    UnknownSizeSegment,
+    BiggerSizeSegment,
     Max
 };
 
@@ -209,13 +213,13 @@ void matroska::Shutdown()
     TrackInfo.clear();
 
     // Hashes
-    if (Hashes_FromRAWcooked)
+    if (!Actions[Action_CheckOptionIsSet] && Hashes_FromRAWcooked)
     {
         if (ReversibilityCompat >= Compat_18_10_1)
             Hashes_FromRAWcooked->RemoveEmptyFiles();
         Hashes_FromRAWcooked->Finish();
     }
-    if (Hashes_FromAttachments)
+    if (!Actions[Action_CheckOptionIsSet] && Hashes_FromAttachments)
     {
         Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
@@ -321,8 +325,8 @@ void matroska::ParseBuffer()
         uint64_t Size = Get_EB();
         if (Size <= Levels[Level - 1].Offset_End - Buffer_Offset)
             Levels[Level].Offset_End = Buffer_Offset + Size;
-        else
-            Levels[Level].Offset_End = Levels[Level - 1].Offset_End;
+        else if (UnknownSize(Name, Size))
+            break; // Problem, we stop
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
         IsList = false;
         (this->*Call)();
@@ -340,7 +344,7 @@ void matroska::ParseBuffer()
         }
 
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
-        if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
+        if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024 && Buffer_Offset < Buffer.Size()) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
         {
             FileMap->Remap();
             Buffer = *FileMap;
@@ -377,6 +381,13 @@ void matroska::Segment()
 {
     SetDetected();
     IsList = true;
+
+    // In case of partial check
+    if (Actions[Action_QuickCheckAfterEncode]) // Quick check after encoding
+    {
+        Buffer_Offset = Buffer.Size();
+        Shutdown();
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -982,4 +993,25 @@ void matroska::RejectIncompatibleVersions()
         if (RAWcooked_LibraryVersion < "18.10.1.20200219")
             ReversibilityCompat = Compat_18_10_1;
     }
+}
+
+//---------------------------------------------------------------------------
+bool matroska::UnknownSize(uint64_t Name, uint64_t Size)
+{
+    if (Name == 0x8538067) // Segment
+    {
+        if (Size == (uint64_t)-1)
+            Undecodable(undecodable::UnknownSizeSegment);
+        else
+            Undecodable(undecodable::BiggerSizeSegment);
+        if (Actions[Action_QuickCheckAfterEncode]) // Quick check after encoding
+        {
+            Buffer_Offset = Buffer.Size();
+            return true;
+        }
+    }
+
+    // Continue
+    Levels[Level].Offset_End = Levels[Level - 1].Offset_End;
+    return false;
 }

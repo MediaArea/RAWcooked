@@ -92,10 +92,10 @@ Assume \fIno\fR as answer to all prompts, and run non-interactively.
 .SS ACTIONS
 .TP
 .B --all
-Same as --check --check-padding --coherency --conch --encode --hash (see below)
+Same as --encode --hash --conch --coherency --check-padding --check (see below)
 .TP
 .B --none
-Same as --no-check --no-coherency --no-conch --no-encode (see below)
+Same as --no-encode --no-hash --no-conch --no-coherency --quick-check (see below)
 .TP
 .B --check
 Check that the encoded file can be correctly decoded.
@@ -103,6 +103,13 @@ Check that the encoded file can be correctly decoded.
 If the input is raw content such as DPX, encode then decode the raw input, before checking that the original raw content and the decoded files are identical.
 .br
 If the input is a Matroska container, decode the input and check that the output is same as the decoded content.
+.TP
+.B --quick-check
+Do quick coherency checks of the encoded file. It permits to check that the file seems healthy without the time and processor usage of the full check.
+.br
+Is ignored in case of compressed content.
+.br
+This is the default, but may change in the future.
 .TP
 .B --no-check
 Don't run any checks (see above).
