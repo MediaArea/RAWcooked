@@ -73,7 +73,7 @@ while read line ; do
             continue
         fi
 
-        run_rawcooked --conch "${file}.mkv"
+        run_rawcooked -y --conch "${file}.mkv"
         check_success "mkv decoding failed" "mkv decoded"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
             clean
