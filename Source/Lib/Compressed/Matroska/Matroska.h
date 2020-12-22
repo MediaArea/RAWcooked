@@ -49,8 +49,9 @@ public:
     bool                        Quiet = false;
     bool                        NoWrite = false;
     bool                        NoOutputCheck = false;
-    hashes*                     Hashes_FromRAWcooked;
-    hashes*                     Hashes_FromAttachments;
+    bool                        NoHashCheck = false;
+    hashes*                     Hashes_FromRAWcooked = nullptr;
+    hashes*                     Hashes_FromAttachments = nullptr;
 
     // Theading relating functions
     void                        ProgressIndicator_Show();

@@ -184,8 +184,6 @@ void matroska_ProgressIndicator_Show(matroska* M)
 //---------------------------------------------------------------------------
 matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, ThreadPool* Pool, errors* Errors_Source) :
     input_base(Errors_Source, Parser_Matroska),
-    Hashes_FromRAWcooked(new hashes(Errors_Source)),
-    Hashes_FromAttachments(new hashes(Errors_Source)),
     FrameWriter_Template(new frame_writer(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source)),
     FramesPool(Pool)
 {
@@ -213,13 +211,13 @@ void matroska::Shutdown()
     TrackInfo.clear();
 
     // Hashes
-    if (!Actions[Action_CheckOptionIsSet] && Hashes_FromRAWcooked)
+    if (Hashes_FromRAWcooked)
     {
         if (ReversibilityCompat >= Compat_18_10_1)
             Hashes_FromRAWcooked->RemoveEmptyFiles();
         Hashes_FromRAWcooked->Finish();
     }
-    if (!Actions[Action_CheckOptionIsSet] && Hashes_FromAttachments)
+    if (Hashes_FromAttachments)
     {
         Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
@@ -312,6 +310,12 @@ void matroska::ParseBuffer()
         FrameWriter_Template->Mode.set(frame_writer::NoWrite);
     if (NoOutputCheck)
         FrameWriter_Template->Mode.set(frame_writer::NoOutputCheck);
+    if (NoHashCheck)
+        FrameWriter_Template->Mode.set(frame_writer::NoHashCheck);
+    else
+        Hashes_FromRAWcooked = new hashes(Errors);
+    if (Actions[Action_Conch])
+        Hashes_FromAttachments = new hashes(Errors);
 
     Levels[Level].Offset_End = Buffer.Size();
     Levels[Level].SubElements = &matroska::SubElements__;
@@ -478,6 +482,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash()
 {
+    if (!Hashes_FromRAWcooked)
+        return; // Not needed
     if (AttachedFile_FileName.empty())
         return; // File name should come first. TODO: support when file name comes after
     if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
@@ -545,6 +551,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock_FileHash()
 {
+    if (!Hashes_FromRAWcooked)
+        return; // Not needed
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
     if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
@@ -616,6 +624,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash()
 {
+    if (!Hashes_FromRAWcooked)
+        return; // Not needed
     if (!RAWcooked_FileNameIsValid)
         return; // File name should come first. TODO: support when file name comes after
     if (Levels[Level].Offset_End - Buffer_Offset != 17 || (Buffer[Buffer_Offset] != 0x00 && Buffer[Buffer_Offset] != 0x80)) // Is expected to be EBML encoded but some older version writes only 0x00

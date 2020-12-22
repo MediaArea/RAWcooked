@@ -139,6 +139,13 @@ int global::SetConch(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetDecode(bool Value)
+{
+    Actions.set(Action_Decode, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetEncode(bool Value)
 {
     Actions.set(Action_Encode, Value);
@@ -163,6 +170,7 @@ int global::SetFrameMd5FileName(const char* FileName)
 int global::SetHash(bool Value)
 {
     Actions.set(Action_Hash, Value);
+    Actions.set(Action_HashOptionIsSet);
     return 0;
 }
 
@@ -178,6 +186,8 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetCoherency(Value))
         return ReturnValue;
     if (int ReturnValue = SetConch(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetDecode(Value))
         return ReturnValue;
     if (int ReturnValue = SetEncode(Value))
         return ReturnValue;
@@ -329,6 +339,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
     if (strcmp(argv[i], "-n") == 0)
     {
         OutputOptions["n"] = string();
+        OutputOptions.erase("y");
         Mode = AlwaysNo; // Also RAWcooked itself
         License.Feature(feature::GeneralOptions);
         return 0;
@@ -370,6 +381,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
     if (strcmp(argv[i], "-y") == 0)
     {
         OutputOptions["y"] = string();
+        OutputOptions.erase("n");
         Mode = AlwaysYes; // Also RAWcooked itself
         License.Feature(feature::GeneralOptions);
         return 0;
@@ -393,6 +405,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     OutputFileName_IsProvided = false;
     Quiet = false;
     Actions.set(Action_Encode);
+    Actions.set(Action_Decode);
     Actions.set(Action_Coherency);
     Hashes = hashes(&Errors);
     ProgressIndicator_Thread = NULL;
@@ -486,6 +499,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Value;
             License.Feature(feature::GeneralOptions);
         }
+        else if (strcmp(argv[i], "--decode") == 0)
+        {
+            int Value = SetDecode(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--encode") == 0)
         {
             int Value = SetEncode(true);
@@ -553,6 +572,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--no-conch") == 0)
         {
             int Value = SetConch(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-decode") == 0)
+        {
+            int Value = SetDecode(false);
             if (Value)
                 return Value;
         }

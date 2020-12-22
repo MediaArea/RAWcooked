@@ -186,7 +186,7 @@ void hashes::Finish()
 
     for (auto HashItem : List_FromHashFiles)
     {
-        if (!HashItem.Flags[hashes::value::Flag_IsFound])
+        if (!HashItem.Flags[hashes::value::Flag_IsFound] && find(HashFiles.begin(), HashFiles.end(), HashItem.Name) == HashFiles.end())
         {
             if (Errors)
                 Errors->Error(IO_Hashes, CheckFromFiles ? error::type::Undecodable : error::type::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileExtra : (error::generic::code)hashes_issue::invalid::FileHashExtra, HashItem.Name);
@@ -217,6 +217,8 @@ void hashsum::ParseBuffer()
     size_t PathSeparatorPos = HomePath.rfind('/');
     if (PathSeparatorPos != (size_t)-1 && PathSeparatorPos + 1 != HomePath.size())
         HomePath.resize(PathSeparatorPos + 1);
+    else
+        HomePath.clear();
 
     while (Buffer_Offset + 32 + 1 <= Buffer.Size())
     {

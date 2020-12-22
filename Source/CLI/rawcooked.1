@@ -92,10 +92,10 @@ Assume \fIno\fR as answer to all prompts, and run non-interactively.
 .SS ACTIONS
 .TP
 .B --all
-Same as --encode --hash --conch --coherency --check-padding --check (see below)
+Same as --decode --encode --hash --conch --coherency --check-padding --check (see below)
 .TP
 .B --none
-Same as --no-encode --no-hash --no-conch --no-coherency --quick-check (see below)
+Same as --no-decode --no-encode --no-hash --no-conch --no-coherency --quick-check (see below)
 .TP
 .B --check
 Check that the encoded file can be correctly decoded.
@@ -152,6 +152,14 @@ This is currently partially implemented for DPX.
 Do not carry out conformance check (see above).
 .br
 This is default, but may change in the future.
+.TP
+.B --decode
+Encode a compressed stream into audio-visual RAW data.
+.br
+This is default.
+.TP
+.B --no-decode
+Do not carry out decode (see above).
 .TP
 .B --encode
 Encode audio-visual RAW data into a compressed stream.

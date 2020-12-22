@@ -362,7 +362,7 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
     // Matroska
     int ReturnValue = 0;
-    bool NoOutputCheck = Global.Actions[Action_Check] && !Global.OutputFileName_IsProvided;
+    bool NoOutputCheck = (Global.Actions[Action_Check] || !Global.Actions[Action_Decode]) && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     if (!ParseInfo.IsDetected)
     {
@@ -386,8 +386,9 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
-        M->NoWrite = Global.Actions[Action_Check];
+        M->NoWrite = Global.Actions[Action_Check] || !Global.Actions[Action_Decode];
         M->NoOutputCheck = NoOutputCheck;
+        M->NoHashCheck = Global.Actions[Action_HashOptionIsSet] && !Global.Actions[Action_Hash];
         if (ParseInfo.ParseFile_Input(*M))
         {
             ReturnValue = 1;
@@ -401,9 +402,9 @@ int ParseFile_Compressed(parse_info& ParseInfo)
     // End
     if (ParseInfo.IsDetected && !Global.Quiet)
     {
-        if (!Global.Actions[Action_Check])
+        if (!Global.Actions[Action_Check] && Global.Actions[Action_Decode])
             cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
-        else if (!Global.Errors.HasErrors())
+        else if (Global.Actions[Action_Check] && !Global.Errors.HasErrors())
             cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, no issue detected." << endl;
     }
     if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
@@ -549,6 +550,7 @@ int main(int argc, const char* argv[])
 
             // Parse (check mode)
             Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
+            Global.Actions.set(Action_Decode, true); // Override config
             Value = ParseFile_Compressed(ParseInfo);
             if (!Value && !ParseInfo.IsDetected)
             {
