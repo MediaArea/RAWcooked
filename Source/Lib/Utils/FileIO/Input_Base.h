@@ -24,7 +24,9 @@ class hashes;
 enum action : uint8_t
 {
     Action_Encode,
+    Action_Decode,
     Action_Hash,
+    Action_HashOptionIsSet,
     Action_Coherency,
     Action_Conch,
     Action_CheckPadding,

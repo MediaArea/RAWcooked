@@ -110,11 +110,11 @@ ReturnValue Help(const char* Name)
     cout << endl;
     cout << "ACTIONS" << endl;
     cout << "       --all" << endl;
-    cout << "              Same as --encode --hash --conch --coherency --check-padding" << endl;
-    cout << "              --check"<< endl;
+    cout << "              Same as --decode --encode --hash --conch --coherency" << endl;
+    cout << "               --check-padding --check"<< endl;
     cout << "       --none" << endl;
-    cout << "              Same as --no-encode --no-hash --no-conch --no-coherency" << endl;
-    cout << "              --quick-check" << endl;
+    cout << "              Same as --no-decode --no-encode --no-hash --no-conch" << endl;
+    cout << "               --no-coherency --quick-check" << endl;
     cout << endl;
     cout << "       --check" << endl;
     cout << "              Check that the encoded file can be correctly decoded." << endl;
@@ -162,6 +162,12 @@ ReturnValue Help(const char* Name)
     cout << "       --no-conch" << endl;
     cout << "              Don't do conformance check (see above)." << endl;
     cout << "              Is default (it may change in the future)" << endl;
+    cout << endl;
+    cout << "       --decode" << endl;
+    cout << "              Decode a compressed stream into audio-visual RAW data." << endl;
+    cout << "              Is default" << endl;
+    cout << "       --no-decode" << endl;
+    cout << "              Don't decode (see above)." << endl;
     cout << endl;
     cout << "       --encode" << endl;
     cout << "              Encode audio-visual RAW data into a compressed stream." << endl;
