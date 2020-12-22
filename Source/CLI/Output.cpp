@@ -85,7 +85,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         Command += Global.BinName;
 
     // Disable stdin for ffmpeg
-    Command += " -nostdin";
+    if (Global.OutputOptions.find("n") != Global.OutputOptions.end() && Global.OutputOptions.find("y") != Global.OutputOptions.end())
+        Command += " -nostdin";
 
     // Info
     bool Problem = false;
