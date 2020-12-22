@@ -18,8 +18,7 @@
 class hashes
 {
 public:
-    hashes() {}
-    hashes(errors* Errors_Source) :
+    hashes(errors* Errors_Source = nullptr) :
         Errors(Errors_Source)
     {
     }

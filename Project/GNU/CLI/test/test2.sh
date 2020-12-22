@@ -57,7 +57,7 @@ while read line ; do
         # check decoding
         run_rawcooked --check "${file}.mkv"
         check_success "decoding check failed" "decoding checked"
-        if ! contains "Reversability was checked, no issue detected." "${cmd_stdout}" ; then
+        if ! contains "Decoding was checked, no issue detected." "${cmd_stdout}" ; then
             echo "NOK: ${test}, wrong decoding check output, ${cmd_stdout}" >&${fd}
             status=1
             clean

@@ -31,6 +31,8 @@ enum action : uint8_t
     Action_CheckPaddingOptionIsSet,
     Action_AcceptGaps,
     Action_AcceptTruncated,
+    Action_Check,
+    Action_FrameMd5,
     Action_Max
 };
 

@@ -66,7 +66,7 @@ int global::SetAcceptFiles()
 //---------------------------------------------------------------------------
 int global::SetCheck(bool Value)
 {
-    Check = Value;
+    Actions.set(Action_Check, Value);
     return 0;
 }
 
@@ -88,7 +88,7 @@ int global::SetCheck(const char* Value, int& i)
         return 0;
     }
 
-    Check = true;
+    Actions.set(Action_Check);
     return 0;
 }
 
@@ -139,7 +139,7 @@ int global::SetEncode(bool Value)
 //---------------------------------------------------------------------------
 int global::SetFrameMd5(bool Value)
 {
-    FrameMd5 = Value;
+    Actions.set(Action_FrameMd5, Value);
     return 0;
 }
 
@@ -383,8 +383,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
     AcceptFiles = false;
     OutputFileName_IsProvided = false;
     Quiet = false;
-    Check = false;
-    FrameMd5 = false;
     Actions.set(Action_Encode);
     Actions.set(Action_Coherency);
     Hashes = hashes(&Errors);
