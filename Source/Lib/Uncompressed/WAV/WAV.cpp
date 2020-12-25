@@ -124,30 +124,39 @@ struct wav_tested WAV_Tested[] =
     { sample_per_sec_code::_44100,  8, 1 },
     { sample_per_sec_code::_44100,  8, 2 },
     { sample_per_sec_code::_44100,  8, 6 },
+    { sample_per_sec_code::_44100,  8, 8 },
     { sample_per_sec_code::_44100, 16, 1 },
     { sample_per_sec_code::_44100, 16, 2 },
     { sample_per_sec_code::_44100, 16, 6 },
+    { sample_per_sec_code::_44100, 16, 8 },
     { sample_per_sec_code::_44100, 24, 1 },
     { sample_per_sec_code::_44100, 24, 2 },
     { sample_per_sec_code::_44100, 24, 6 },
+    { sample_per_sec_code::_44100, 24, 8 },
     { sample_per_sec_code::_48000,  8, 1 },
     { sample_per_sec_code::_48000,  8, 2 },
     { sample_per_sec_code::_48000,  8, 6 },
+    { sample_per_sec_code::_48000,  8, 8 },
     { sample_per_sec_code::_48000, 16, 1 },
     { sample_per_sec_code::_48000, 16, 2 },
     { sample_per_sec_code::_48000, 16, 6 },
+    { sample_per_sec_code::_48000, 16, 8 },
     { sample_per_sec_code::_48000, 24, 1 },
     { sample_per_sec_code::_48000, 24, 2 },
     { sample_per_sec_code::_48000, 24, 6 },
+    { sample_per_sec_code::_48000, 24, 8 },
     { sample_per_sec_code::_96000,  8, 1 },
     { sample_per_sec_code::_96000,  8, 2 },
     { sample_per_sec_code::_96000,  8, 6 },
+    { sample_per_sec_code::_96000,  8, 8 },
     { sample_per_sec_code::_96000, 16, 1 },
     { sample_per_sec_code::_96000, 16, 2 },
     { sample_per_sec_code::_96000, 16, 6 },
+    { sample_per_sec_code::_96000, 16, 8 },
     { sample_per_sec_code::_96000, 24, 1 },
     { sample_per_sec_code::_96000, 24, 2 },
     { sample_per_sec_code::_96000, 24, 6 },
+    { sample_per_sec_code::_96000, 24, 8 },
 };
 static_assert(wav::flavor_Max == sizeof(WAV_Tested) / sizeof(wav_tested), IncoherencyMessage);
 
@@ -403,7 +412,8 @@ void wav::WAVE_fmt_()
         uint32_t ChannelMask = Get_L4();
         if ((Channels != 1 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000004))
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
-         && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F)))
+         && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
+         && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
             Unsupported(unsupported::fmt__ChannelMask);
         uint32_t SubFormat1 = Get_L4();
         uint32_t SubFormat2 = Get_L4();
