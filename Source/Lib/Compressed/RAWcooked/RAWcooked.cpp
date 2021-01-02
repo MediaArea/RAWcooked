@@ -155,7 +155,7 @@ void compressed_buffer::Assign(const buffer_base& Content, const buffer_base& Ma
     auto destLen = UncompressedSize_;
     auto src = (const Bytef*)Temp;
     auto srcLen = (uLong)Content.Size();
-    if (compress(dest, &destLen, src, srcLen) < 0)
+    if (compress2(dest, &destLen, src, srcLen, 1) < 0)
     {
         // Uncompressed
         AssignBase(src, srcLen);
