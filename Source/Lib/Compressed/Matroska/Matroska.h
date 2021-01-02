@@ -47,9 +47,7 @@ public:
     void                        Shutdown();
 
     bool                        Quiet = false;
-    bool                        NoWrite = false;
     bool                        NoOutputCheck = false;
-    bool                        NoHashCheck = false;
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
 
@@ -66,6 +64,9 @@ public:
         Track_,
         Track_MaskBase,
     };
+
+    // Info
+    string                      RAWcooked_LibraryNameVersion_Get() { if (RAWcooked_LibraryName.empty()) return string(); return RAWcooked_LibraryName + ' ' + RAWcooked_LibraryVersion; }
 
 private:
     void                        ParseBuffer();

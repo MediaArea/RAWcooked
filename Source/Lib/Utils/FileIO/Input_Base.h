@@ -26,7 +26,6 @@ enum action : uint8_t
     Action_Encode,
     Action_Decode,
     Action_Hash,
-    Action_HashOptionIsSet,
     Action_Coherency,
     Action_Conch,
     Action_CheckPadding,
@@ -35,6 +34,7 @@ enum action : uint8_t
     Action_AcceptTruncated,
     Action_Check,
     Action_CheckOptionIsSet,
+    Action_Info,
     Action_FrameMd5,
     Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
     Action_Max

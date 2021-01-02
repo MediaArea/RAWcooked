@@ -57,7 +57,6 @@ public:
         IsNotEnd,
         NoWrite,
         NoOutputCheck,
-        NoHashCheck,
         mode_Max,
     };
     bitset<mode_Max>            Mode;

@@ -62,6 +62,9 @@ public:
     void                        FromFile(string const& FileName, md5 const& MD5);
     void                        Finish();
 
+    // Info
+    size_t                      HashFiles_Count() { return HashFiles.size(); }
+
 private:
     // Internal
     void                        NoMoreHashFiles_Internal();

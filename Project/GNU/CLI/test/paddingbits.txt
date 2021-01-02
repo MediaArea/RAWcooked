@@ -26,14 +26,23 @@ Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --all
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 fail --check --no-check-padding 
 Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV 1 pass --check --no-check-padding --quick-check-padding 
 Features/HashCheck/HashTest_BuggyFileHash.mkv X pass --check --no-hash
-Features/HashCheck/HashTest_BuggyHashInternal.mkv X pass --check --no-hash
-Features/HashCheck/HashTest_BuggyHashInternal_BuggyFileHash.mkv X pass --check --no-hash
-Features/HashCheck/HashTest_BuggyHashInternal_FileHash.mkv X pass --check --no-hash
+Features/HashCheck/HashTest_BuggyHashInternal.mkv X fail --check --no-hash
+Features/HashCheck/HashTest_BuggyHashInternal_BuggyFileHash.mkv X fail --check --no-hash
+Features/HashCheck/HashTest_BuggyHashInternal_FileHash.mkv X fail --check --no-hash
 Features/HashCheck/HashTest_FileHash.mkv X pass --check --no-hash
 Features/HashCheck/HashTest_HashInternal.mkv X pass --check --no-hash
 Features/HashCheck/HashTest_HashInternal_BuggyFileHash.mkv X pass --check --no-hash
 Features/HashCheck/HashTest_HashInternal_FileHash.mkv X pass --check --no-hash
 Features/HashCheck/HashTest_NoHash.mkv X pass --check --no-hash
+Features/HashCheck/HashTest_BuggyFileHash.mkv X pass --check --info
+Features/HashCheck/HashTest_BuggyHashInternal.mkv X fail --check --info
+Features/HashCheck/HashTest_BuggyHashInternal_BuggyFileHash.mkv X fail --check --info
+Features/HashCheck/HashTest_BuggyHashInternal_FileHash.mkv X fail --check --info
+Features/HashCheck/HashTest_FileHash.mkv X pass --check --info
+Features/HashCheck/HashTest_HashInternal.mkv X pass --check --info
+Features/HashCheck/HashTest_HashInternal_BuggyFileHash.mkv X pass --check --info
+Features/HashCheck/HashTest_HashInternal_FileHash.mkv X pass --check --info
+Features/HashCheck/HashTest_NoHash.mkv X pass --check --info
 Features/HashCheck/HashTest_BuggyFileHash.mkv X pass --check
 Features/HashCheck/HashTest_BuggyHashInternal.mkv X fail --check
 Features/HashCheck/HashTest_BuggyHashInternal_BuggyFileHash.mkv X fail --check

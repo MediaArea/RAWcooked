@@ -212,6 +212,11 @@ input_base_uncompressed* track_info::InitOutput(input_base_uncompressed* Potenti
 //---------------------------------------------------------------------------
 void track_info::End(size_t i)
 {
+    if (!Actions[Action_Decode] && !Actions[Action_Check])
+    {
+        return;
+    }
+
     // Write end of the file if the file is unique per track
     if (ReversibilityData->Unique())
     {
