@@ -68,6 +68,8 @@ int global::SetCheck(bool Value)
 {
     Actions.set(Action_Check, Value);
     Actions.set(Action_CheckOptionIsSet);
+    if (Value)
+        return SetDecode(false);
     return 0;
 }
 
@@ -153,6 +155,15 @@ int global::SetEncode(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetInfo(bool Value)
+{
+    Actions.set(Action_Info, Value);
+    if (Value)
+        return SetDecode(false);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetFrameMd5(bool Value)
 {
     Actions.set(Action_FrameMd5, Value);
@@ -170,13 +181,14 @@ int global::SetFrameMd5FileName(const char* FileName)
 int global::SetHash(bool Value)
 {
     Actions.set(Action_Hash, Value);
-    Actions.set(Action_HashOptionIsSet);
     return 0;
 }
 
 //---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
+    if (int ReturnValue = SetInfo(Value))
+        return ReturnValue;
     if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitely set no check
         return ReturnValue;
     if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitely set no check padding
@@ -543,6 +555,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--info") == 0)
+        {
+            int Value = SetInfo(true);
+            if (Value)
+                return Value;
+        }
         else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0))
         {
             if (i + 1 == argc)
@@ -590,6 +608,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--no-hash") == 0)
         {
             int Value = SetHash(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-info") == 0)
+        {
+            int Value = SetInfo(false);
             if (Value)
                 return Value;
         }

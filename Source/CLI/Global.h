@@ -90,6 +90,7 @@ private:
     int SetConch(bool Value);
     int SetDecode(bool Value);
     int SetEncode(bool Value);
+    int SetInfo(bool Value);
     int SetFrameMd5(bool Value);
     int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);

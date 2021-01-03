@@ -211,13 +211,13 @@ void matroska::Shutdown()
     TrackInfo.clear();
 
     // Hashes
-    if (Hashes_FromRAWcooked)
+    if ((Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) && Hashes_FromRAWcooked)
     {
-        if (ReversibilityCompat >= Compat_18_10_1)
+        if (ReversibilityCompat > Compat_18_10_1)
             Hashes_FromRAWcooked->RemoveEmptyFiles();
         Hashes_FromRAWcooked->Finish();
     }
-    if (Hashes_FromAttachments)
+    if (Actions[Action_Conch] && Hashes_FromAttachments)
     {
         Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
@@ -246,7 +246,6 @@ void matroska::Shutdown()
                 }
 
                 ReversibilityFileHasNames = true;
-                break;
             }
         }
 
@@ -306,15 +305,13 @@ void matroska::ParseBuffer()
         ProgressIndicator_Thread=new thread(matroska_ProgressIndicator_Show, this);
     
     // Config
-    if (NoWrite)
+    if (!Actions[Action_Decode])
         FrameWriter_Template->Mode.set(frame_writer::NoWrite);
     if (NoOutputCheck)
         FrameWriter_Template->Mode.set(frame_writer::NoOutputCheck);
-    if (NoHashCheck)
-        FrameWriter_Template->Mode.set(frame_writer::NoHashCheck);
-    else
+    if (Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch] || Actions[Action_Info])
         Hashes_FromRAWcooked = new hashes(Errors);
-    if (Actions[Action_Conch])
+    if (Actions[Action_Conch] || Actions[Action_Info])
         Hashes_FromAttachments = new hashes(Errors);
 
     Levels[Level].Offset_End = Buffer.Size();
@@ -387,7 +384,7 @@ void matroska::Segment()
     IsList = true;
 
     // In case of partial check
-    if (Actions[Action_QuickCheckAfterEncode]) // Quick check after encoding
+    if (!Actions[Action_Decode] && !Actions[Action_Info] && Actions[Action_QuickCheckAfterEncode]) // Quick check after encoding
     {
         Buffer_Offset = Buffer.Size();
         Shutdown();
@@ -448,8 +445,6 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         HashSum.Parse(buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
         if (HashSum.IsDetected())
         {
-            if (Hashes_FromRAWcooked)
-                Hashes_FromRAWcooked->Ignore(AttachedFile_FileName);
             if (Hashes_FromAttachments)
                 Hashes_FromAttachments->Ignore(AttachedFile_FileName);
             AttachedFile_FileNames_IsHash.insert(AttachedFile_FileName);
@@ -457,6 +452,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
     }
 
     // Output file
+    if (Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch])
     {
         raw_frame RawFrame;
         RawFrame.SetPre(buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
@@ -663,20 +659,35 @@ void matroska::Segment_Cluster()
     // Check if Hashes check is useful
     if (Hashes_FromRAWcooked)
     {
+        for (const auto& AttachedFile : AttachedFiles)
+        {
+            if (ReversibilityCompat >= Compat_18_10_1 && !AttachedFile_FileNames_IsHash.empty()) // In previous versions hash files were not listed in reversibility file
+            {
+                for (const auto& Name : AttachedFile_FileNames_IsHash)
+                    Hashes_FromRAWcooked->Ignore(Name);
+            }
+        }
+
         Hashes_FromRAWcooked->WouldBeError = true;
-        if (!Hashes_FromRAWcooked->NoMoreHashFiles())
+        if (!(Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) || !Hashes_FromRAWcooked->NoMoreHashFiles())
         {
             delete Hashes_FromRAWcooked;
             Hashes_FromRAWcooked = nullptr;
         }
     }
-    if (Hashes_FromAttachments)
+    if (Actions[Action_Conch] && Hashes_FromAttachments)
     {
         if (!Hashes_FromAttachments->NoMoreHashFiles())
         {
             delete Hashes_FromAttachments;
             Hashes_FromAttachments = nullptr;
         }
+    }
+
+    if (!Actions[Action_Decode] && !Actions[Action_Check] && !Actions[Action_Conch]) // No file parsing requested, we stop now
+    {
+        Buffer_Offset = Buffer.Size();
+        return;
     }
 
     // Init

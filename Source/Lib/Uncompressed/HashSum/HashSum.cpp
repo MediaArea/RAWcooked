@@ -189,7 +189,7 @@ void hashes::Finish()
         if (!HashItem.Flags[hashes::value::Flag_IsFound] && find(HashFiles.begin(), HashFiles.end(), HashItem.Name) == HashFiles.end())
         {
             if (Errors)
-                Errors->Error(IO_Hashes, CheckFromFiles ? error::type::Undecodable : error::type::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileExtra : (error::generic::code)hashes_issue::invalid::FileHashExtra, HashItem.Name);
+                Errors->Error(IO_Hashes, WouldBeError ? error::type::Undecodable : error::type::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileExtra : (error::generic::code)hashes_issue::invalid::FileHashExtra, HashItem.Name);
         }
     }
 }

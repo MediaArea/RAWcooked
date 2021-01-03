@@ -92,17 +92,19 @@ Assume \fIno\fR as answer to all prompts, and run non-interactively.
 .SS ACTIONS
 .TP
 .B --all
-Same as --decode --encode --hash --conch --coherency --check-padding --check (see below)
+Same as --info --decode --encode --hash --conch --coherency --check-padding --check (see below)
 .TP
 .B --none
-Same as --no-decode --no-encode --no-hash --no-conch --no-coherency --quick-check (see below)
+Same as --no-info --no-decode --no-encode --no-hash --no-conch --no-coherency --quick-check-padding --quick-check (see below)
 .TP
 .B --check
 Check that the encoded file can be correctly decoded.
 .br
-If the input is raw content such as DPX, encode then decode the raw input, before checking that the original raw content and the decoded files are identical.
+If input is raw content, encode then check that output would be same as the input content.
 .br
-If the input is a Matroska container, decode the input and check that the output is same as the decoded content.
+If input is compressed content, check that output would be same as the original content.
+.br
+Disable decoding.
 .TP
 .B --quick-check
 Do quick coherency checks of the encoded file. It permits to check that the file seems healthy without the time and processor usage of the full check.
@@ -113,6 +115,16 @@ This is the default, but may change in the future.
 .TP
 .B --no-check
 Don't run any checks (see above).
+.br
+This is the default, but may change in the future.
+.TP
+.B --info
+Provide extra information about the compresssed file, for example the presence of hash of the raw data.
+.br
+Disable decoding.
+.TP
+.B --no-info
+Don't provide extra information (see above).
 .br
 This is the default, but may change in the future.
 .TP
@@ -170,22 +182,14 @@ This is default.
 Do not carry out encode (see above).
 .TP
 .B --hash
-Can be used to either compute, or test, the hash of files.
+Compute the hash of audio-visual RAW data files.
 .br
-To compute a hash use with the audio-visual RAW data. A hash is generated and stored in the RAWcooked metadata.
-.br
-Repeat the command with the RAW data to test that the previously generated hash file is valid.
-.br
-If the input is a Matroska container with metadata that contains computed hashes then decode the Matroska input and check hashes. Any issue raised by the check is considered a decoding error.
-.br
-If the input is a Matroska container with computed hash files stored in an attachment, then decode the Matroska input and check hashes. Any issue raised by the check is considered as invalid data.
-.br
-This is default when the input is a Matroska container and RAWcooked metadata contains hashes, and when the input is a Matroska container with hash files in the attachment. This default may change in the future.
+This permits a reversibility check without the original files.
 .TP
 .B --no-hash
 Do not compute or test the hash of the file (see above).
 .br
-This is default when the input is RAW content, but may change in the future.
+This is default, but may change in the future.
 .TP
 .B --framemd5
 Compute the framemd5 of input frames and store it to a sidecar file.
