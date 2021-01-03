@@ -110,11 +110,11 @@ ReturnValue Help(const char* Name)
     cout << endl;
     cout << "ACTIONS" << endl;
     cout << "       --all" << endl;
-    cout << "              Same as --info --decode --encode --hash --conch" << endl;
+    cout << "              Same as --info --conch --decode --encode --hash" << endl;
     cout << "               --coherency --check-padding --check"<< endl;
     cout << "       --none" << endl;
-    cout << "              Same as --no-info --no-decode --no-encode --no-hash" << endl;
-    cout << "               --no-conch --no-coherency --quick-check-padding --quick-check" << endl;
+    cout << "              Same as --no-info --no-conch --no-decode --no-encode --no-hash" << endl;
+    cout << "               --no-coherency --quick-check-padding --quick-check" << endl;
     cout << endl;
     cout << "       --check" << endl;
     cout << "              Check that the encoded file can be correctly decoded." << endl;
@@ -135,7 +135,7 @@ ReturnValue Help(const char* Name)
     cout << "       --info" << endl;
     cout << "              Provide some extra information about the compresssed file," << endl;
     cout << "              for example the presence of hash of the raw data." << endl;
-    cout << "              Disable decoding." << endl;
+    cout << "              Disable encoding and decoding." << endl;
     cout << "       --no-info" << endl;
     cout << "              Don't provide some extra information (see above)." << endl;
     cout << "              Is default (it may change in the future)" << endl;
@@ -168,6 +168,7 @@ ReturnValue Help(const char* Name)
     cout << "       --conch" << endl;
     cout << "              Conformance check of the format, when supported." << endl;
     cout << "              Currently partially implemented for DPX." << endl;
+    cout << "              Disable encoding and decoding." << endl;
     cout << "       --no-conch" << endl;
     cout << "              Don't do conformance check (see above)." << endl;
     cout << "              Is default (it may change in the future)" << endl;

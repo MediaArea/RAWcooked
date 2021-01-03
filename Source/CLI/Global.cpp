@@ -137,6 +137,11 @@ int global::SetCoherency(bool Value)
 int global::SetConch(bool Value)
 {
     Actions.set(Action_Conch, Value);
+    if (Value)
+    {
+        SetDecode(false);
+        SetEncode(false);
+    }
     return 0;
 }
 
@@ -159,7 +164,10 @@ int global::SetInfo(bool Value)
 {
     Actions.set(Action_Info, Value);
     if (Value)
-        return SetDecode(false);
+    {
+        SetDecode(false);
+        SetEncode(false);
+    }
     return 0;
 }
 
@@ -189,6 +197,8 @@ int global::SetAll(bool Value)
 {
     if (int ReturnValue = SetInfo(Value))
         return ReturnValue;
+    if (int ReturnValue = SetConch(Value))
+        return ReturnValue;
     if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitely set no check
         return ReturnValue;
     if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitely set no check padding
@@ -196,8 +206,6 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetAcceptGaps(Value))
         return ReturnValue;
     if (int ReturnValue = SetCoherency(Value))
-        return ReturnValue;
-    if (int ReturnValue = SetConch(Value))
         return ReturnValue;
     if (int ReturnValue = SetDecode(Value))
         return ReturnValue;

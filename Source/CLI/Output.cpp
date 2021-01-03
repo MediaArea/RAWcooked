@@ -102,26 +102,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     vector<intermediate_write*> FilesToRemove;
     for (size_t i = 0; i < Streams.size(); i++)
     {
-        // Info
-        if (!Global.Quiet)
-        {
-            cerr << "Track " << i + 1 << ':' << endl;
-            if (Streams[i].FileName_Template.empty())
-            {
-                cerr << "  " << Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-            }
-            else
-            {
-                cerr << "  " << Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-                cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber;
-                if (!Streams[i].FileList.empty())
-                    cerr << ", with gaps";
-                cerr << ')' << endl;
-            }
-            cerr << "  " << Streams[i].Flavor << endl;
-            if (Streams[i].Problem)
-                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
-        }
         if (Streams[i].Problem)
             Problem = true;
 

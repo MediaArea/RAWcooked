@@ -520,6 +520,30 @@ int main(int argc, const char* argv[])
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
+    // Info
+    if (!Global.Quiet)
+    {
+        for (size_t i = 0; i < Output.Streams.size(); i++)
+        {
+            cerr << "Track " << i + 1 << ':' << endl;
+            if (Output.Streams[i].FileName_Template.empty())
+            {
+                cerr << "  " << Output.Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+            }
+            else
+            {
+                cerr << "  " << Output.Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+                cerr << " (" << Output.Streams[i].FileName_StartNumber << " --> " << Output.Streams[i].FileName_EndNumber;
+                if (!Output.Streams[i].FileList.empty())
+                    cerr << ", with gaps";
+                cerr << ')' << endl;
+            }
+            cerr << "  " << Output.Streams[i].Flavor << endl;
+            if (Output.Streams[i].Problem)
+                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
+        }
+    }
+
     if (!Value && Global.Errors.HasWarnings())
     {
         cerr << Global.Errors.ErrorMessage() << endl;
