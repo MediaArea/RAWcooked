@@ -92,10 +92,10 @@ Assume \fIno\fR as answer to all prompts, and run non-interactively.
 .SS ACTIONS
 .TP
 .B --all
-Same as --info --decode --encode --hash --conch --coherency --check-padding --check (see below)
+Same as --info --conch --decode --encode --hash --coherency --check-padding --check (see below)
 .TP
 .B --none
-Same as --no-info --no-decode --no-encode --no-hash --no-conch --no-coherency --quick-check-padding --quick-check (see below)
+Same as --no-info --no-conch --no-decode --no-encode --no-hash --no-coherency --quick-check-padding --quick-check (see below)
 .TP
 .B --check
 Check that the encoded file can be correctly decoded.
@@ -104,7 +104,7 @@ If input is raw content, encode then check that output would be same as the inpu
 .br
 If input is compressed content, check that output would be same as the original content.
 .br
-Disable decoding.
+Disable encoding and decoding.
 .TP
 .B --quick-check
 Do quick coherency checks of the encoded file. It permits to check that the file seems healthy without the time and processor usage of the full check.
@@ -159,6 +159,8 @@ Do not carry out coherency check (see above).
 Conformance check of the format, effective only when format is supported.
 .br
 This is currently partially implemented for DPX.
+.br
+Disable encoding and decoding.
 .TP
 .B --no-conch
 Do not carry out conformance check (see above).

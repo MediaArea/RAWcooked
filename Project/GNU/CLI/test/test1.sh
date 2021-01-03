@@ -16,7 +16,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        run_rawcooked -y --conch --file -d "${file}"
+        run_rawcooked -y --conch --encode --file -d "${file}"
 
         # check expected result
         if [ "${want}" == "fail" ] ; then
@@ -47,7 +47,7 @@ while read line ; do
         fi
 
         # check decoding
-        run_rawcooked -y --conch "${file}.mkv"
+        run_rawcooked -y --conch --decode "${file}.mkv"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
             clean
             continue

@@ -42,7 +42,7 @@ while read line ; do
         fi
 
         # run analysis
-        run_rawcooked -y --conch --check-padding --file ${file_input}
+        run_rawcooked -y --conch --encode --check-padding --file ${file_input}
         check_success "file rejected at input" "file accepted at input" || continue
 
         source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
@@ -73,7 +73,7 @@ while read line ; do
             continue
         fi
 
-        run_rawcooked -y --conch "${file}.mkv"
+        run_rawcooked -y --conch --decode "${file}.mkv"
         check_success "mkv decoding failed" "mkv decoded"
         if ! check_success "mkv decoding failed" "mkv decoded" ; then
             clean
