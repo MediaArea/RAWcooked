@@ -1,3 +1,18 @@
+Version 21.01, 2021-01-04
+-------------
+Thanks to New York Public Library (NYPL) for their vision and support on this release
+Thanks to British Film Institute (BFI) for their extensive testing
+Reversibility checking: an option to check after encoding to ensure that the decoding of a RAWcooked file is fully reversible (--check)
+Reversibility checking: an option to embed checksums of the input files  to enable the possibility of later reversibility integrity checks without requiring access to the original  input files (--hash)
+Conformance checking: an option to to perform a selection of DPX implementation checks (--conch), more to come
+Coherency checking: an option to check e.g. that audio duration is same as video duration (--coherency, by default)
+A new requirement when encoding DPX with padding bits to specify user preferences for the evaluation of padding bits (--check-padding or --no-check-padding) as some DPX files use padding bits for unstandardized purposes.
+An option to offer extra information about the content of the reversibility data (--info)
+Perform --info --check --hash --conch --coherency --check-padding --encode in a single option (--all)
+Support additional post-encoding coherency checks, such as a quick check of the resulting compressed file in order to be sure that FFmpeg correctly finished the encoding.
+Fix reversibility issues if DPX header does not have the same size in all files
+Support of more DPX/TIFF/WAV/AIFF flavors and features
+
 Version 18.10.1, 2018-11-13
 ---------------
 Fix regression during demux of some MKV files, preventing demux of all DPX files
