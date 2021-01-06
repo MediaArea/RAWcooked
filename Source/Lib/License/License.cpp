@@ -119,17 +119,16 @@ string GetLocalConfigPath (bool Create = false)
 }
 
 //***************************************************************************
-// License decode
+// License input
 //***************************************************************************
 
 //---------------------------------------------------------------------------
 class license_input : public input_base
 {
 public:
-    license_input() : input_base(Parser_License), Supported(false) {}
+    license_input() : input_base(Parser_License) {}
 
-    license_internal* License;
-    bool Supported;
+    license_internal*           License = nullptr;
 
 private:
     void                        ParseBuffer();
@@ -137,22 +136,77 @@ private:
 };
 
 //---------------------------------------------------------------------------
-void license_input::ParseBuffer()
-{
-    // Place holder for license key descrambling - Begin
-    // Place holder for license key descrambling - End
-}
-
-//---------------------------------------------------------------------------
 void license_input::BufferOverflow()
 {
 }
 
+//***************************************************************************
+// Place holder for license encoding/decoding
+//***************************************************************************
+
 //---------------------------------------------------------------------------
-bool DecodeLicense(const string& FromUser, license_internal* License)
+// Place holder for license key related functions - Begin
+// Place holder for license key related functions - End
+
+//---------------------------------------------------------------------------
+buffer license_internal::ToBuffer()
+{
+    buffer Buffer;
+
+    // Place holder for license key encoding - Begin
+    // Place holder for license key encoding - End
+
+    return Buffer;
+}
+
+//---------------------------------------------------------------------------
+void license_input::ParseBuffer()
+{
+    // Place holder for license key decoding - Begin
+    // Place holder for license key decoding - End
+}
+
+//***************************************************************************
+// license_internal
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+license_internal::license_internal(bool IgnoreDefault)
+{
+    // Default license flags
+    if (!IgnoreDefault)
+        for (size_t i = 0; DefaultLicense_Parsers[i].Value != (uint8_t)-1; i++)
+            SetSupported(DefaultLicense_Parsers[i].Value, DefaultLicense_Parsers[i].Flavor);
+}
+
+size_t license_internal::Flags_Pos_Get(uint8_t Type, uint8_t SubType)
+{
+    size_t Flags_Pos = 0;
+    for (size_t i = 0; i < Type; i++)
+        Flags_Pos += License_Infos[i].Size;
+    Flags_Pos += SubType;
+
+    if (Flags_Pos >= Flags_.size())
+        Flags_.resize(Flags_Pos + 1);
+
+    return Flags_Pos;
+}
+
+void license_internal::SetSupported(uint8_t Type, uint8_t SubType)
+{
+    Flags_[Flags_Pos_Get(Type, SubType)] = true;
+}
+
+bool license_internal::IsSupported(uint8_t Type, uint8_t SubType)
+{
+    return Flags_[Flags_Pos_Get(Type, SubType)];
+}
+
+//---------------------------------------------------------------------------
+bool license_internal::FromString(const string& FromUser)
 {
     // SizeOnDisk
-    if (FromUser.size()>200)
+    if (FromUser.size() > 200)
     {
         cerr << "Invalid size of license key." << endl;
         return true;
@@ -177,48 +231,47 @@ bool DecodeLicense(const string& FromUser, license_internal* License)
     }
 
     // Parse
+    return FromBuffer(buffer_view(Buffer, Buffer_Offset));
+}
+
+//---------------------------------------------------------------------------
+bool license_internal::FromBuffer(const buffer_view& Buffer)
+{
     license_input Input;
-    Input.License = License;
-    if (Input.Parse(buffer_view(Buffer, Buffer_Offset)))
+    Input.License = this;
+    if (Input.Parse(Buffer))
     {
-        if (License && !Input.Supported)
+        if (!Input.IsSupported())
         {
             cerr << "License detected but decoding not supported in this version." << endl;
-            *License = license_internal();
+            *this = license_internal();
             return false;
         }
-        if (!License)
-            return !Input.Supported;
+        // TEMP IsSupported !License
         return true;
     }
     return false;
 }
 
-//***************************************************************************
-// license_internal
-//***************************************************************************
-
 //---------------------------------------------------------------------------
-license_internal::license_internal()
-    : Date((time_t)-1)
-    , UserID(0)
+string license_internal::ToString()
 {
-    memset(License_Flags, 0x00, sizeof(License_Flags));
-    memset(Input_Flags, 0x00, sizeof(Input_Flags));
-
-    // Default license flags
-    for (size_t i = 0; DefaultLicense_Parsers[i].Value != (uint8_t)-1; i++)
-        AddFlavor(License_Flags[DefaultLicense_Parsers[i].Value], DefaultLicense_Parsers[i].Flavor);
-}
-
-void license_internal::AddFlavor(uint64_t &Value, uint8_t Flavor)
-{
-    Value |= (((uint64_t)1) << Flavor);
-}
-
-const char* license_internal::SupportedFlavor(uint64_t &Value, uint8_t Flavor)
-{
-    return (Value & (((uint64_t)1) << Flavor)) ? "Yes" : "No ";
+    // To string
+    auto Buffer = ToBuffer();
+    string ToReturn;
+    ToReturn.reserve(Buffer.Size());
+    for (size_t i = 0; i < Buffer.Size(); i++)
+    {
+        uint8_t Value = Buffer[i];
+        Value >>= 4;
+        Value += (Value < 10 ? '0' : ('A' - 10));
+        ToReturn.push_back((char)Value);
+        Value = Buffer[i];
+        Value &= 0xF;
+        Value += (Value < 10 ? '0' : ('A' - 10));
+        ToReturn.push_back((char)Value);
+    }
+    return ToReturn;
 }
 
 //***************************************************************************
@@ -266,7 +319,8 @@ bool license::LoadLicense(string LicenseKey, bool StoreLicenseKey)
     // Decode
     if (!LicenseKey.empty())
     {
-        if (DecodeLicense(LicenseKey, (license_internal*)Internal))
+        license_internal* License = (license_internal*)Internal;
+        if (License->FromString(LicenseKey))
             return true;
         
         if (StoreLicenseKey)
@@ -327,11 +381,11 @@ void license::ShowLicense(bool Verbose)
     license_internal* License = (license_internal*)Internal;
 
     // UserID
-    if (License->UserID)
+    if (License->OwnerID)
     {
         if (Verbose)
         {
-            cerr << "License owner ID = " << License->UserID << '.';
+            cerr << "License owner ID = " << License->OwnerID << '.';
             if (License->Date == (time_t)-1)
                 cerr << '\n' << endl;
             else
@@ -362,13 +416,13 @@ void license::ShowLicense(bool Verbose)
         return;
 
     // Info
-    for (size_t i = 0; Infos[i].Name; i++)
+    for (int8_t i = 0; i < License_Infos_Size; i++)
     {
-        cerr << "Licensed " << Infos[i].Name << ':' << endl;
-        for (int8_t j = 0; j < Infos[i].Size; j++)
+        cerr << "Licensed " << License_Infos[i].Name << ':' << endl;
+        for (int8_t j = 0; j < License_Infos[i].Size; j++)
         {
-            const char* Supported = License->SupportedFlavor(License->License_Flags[i], j);
-            cerr << Supported << ' ' << Infos[i].Flavor_String(j) << endl;
+            const char* Supported = License->IsSupported(i, j) ? "Yes" : "No ";
+            cerr << Supported << ' ' << License_Infos[i].Flavor_String(j) << endl;
         }
         cerr << endl;
     }
@@ -380,9 +434,9 @@ bool license::IsSupported()
     license_internal* License = (license_internal*)Internal;
 
     // Info
-    for (int8_t i = 0; i < 3; i++)
-        for (int8_t j = 0; j < Infos[i].Size; j++)
-            if (License->Input_Flags[i] & ((uint64_t)1 << j) && License->SupportedFlavor(License->License_Flags[i], j)[0] != 'Y')
+    for (int8_t i = 0; i < License_Parser_Offset; i++)
+        for (int8_t j = 0; j < License_Infos[i].Size; j++)
+            if (License->Input_Flags[i] & ((uint64_t)1 << j) && !License->IsSupported(i, j))
                 return false;
     
     return true;
@@ -393,22 +447,21 @@ bool license::IsSupported(feature Feature)
 {
     license_internal* License = (license_internal*)Internal;
 
-    const char* Supported = License->SupportedFlavor(License->License_Flags[0], (uint8_t)Feature);
-    return Supported[0] == 'Y';
+    return License->IsSupported(0, (uint8_t)Feature);
 }
 
 //---------------------------------------------------------------------------
-bool license::IsSupported(parser Parser, uint8_t Style)
+bool license::IsSupported(parser Parser, uint8_t Flavor)
 {
     license_internal* License = (license_internal*)Internal;
 
-    const char* Supported = License->SupportedFlavor(License->License_Flags[3 + Parser], Style);
-    return Supported[0] == 'Y';
+    return License->IsSupported(Parser, Flavor);
 }
 
 //---------------------------------------------------------------------------
 bool license::IsSupported_License()
 {
-    string LicenseKey;
-    return !DecodeLicense(LicenseKey, NULL);
+    license_input Input;
+    buffer Buffer;
+    return !Input.Parse(Buffer) && Input.IsSupported();
 }

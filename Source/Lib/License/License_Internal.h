@@ -19,21 +19,22 @@
 
 //---------------------------------------------------------------------------
 // Default license content
+static const uint8_t License_Parser_Offset = 3;
 struct default_license_values
 {
-    uint8_t         Value;
-    uint8_t         Flavor;
+    uint8_t                     Value;
+    uint8_t                     Flavor;
 };
 static default_license_values DefaultLicense_Parsers[] =
 {
-    { 1                 , (uint8_t)muxer::Matroska                          },
-    { 2                 , (uint8_t)encoder::FFV1                            },
-    { 2                 , (uint8_t)encoder::FLAC                            },
-    { 3 + Parser_DPX    , (uint8_t)dpx::flavor::Raw_RGB_8                   },
-    { 3 + Parser_DPX    , (uint8_t)dpx::flavor::Raw_RGB_10_FilledA_LE       },
-    { 3 + Parser_DPX    , (uint8_t)dpx::flavor::Raw_RGB_10_FilledA_BE       },
-    { 3 + Parser_WAV    , (uint8_t)wav::flavor::PCM_48000_16_2_LE           },
-    { (uint8_t)-1       , (uint8_t)-1                                       },
+    { 1                                      , (uint8_t)muxer::Matroska                          },
+    { 2                                      , (uint8_t)encoder::FFV1                            },
+    { 2                                      , (uint8_t)encoder::FLAC                            },
+    { License_Parser_Offset + Parser_DPX     , (uint8_t)dpx::flavor::Raw_RGB_8                   },
+    { License_Parser_Offset + Parser_DPX     , (uint8_t)dpx::flavor::Raw_RGB_10_FilledA_LE       },
+    { License_Parser_Offset + Parser_DPX     , (uint8_t)dpx::flavor::Raw_RGB_10_FilledA_BE       },
+    { License_Parser_Offset + Parser_WAV     , (uint8_t)wav::flavor::PCM_48000_16_2_LE           },
+    { (uint8_t)-1                            , (uint8_t)-1                                       },
 };
 
 //---------------------------------------------------------------------------
@@ -41,49 +42,51 @@ struct feature_info
 {
     const char*     Name;
 };
-const feature_info FeatureInfos[feature_Max + 1] =
+const feature_info FeatureInfos[] =
 {
     { "General options"         },
     { "Input options"           },
     { "Encoding options"        },
     { "More than 2 tracks"      },
-    { NULL                      },
 };
+static_assert(sizeof(FeatureInfos) / sizeof(feature_info) == feature_Max, "feature_info issue");
 
 //---------------------------------------------------------------------------
 struct muxer_info
 {
     const char*     Name;
 };
-const muxer_info MuxerInfos[muxer_Max] =
+const muxer_info MuxerInfos[] =
 {
     { "Matroska"    },
 };
+static_assert(sizeof(MuxerInfos) / sizeof(muxer_info) == muxer_Max, "muxer_info issue");
 
 //---------------------------------------------------------------------------
 struct encoder_info
 {
     const char*     Name;
 };
-const encoder_info EncoderInfos[encoder_Max] =
+const encoder_info EncoderInfos[] =
 {
     { "FFV1"        },
     { "PCM"         },
     { "FLAC"        },
 };
+static_assert(sizeof(EncoderInfos) / sizeof(encoder_info) == encoder_Max, "encoder_info issue");
 
 //---------------------------------------------------------------------------
 static string Features_String(uint8_t Value) { return FeatureInfos[Value].Name; }
 static string Muxers_String(uint8_t Value) { return MuxerInfos[Value].Name; }
 static string Encoders_String(uint8_t Value) { return EncoderInfos[Value].Name; }
 typedef string (*flavor_string) (uint8_t Flavor);
-struct parser_info
+struct license_info
 {
     const char*     Name;
     uint8_t         Size;
     flavor_string   Flavor_String;
 };
-static const parser_info Infos[3 + Parser_Max + 1] =
+static const license_info License_Infos[] =
 {
     { "features"            , feature_Max           , Features_String       },
     { "muxers/demuxers"     , muxer_Max             , Muxers_String         },
@@ -92,23 +95,44 @@ static const parser_info Infos[3 + Parser_Max + 1] =
     { "TIFF flavors"        , tiff::flavor_Max      , TIFF_Flavor_String    },
     { "WAV flavors"         , wav::flavor_Max       , WAV_Flavor_String     },
     { "AIFF flavors"        , aiff::flavor_Max      , AIFF_Flavor_String    },
-    { NULL                  , 0                     , NULL                  },
 };
+const size_t License_Infos_Size = License_Parser_Offset + Uncompressed_Max;
+static_assert(sizeof(License_Infos) / sizeof(license_info) == License_Infos_Size, "license_info issue");
 
 //---------------------------------------------------------------------------
-struct license_internal
+class license_internal
 {
-    time_t              Date;
-    uint64_t            UserID;
-    uint64_t            License_Flags[3 + Parser_Max];
+public:
+                        license_internal(bool IgnoreDefault = false);
 
-    license_internal();
+    time_t              Date = (time_t)-1;
+    uint64_t            OwnerID = 0;
 
-    static void         AddFlavor(uint64_t &Value, uint8_t Flavor);
-    static const char*  SupportedFlavor(uint64_t &Value, uint8_t Flavor);
+    uint8_t             Input_Flags[License_Parser_Offset] = {};
 
-    // License info
-    uint8_t             Input_Flags[3];
+    // Tests
+    void                SetSupported(uint8_t Type, uint8_t SubType);
+    void                SetSupported(feature Flavor) { SetSupported(0, (uint8_t)Flavor); }
+    void                SetSupported(muxer Flavor) { SetSupported(1, (uint8_t)Flavor); }
+    void                SetSupported(encoder Flavor) { SetSupported(2, (uint8_t)Flavor); }
+    void                SetSupported(parser Parser, uint8_t Flavor) { SetSupported(License_Parser_Offset + Parser, Flavor); }
+    void                SetSupported(dpx::flavor Flavor) { SetSupported(Parser_DPX, (uint8_t)Flavor); }
+    void                SetSupported(tiff::flavor Flavor) { SetSupported(Parser_TIFF, (uint8_t)Flavor); }
+    void                SetSupported(wav::flavor Flavor) { SetSupported(Parser_WAV, (uint8_t)Flavor); }
+    void                SetSupported(aiff::flavor Flavor) { SetSupported(Parser_AIFF, (uint8_t)Flavor); }
+    bool                IsSupported(uint8_t Type, uint8_t SubType);
+    bool                IsSupported(parser Parser, uint8_t Flavor) { return IsSupported(License_Parser_Offset + Parser, Flavor); }
+
+    // I/O
+    buffer              ToBuffer();
+    string              ToString();
+    bool                FromBuffer(const buffer_view& Buffer);
+    bool                FromString(const string& FromUser);
+
+private:
+    vector<bool>        Flags_;
+
+    size_t              Flags_Pos_Get(uint8_t Type, uint8_t SubType);
 };
 
 #endif
