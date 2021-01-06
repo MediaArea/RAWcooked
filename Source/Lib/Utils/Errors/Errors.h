@@ -29,7 +29,8 @@ enum parser
     Parser_TIFF,
     Parser_WAV,
     Parser_AIFF,
-    Parser_Matroska,
+    Uncompressed_Max, // After this line, this isn't parsers of uncompressed data
+    Parser_Matroska = Uncompressed_Max,
     Parser_ReversibilityData,
     Parser_HashSum,
     Parser_License,
