@@ -376,7 +376,7 @@ bool license::LoadLicense(string LicenseKey, bool StoreLicenseKey)
 }
 
 //---------------------------------------------------------------------------
-void license::ShowLicense(bool Verbose)
+bool license::ShowLicense(bool Verbose, uint64_t NewSublicenseId, uint64_t NewSubLicenseDur)
 {
     license_internal* License = (license_internal*)Internal;
 
@@ -385,7 +385,10 @@ void license::ShowLicense(bool Verbose)
     {
         if (Verbose)
         {
-            cerr << "License owner ID = " << License->OwnerID << '.';
+            cerr << "License owner ID = " << License->OwnerID;
+            if (License->SubLicenseeID)
+                cerr << " (sub-licensee ID = " << License->SubLicenseeID << ')';
+            cerr << '.';
             if (License->Date == (time_t)-1)
                 cerr << '\n' << endl;
             else
@@ -406,14 +409,31 @@ void license::ShowLicense(bool Verbose)
         if (Time > License->Date)
         {
             cerr << "Outdated license, using default license.\n";
+            auto SubLicenseeID_Sav = License->SubLicenseeID;
             *License = license_internal();
+            License->SubLicenseeID = SubLicenseeID_Sav;
         }
 
         cerr << endl;
     }
 
+    if (NewSublicenseId)
+    {
+        if (License->SubLicenseeID)
+        {
+            cerr << "Error: a sublicensee can not sublicense.\n";
+            return true;
+        }
+        License->SubLicenseeID = NewSublicenseId;
+        License->SetDateFromMonths((int)NewSubLicenseDur);
+
+        cerr << "Sub-licensee license key: ";
+        cout << License->ToString();
+        cerr << endl;
+    }
+
     if (!Verbose)
-        return;
+        return false;
 
     // Info
     for (int8_t i = 0; i < License_Infos_Size; i++)
@@ -426,6 +446,8 @@ void license::ShowLicense(bool Verbose)
         }
         cerr << endl;
     }
+
+    return false;
 }
 
 //---------------------------------------------------------------------------
@@ -464,4 +486,16 @@ bool license::IsSupported_License()
     license_input Input;
     buffer Buffer;
     return !Input.Parse(Buffer) && Input.IsSupported();
+}
+
+//---------------------------------------------------------------------------
+void license_internal::SetDateFromMonths(int Months)
+{
+    time_t Time;
+    time(&Time);
+    struct tm TimeInfo = localtime_tm(Time);
+    TimeInfo.tm_mon += (decltype(TimeInfo.tm_mon))Months;
+    Time = mktime(&TimeInfo);
+    if (Date < 0 || Date > Time)
+        Date = Time;
 }

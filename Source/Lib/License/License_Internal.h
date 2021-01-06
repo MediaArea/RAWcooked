@@ -49,6 +49,7 @@ const feature_info FeatureInfos[] =
     { "Input options"           },
     { "Encoding options"        },
     { "More than 2 tracks"      },
+    { "Sub-licensing"           },
 };
 static_assert(sizeof(FeatureInfos) / sizeof(feature_info) == feature_Max, "feature_info issue");
 
@@ -109,6 +110,7 @@ public:
 
     time_t              Date = (time_t)-1;
     uint64_t            OwnerID = 0;
+    uint64_t            SubLicenseeID = 0;
 
     uint8_t             Input_Flags[License_Parser_Offset] = {};
 
@@ -131,6 +133,9 @@ public:
     string              ToString();
     bool                FromBuffer(const buffer_view& Buffer);
     bool                FromString(const string& FromUser);
+
+    // Settings
+    void                SetDateFromMonths(int Months);
 
 private:
     vector<bool>        Flags_;
