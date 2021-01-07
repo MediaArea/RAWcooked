@@ -32,18 +32,19 @@ public:
 
     struct plane
     {
-        plane(size_t NewWidth, size_t NewHeight, size_t NewBytesPerBlock, size_t NewPixelsPerBlock = 1)
+        plane(size_t NewWidth, size_t NewHeight, size_t NewBytesPerBlock, size_t NewPixelsPerBlock = 1, size_t Width_Prefix = 0)
             :
             Width_(NewWidth),
             Height_(NewHeight),
             BytesPerBlock_(NewBytesPerBlock),
-            PixelsPerBlock_(NewPixelsPerBlock)
+            PixelsPerBlock_(NewPixelsPerBlock),
+            Width_Prefix_(Width_Prefix)
         {
             Width_Padding_ = 0; //TODO: option for padding size
             if (Width_Padding_)
                 Width_Padding_ -= Width_ % Width_Padding_;
 
-            Buffer_.Create((Width_ + Width_Padding_) * Height_ * BytesPerBlock_ / PixelsPerBlock_);
+            Buffer_.Create(AllBytesPerLine() * Height_);
         }
 
         const buffer& Buffer() const
@@ -58,7 +59,7 @@ public:
 
         size_t AllBytesPerLine() const
         {
-            return (Width_ + Width_Padding_) * BytesPerBlock_ / PixelsPerBlock_;
+            return Width_Prefix_ + (Width_ * BytesPerBlock_ / PixelsPerBlock_) + Width_Padding_;
         }
 
         size_t BytesPerBlock() const
@@ -74,6 +75,7 @@ public:
     //private:
         buffer                  Buffer_;
         size_t                  Width_;
+        size_t                  Width_Prefix_;
         size_t                  Width_Padding_;
         size_t                  Height_;
         size_t                  BytesPerBlock_;
@@ -135,6 +137,7 @@ public:
         FFmpeg,
         DPX,
         TIFF,
+        EXR,
     ENUM_END(flavor)
     flavor                       Flavor = flavor::None;
 
@@ -164,6 +167,7 @@ public:
     void FFmpeg_Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
     void DPX_Create(size_t colorspace_type, size_t width, size_t height);
     void TIFF_Create(size_t colorspace_type, size_t width, size_t height);
+    void EXR_Create(size_t colorspace_type, size_t width, size_t height);
     void MergeIn();
 };
 

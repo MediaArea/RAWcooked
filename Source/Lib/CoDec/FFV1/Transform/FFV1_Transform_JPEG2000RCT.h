@@ -19,7 +19,7 @@ class raw_frame;
 class transform_jpeg2000rct
 {
 public:
-    transform_jpeg2000rct(raw_frame* RawFrame, size_t Bits, size_t y_offset, size_t x_offset);
+    transform_jpeg2000rct(raw_frame* RawFrame, size_t Bits, size_t y_offset, size_t x_offset, size_t w = 0, size_t h = 0);
 
     void From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
 
@@ -34,6 +34,7 @@ private:
     void FFmpeg_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
     void DPX_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
     void TIFF_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
+    void EXR_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A);
 };
 
 //---------------------------------------------------------------------------

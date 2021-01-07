@@ -23,6 +23,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h" />
     <ClInclude Include="..\..\..\Source\Lib\Config.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\Buffer\Buffer.h" />
@@ -98,6 +99,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\Errors\Errors.cpp" />

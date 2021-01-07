@@ -119,6 +119,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Command += " -f image2 -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -f image2 -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
+            {
+                Command += " -f image2 -c:v exr -consider_float16_as_uint16 1";
+                Global.OutputOptions["metadata:s:v"] = "WARNING=\"Pixel content is IEEE 754 floating-point format\"";
+            }
 
             // FileName_StartNumber (if needed)
             if (!Streams[i].FileName_StartNumber.empty())
@@ -226,6 +231,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Command += " -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
+                Command += " -c:v exr -consider_float16_as_uint16 1";
 
             // Write the list of files
             auto FileList_File = new intermediate_write;

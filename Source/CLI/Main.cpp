@@ -11,6 +11,7 @@
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
@@ -112,6 +113,14 @@ bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPaddi
     // Management
     if (SingleFile.IsDetected() && SingleFile.ParserCode != Parser_Unknown && SingleFile.ParserCode != Parser_HashSum)
         IsDetected = true;
+
+    if (SingleFile.ParserCode == Parser_EXR && IsDetected && !Global.Actions[Action_Check])
+    {
+        Global.ProgressIndicator_Stop();
+        cerr << "EXR support depends a lot on the FFmpeg version you have, it is safer to double check the output,\n"
+            "use --check for adding checks after the encoding." << endl;
+        return true;
+    }
 
     if (Global.Errors.HasErrors())
     {
@@ -262,6 +271,21 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             stringstream t;
             t << TIFF.slice_x * TIFF.slice_y;
+            ParseInfo.Slices = t.str();
+        }
+    }
+
+    // EXR
+    if (!ParseInfo.IsDetected)
+    {
+        exr EXR(&Global.Errors);
+        if (ParseInfo.ParseFile_Input(EXR, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
+        {
+            stringstream t;
+            t << EXR.slice_x * EXR.slice_y;
             ParseInfo.Slices = t.str();
         }
     }

@@ -8,11 +8,12 @@
 #include "Lib/CoDec/FFV1/Transform/FFV1_Transform_JPEG2000RCT.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_, size_t y_offset, size_t x_offset) :
+transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_, size_t y_offset, size_t x_offset, size_t /*w*/, size_t h) :
     RawFrame(RawFrame_),
     Bits(Bits_)
 {
@@ -25,7 +26,31 @@ transform_jpeg2000rct::transform_jpeg2000rct(raw_frame* RawFrame_, size_t Bits_,
         const auto& Plane = RawFrame->Plane(p);
         FrameBuffer_Temp[p] = Plane->Buffer().Data();
         FrameBuffer_Temp[p] += y_offset * Plane->AllBytesPerLine();
-        FrameBuffer_Temp[p] += x_offset * Plane->BytesPerBlock() / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
+
+        if (RawFrame->Flavor == raw_frame::flavor::EXR)
+        {
+            if (x_offset)
+            {
+                FrameBuffer_Temp[p] += x_offset * Plane->BytesPerBlock() / Plane->PixelsPerBlock() / 3; // TODO: handle when not 3 components
+            }
+            else
+            {
+                auto FrameBuffer_Temp2 = FrameBuffer_Temp[0];
+                for (size_t y = 0; y < h; ++y)
+                {
+                    uint32_t* FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer_Temp2;
+                    FrameBuffer_Temp_32[0] = (uint32_t)(y_offset + y);
+                    FrameBuffer_Temp_32[1] = (uint32_t)Plane->ValidBytesPerLine();
+                    FrameBuffer_Temp2 += Plane->AllBytesPerLine();
+                }
+            }
+
+            FrameBuffer_Temp[0] += 8;
+        }
+        else
+        {
+            FrameBuffer_Temp[p] += x_offset * Plane->BytesPerBlock() / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
+        }
     }
 }
 
@@ -37,6 +62,7 @@ void transform_jpeg2000rct::From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, p
         case raw_frame::flavor::FFmpeg: FFmpeg_From(w, Y, U, V, A); break;
         case raw_frame::flavor::DPX: DPX_From(w, Y, U, V, A); break;
         case raw_frame::flavor::TIFF: TIFF_From(w, Y, U, V, A); break;
+        case raw_frame::flavor::EXR: EXR_From(w, Y, U, V, A); break;
         case raw_frame::flavor::None:;
     }
 
@@ -394,6 +420,40 @@ void transform_jpeg2000rct::TIFF_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t*
                                         FrameBuffer_Temp_16[x*4+2] = b;
                                         FrameBuffer_Temp_16[x*4+3] = a;
                                         }
+                                        break;
+            default:;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
+void transform_jpeg2000rct::EXR_From(size_t w, pixel_t* Y, pixel_t* U, pixel_t* V, pixel_t* A)
+{
+    auto Flavor = (exr::flavor)Flavor_Private;
+    auto FrameWidth = RawFrame->Planes_[0]->Width_;
+    uint8_t*  FrameBuffer_Temp_8  = (uint8_t* )FrameBuffer_Temp[0];
+    uint16_t* FrameBuffer_Temp_16 = (uint16_t*)FrameBuffer_Temp[0];
+
+    for (size_t x = 0; x < w; x++)
+    {
+        pixel_t g = Y[x];
+        pixel_t b = U[x];
+        pixel_t r = V[x];
+
+        b -= Offset;
+        r -= Offset;
+        g -= (b + r) >> 2;
+        b += g;
+        r += g;
+
+        switch (Flavor)
+        {
+            case exr::flavor::Raw_RGB_16:
+                                        { 
+                                        FrameBuffer_Temp_16[x]   = b;
+                                        FrameBuffer_Temp_16[x + FrameWidth] = g;
+                                        FrameBuffer_Temp_16[x + FrameWidth * 2] = r;
+            }
                                         break;
             default:;
         }

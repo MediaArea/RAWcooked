@@ -12,6 +12,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "Lib/License/License.h"
@@ -93,6 +94,7 @@ static const license_info License_Infos[] =
     { "encoders/decoders"   , encoder_Max           , Encoders_String       },
     { "DPX flavors"         , dpx::flavor_Max       , DPX_Flavor_String     },
     { "TIFF flavors"        , tiff::flavor_Max      , TIFF_Flavor_String    },
+    { "EXR flavors"         , exr::flavor_Max       , EXR_Flavor_String     },
     { "WAV flavors"         , wav::flavor_Max       , WAV_Flavor_String     },
     { "AIFF flavors"        , aiff::flavor_Max      , AIFF_Flavor_String    },
 };
@@ -118,6 +120,7 @@ public:
     void                SetSupported(parser Parser, uint8_t Flavor) { SetSupported(License_Parser_Offset + Parser, Flavor); }
     void                SetSupported(dpx::flavor Flavor) { SetSupported(Parser_DPX, (uint8_t)Flavor); }
     void                SetSupported(tiff::flavor Flavor) { SetSupported(Parser_TIFF, (uint8_t)Flavor); }
+    void                SetSupported(exr::flavor Flavor) { SetSupported(Parser_EXR, (uint8_t)Flavor); }
     void                SetSupported(wav::flavor Flavor) { SetSupported(Parser_WAV, (uint8_t)Flavor); }
     void                SetSupported(aiff::flavor Flavor) { SetSupported(Parser_AIFF, (uint8_t)Flavor); }
     bool                IsSupported(uint8_t Type, uint8_t SubType);

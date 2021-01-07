@@ -49,6 +49,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/zlib/zutil.c \
     ../../../Source/Lib/Uncompressed/AIFF/AIFF.cpp \
     ../../../Source/Lib/Uncompressed/DPX/DPX.cpp \
+    ../../../Source/Lib/Uncompressed/EXR/EXR.cpp \
     ../../../Source/Lib/Uncompressed/HashSum/HashSum.cpp \
     ../../../Source/Lib/Uncompressed/TIFF/TIFF.cpp \
     ../../../Source/Lib/Uncompressed/WAV/WAV.cpp \

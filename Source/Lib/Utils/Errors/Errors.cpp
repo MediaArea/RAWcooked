@@ -13,6 +13,7 @@
 //---------------------------------------------------------------------------
 namespace dpx_issue { extern const char** ErrorTexts[]; }
 namespace tiff_issue { extern const char** ErrorTexts[]; }
+namespace exr_issue { extern const char** ErrorTexts[]; }
 namespace wav_issue { extern const char** ErrorTexts[]; }
 namespace aiff_issue { extern const char** ErrorTexts[]; }
 namespace matroska_issue { extern const char** ErrorTexts[]; }
@@ -26,6 +27,7 @@ static const char*** AllErrorTexts[] =
 {
     dpx_issue::ErrorTexts,
     tiff_issue::ErrorTexts,
+    exr_issue::ErrorTexts,
     wav_issue::ErrorTexts,
     aiff_issue::ErrorTexts,
     matroska_issue::ErrorTexts,
@@ -47,6 +49,7 @@ static const char* ParserNames[] =
 {
     "DPX",
     "TIFF",
+    "EXR",
     "WAV",
     "AIFF",
     "Matroska",

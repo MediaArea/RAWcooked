@@ -27,6 +27,7 @@ enum parser
 {
     Parser_DPX,
     Parser_TIFF,
+    Parser_EXR,
     Parser_WAV,
     Parser_AIFF,
     Uncompressed_Max, // After this line, this isn't parsers of uncompressed data
