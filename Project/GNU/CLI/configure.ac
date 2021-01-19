@@ -96,12 +96,6 @@ dnl
 if test "$enable_universal_binary" = "yes"; then
 	enable_arch_x86_64=yes
 	enable_arch_arm64=yes
-	if test "$with_macosx_sdk" = no ; then
-		with_macosx_sdk="/Developer/SDKs/MacOSX10.5.sdk"
-	fi
-	if test "$with_macosx_version_min" = no ; then
-		with_macosx_version_min="10.5"
-	fi
 fi
 if test "$enable_arch_ppc" = "yes"; then
 	CXXFLAGS="$CXXFLAGS -arch ppc"
@@ -123,11 +117,7 @@ if test "$enable_arch_arm64" = "yes"; then
 	CFLAGS="$CFLAGS -arch arm64"
 	LDFLAGS="$LDFLAGS -arch arm64"
 fi
-if test "$with_macosx_sdk" = "yes" ; then
-	CXXFLAGS="-isysroot /Developer/SDKs/MacOSX10.5.sdk $CXXFLAGS"
-	CFLAGS="-isysroot /Developer/SDKs/MacOSX10.5.sdk $CFLAGS"
-	LDFLAGS="-isysroot /Developer/SDKs/MacOSX10.5.sdk $LDFLAGS"
-elif test "x$with_macosx_sdk" != xno ; then
+if test "x$with_macosx_sdk" != xno ; then
 	CXXFLAGS="-isysroot $with_macosx_sdk $CXXFLAGS"
 	CFLAGS="-isysroot $with_macosx_sdk $CFLAGS"
 	LDFLAGS="-isysroot $with_macosx_sdk $LDFLAGS"
