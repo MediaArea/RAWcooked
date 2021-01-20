@@ -133,7 +133,7 @@ ReturnValue Help(const char* Name)
     cout << "              Don't do checks (see above)." << endl;
     cout << endl;
     cout << "       --info" << endl;
-    cout << "              Provide some extra information about the compresssed file," << endl;
+    cout << "              Provide some extra information about the compressed file," << endl;
     cout << "              for example the presence of hash of the raw data." << endl;
     cout << "              Disable encoding and decoding." << endl;
     cout << "       --no-info" << endl;
