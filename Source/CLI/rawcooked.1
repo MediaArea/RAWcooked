@@ -39,7 +39,9 @@ Displays the help guide.
 Tells you which installed version you are using.
 .TP
 .B --store-license value
-Set the license key to value and store on hard drive. (license is stored in ~/.config/RAWcooked/Config.txt on Linux/Mac, %APPDATA%/RAWcooked/Config.txt on Windows)
+Set the license key to value and store on hard drive.
+.br
+(License is stored in ~/.config/RAWcooked/Config.txt on Linux/Mac, %APPDATA%/RAWcooked/Config.txt on Windows)
 .TP
 .B --show-license
 Displays information about the installed license.
@@ -48,15 +50,6 @@ Displays information about the installed license.
 Set maximum size of attachments to \fIvalue\fR (in bytes).
 .br
 The default value is \fI1048576\fR.
-.TP
-.B --check \fIvalue\fR
-Switch the check function on or off. Be aware check function can be demanding of time and processor usage.
-.br
-\fIpartial\fR (or \fI0\fR) is quicker but may lead to partial reversibility with files that do not conform.
-.br
-\fIfull\fR (or \fI1\fR) is slower but guarantees reversibility, for example with DPX where the bits do not have any zero padding included.
-.br
-The default value is 'partial'.
 .TP
 .B --display-command \fR|\fB -d
 When an external encoder/decoder is used, display the command to launch instead of just launching it.
@@ -92,7 +85,7 @@ Assume \fIno\fR as answer to all prompts, and run non-interactively.
 .SS ACTIONS
 .TP
 .B --all
-Same as --info --conch --decode --encode --hash --coherency --check-padding --check (see below)
+Same as --info --conch --decode --encode --hash --coherency --check-padding --check --accept-gaps (see below)
 .TP
 .B --none
 Same as --no-info --no-conch --no-decode --no-encode --no-hash --no-coherency --quick-check-padding --quick-check (see below)
@@ -104,10 +97,10 @@ If input is raw content, encode then check that output would be same as the inpu
 .br
 If input is compressed content, check that output would be same as the original content.
 .br
-Disable encoding and decoding.
+Disables decoding.
 .TP
 .B --quick-check
-Do quick coherency checks of the encoded file. It permits to check that the file seems healthy without the time and processor usage of the full check.
+Run quick coherency checks of the encoded file. Allows user to check that the file seems healthy without the additional time taken to process the full check command.
 .br
 Is ignored in case of compressed content.
 .br
@@ -119,9 +112,9 @@ Don't run any checks (see above).
 This is the default, but may change in the future.
 .TP
 .B --info
-Provide extra information about the compressed file, for example the presence of hash of the raw data.
+Provides extra information about the compressed file, for example the presence of hashes for the raw data.
 .br
-Disable decoding.
+Disables encoding and decoding.
 .TP
 .B --no-info
 Don't provide extra information (see above).
@@ -129,9 +122,9 @@ Don't provide extra information (see above).
 This is the default, but may change in the future.
 .TP
 .B --check-padding
-Run padding checks. Be aware check function can be demanding of time and processor usage.
+Runs padding checks for DPX files that have no zero padding. Data found in the padding is stored in the RAWcooked reversibility file. Be aware check function can be demanding of time and processor usage.
 .br
-It is a slower process but guarantees reversibility, for example with DPX files that have bits with no zero padding.
+It is a slower process but guarantees reversibility.
 .TP
 .B --quick-check-padding
 Switch to --check-padding or --no-check-padding depending on what is found in the first image.
@@ -146,7 +139,7 @@ Do not run padding checks, as they are demanding of time and processor usage.
 This method is quicker, but be aware it may lead to partial reversibility with files that do no conform.
 .TP
 .B --coherency
-Checks that the package and contents are coherent.
+Checks that the package and contents are coherent. For example, is the audio file duration the same as the image sequence duration, or are there gaps in the sequence numbering.
 .br
 This is currently partially implemented.
 .br
@@ -184,9 +177,11 @@ This is default.
 Do not carry out encode (see above).
 .TP
 .B --hash
-Compute the hash of audio-visual RAW data files.
+Computes the hash of audio-visual RAW data files.
 .br
-This permits a reversibility check without the original files.
+During encoding it computes a hash for each file within a source folder and stores this within the RAWcooked reversibility metadata for comparison during --check or --check-padding.
+.br
+During decoding of a matroska with hashes in the metadata the file is decoded and new hashes generated for the which are then tested against the source file hashes stored in the metadata. Any issues raised by this check is considered a decoding error. This permits a reversibility check without the original files.
 .TP
 .B --no-hash
 Do not compute or test the hash of the file (see above).
@@ -204,9 +199,16 @@ Set the name of the framemd5 file to \fIvalue\fR.
 Default value is \fI${Input}.framemd5\fR.
 .TP
 .B --no-framemd5
-Do not compute of framemd5 of input frames. (see above)."
+Do not compute the framemd5 of input frames. (see above).
 .br
 Is default.
+.TP
+.B --accept-gaps
+Use if there are missing files within the sequence numbering. RAWcooked creates a concatenated list of all files ensuring the sequence can be encoded.
+.TP
+.B --no-accept-gaps
+Do not accept-gaps within the sequence numbering. FFmpeg will fail any encoding attempts where gaps are present.
+.TP
 .SS INPUT RELATED OPTIONS
 .TP
 .B --file
@@ -258,6 +260,19 @@ The default value is \fI1\fR.
 If the video encoding format is \fIffv1\fR, you can set the multithreaded encoding slices to \fIvalue\fR: any integer over 1 (it is recommended to use a figure divisible by your workstations CPU core processors such as 2, 4, 6, 9, 16, 24...).
 .br
 The default value is variable between \fI16\fR and \fI512\fR, depending on the video frame size and depth.
+.SH EXAMPLE: Encoding using the --all action
+.B rawcooked --all /path_to_av_raw_data/
+This command comprises several commands into one '--all' (see above) that ensures safe image sequence encoding steps are taken. Please see individual flag differences to understand the differences between its use during encoding and decoding.
+.br
+It can be used in conjunction with opposing commands. For example if you want to use this command without --conch, you can add --no-conch after the --all and the conch command will be skipped.
+.SH EXAMPLE: Custom encoding with export of console messages to log file
+.B rawcooked --check --coherency --conch --hash --encode -framerate 24 /path_to_av_raw_data/ >> RAWcooked_encoding.log
+If you want to retain the console output of the RAWcooked encoding or decoding processes, you can set the stdout to a separate log file. This option is useful if you're automating batch encodings and need to assess the log outputs to make decisions within the logic of your code.
+.SH EXAMPLE: Decoding using --all action
+.B rawcooked --all <file.mkv>
+This command works the same as the encoding of raw audio-visual data, but decodes the Matroska file back to it's original raw state. Please see individual flag differences (above) to understand the differences between its use during encoding and decoding.
+.br
+It can be used in conjunction with opposing commands. For example if you want to use this command without --conch, you can add --no-conch after the --all and the conch command will be skipped.
 .SH COPYRIGHT
 Copyright (c) 2018-2021 MediaArea.net SARL & AV Preservation by reto.ch
 .SH LICENSE

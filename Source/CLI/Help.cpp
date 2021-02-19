@@ -19,255 +19,328 @@ extern const char* LibraryVersion;
 ReturnValue Help(const char* Name)
 {
     // Copy of rawcooked.1 manpage, with limit to 80 columns
-    cout << "NAME" << endl;
-    cout << "       RAWcooked - encode and decode audio-visual RAW data with Matroska, FFV1" << endl;
-    cout << "       and FLAC" << endl;
-    cout << endl;
-    cout << "SYNOPSIS" << endl;
-    cout << "       " << Name << " [option ...] (folder | file ...) [option ...]" << endl;
-    cout << endl;
-    cout << "DESCRIPTION" << endl;
-    cout << "       RAWcooked encodes audio-visual RAW data into the Matroska container" << endl;
-    cout << "       (MKV), using the video codec FFV1 for the image and the audio codec" << endl;
-    cout << "       FLAC for the sound. The metadata accompanying the RAW data are" << endl;
-    cout << "       preserved, and sidecar files, like MD5, LUT or XML, can be added into" << endl;
-    cout << "       the Matroska container as attachments. This allows for the management" << endl;
-    cout << "       of these audio-visual file formats in an effective and transparent way" << endl;
-    cout << "       (e.g. native playback in VLC), while saving typically between  one to" << endl;
-    cout << "       two thirds of the needed storage, and speeding up file writing and" << endl;
-    cout << "       reading (e.g. to/from harddisk, over network or for backup on LTO)." << endl;
-    cout << endl;
-    cout << "       When needed, the uncompressed source is retrieved bit-by-bit, in a" << endl;
-    cout << "       manner faster than uncompressed sources." << endl;
-    cout << endl;
-    cout << "       folder Encodes with the FFV1 video codec all single-image video files" << endl;
-    cout << "              in the folder, encodes with the FLAC audio codec all audio files" << endl;
-    cout << "              in the folder, and muxes these into a Matroska container (.mkv)." << endl;
-    cout << "              The filenames of the single image files must end with a numbered" << endl;
-    cout << "              sequence. RAWcooked will generate the regex to parse in the" << endl;
-    cout << "              correct order all the frames in the folder." << endl;
-    cout << endl;
-    cout << "       file   contains RAW data (e.g. a .dpx or .wav file):" << endl;
-    cout << "              Encodes with the FFV1 video codec all single-image video files" << endl;
-    cout << "              in the folder containing the file, encodes with the FLAC audio" << endl;
-    cout << "              codec all audio files in the folder containing the file, and" << endl;
-    cout << "              muxes these into a Matroska container (.mkv)." << endl;
-    cout << "              The filenames usually end with a numbered  sequence. Enter one" << endl;
-    cout << "              frame and the tool will generate the regex to parse all the" << endl;
-    cout << "              frames in the folder." << endl;
-    cout << endl;
-    cout << "       file   is a Matroska container (.mkv):" << endl;
-    cout << "              Decodes back the video and the audio of file to its original" << endl;
-    cout << "              formats. All metadata accompanying the original data are" << endl;
-    cout << "              preserved bit-by-bit." << endl;
-    cout << endl;
-    cout << "GENERAL OPTIONS" << endl;
-    cout << "       --help | -h" << endl;
-    cout << "              Displays a help message." << endl;
-    cout << endl;
-    cout << "       --version" << endl;
-    cout << "              Displays the installed version." << endl;
-    cout << endl;
-    cout << "       --store-license value" << endl;
-    cout << "              Set the license key to value and store on hard drive." << endl;
-    cout << "              (license is stored in ~/.config/RAWcooked/Config.txt on Linux/Mac," << endl;
-    cout << "              %APPDATA%/RAWcooked/Config.txt on Windows)"  << endl;
-    cout << endl;
-    cout << "       --show-license" << endl;
-    cout << "              Displays information about the installed license." << endl;
-    cout << endl;
-    cout << "       --attachment-max-size value | -s value" << endl;
-    cout << "              Set maximum size of attachment to value (in bytes)." << endl;
-    cout << "              Default value is 1048576." << endl;
-    cout << endl;
-    cout << "       --display-command | -d" << endl;
-    cout << "              When an external encoder/decoder is used, display the command to" << endl;
-    cout << "              launch instead of launching it." << endl;
-    cout << endl;
-    cout << "       --output-name value | -o value" << endl;
-    cout << "              Set the name of the output file or folder to value." << endl;
-    cout << "              Default value is ${Input}.mkv (if input is a folder)" << endl;
-    cout << "              or ${Input}.RAWcooked (if input is a file)." << endl;
-    cout << endl;
-    cout << "       --rawcooked-file-name value | -r value" << endl;
-    cout << "              Set (encoding) or get (decoding) the name of the RAWcooked" << endl;
-    cout << "              reversibility data file to value." << endl;
-    cout << "              Default name is ${Input}.rawcooked_reversibility_data" << endl;
-    cout << "              Note: If the RAWcooked reversibility data file is included in" << endl;
-    cout << "              the output A/V file during the encoding, this file is deleted" << endl;
-    cout << "              after encoding." << endl;
-    cout << "              Note: Not yet implemented for decoding." << endl;
-    cout << endl;
-    cout << "       --quiet" << endl;
-    cout << "              Do not show information related to RAWcooked." << endl;
-    cout << "              Encoder application may need an additional option." << endl;
-    cout << "       -y" << endl;
-    cout << "              Automatic yes to prompts. Assume \"yes\" as answer" << endl;
-    cout << "              to all prompts and run non-interactively." << endl;
-    cout << "       -n" << endl;
-    cout << "              Automatic no to prompts. Assume \"no\" as answer" << endl;
-    cout << "              to all prompts and run non-interactively." << endl;
-    cout << endl;
-    cout << "ACTIONS" << endl;
-    cout << "       --all" << endl;
-    cout << "              Same as --info --conch --decode --encode --hash" << endl;
-    cout << "               --coherency --check-padding --check"<< endl;
-    cout << "       --none" << endl;
-    cout << "              Same as --no-info --no-conch --no-decode --no-encode --no-hash" << endl;
-    cout << "               --no-coherency --quick-check-padding --quick-check" << endl;
-    cout << endl;
-    cout << "       --check" << endl;
-    cout << "              Check that the encoded file can be correctly decoded." << endl;
-    cout << "              If input is raw content, encode then check that output" << endl;
-    cout << "              would be same as the input content." << endl;
-    cout << "              If input is compressed content, check that output" << endl;
-    cout << "              would be same as the original content." << endl;
-    cout << "              Disable decoding." << endl;
-    cout << "       --quick-check" << endl;
-    cout << "              Do quick coherency checks of the encoded file." << endl;
-    cout << "              It permits to check that the file seems healthy" << endl;
-    cout << "              without the time and processor usage of the full check." << endl;
-    cout << "              Is ignored in case of compressed content." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << "       --no-check" << endl;
-    cout << "              Don't do checks (see above)." << endl;
-    cout << endl;
-    cout << "       --info" << endl;
-    cout << "              Provide some extra information about the compresssed file," << endl;
-    cout << "              for example the presence of hash of the raw data." << endl;
-    cout << "              Disable encoding and decoding." << endl;
-    cout << "       --no-info" << endl;
-    cout << "              Don't provide some extra information (see above)." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << endl;
-    cout << "       --check-padding" << endl;
-    cout << "              Run padding checks. Be aware check function can be demanding" << endl;
-    cout << "              of time and processor usage." << endl;
-    cout << "              It is a slower process but guarantees reversibility, for example" << endl;
-    cout << "              with DPX files that have bits with no zero padding." << endl;
-    cout << "       --quick-check-padding" << endl;
-    cout << "              Switch to --check-padding or --no-check-padding depending on" << endl;
-    cout << "              what is found in the first image." << endl;
-    cout << "              The program will stop with an error code if --check is not" << endl;
-    cout << "              used at the same time and zero-padding bits are in the content," << endl;
-    cout << "              asking to choose what to do." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << "       --no-check-padding" << endl;
-    cout << "              Do not run padding checks, as they are demanding of time" << endl;
-    cout << "              and processor usage." << endl;
-    cout << "              This method is quicker but may lead to partial reversibility" << endl;
-    cout << "              with non conform files." << endl;
-    cout << endl;
-    cout << "       --coherency" << endl;
-    cout << "              Coherency check of the package." << endl;
-    cout << "              Currently partially implemented." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << "       --no-coherency" << endl;
-    cout << "              Don't do coherency check (see above)." << endl;
-    cout << endl;
-    cout << "       --conch" << endl;
-    cout << "              Conformance check of the format, when supported." << endl;
-    cout << "              Currently partially implemented for DPX." << endl;
-    cout << "              Disable encoding and decoding." << endl;
-    cout << "       --no-conch" << endl;
-    cout << "              Don't do conformance check (see above)." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << endl;
-    cout << "       --decode" << endl;
-    cout << "              Decode a compressed stream into audio-visual RAW data." << endl;
-    cout << "              Is default" << endl;
-    cout << "       --no-decode" << endl;
-    cout << "              Don't decode (see above)." << endl;
-    cout << endl;
-    cout << "       --encode" << endl;
-    cout << "              Encode audio-visual RAW data into a compressed stream." << endl;
-    cout << "              Is default" << endl;
-    cout << "       --no-encode" << endl;
-    cout << "              Don't encode (see above)." << endl;
-    cout << endl;
-    cout << "       --hash" << endl;
-    cout << "              Compute the hash of audio-visual RAW data files." << endl;
-    cout << "              If input is raw content, do the hash and store hashes in RAWcooked" << endl;
-    cout << "              metadata." << endl;
-    cout << "              This permits a reversibility check without the original files." << endl;
-    cout << "       --no-hash" << endl;
-    cout << "              Don't do compute or test of hash of files. (see above)." << endl;
-    cout << "              Is default (it may change in the future)" << endl;
-    cout << endl;
-    cout << "       --framemd5" << endl;
-    cout << "              Compute the framemd5 of input frames and store it to a sidecar" << endl;
-    cout << "              file." << endl;
-    cout << "              See FFmpeg framemd5 documentation for more information." << endl;
-    cout << "       --framemd5-name value" << endl;
-    cout << "              Set the name of the framemd5 file to value." << endl;
-    cout << "              Default value is ${Input}.framemd5." << endl;
-    cout << "       --no-framemd5" << endl;
-    cout << "              Don't do compute of framemd5 of input frames. (see above)." << endl;
-    cout << "              Is default." << endl;
-    cout << endl;
-    cout << "INPUT RELATED OPTIONS" << endl;
-    cout << "       --file" << endl;
-    cout << "              Unlock compression of files (e.g. a .dpx or .wav)." << endl;
-    cout << "       -framerate value" << endl;
-    cout << "              Force video frame rate to value." << endl;
-    cout << "              Default value is the one found in the image files if available," << endl;
-    cout << "              otherwise 24." << endl;
-    cout << endl;
-    cout << "ENCODING RELATED OPTIONS" << endl;
-    cout << "       -c:a value" << endl;
-    cout << "              Force the audio encoding format to value: copy (copy PCM to PCM," << endl;
-    cout << "              without modification), flac." << endl;
-    cout << "              Default value is flac." << endl;
-    cout << endl;
-    cout << "       -c:v value" << endl;
-    cout << "              Force the video encoding format value: only ffv1 is currently" << endl;
-    cout << "              allowed, which is the default value." << endl;
-    cout << endl;
-    cout << "       -coder value" << endl;
-    cout << "              If video encoding format is ffv1, set the coder to value: 0" << endl;
-    cout << "              (Golomb-Rice), 1 (Range Coder), 2 (Range Coder with custom state" << endl;
-    cout << "              transition table)." << endl;
-    cout << "              Default value is 1." << endl;
-    cout << endl;
-    cout << "       -context value" << endl;
-    cout << "              If video encoding format is ffv1, set the context to value: 0" << endl;
-    cout << "              (small), 1 (large)." << endl;
-    cout << "              Default value is 0." << endl;
-    cout << endl;
-    cout << "       -format value" << endl;
-    cout << "              Set the container format to value: only matroska is currently" << endl;
-    cout << "              allowed, which is the default value." << endl;
-    cout << endl;
-    cout << "       -g value" << endl;
-    cout << "              If video encoding format is ffv1, set the GOP size to value any" << endl;
-    cout << "              integer >=1." << endl;
-    cout << "              Default value is 1." << endl;
-    cout << endl;
-    cout << "       -level value" << endl;
-    cout << "              If video encoding format is ffv1, set the version to value: 0," << endl;
-    cout << "              1, 3." << endl;
-    cout << "              Default value is 3." << endl;
-    cout << endl;
-    cout << "       -slicecrc value" << endl;
-    cout << "              If  video  encoding format is ffv1, set the CRC to value: 0 (CRC" << endl;
-    cout << "              not present), 1 (CRC present)." << endl;
-    cout << "              Default value is 1." << endl;
-    cout << endl;
-    cout << "       -slices value" << endl;
-    cout << "              If video encoding format is ffv1, set the count of slices to" << endl;
-    cout << "              value: any integer >=1 and making sense (2, 4, 6, 9, 16, 24...)." << endl;
-    cout << "              Default value is between 16 and 512, depending on video frame" << endl;
-    cout << "              size and depth." << endl;
-    cout << endl;
-    cout << "COPYRIGHT" << endl;
-    cout << "       Copyright (c) 2018-2021 MediaArea.net SARL & AV Preservation by reto.ch" << endl;
-    cout << endl;
-    cout << "LICENSE" << endl;
-    cout << "       RAWcooked is released under a BSD License." << endl;
-    cout << endl;
-    cout << "DISCLAIMER" << endl;
-    cout << "       RAWcooked is provided \"as is\" without warranty or support of any kind." << endl;
-    cout << endl;
+    cout <<
+        "NAME\n"
+        "       RAWcooked - encode and decode audio-visual RAW data with Matroska, FFV1\n"
+        "       and FLAC\n"
+        "\n"
+        "SYNOPSIS\n"
+        "       rawcooked [option ...] (folder | file ...) [option ...]\n"
+        "\n"
+        "DESCRIPTION\n"
+        "       RAWcooked easily encodes RAW audio-visual sequences into a lossless\n"
+        "       video stream, reducing the file size by between one and two thirds.\n"
+        "       FFmpeg encodes the audio-visual data into a Matroska container (.mkv)\n"
+        "       using the video codec FFV1, and audio codec FLAC. The metadata\n"
+        "       accompanying the RAW data is fully preserved, along with additional\n"
+        "       sidecar files such as MD5 checksums, LUT or XML if desired. This allows\n"
+        "       for the management of these audio-visual file formats in an effective\n"
+        "       and transparent way. The lossless Matroska video stream can be played\n"
+        "       in VLC or MPV media players, and writing and retrieving from storage\n"
+        "       devices such as LTO is significantly quicker.\n"
+        "\n"
+        "       If you need to use the RAW source in its original form, one line of\n"
+        "       code will easily restore it bit-by-bit, faster than retrieving the same\n"
+        "       file from LTO tape storage.\n"
+        "\n"
+        "       folder Every image file within the sequence's folder is encoded into a\n"
+        "              single FFV1 video stream, and each audio track within the same\n"
+        "              folder is encoded to the FLAC codec. Both the FFV1 and FLAC\n"
+        "              contents are then muxed into a single Matroska container (.mkv).\n"
+        "              The image filenames must end in a complete number sequence, so\n"
+        "              that RAWcooked can parse each image within the sequence in the\n"
+        "              correct order.\n"
+        "\n"
+        "       file   contains RAW data (e.g. a .dpx or .wav file):\n"
+        "              Every image within a sequence folder containing the file is\n"
+        "              encoded into a single FFV1 video stream, and each audio track\n"
+        "              within the folder containing the same file is encoded to the\n"
+        "              FLAC codec. Both the FFV1 and FLAC contents are then muxed into\n"
+        "              a single Matroska container (.mkv).\n"
+        "              The image filenames must end in a complete number sequence. By\n"
+        "              entering one file within this sequence RAWcooked will parse\n"
+        "              every image in the correct order.\n"
+        "\n"
+        "       file   is a Matroska container (.mkv):\n"
+        "              Decodes the Matroska file back to the original RAW image\n"
+        "              sequence, including restoration of the original metadata and\n"
+        "              sidecar files. It is important to stress that the encoded files\n"
+        "              can be fully decoded, and that this process will create bit-by-\n"
+        "              bit identical files to the originals. Not only is the image and\n"
+        "              audio content fully restored, but also all enclosed metadata and\n"
+        "              all of the file's characteristics. Therefore, an encoded and\n"
+        "              decoded RAW file cannot be differentiated from its original.\n"
+        "\n"
+        "OPTIONS\n"
+        "   GENERAL OPTIONS\n"
+        "       --help | -h\n"
+        "              Displays the help guide.\n"
+        "\n"
+        "       --version\n"
+        "              Tells you which installed version you are using.\n"
+        "\n"
+        "       --store-license value\n"
+        "              Set the license key to value and store on hard drive.\n"
+        "              (License is stored in ~/.config/RAWcooked/Config.txt on\n"
+        "              Linux/Mac, %APPDATA%/RAWcooked/Config.txt on Windows)\n"
+        "\n"
+        "       --show-license\n"
+        "              Displays information about the installed license.\n"
+        "\n"
+        "       --attachment-max-size value | -s value\n"
+        "              Set maximum size of attachments to value (in bytes).\n"
+        "              The default value is 1048576.\n"
+        "\n"
+        "       --display-command | -d\n"
+        "              When an external encoder/decoder is used, display the command to\n"
+        "              launch instead of just launching it.\n"
+        "\n"
+        "       --output-name value | -o value\n"
+        "              Set the name of the output file or folder to value.\n"
+        "              The default output value is opposite to the input. Expect\n"
+        "              ${Input}.mkv if the input is a folder, or ${Input}.RAWcooked if\n"
+        "              input is a file, such as a DPX.\n"
+        "\n"
+        "       --rawcooked-file-name value | -r value\n"
+        "              Set during encoding, or retrieve by decoding, the name of the\n"
+        "              RAWcooked reversibility data file to value.\n"
+        "              The default name is ${Input}.rawcooked_reversibility_data.\n"
+        "              Note: This file is deleted after encoding if the RAWcooked\n"
+        "              reversibility data file is embedded in the output Matroska\n"
+        "              wrapper during encoding.\n"
+        "              Note: Not yet implemented for decoding.\n"
+        "\n"
+        "       --quiet\n"
+        "              Do not show information related to RAWcooked.\n"
+        "              External encoder or decoder may need an additional option.\n"
+        "\n"
+        "       -y     Automatic yes to prompts.\n"
+        "              Assume yes in answer to all prompts, and run non-interactively.\n"
+        "\n"
+        "       -n     Automatic no to prompts.\n"
+        "              Assume no as answer to all prompts, and run non-interactively.\n"
+        "\n"
+        "   ACTIONS\n"
+        "       --all  Same as --info --conch --decode --encode --hash --coherency\n"
+        "              --check-padding --check --accept-gaps (see below)\n"
+        "\n"
+        "       --none Same as --no-info --no-conch --no-decode --no-encode --no-hash\n"
+        "              --no-coherency --quick-check-padding --quick-check (see below)\n"
+        "\n"
+        "       --check\n"
+        "              Check that the encoded file can be correctly decoded.\n"
+        "              If input is raw content, encode then check that output would be\n"
+        "              same as the input content.\n"
+        "              If input is compressed content, check that output would be same\n"
+        "              as the original content.\n"
+        "              Disables decoding.\n"
+        "\n"
+        "       --quick-check\n"
+        "              Run quick coherency checks of the encoded file. Allows user to\n"
+        "              check that the file seems healthy without the additional time\n"
+        "              taken to process the full check command.\n"
+        "              Is ignored in case of compressed content.\n"
+        "              This is the default, but may change in the future.\n"
+        "\n"
+        "       --no-check\n"
+        "              Don't run any checks (see above).\n"
+        "              This is the default, but may change in the future.\n"
+        "\n"
+        "       --info Provides extra information about the compressed file, for\n"
+        "              example the presence of hashes for the raw data.\n"
+        "              Disables encoding and decoding.\n"
+        "\n"
+        "       --no-info\n"
+        "              Don't provide extra information (see above).\n"
+        "              This is the default, but may change in the future.\n"
+        "\n"
+        "       --check-padding\n"
+        "              Runs padding checks for DPX files that have no zero padding.\n"
+        "              Data found in the padding is stored in the RAWcooked\n"
+        "              reversibility file. Be aware check function can be demanding of\n"
+        "              time and processor usage.\n"
+        "              It is a slower process but guarantees reversibility.\n"
+        "\n"
+        "       --quick-check-padding\n"
+        "              Switch to --check-padding or --no-check-padding depending on\n"
+        "              what is found in the first image.\n"
+        "              The program will stop with an error code if --check is not used\n"
+        "              at the same time and zero-padding bits are in the content,\n"
+        "              asking to choose what to do.\n"
+        "              This is the default, but may change in the future.\n"
+        "\n"
+        "       --no-check-padding\n"
+        "              Do not run padding checks, as they are demanding of time and\n"
+        "              processor usage.\n"
+        "              This method is quicker, but be aware it may lead to partial\n"
+        "              reversibility with files that do no conform.\n"
+        "\n"
+        "       --coherency\n"
+        "              Checks that the package and contents are coherent. For example,\n"
+        "              is the audio file duration the same as the image sequence\n"
+        "              duration, or are there gaps in the sequence numbering.\n"
+        "              This is currently partially implemented.\n"
+        "              This is default, but may change in the future.\n"
+        "\n"
+        "       --no-coherency\n"
+        "              Do not carry out coherency check (see above).\n"
+        "\n"
+        "       --conch\n"
+        "              Conformance check of the format, effective only when format is\n"
+        "              supported.\n"
+        "              This is currently partially implemented for DPX.\n"
+        "              Disable encoding and decoding.\n"
+        "\n"
+        "       --no-conch\n"
+        "              Do not carry out conformance check (see above).\n"
+        "              This is default, but may change in the future.\n"
+        "\n"
+        "       --decode\n"
+        "              Encode a compressed stream into audio-visual RAW data.\n"
+        "              This is default.\n"
+        "\n"
+        "       --no-decode\n"
+        "              Do not carry out decode (see above).\n"
+        "\n"
+        "       --encode\n"
+        "              Encode audio-visual RAW data into a compressed stream.\n"
+        "              This is default.\n"
+        "\n"
+        "       --no-encode\n"
+        "              Do not carry out encode (see above).\n"
+        "\n"
+        "       --hash Computes the hash of audio-visual RAW data files.\n"
+        "              During encoding it computes a hash for each file within a source\n"
+        "              folder and stores this within the RAWcooked reversibility\n"
+        "              metadata for comparison during --check or --check-padding.\n"
+        "              During decoding of a matroska with hashes in the metadata the\n"
+        "              file is decoded and new hashes generated for the which are then\n"
+        "              tested against the source file hashes stored in the metadata.\n"
+        "              Any issues raised by this check is considered a decoding error.\n"
+        "              This permits a reversibility check without the original files.\n"
+        "\n"
+        "       --no-hash\n"
+        "              Do not compute or test the hash of the file (see above).\n"
+        "              This is default, but may change in the future.\n"
+        "\n"
+        "       --framemd5\n"
+        "              Compute the framemd5 of input frames and store it to a sidecar\n"
+        "              file.\n"
+        "              See FFmpeg framemd5 documentation for more information.\n"
+        "\n"
+        "       --framemd5-name value\n"
+        "              Set the name of the framemd5 file to value.\n"
+        "              Default value is ${Input}.framemd5.\n"
+        "\n"
+        "       --no-framemd5\n"
+        "              Do not compute the framemd5 of input frames. (see above).\n"
+        "              Is default.\n"
+        "\n"
+        "       --accept-gaps\n"
+        "              Use if there are missing files within the sequence numbering.\n"
+        "              RAWcooked creates a concatenated list of all files ensuring the\n"
+        "              sequence can be encoded.\n"
+        "\n"
+        "       --no-accept-gaps\n"
+        "              Do not accept-gaps within the sequence numbering. FFmpeg will\n"
+        "              fail any encoding attempts where gaps are present.\n"
+        "\n"
+        "          INPUT RELATED OPTIONS\n"
+        "\n"
+        "       --file Unlock the compression of files, for example with .dpx or .wav.\n"
+        "\n"
+        "       -framerate value\n"
+        "              Force the video frame rate value to value.\n"
+        "              Default frame rate value is found in the image file metadata, if\n"
+        "              available. Otherwise it will default to 24.\n"
+        "\n"
+        "   ENCODING RELATED OPTIONS\n"
+        "       -c:a value\n"
+        "              Use this command to force the audio encoding format to value:\n"
+        "              copy (for example copy PCM to PCM, without modification), FLAC\n"
+        "              The default value is FLAC.\n"
+        "\n"
+        "       -c:v value\n"
+        "              Force the video encoding format value: only ffv1 is currently\n"
+        "              allowed, which is the default value.\n"
+        "\n"
+        "       -coder value\n"
+        "              If video encoding format is ffv1, set the Coder to value: 0\n"
+        "              (Golomb-Rice), 1 (Range Coder), 2 (Range Coder with custom state\n"
+        "              transition table).\n"
+        "              The default value is 1.\n"
+        "\n"
+        "       -context value\n"
+        "              If the video encoding format is ffv1, set the Context to value:\n"
+        "              0 (small), 1 (large).\n"
+        "              The default value is 0.\n"
+        "\n"
+        "       -format value\n"
+        "              Set the container format to value: only matroska is currently\n"
+        "              allowed, which is the default value.\n"
+        "\n"
+        "       -g value\n"
+        "              If video encoding format is ffv1, set the GOP size to value 1\n"
+        "              (generates a strict intra-frame bitstream), 0 (allows adaptable\n"
+        "              context model across frames).\n"
+        "              The default value is 1. Ensure you leave the setting at 1 for\n"
+        "              archival use.\n"
+        "\n"
+        "       -level value\n"
+        "              The video encoding format ffv1 can have Version set to value: 0,\n"
+        "              1, 3.\n"
+        "              The default value is the latest version 3.\n"
+        "\n"
+        "       -slicecrc value\n"
+        "              If video encoding format is ffv1, you can set the CRC checksum\n"
+        "              to value: 0 (CRC checksums off), 1 (CRC checksum on).\n"
+        "              The default value is 1.\n"
+        "\n"
+        "       -slices value\n"
+        "              If the video encoding format is ffv1, you can set the\n"
+        "              multithreaded encoding slices to value: any integer over 1 (it\n"
+        "              is recommended to use a figure divisible by your workstations\n"
+        "              CPU core processors such as 2, 4, 6, 9, 16, 24...).\n"
+        "              The default value is variable between 16 and 512, depending on\n"
+        "              the video frame size and depth.\n"
+        "\n"
+        "EXAMPLE: Encoding using the --all action\n"
+        "       rawcooked --all /path_to_av_raw_data/ This command comprises several\n"
+        "       commands into one '--all' (see above) that ensures safe image sequence\n"
+        "       encoding steps are taken. Please see individual flag differences to\n"
+        "       understand the differences between its use during encoding and\n"
+        "       decoding.\n"
+        "       It can be used in conjunction with opposing commands. For example if\n"
+        "       you want to use this command without --conch, you can add --no-conch\n"
+        "       after the --all and the conch command will be skipped.\n"
+        "\n"
+        "EXAMPLE: Custom encoding with export of console messages to log file\n"
+        "       rawcooked --check --coherency --conch --hash --encode -framerate 24\n"
+        "       /path_to_av_raw_data/ >> RAWcooked_encoding.log If you want to retain\n"
+        "       the console output of the RAWcooked encoding or decoding processes, you\n"
+        "       can set the stdout to a separate log file. This option is useful if\n"
+        "       you're automating batch encodings and need to assess the log outputs to\n"
+        "       make decisions within the logic of your code.\n"
+        "\n"
+        "EXAMPLE: Decoding using --all action\n"
+        "       rawcooked --all <file.mkv> This command works the same as the encoding\n"
+        "       of raw audio-visual data, but decodes the Matroska file back to it's\n"
+        "       original raw state. Please see individual flag differences (above) to\n"
+        "       understand the differences between its use during encoding and\n"
+        "       decoding.\n"
+        "       It can be used in conjunction with opposing commands. For example if\n"
+        "       you want to use this command without --conch, you can add --no-conch\n"
+        "       after the --all and the conch command will be skipped.\n"
+        "\n"
+        "COPYRIGHT\n"
+        "       Copyright (c) 2018-2021 MediaArea.net SARL & AV Preservation by reto.ch\n"
+        "\n"
+        "LICENSE\n"
+        "       RAWcooked is released under a BSD License.\n"
+        "\n"
+        "DISCLAIMER\n"
+        "       RAWcooked is provided \"as is\" without warranty or support of any kind.\n"
+        << endl;
 
   return ReturnValue_OK;
 }
