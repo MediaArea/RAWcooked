@@ -133,6 +133,7 @@ Formats/DPX/Flavors/RGB_16_Packed_BE/058142ce-aeb9-4f5c-b3c7-7590f09c757d_000900
 Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_LE/Dufay_000001.dpx pass
 Formats/DPX/Conformance/0004_OffsetToImageData/0004_OffsetToImageData_000000.dpx fail
+Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_v.dpx pass
 Formats/TIFF/Features/MultipleContinuousStripOffsets/Lavc.tiff pass
 Formats/TIFF/Flavors/Raw_CMYK_8_U/flower-separated-contig-08.tif fail
 Formats/TIFF/Flavors/Raw_CMYK_8_U/flower-separated-planar-08.tif fail
