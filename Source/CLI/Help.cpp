@@ -260,7 +260,7 @@ ReturnValue Help(const char* Name)
     cout << "              size and depth." << endl;
     cout << endl;
     cout << "COPYRIGHT" << endl;
-    cout << "       Copyright (c) 2018-2020 MediaArea.net SARL & AV Preservation by reto.ch" << endl;
+    cout << "       Copyright (c) 2018-2021 MediaArea.net SARL & AV Preservation by reto.ch" << endl;
     cout << endl;
     cout << "LICENSE" << endl;
     cout << "       RAWcooked is released under a BSD License." << endl;
