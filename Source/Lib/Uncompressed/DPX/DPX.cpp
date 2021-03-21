@@ -87,6 +87,7 @@ static const char* MessageText[] =
 {
     "Offset to image data in bytes",
     "Total image file size",
+    "Version number of header format",
     "Ditto key",
     "Ditto key is set to \"same as the previous frame\" but header data differs",
     "Number of image elements",
@@ -96,6 +97,7 @@ enum code : uint8_t
 {
     OffsetToImageData,
     TotalImageFileSize,
+    VersionNumber,
     DittoKey,
     DittoKey_NotSame,
     NumberOfElements,
@@ -293,6 +295,7 @@ void dpx::ParseBuffer()
     {
     case 0x56312E3000LL:
     case 0x56322E3000LL:
+    case 0x76312E3000LL:
         break;
     default:
         Undecodable(undecodable::VersionNumber);
@@ -506,6 +509,13 @@ void dpx::ConformanceCheck()
     uint32_t OffsetToImageData = Get_X4();
     if (OffsetToImageData < 1664 || OffsetToImageData > Buffer.Size())
         Invalid(invalid::OffsetToImageData);
+    uint64_t VersionNumber = Get_B8() >> 24;
+    switch (VersionNumber)
+    {
+    case 0x76312E3000LL:
+        Invalid(invalid::VersionNumber);
+    default:;
+    }
     Buffer_Offset = 16;
     uint32_t TotalImageFileSize = Get_X4();
     if (TotalImageFileSize != FileSize)
