@@ -50,6 +50,30 @@ int global::SetLicenseKey(const char* Key, bool StoreIt)
 }
 
 //---------------------------------------------------------------------------
+int global::SetSubLicenseId(uint64_t Id)
+{
+    if (!Id || Id >= 127)
+    {
+        cerr << "Error: sub-licensee ID must be between 1 and 126.\n";
+        return 1;
+    }
+    SubLicenseId = Id;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetSubLicenseDur(uint64_t Dur)
+{
+    if (Dur > 12)
+    {
+        cerr << "Error: sub-licensee duration must be between 0 and 12.\n";
+        return 1;
+    }
+    SubLicenseDur = Dur;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetDisplayCommand()
 {
     DisplayCommand = true;
@@ -418,6 +442,8 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     AttachmentMaxSize = (size_t)-1;
     IgnoreLicenseKey = !License.IsSupported_License();
+    SubLicenseId = 0;
+    SubLicenseDur = 1;
     ShowLicenseKey = false;
     StoreLicenseKey = false;
     DisplayCommand = false;
@@ -672,6 +698,22 @@ int global::ManageCommandLine(const char* argv[], int argc)
         {
             ShowLicenseKey = true;
         }
+        else if (strcmp(argv[i], "--sublicense") == 0 || strcmp(argv[i], "--sublicence") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            License.Feature(feature::SubLicense);
+            if (auto Value = SetSubLicenseId(atoi(argv[++i])))
+                return Value;
+        }
+        else if (strcmp(argv[i], "--sublicense-dur") == 0 || strcmp(argv[i], "--sublicence-dur") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            License.Feature(feature::SubLicense);
+            if (auto Value = SetSubLicenseDur(atoi(argv[++i])))
+                return Value;
+        }
         else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0))
         {
             if (i + 1 == argc)
@@ -693,9 +735,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
     // License
     if (License.LoadLicense(LicenseKey, StoreLicenseKey))
         return true;
-    License.ShowLicense(ShowLicenseKey);
-    if (ShowLicenseKey)
-        return 1;
     if (!License.IsSupported())
     {
         cerr << "\nOne or more requested features are not supported with the current license key.\n";
@@ -704,6 +743,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
             return 1;
         cerr << "       Ignoring the license for the moment.\n" << endl;
     }
+    if (License.ShowLicense(ShowLicenseKey, SubLicenseId, SubLicenseDur))
+        return 1;
+    if (Inputs.empty() && (ShowLicenseKey || SubLicenseId))
+        return 0;
 
     return 0;
 }

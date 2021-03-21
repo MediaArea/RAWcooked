@@ -35,6 +35,8 @@ public:
     string                      FrameMd5FileName;
     string                      BinName;
     string                      LicenseKey;
+    uint64_t                    SubLicenseId;
+    uint64_t                    SubLicenseDur;
     bool                        IgnoreLicenseKey;
     bool                        ShowLicenseKey;
     bool                        StoreLicenseKey;
@@ -78,6 +80,8 @@ private:
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
     int SetLicenseKey(const char* Key, bool Add);
+    int SetSubLicenseId(uint64_t Id);
+    int SetSubLicenseDur(uint64_t Dur);
     int SetDisplayCommand();
     int SetAcceptFiles();
     int SetCheck(bool Value);
