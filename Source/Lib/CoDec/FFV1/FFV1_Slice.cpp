@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/CoDec/FFV1/FFV1_Slice.h"
-#include "Lib/CoDec/FFV1/Transform/FFV1_Transform_JPEG2000RCT.h"
+#include "Lib/Transform/Transform.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/CRC32/ZenCRC32.h"
 #include <algorithm>
@@ -343,8 +343,9 @@ void slice::SliceContent_PlaneThenLine()
 {
     pixel_t* SamplesBuffer = new pixel_t[2 * (w + 3)];
     memset(SamplesBuffer, 0, 2 * (w + 3) * sizeof(pixel_t));
+    auto Transform = Transform_Init(RawFrame, pix_style::YUVA, P->bits_per_raw_sample, x, y, w, h);
 
-    SliceContent_PlaneThenLine(SamplesBuffer, 0);
+    SliceContent_PlaneThenLine(Transform, SamplesBuffer, 0);
     if (P->chroma_planes)
     {
         uint32_t w_Save = w;
@@ -356,18 +357,19 @@ void slice::SliceContent_PlaneThenLine()
         h = h_Save >> P->log2_v_chroma_subsample;
         if (h_Save & ((1 << P->log2_v_chroma_subsample) - 1))
             h++; //Is ceil
-        SliceContent_PlaneThenLine(SamplesBuffer, 1);
-        SliceContent_PlaneThenLine(SamplesBuffer, 1);
+        SliceContent_PlaneThenLine(Transform, SamplesBuffer, 1);
+        SliceContent_PlaneThenLine(Transform, SamplesBuffer, 1);
         }
 
     if (P->alpha_plane)
-        SliceContent_PlaneThenLine(SamplesBuffer, 2);
+        SliceContent_PlaneThenLine(Transform, SamplesBuffer, 2);
 
+    delete Transform;
     delete[] SamplesBuffer;
 }
 
 //---------------------------------------------------------------------------
-void slice::SliceContent_PlaneThenLine(pixel_t* SamplesBuffer, uint32_t pos)
+void slice::SliceContent_PlaneThenLine(transform_base* Transform, pixel_t* SamplesBuffer, uint32_t pos)
 {
     pixel_t* sample[2];
     sample[0] = SamplesBuffer + 2;
@@ -384,6 +386,8 @@ void slice::SliceContent_PlaneThenLine(pixel_t* SamplesBuffer, uint32_t pos)
 
         Line(pos, sample);
 
+        //Copy the line to the frame buffer
+        Transform->From(sample[1]);
     }
 }
 
@@ -392,6 +396,7 @@ void slice::SliceContent_LineThenPlane()
 {
     pixel_t* SamplesBuffer = new pixel_t[2 * P->plane_count * (w + 3)];
     memset(SamplesBuffer, 0, 2 * P->plane_count * (w + 3) * sizeof(pixel_t));
+    auto Transform = Transform_Init(RawFrame, pix_style::RGBA, P->bits_per_raw_sample, x, y, w, h);
 
     Coder->Plane_Init();
 
@@ -407,8 +412,6 @@ void slice::SliceContent_LineThenPlane()
         sample[x][1] = NULL;
     }
 
-    transform_jpeg2000rct Transform(RawFrame, P->bits_per_raw_sample, y, x, w, h);
-
     for (size_t y = 0; y < h; y++)
     {
         for (size_t c = 0; c < P->plane_count; c++)
@@ -422,9 +425,10 @@ void slice::SliceContent_LineThenPlane()
         }
 
         //Copy the line to the frame buffer
-        Transform.From(w, sample[0][1], sample[1][1], sample[2][1], sample[3][1]);
+        Transform->From(sample[0][1], sample[1][1], sample[2][1], sample[3][1]);
     }
 
+    delete Transform;
     delete[] SamplesBuffer;
 }
 

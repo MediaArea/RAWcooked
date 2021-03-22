@@ -607,8 +607,8 @@ static const char* ColorSpace_String(dpx::flavor Flavor)
     {
     case colorspace::RGB : return "RGB";
     case colorspace::RGBA: return "RGBA";
+    default: return nullptr;
     }
-    return "";
 }
 
 //---------------------------------------------------------------------------
@@ -624,8 +624,8 @@ static const char* BitDepth_String(dpx::flavor Flavor)
     case 10: return "10";
     case 12: return "12";
     case 16: return "16";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -636,8 +636,8 @@ static const char* Packing_String(dpx::flavor Flavor)
     case packing::Packed : return "Packed";
     case packing::MethodA: return "FilledA";
     case packing::MethodB: return "FilledB";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -647,8 +647,8 @@ static const char* Endianess_String(dpx::flavor Flavor)
     {
     case endianness::LE: return BitDepth(Flavor) == 8 ? "" : "LE";
     case endianness::BE: return "BE";
+    default: return nullptr;
     }
-    return "";
 }
 
 //---------------------------------------------------------------------------

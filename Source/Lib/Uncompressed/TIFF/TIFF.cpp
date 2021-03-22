@@ -158,7 +158,7 @@ struct tiff_tested TIFF_Tested[] =
     { colorspace::RGBA    ,  8, endianness::LE},
     { colorspace::RGBA    , 16, endianness::LE},
 };
-const size_t TIFF_Tested_Size = sizeof(TIFF_Tested) / sizeof(tiff_tested);
+static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), IncoherencyMessage);
 
 //---------------------------------------------------------------------------
 // Info
@@ -169,10 +169,10 @@ struct tiff_info
 
 struct tiff_info TIFF_Info[] =
 {
-    { 3 }, // 1x3x 8-bit in 1x24-bit
+    { 3 }, // 1x3x 8-bit in 3x 8-bit
     { 6 }, // 1x3x16-bit in 3x16-bit
     { 6 }, // 1x3x16-bit in 3x16-bit
-    { 4 }, // 1x4x 8-bit in 1x32-bit
+    { 4 }, // 1x4x 8-bit in 4x 8-bit
     { 8 }, // 1x4x16-bit in 4x16-bit
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Info) / sizeof(tiff_info), IncoherencyMessage);
@@ -730,8 +730,8 @@ static const char* ColorSpace_String(tiff::flavor Flavor)
     {
     case colorspace::RGB : return "RGB";
     case colorspace::RGBA: return "RGBA";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -756,8 +756,8 @@ static const char* Endianess_String(tiff::flavor Flavor)
     {
     case endianness::LE: return BitsPerSample(Flavor) == 8 ? nullptr : "LE";
     case endianness::BE: return "BE";
+    default: return nullptr;
     }
-    return nullptr;
 }
 //---------------------------------------------------------------------------
 string TIFF_Flavor_String(uint8_t Flavor)

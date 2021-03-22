@@ -13,6 +13,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Parameters.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder_GolombRice.h"
+class transform_base;
 //---------------------------------------------------------------------------
 
 //***************************************************************************
@@ -62,7 +63,7 @@ private:
     bool                        SliceHeader();
     size_t                      SliceContent();
     void                        SliceContent_PlaneThenLine();
-    void                        SliceContent_PlaneThenLine(pixel_t* SamplesBuffer, uint32_t pos);
+    void                        SliceContent_PlaneThenLine(transform_base* Transform, pixel_t* SamplesBuffer, uint32_t pos);
     void                        SliceContent_LineThenPlane();
     void                        Line(size_t quant_table_set_index, pixel_t *sample[2]);
 

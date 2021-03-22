@@ -13,7 +13,6 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Parameters.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Slice.cpp \
-    ../../../Source/Lib/CoDec/FFV1/Transform/FFV1_Transform_JPEG2000RCT.cpp \
     ../../../Source/Lib/CoDec/Wrapper.cpp \
     ../../../Source/Lib/Compressed/Matroska/Matroska.cpp \
     ../../../Source/Lib/Compressed/RAWcooked/IntermediateWrite.cpp \
@@ -47,6 +46,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/zlib/trees.c \
     ../../../Source/Lib/ThirdParty/zlib/uncompr.c \
     ../../../Source/Lib/ThirdParty/zlib/zutil.c \
+    ../../../Source/Lib/Transform/Transform.cpp \
     ../../../Source/Lib/Uncompressed/AIFF/AIFF.cpp \
     ../../../Source/Lib/Uncompressed/DPX/DPX.cpp \
     ../../../Source/Lib/Uncompressed/EXR/EXR.cpp \

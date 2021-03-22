@@ -661,8 +661,8 @@ static const char* ColorSpace_String(exr::flavor Flavor)
     switch (ColorSpace(Flavor))
     {
     case colorspace::RGB : return "RGB";
+    default: return nullptr;
     }
-    return "";
 }
 
 //---------------------------------------------------------------------------
@@ -681,8 +681,8 @@ static const char* PixelType_String(exr::flavor Flavor)
     switch (EXR_Tested[(size_t)Flavor].pixelType)
     {
     case pixeltype::Float : return "Float";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------

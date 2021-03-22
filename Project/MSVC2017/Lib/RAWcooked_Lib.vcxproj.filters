@@ -37,9 +37,6 @@
     <Filter Include="Source Files\CoDec\FFV1\Coder">
       <UniqueIdentifier>{71d1e08b-131b-4959-b2fb-a30fa1aaae07}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\CoDec\FFV1\Transform">
-      <UniqueIdentifier>{480db659-e3a9-4e5a-bb1c-1240ebb4cc80}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Utils">
       <UniqueIdentifier>{82dbca5c-f362-4212-94c0-56c9829d3d95}</UniqueIdentifier>
     </Filter>
@@ -153,6 +150,12 @@
     </Filter>
     <Filter Include="Header Files\Uncompressed\EXR">
       <UniqueIdentifier>{a2799b00-8701-4fd0-9657-36a4e798c82c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Transform">
+      <UniqueIdentifier>{f94bf2c8-35ad-4788-a3a1-55cf48741230}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Transform">
+      <UniqueIdentifier>{4d9df808-fb06-4aea-b0cd-3f01c462a047}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -378,6 +381,12 @@
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h">
       <Filter>Header Files\Uncompressed\EXR</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Transform\Transform.h">
+      <Filter>Header Files\Transform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h">
+      <Filter>ThirdParty</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp">
@@ -409,9 +418,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_RangeCoder.cpp">
       <Filter>Source Files\CoDec\FFV1\Coder</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp">
-      <Filter>Source Files\CoDec\FFV1\Transform</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.cpp">
       <Filter>Source Files\Uncompressed\DPX</Filter>
@@ -535,6 +541,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.cpp">
       <Filter>Source Files\Uncompressed\EXR</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp">
+      <Filter>Source Files\Transform</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

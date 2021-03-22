@@ -22,6 +22,8 @@
     <ClInclude Include="..\..\..\Source\Lib\CoDec\Wrapper.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h" />
+    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Transform\Transform.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h" />
@@ -98,6 +100,7 @@
     <ClCompile Include="..\..\..\Source\Lib\CoDec\Wrapper.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp" />
@@ -109,7 +112,6 @@
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_RangeCoder.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Slice.cpp" />
-    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Transform\FFV1_Transform_JPEG2000RCT.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\FileChecker.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\FileIO\FileIO.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\HashSum\HashSum.cpp" />

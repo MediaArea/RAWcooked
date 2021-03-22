@@ -491,8 +491,8 @@ static const char* SamplesPerSec_String(wav::flavor Flavor)
     case sample_per_sec_code::_44100: return "44";
     case sample_per_sec_code::_48000: return "48";
     case sample_per_sec_code::_96000: return "96";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
