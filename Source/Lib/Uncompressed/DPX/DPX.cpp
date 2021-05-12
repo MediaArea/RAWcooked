@@ -128,6 +128,7 @@ enum class colorspace : uint8_t
 {
     RGB,
     RGBA,
+    Y,
 };
 
 enum class packing : uint8_t
@@ -178,6 +179,9 @@ struct dpx_tested DPX_Tested[] =
     { colorspace::RGBA     , 12, packing::MethodA, endianness::BE },
     { colorspace::RGBA     , 16, packing::Packed , endianness::LE },
     { colorspace::RGBA     , 16, packing::Packed , endianness::BE },
+    { colorspace::Y        ,  8, packing::Packed , endianness::LE },
+    { colorspace::Y        , 16, packing::Packed , endianness::LE },
+    { colorspace::Y        , 16, packing::Packed , endianness::BE },
 };
 static_assert(dpx::flavor_Max == sizeof(DPX_Tested) / sizeof(dpx_tested), IncoherencyMessage);
 
@@ -193,6 +197,12 @@ struct dpx_also DPX_Also[] =
     { { colorspace::RGBA     ,  8, packing::MethodA, endianness::BE}, dpx::flavor::Raw_RGBA_8                },
     { { colorspace::RGBA     , 16, packing::MethodA, endianness::LE}, dpx::flavor::Raw_RGBA_16_LE            },
     { { colorspace::RGBA     , 16, packing::MethodA, endianness::BE}, dpx::flavor::Raw_RGBA_16_BE            },
+    { { colorspace::Y        ,  8, packing::Packed , endianness::LE}, dpx::flavor::Raw_Y_8                   },
+    { { colorspace::Y        ,  8, packing::MethodA, endianness::LE}, dpx::flavor::Raw_Y_8                   },
+    { { colorspace::Y        ,  8, packing::Packed , endianness::BE}, dpx::flavor::Raw_Y_8                   },
+    { { colorspace::Y        ,  8, packing::MethodA, endianness::BE}, dpx::flavor::Raw_Y_8                   },
+    { { colorspace::Y        , 16, packing::MethodA, endianness::LE}, dpx::flavor::Raw_Y_16_LE               },
+    { { colorspace::Y        , 16, packing::MethodA, endianness::BE}, dpx::flavor::Raw_Y_16_BE               },
 };
 
 //---------------------------------------------------------------------------
@@ -221,6 +231,9 @@ struct dpx_info DPX_Info[] =
     { 1,  8 }, // 1x4x12-bit in 4x16-bit including 4x4-bit padding
     { 1,  8 }, // 1x4x16-bit in 4x16-bit
     { 1,  8 }, // 1x4x16-bit in 4x16-bit
+    { 1,  1 }, // 1x1x 8-bit in 1x 8-bit
+    { 1,  2 }, // 1x1x16-bit in 1x16-bit
+    { 1,  2 }, // 1x1x16-bit in 1x16-bit
 };
 static_assert(dpx::flavor_Max == sizeof(DPX_Info) / sizeof(dpx_info), IncoherencyMessage);
 
@@ -324,6 +337,7 @@ void dpx::ParseBuffer()
     uint8_t Descriptor = Get_X1();
     switch (Descriptor)
     {
+    case  6: Info.ColorSpace = colorspace::Y; break;
     case 50: Info.ColorSpace = colorspace::RGB; break;
     case 51: Info.ColorSpace = colorspace::RGBA; break;
     default: Info.ColorSpace = (decltype(Info.ColorSpace))-1;
@@ -607,6 +621,7 @@ static const char* ColorSpace_String(dpx::flavor Flavor)
     {
     case colorspace::RGB : return "RGB";
     case colorspace::RGBA: return "RGBA";
+    case colorspace::Y: return "Y";
     default: return nullptr;
     }
 }

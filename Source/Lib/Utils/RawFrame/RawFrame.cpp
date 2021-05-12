@@ -65,6 +65,7 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height)
 {
     switch (colorspace_type)
     {
+        case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
                 Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private), dpx::PixelsPerBlock((dpx::flavor)Flavor_Private)));
         default: ;
@@ -76,6 +77,7 @@ void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height)
 {
     switch (colorspace_type)
     {
+        case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
                 Planes_.push_back(new plane(width, height, tiff::BytesPerBlock((tiff::flavor)Flavor_Private), tiff::PixelsPerBlock((tiff::flavor)Flavor_Private)));
         default: ;
@@ -87,6 +89,7 @@ void raw_frame::EXR_Create(size_t colorspace_type, size_t width, size_t height)
 {
     switch (colorspace_type)
     {
+        case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
                 Planes_.push_back(new plane(width, height, exr::BytesPerBlock((exr::flavor)Flavor_Private), exr::PixelsPerBlock((exr::flavor)Flavor_Private), 8));
         default: ;

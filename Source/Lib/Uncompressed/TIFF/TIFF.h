@@ -41,6 +41,9 @@ public:
         Raw_RGB_16_U_BE,
         Raw_RGBA_8_U,
         Raw_RGBA_16_U_LE,
+        Raw_Y_8_U,
+        Raw_Y_16_U_LE,
+        Raw_Y_16_U_BE,
     ENUM_END(flavor)
 
     // Info about flavors

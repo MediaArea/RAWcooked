@@ -132,6 +132,7 @@ enum class colorspace : uint8_t
 {
     RGB,
     RGBA,
+    Y,
 };
 
 //---------------------------------------------------------------------------
@@ -157,6 +158,9 @@ struct tiff_tested TIFF_Tested[] =
     { colorspace::RGB     , 16, endianness::BE},
     { colorspace::RGBA    ,  8, endianness::LE},
     { colorspace::RGBA    , 16, endianness::LE},
+    { colorspace::Y       ,  8, endianness::BE},
+    { colorspace::Y       , 16, endianness::LE},
+    { colorspace::Y       , 16, endianness::BE},
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), IncoherencyMessage);
 
@@ -174,6 +178,9 @@ struct tiff_info TIFF_Info[] =
     { 6 }, // 1x3x16-bit in 3x16-bit
     { 4 }, // 1x4x 8-bit in 4x 8-bit
     { 8 }, // 1x4x16-bit in 4x16-bit
+    { 1 }, // 1x4x 8-bit in 1x 8-bit
+    { 2 }, // 1x1x16-bit in 1x16-bit
+    { 2 }, // 1x1x16-bit in 1x16-bit
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Info) / sizeof(tiff_info), IncoherencyMessage);
 
@@ -577,6 +584,13 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::IfdUnknownTag);
     switch (PhotometricInterpretation)
     {
+    case  1: // Y
+        switch (SamplesPerPixel)
+        {
+        case  1: Info.ColorSpace = colorspace::Y; break;
+        default: Info.ColorSpace = (decltype(Info.ColorSpace))-1;
+        }
+        break;
     case  2 : // RGB / RGBA
         switch (SamplesPerPixel)
         {
@@ -730,6 +744,7 @@ static const char* ColorSpace_String(tiff::flavor Flavor)
     {
     case colorspace::RGB : return "RGB";
     case colorspace::RGBA: return "RGBA";
+    case colorspace::Y: return "Y";
     default: return nullptr;
     }
 }

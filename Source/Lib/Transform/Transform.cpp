@@ -534,6 +534,66 @@ public:
     }
 };
 
+//---------------------------------------------------------------------------
+class transform_passthrough_dpx_Raw_Y_8 : public transform_dpx
+{
+public:
+    transform_passthrough_dpx_Raw_Y_8(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        for (size_t x = 0; x < w; x++)
+        {
+            *(FrameBuffer++) = (int8_t)y[x];
+        }
+
+        Next();
+    }
+};
+
+//---------------------------------------------------------------------------
+class transform_passthrough_dpx_Raw_Y_16_LE : public transform_dpx
+{
+public:
+    transform_passthrough_dpx_Raw_Y_16_LE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        auto FrameBuffer_Temp_16 = (uint16_t*)FrameBuffer;
+
+        for (size_t x = 0; x < w; x++)
+        {
+            *(FrameBuffer_Temp_16++) = htol((uint16_t)y[x]);
+        }
+
+        FrameBuffer = (uint8_t*)FrameBuffer_Temp_16;
+        Next();
+    }
+};
+
+//---------------------------------------------------------------------------
+class transform_passthrough_dpx_Raw_Y_16_BE : public transform_dpx
+{
+public:
+    transform_passthrough_dpx_Raw_Y_16_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        auto FrameBuffer_Temp_16 = (uint16_t*)FrameBuffer;
+
+        for (size_t x = 0; x < w; x++)
+        {
+            *(FrameBuffer_Temp_16++) = htob((uint16_t)y[x]);
+        }
+
+        FrameBuffer = (uint8_t*)FrameBuffer_Temp_16;
+        Next();
+    }
+};
+
 //***************************************************************************
 // TIFF
 //***************************************************************************
@@ -553,6 +613,9 @@ SAMEAS(jpeg2000rct, tiff_Raw_RGB_16_U_LE   , dpx_Raw_RGB_16_LE)
 SAMEAS(jpeg2000rct, tiff_Raw_RGB_16_U_BE   , dpx_Raw_RGB_16_BE)
 SAMEAS(jpeg2000rct, tiff_Raw_RGBA_8_U      , dpx_Raw_RGBA_8)
 SAMEAS(jpeg2000rct, tiff_Raw_RGBA_16_U_LE  , dpx_Raw_RGBA_16_LE)
+SAMEAS(passthrough, tiff_Raw_Y_8_U         , dpx_Raw_Y_8)
+SAMEAS(passthrough, tiff_Raw_Y_16_U_LE     , dpx_Raw_Y_16_LE)
+SAMEAS(passthrough, tiff_Raw_Y_16_U_BE     , dpx_Raw_Y_16_BE)
 
 //***************************************************************************
 // EXR
@@ -690,6 +753,18 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t B
         TRANSFORM_FLAVOR_END()
         TRANSFORM_FLAVOR_BEGIN(exr, EXR)
             TRANSFORM_CASE(jpeg2000rct, exr, Raw_RGB_16)
+        TRANSFORM_FLAVOR_END()
+    TRANSFORM_PIX_END()
+    TRANSFORM_PIX_BEGIN(YUVA)
+        TRANSFORM_FLAVOR_BEGIN(dpx, DPX)
+            TRANSFORM_CASE(passthrough, dpx, Raw_Y_8)
+            TRANSFORM_CASE(passthrough, dpx, Raw_Y_16_LE)
+            TRANSFORM_CASE(passthrough, dpx, Raw_Y_16_BE)
+        TRANSFORM_FLAVOR_END()
+        TRANSFORM_FLAVOR_BEGIN(tiff, TIFF)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_8_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_LE)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_BE)
         TRANSFORM_FLAVOR_END()
     TRANSFORM_PIX_END()
     default:
