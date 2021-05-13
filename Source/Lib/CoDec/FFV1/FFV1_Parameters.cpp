@@ -166,16 +166,9 @@ bool parameters::Parse(rangecoder& E, bool ConfigurationRecord_IsPresent)
     switch (colorspace_type)
     {
         case 0 : 
-                plane_count = quant_table_set_index_count = 1 + (alpha_plane ? 1 : 0);
-                if (chroma_planes)
-                {
-                    quant_table_set_index_count++;
-                    plane_count += 2;
-                }
-                if (bits_per_raw_sample <= 8)
-                    bits_max = 8;
-                else
-                    bits_max = bits_per_raw_sample;
+                plane_count = 1 + (chroma_planes ? 2 : 0) + (alpha_plane ? 1 : 0);
+                quant_table_set_index_count = 1 + ((version < 4 || chroma_planes) ? 1 : 0) + (alpha_plane ? 1 : 0);
+                bits_max = (bits_per_raw_sample <= 8) ? 8 : bits_per_raw_sample;
                 break;
         case 1 : 
                 plane_count = alpha_plane ? 4 : 3;

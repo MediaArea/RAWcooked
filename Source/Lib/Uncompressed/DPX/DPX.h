@@ -52,6 +52,9 @@ public:
         Raw_RGBA_12_FilledA_BE,
         Raw_RGBA_16_LE,
         Raw_RGBA_16_BE,
+        Raw_Y_8,
+        Raw_Y_16_LE,
+        Raw_Y_16_BE,
     ENUM_END(flavor)
 
     // Features

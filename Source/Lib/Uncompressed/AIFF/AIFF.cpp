@@ -450,8 +450,8 @@ static const char* sampleRate_String(aiff::flavor Flavor)
     case sample_rate_code::_44100: return "44";
     case sample_rate_code::_48000: return "48";
     case sample_rate_code::_96000: return "96";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -481,8 +481,8 @@ static const char* Endianess_String(aiff::flavor Flavor)
     {
     case endianness::LE: return sampleSize(Flavor) == 8 ? "U" : "LE";
     case endianness::BE: return sampleSize(Flavor) == 8 ? "S" : "BE";
+    default: return nullptr;
     }
-    return nullptr;
 }
 
 //---------------------------------------------------------------------------
