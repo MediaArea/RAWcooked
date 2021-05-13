@@ -134,6 +134,12 @@ Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_LE/Dufay_000001.dpx pass
 Formats/DPX/Conformance/0004_OffsetToImageData/0004_OffsetToImageData_000000.dpx fail
 Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_v.dpx pass
+Formats/EXR/Features/Compressed/PXR24/AllHalfValues.exr fail
+Formats/EXR/Flavors/RGB_16F/Color_Test_Chart_LogC_400ASA_3200k.cpu.00.exr pass
+Formats/EXR/Flavors/RGB_32F/FFmpeg_gbrp32_gamma_removed.exr fail
+Formats/EXR/Flavors/RGBA_32F/FFmpeg_gbrap32_gamma_removed.exr fail
+Formats/EXR/Flavors/YUV_16F/FFmpeg_gbrp32_gamma_removed_hacked_yuv16.exr fail
+Formats/EXR/Flavors/YUVA_16F/FFmpeg_gbrap32_gamma_removed_hacked_yuv16.exr fail
 Formats/TIFF/Features/MultipleContinuousStripOffsets/Lavc.tiff pass
 Formats/TIFF/Flavors/Raw_CMYK_8_U/flower-separated-contig-08.tif fail
 Formats/TIFF/Flavors/Raw_CMYK_8_U/flower-separated-planar-08.tif fail

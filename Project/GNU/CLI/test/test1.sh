@@ -16,7 +16,10 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        run_rawcooked -y --conch --encode --file -d "${file}"
+        if [[ ${file} == *".exr" ]]; then
+            encode_extra="--check"
+        fi
+        run_rawcooked -y --conch --encode --file ${encode_extra} -d "${file}"
 
         # check expected result
         if [ "${want}" == "fail" ] ; then
