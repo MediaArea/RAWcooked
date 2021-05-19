@@ -361,14 +361,15 @@ void reversibility::filesize::SetData(size_t Pos, uint64_t Value)
         }
         else
         {
+            auto OldMaxCount = MaxCount_;
             if (!MaxCount_)
                 MaxCount_ = 1;
             while (Pos >= MaxCount_)
                 MaxCount_ *= 4;
             auto NewContent = new std::remove_pointer<decltype(Content_)>::type[MaxCount_];
-            if (Content_)
+            if (OldMaxCount)
             {
-                memcpy(NewContent, Content_, MaxCount_ * sizeof(std::remove_pointer<decltype(Content_)>::type));
+                memcpy(NewContent, Content_, OldMaxCount * sizeof(std::remove_pointer<decltype(Content_)>::type));
                 delete[] Content_;
             }
             Content_ = NewContent;
