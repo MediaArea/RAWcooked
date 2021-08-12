@@ -19,10 +19,10 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-int output::Process(global& Global)
+int output::Process(global& Global, bool IgnoreReversibilityFile)
 {
     if (!Streams.empty())
-        return FFmpeg_Command(Global.Inputs[0].c_str(), Global);
+        return FFmpeg_Command(Global.Inputs[0].c_str(), Global, IgnoreReversibilityFile);
     else if (!Attachments.empty())
     {
         cerr << "Error: no A/V content detected.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
@@ -33,7 +33,7 @@ int output::Process(global& Global)
 }
 
 //---------------------------------------------------------------------------
-int output::FFmpeg_Command(const char* FileName, global& Global)
+int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReversibilityFile)
 {
     // Defaults
     if (int Value = Global.SetDefaults())
@@ -288,13 +288,17 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
             cerr << "  " << Attachments[i].FileName_Out.substr(Attachments[i].FileName_Out.find_first_of("/\\")+1) << endl;
         }
 
-        stringstream t;
-        t << MapPos++;
-        Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
+        if (!Global.Actions[Action_Version2])
+        {
+            stringstream t;
+            t << MapPos++;
+            Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
+        }
     }
     stringstream t;
     t << MapPos++;
-    Command += " -attach \"" + Global.rawcooked_reversibility_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
+    if (!IgnoreReversibilityFile)
+        Command += " -attach \"" + Global.rawcooked_reversibility_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
         Global.OutputFileName = FileName;
@@ -343,7 +347,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
 
     if (Global.DisplayCommand)
+    {
         cout << Command;
+        if (Global.Actions[Action_Version2])
+            cout << " && cat " << Global.rawcooked_reversibility_FileName << " >> " << Global.OutputFileName << " && rm " << Global.rawcooked_reversibility_FileName;
+    }
     else
     {
         int Value = system(Command.c_str());

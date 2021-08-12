@@ -91,6 +91,7 @@ matroska::call matroska::SubElements_##_VALUE(uint64_t Name) \
 
 ELEMENT_BEGIN(_)
 ELEMENT_CASE( 8538067, Segment)
+ELEMENT_CASE(    7263, Segment_Attachments_AttachedFile_FileData)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment)
@@ -118,6 +119,7 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment)
 ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash)
 ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName)
+ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_InData)
 ELEMENT_VOID(      30, Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileSize)
 ELEMENT_END()
 
@@ -322,6 +324,7 @@ void matroska::ParseBuffer()
 
     while (Buffer_Offset < Buffer.Size())
     {
+        Element_Begin_Offset = Buffer_Offset;
         uint64_t Name = Get_EB();
         uint64_t Size = Get_EB();
         if (Size <= Levels[Level - 1].Offset_End - Buffer_Offset)
@@ -353,6 +356,36 @@ void matroska::ParseBuffer()
                 if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                     TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
             Buffer_Offset_LowerLimit = Buffer_Offset;
+        }
+
+        if (Cluster_Level != -1 && Buffer_Offset >= Buffer.Size() && Cluster_Offset != (size_t)-1 && !RAWcooked_LibraryName.empty())
+        {
+            memcpy(Levels, Cluster_Levels, sizeof(Levels));
+            Level = Cluster_Level;
+            Buffer_Offset = Cluster_Offset;
+            Cluster_Level = (size_t)-1;
+
+            FileMap->Remap();
+            Buffer = *FileMap;
+            for (const auto& TrackInfo_Current : TrackInfo)
+                if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
+                    TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
+            Buffer_Offset_LowerLimit = Buffer_Offset;
+        }
+    }
+
+    // Clean up
+    if (RAWcooked_LibraryName.empty())
+    {
+        if (Hashes_FromRAWcooked)
+        {
+            delete Hashes_FromRAWcooked;
+            Hashes_FromRAWcooked = nullptr;
+        }
+        if (Hashes_FromAttachments)
+        {
+            delete Hashes_FromAttachments;
+            Hashes_FromAttachments = nullptr;
         }
     }
 
@@ -415,6 +448,21 @@ void matroska::Segment_Attachments_AttachedFile_FileName()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData()
 {
+    if (Cluster_Offset != (size_t)-1)
+    {
+        if (Cluster_Level == (size_t)-1)
+            return;
+
+        // This is a RAWcooked file, not intended to be demuxed
+        IsList = true;
+        TrackInfo_Pos = (size_t)-1;
+        for (const auto& TrackInfo_Current : TrackInfo)
+            if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
+                TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
+
+        return;
+    }
+
     bool IsAlpha2, IsEBML;
     if (Levels[Level].Offset_End - Buffer_Offset < 3 || Buffer[Buffer_Offset + 0] != 0x20 || Buffer[Buffer_Offset + 1] != 0x72 || (Buffer[Buffer_Offset + 2] != 0x62 && Buffer[Buffer_Offset + 2] != 0x74))
         IsAlpha2 = false;
@@ -536,6 +584,44 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_InData()
+{
+    buffer Output;
+    Uncompress(Output); // TODO: avoid new/delete
+
+    // Test if it is hash file
+    //if (!Hashes) // If hashes are provided from elsewhere, they were already tests, not doing the test twice. TODO: test is removed because we need to know if hte file is an hash for older versions, in the future it should be set back for performance
+    {
+        hashsum HashSum;
+        HashSum.HomePath = AttachedFile_FileName;
+        HashSum.List = Hashes_FromAttachments;
+        HashSum.Parse(buffer_view(Output.Data(), Output.Size()));
+        if (HashSum.IsDetected())
+        {
+            if (Hashes_FromAttachments)
+                Hashes_FromAttachments->Ignore(AttachedFile_FileName);
+            AttachedFile_FileNames_IsHash.insert(AttachedFile_FileName);
+        }
+    }
+
+    // Output file
+    if (Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch])
+    {
+        raw_frame RawFrame;
+        RawFrame.SetPre(buffer_view(Output.Data(), Output.Size()));
+
+        frame_writer FrameWriter(FrameWriter_Template);
+        FrameWriter.OutputFileName = AttachedFile_FileName;
+        RawFrame.FrameProcess = &FrameWriter;
+        RawFrame.Process();
+    }
+
+    auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
+    AttachedFile.FileSizeFromAttachments = Output.Size();
+    AttachedFile.Flags.set(IsInFromAttachments);
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedBlock()
 {
     IsList = true;
@@ -654,6 +740,15 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryV
 //---------------------------------------------------------------------------
 void matroska::Segment_Cluster()
 {
+    if (RAWcooked_LibraryName.empty())
+    {
+        memcpy(Cluster_Levels, Levels, sizeof(Levels));
+        Cluster_Offset = Element_Begin_Offset;
+        Cluster_Level = Level;
+        Level--;
+        return;
+    }
+
     IsList = true;
 
     // Check if Hashes check is useful

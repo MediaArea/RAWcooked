@@ -10,6 +10,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+#include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/Utils/Errors/Errors.h"
 #include "Lib/Utils/FileIO/FileIO.h"
 #include <bitset>
@@ -31,6 +32,8 @@ enum action : uint8_t
     Action_CheckPadding,
     Action_CheckPaddingOptionIsSet,
     Action_AcceptGaps,
+    Action_VersionValueIsAuto,
+    Action_Version2,
     Action_AcceptTruncated,
     Action_Check,
     Action_CheckOptionIsSet,
@@ -154,6 +157,7 @@ public:
     rawcooked*                  RAWcooked = nullptr;
 
     // Features
+    rawcooked::version          Version() { return RAWcooked ? RAWcooked->Version : rawcooked::version::v1; }
     virtual bool                MayHavePaddingBits() { return false; }
 };
 

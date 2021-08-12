@@ -48,10 +48,10 @@ public:
     vector<attachment>          Attachments;
 
     // Commands
-    int Process(global& Global);
+    int Process(global& Global, bool IgnoreReversibilityFile = false);
 
 private:
-    int FFmpeg_Command(const char* FileName, global& Global);
+    int FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReversibilityFile = false);
 };
 
 #endif

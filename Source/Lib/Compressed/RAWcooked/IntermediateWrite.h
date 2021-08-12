@@ -27,6 +27,7 @@ public:
 
     bool                        Close();
     bool                        Delete();
+    bool                        Rename(const string& NewwFileName);
 
     string                      FileName;
 

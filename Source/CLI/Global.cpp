@@ -151,6 +151,25 @@ int global::SetAcceptGaps(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetVersion(const char* Value)
+{
+    if (Value[0] == '1' && !Value[1])
+    {
+        Actions.set(Action_VersionValueIsAuto, false);
+        Actions.set(Action_Version2, false);
+        return 0;
+    }
+    if (Value[0] == '2' && !Value[1])
+    {
+        Actions.set(Action_VersionValueIsAuto, false);
+        Actions.set(Action_Version2);
+        return 0;
+    }
+    cerr << "Error: unknown version value '" << Value << "'." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int global::SetCoherency(bool Value)
 {
     Actions.set(Action_Coherency, Value);
@@ -686,6 +705,13 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Error_Missing(argv[i]);
             int Value = SetOutputFileName(argv[++i]);
             if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--output-version") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            if (int Value = SetVersion(argv[++i]))
                 return Value;
         }
         else if (strcmp(argv[i], "--quiet") == 0)

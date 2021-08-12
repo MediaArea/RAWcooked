@@ -93,6 +93,25 @@ bool intermediate_write::Delete()
 }
 
 //---------------------------------------------------------------------------
+bool intermediate_write::Rename(const string& NewFileName)
+{
+    if (!File_WasCreated)
+        return true;
+
+    // Delete the temporary file
+    int Result = rename(FileName.c_str(), NewFileName.c_str());
+    if (Result)
+    {
+        if (Errors)
+            Errors->Error(IO_IntermediateWriter, error::type::Undecodable, (error::generic::code)intermediatewrite_issue::undecodable::FileRemove, FileName);
+        return true;
+    }
+
+    FileName = NewFileName;
+    return false;
+}
+
+//---------------------------------------------------------------------------
 void intermediate_write::SetErrorFileBecomingTooBig()
 {
     if (Errors)
@@ -129,6 +148,7 @@ void intermediate_write::WriteToDisk(const uint8_t* Buffer, size_t Buffer_Size)
                 return;
             }
         }
+
         File_WasCreated = true;
     }
 
