@@ -509,7 +509,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
             else
             {
                 int Value = SetCheck(true);
-                License.Feature(feature::GeneralOptions);
                 if (Value)
                     return Value;
             }
