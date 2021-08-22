@@ -602,6 +602,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--no-accept-gaps") == 0)
+        {
+            int Value = SetAcceptGaps(false);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--no-check") == 0)
         {
             int Value = SetCheck(false);
