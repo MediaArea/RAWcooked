@@ -576,7 +576,7 @@ void rawcooked::Parse()
                 WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize());
 
                 size_t CopySize = 1024 * 1024;
-                auto End = Start + ReversibilityFile->Size();
+                auto End = ReversibilityFile->Size();
                 for (size_t Offset = Start; Offset < End; Offset += CopySize)
                 {
                     auto CopySize_Max = End - Offset;
