@@ -296,6 +296,12 @@ void input_base_uncompressed::RegisterAsAttachment()
         RAWcooked->InData = nullptr;
         RAWcooked->InData_Size = 0;
         RAWcooked->FileSize = FileSize;
+        if (RAWcooked->Version == rawcooked::version::v2 && FileSize)
+        {
+            RAWcooked->InData = Buffer.Data();
+            RAWcooked->InData_Size = FileSize;
+            RAWcooked->FileSize = (size_t)-1;
+        }
         if (Actions[Action_Hash])
         {
             Hash();

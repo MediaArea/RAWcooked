@@ -87,6 +87,11 @@ private:
     size_t Level;
     bool IsList;
 
+    levels_struct Cluster_Levels[Levels_Max];
+    size_t Cluster_Level = (size_t)-1;
+    size_t Cluster_Offset = (size_t)-1;
+    size_t Element_Begin_Offset;
+
     #define MATROSKA_ELEMENT(_NAME) \
         void _NAME(); \
         call SubElements_##_NAME(uint64_t Name);
@@ -105,6 +110,7 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileHash);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_FileSize);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_InData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedBlock);
     MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Block_, FileName);
     MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Block_, AfterData);

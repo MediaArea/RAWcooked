@@ -42,7 +42,17 @@ public:
     void                        ResetTrack();
 
     string                      OutputFileName;
+    string                      OutputFileName_Full;
     uint64_t                    FileSize = 0;
+
+    filemap*                    ReversibilityFile = nullptr;
+    enum class version
+    {
+        v1,
+        mini,
+        v2,
+    };
+    version                     Version = version::v1;
 
 private:
     // Private

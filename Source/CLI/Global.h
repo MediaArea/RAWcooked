@@ -75,6 +75,9 @@ public:
     // Theading relating functions
     void                        ProgressIndicator_Show();
 
+    int SetCheck(bool Value);
+    int SetVersion(const char* Value);
+
 private:
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
@@ -84,7 +87,6 @@ private:
     int SetSubLicenseDur(uint64_t Dur);
     int SetDisplayCommand();
     int SetAcceptFiles();
-    int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
     int SetQuickCheck();
     int SetCheckPadding(bool Value);

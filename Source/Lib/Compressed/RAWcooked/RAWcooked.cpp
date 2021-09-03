@@ -24,6 +24,7 @@ static const uint32_t Name_EBML_DoctypeVersion = 0x0287;
 static const uint32_t Name_EBML_DoctypeReadVersion = 0x0285;
 
 // Top level
+static const uint32_t Name_RawCooked = 0x7263; // "rc", RAWcooked root
 static const uint32_t Name_RawCookedSegment = 0x7273;    // "rs", RAWcooked Segment part
 static const uint32_t Name_RawCookedAttachment = 0x7261; // "ra" RAWcooked Attachment part
 static const uint32_t Name_RawCookedTrack = 0x7274;      // "rt", RAWcooked Track part
@@ -188,6 +189,7 @@ public:
     // Types
     void EB(uint64_t Size);
     void Block(uint32_t Name, uint64_t Size, const uint8_t* Data);
+    void BlockHeaderOnly(uint32_t Name, size_t Size);
     void String(uint32_t Name, const char* Data);
     void Number(uint32_t Name, uint64_t Number);
     void DataWithEncodedPrefix(uint32_t Name, uint64_t Prefix, const buffer_base& Data);
@@ -195,8 +197,8 @@ public:
 
     // Blocks
     void Block_Begin(uint32_t Name);
-    void Block_End();
-    
+    void Block_End(size_t Extra = 0);
+
     // Buffer
     void Set1stPass();
     void Set2ndPass();
@@ -204,7 +206,44 @@ public:
     size_t GetBufferSize();
 
 private:
-    std::vector<size_t> BlockSizes;
+    struct block
+    {
+        size_t HeaderNameSize = 0;
+        size_t HeaderSizeSize = 0;
+        size_t ContentSize = 0;
+        std::vector<block> Blocks;
+        size_t GetSize(bool Full = false) const
+        {
+            size_t Temp = +ContentSize;
+            if (Full)
+                Temp += HeaderNameSize + HeaderSizeSize;
+            for (const auto& Block : Blocks)
+                Temp += Block.GetSize(true);
+            return Temp;
+        }
+        void Reverse()
+        {
+            for (auto& Block : Blocks)
+                Block.Reverse();
+            reverse(Blocks.begin(), Blocks.end()); // We'll decrement size for keeping track about where we are
+        }
+    };
+    std::vector<block> Blocks;
+    size_t Blocks_Level = 0;
+    std::vector<block>* Blocks_Current()
+    {
+        std::vector<block>* Current = &Blocks;
+        for (size_t i = 1; i < Blocks_Level; i++)
+        {
+            Current = &(*Current)[Current->size() - 1].Blocks;
+        }
+        return Current;
+    }
+    void Blocks_New()
+    {
+        auto Current = Blocks_Current();
+        Current->resize(Current->size() + 1);
+    }
     uint8_t* Buffer = nullptr;
     size_t Buffer_PreviousOffset = 0;
     size_t Buffer_Offset = 0;
@@ -243,6 +282,13 @@ void ebml_writer::Block(uint32_t Name, uint64_t Size, const uint8_t* Data)
         memcpy(Buffer + Buffer_Offset, Data, Size);
     }
     Buffer_Offset += Size;
+}
+
+//---------------------------------------------------------------------------
+void ebml_writer::BlockHeaderOnly(uint32_t Name, size_t Size)
+{
+    EB(Name);
+    EB(Size);
 }
 
 //---------------------------------------------------------------------------
@@ -296,30 +342,56 @@ void ebml_writer::CompressableData(uint32_t Name, const compressed_buffer& Data)
 //---------------------------------------------------------------------------
 void ebml_writer::Block_Begin(uint32_t Name)
 {
+    size_t Temp = Buffer_Offset;
     EB(Name);
     if (IsSecondPass_)
     {
-        EB(BlockSizes.back());
-        BlockSizes.pop_back();
+        EB(Blocks_Current()->back().GetSize());
+        if (Blocks_Current()->back().Blocks.empty())
+        {
+            Blocks_Current()->pop_back();
+            auto Blocks_Level_Save = Blocks_Level;
+            while (Blocks_Level)
+            {
+                Blocks_Level--;
+                if (!Blocks_Current()->back().Blocks.empty())
+                    break;
+                Blocks_Current()->pop_back();
+            }
+            Blocks_Level = Blocks_Level_Save;
+        }
     }
     else
+    {
         Buffer_PreviousOffset = Buffer_Offset;
+        Blocks_New();
+        Blocks_Current()->back().HeaderNameSize = Buffer_Offset - Temp;
+    }
+    Blocks_Level++;
 }
 
 //---------------------------------------------------------------------------
-void ebml_writer::Block_End()
+void ebml_writer::Block_End(size_t Extra)
 {
-    if (!IsSecondPass_)
+    if (IsSecondPass_)
     {
-        BlockSizes.push_back(Buffer_Offset - Buffer_PreviousOffset);
-        EB(Buffer_Offset - Buffer_PreviousOffset);
     }
+    else
+    {
+        if (Blocks_Current()->back().Blocks.empty())
+            Blocks_Current()->back().ContentSize = Buffer_Offset - Buffer_PreviousOffset + Extra;
+        size_t Temp = Buffer_Offset;
+        EB(Blocks_Current()->back().GetSize(true) + Extra);
+        Blocks_Current()->back().HeaderSizeSize += Buffer_Offset - Temp;
+    }
+    Blocks_Level--;
 }
 
 //---------------------------------------------------------------------------
 void ebml_writer::Set1stPass()
 {
-    BlockSizes.clear();
+    Blocks.clear();
+    Blocks_Level = 0;
     Buffer_PreviousOffset = 0;
     Buffer_Offset = 0;
     IsSecondPass_ = false;
@@ -328,7 +400,9 @@ void ebml_writer::Set1stPass()
 //---------------------------------------------------------------------------
 void ebml_writer::Set2ndPass()
 {
-    reverse(BlockSizes.begin(), BlockSizes.end()); // We'll decrement size for keeping track about where we are
+    for (auto& Block : Blocks)
+        Block.Reverse();
+    reverse(Blocks.begin(), Blocks.end()); // We'll decrement size for keeping track about where we are
     if (Buffer_Offset > Buffer_MaxSize)
     {
         delete[] Buffer;
@@ -381,7 +455,7 @@ public:
 
     // Analysis
     void                        Parse(element Element, const buffer_base& Content, const buffer_base& Mask = buffer());
-    const compressed_buffer&    Compressed(element Element);
+    const compressed_buffer& Compressed(element Element);
     bool                        IsUsingMask(element Element);
     long long                   TotalSize = 0;
 
@@ -468,9 +542,54 @@ void rawcooked::Parse()
         {
             Writer.Block_Begin(Name_EBML);
             Writer.String(Name_EBML_Doctype, DocType);
-            Writer.Number(Name_EBML_DoctypeVersion, 1);
-            Writer.Number(Name_EBML_DoctypeReadVersion, 1);
+            Writer.Number(Name_EBML_DoctypeVersion, ReversibilityFile ? 2 : 1);
+            Writer.Number(Name_EBML_DoctypeReadVersion, ReversibilityFile ? 2 : 1);
             Writer.Block_End();
+        }
+
+        if (ReversibilityFile)
+        {
+            auto Start = Writer.GetBufferSize();
+            Writer.Block_Begin(Name_RawCooked);
+
+            if (!Pass)
+            {
+                Writer.Block_End(ReversibilityFile->Size() - Start);
+
+                // Init 2nd pass
+                Writer.Set2ndPass();
+            }
+            else
+            {
+                // Copy content
+                File_WasCreated = true;
+                if (auto Result = File.Open_WriteMode(string(), FileName))
+                {
+                    SetErrorFileBecomingTooBig(); //TODO: dedicated error
+                    return;
+                }
+                if (auto Result = File.Seek(0, file::End))
+                {
+                    SetErrorFileBecomingTooBig(); //TODO: dedicated error
+                    return;
+                }
+                WriteToDisk(Writer.GetBuffer(), Writer.GetBufferSize());
+
+                size_t CopySize = 1024 * 1024;
+                auto End = Start + ReversibilityFile->Size();
+                for (size_t Offset = Start; Offset < End; Offset += CopySize)
+                {
+                    auto CopySize_Max = End - Offset;
+                    if (CopySize > CopySize_Max)
+                        CopySize = CopySize_Max;
+                    WriteToDisk(ReversibilityFile->Data() + Offset, CopySize);
+                    ReversibilityFile->Remap();
+                }
+
+                return;
+            }
+
+            continue;
         }
 
         // Segment
@@ -524,7 +643,10 @@ void rawcooked::Parse()
     Data_->TotalSize += Writer.GetBufferSize();
     if (Data_->TotalSize > 0x10000000) // TODO: add an option for avoiding this hard coded value; this value is from FFmpeg (prevent read by FFmpeg, with >= 0x40000000 older FFmpeg create invalid files)
     {
-        SetErrorFileBecomingTooBig();
+        if (Version == version::mini)
+            Version = version::v2;
+        if (Version != version::v2)
+            SetErrorFileBecomingTooBig();
     }
 }
 
