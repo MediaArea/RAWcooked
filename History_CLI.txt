@@ -1,3 +1,11 @@
+Version 21.09, 2021-09-03
+-------------
+Y support (DPX and TIFF, 8- and 16-bit)
+Support of big reversibility content (new format of reversibility data)
+Support of DPX with "v1.0" ("v" in lowercase)
+EXR 16-bit float support (warning: custom FFmpeg is needed)
+Fix crash with decoding 100K+ files
+
 Version 21.01, 2021-01-04
 -------------
 Thanks to New York Public Library (NYPL) for their vision and support on this release
