@@ -35,7 +35,7 @@ RAWcooked provides this service:
 Encodes RAW audio-visual data while permitting reversibility
 
 %prep
-%setup -q -n rawcooked
+%setup -q -n rawcooked-%rawcooked_version
 dos2unix     *.txt
 %__chmod 644 *.html *.txt
 
