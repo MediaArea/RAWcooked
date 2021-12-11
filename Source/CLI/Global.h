@@ -12,8 +12,8 @@
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
 #include "Lib/Config.h"
-#include "Lib/HashSum/HashSum.h"
-#include "Lib/License.h"
+#include "Lib/Uncompressed/HashSum/HashSum.h"
+#include "Lib/License/License.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -30,10 +30,13 @@ public:
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
     size_t                      AttachmentMaxSize;
-    string                      rawcooked_reversibility_data_FileName;
+    string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
+    string                      FrameMd5FileName;
     string                      BinName;
     string                      LicenseKey;
+    uint64_t                    SubLicenseId;
+    uint64_t                    SubLicenseDur;
     bool                        IgnoreLicenseKey;
     bool                        ShowLicenseKey;
     bool                        StoreLicenseKey;
@@ -43,7 +46,6 @@ public:
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
     bool                        Quiet;
-    bool                        Check;
     bitset<Action_Max>          Actions;
 
     // Intermediate info
@@ -73,20 +75,30 @@ public:
     // Theading relating functions
     void                        ProgressIndicator_Show();
 
+    int SetCheck(bool Value);
+    int SetVersion(const char* Value);
+
 private:
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
     int SetLicenseKey(const char* Key, bool Add);
+    int SetSubLicenseId(uint64_t Id);
+    int SetSubLicenseDur(uint64_t Dur);
     int SetDisplayCommand();
     int SetAcceptFiles();
-    int SetCheck(bool Value);
     int SetCheck(const char* Value, int& i);
+    int SetQuickCheck();
     int SetCheckPadding(bool Value);
+    int SetQuickCheckPadding();
     int SetAcceptGaps(bool Value);
     int SetCoherency(bool Value);
     int SetConch(bool Value);
+    int SetDecode(bool Value);
     int SetEncode(bool Value);
+    int SetInfo(bool Value);
+    int SetFrameMd5(bool Value);
+    int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
     int SetAll(bool Value);
 

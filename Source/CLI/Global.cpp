@@ -50,6 +50,30 @@ int global::SetLicenseKey(const char* Key, bool StoreIt)
 }
 
 //---------------------------------------------------------------------------
+int global::SetSubLicenseId(uint64_t Id)
+{
+    if (!Id || Id >= 127)
+    {
+        cerr << "Error: sub-licensee ID must be between 1 and 126.\n";
+        return 1;
+    }
+    SubLicenseId = Id;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetSubLicenseDur(uint64_t Dur)
+{
+    if (Dur > 12)
+    {
+        cerr << "Error: sub-licensee duration must be between 0 and 12.\n";
+        return 1;
+    }
+    SubLicenseDur = Dur;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetDisplayCommand()
 {
     DisplayCommand = true;
@@ -66,7 +90,18 @@ int global::SetAcceptFiles()
 //---------------------------------------------------------------------------
 int global::SetCheck(bool Value)
 {
-    Check = true;
+    Actions.set(Action_Check, Value);
+    Actions.set(Action_CheckOptionIsSet);
+    if (Value)
+        return SetDecode(false);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetQuickCheck()
+{
+    Actions.set(Action_Check, false);
+    Actions.set(Action_CheckOptionIsSet, false);
     return 0;
 }
 
@@ -75,20 +110,20 @@ int global::SetCheck(const char* Value, int& i)
 {
     if (Value && (strcmp(Value, "0") == 0 || strcmp(Value, "partial") == 0))
     {
-        Actions.reset(Action_CheckPadding);
+        SetCheckPadding(false);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --no-check-padding\" instead.\n" << endl;
         return 0;
     }
     if (Value && (strcmp(Value, "1") == 0 || strcmp(Value, "full") == 0))
     {
-        Actions.set(Action_CheckPadding);
+        SetCheckPadding(true);
         ++i; // Next argument is used
         cerr << "Warning: \" --check " << Value << "\" is deprecated, use \" --check-padding\" instead.\n" << endl;
         return 0;
     }
 
-    Check = true;
+    SetCheck(true);
     return 0;
 }
 
@@ -96,6 +131,15 @@ int global::SetCheck(const char* Value, int& i)
 int global::SetCheckPadding(bool Value)
 {
     Actions.set(Action_CheckPadding, Value);
+    Actions.set(Action_CheckPaddingOptionIsSet);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetQuickCheckPadding()
+{
+    Actions.set(Action_CheckPadding, false);
+    Actions.set(Action_CheckPaddingOptionIsSet, false);
     return 0;
 }
 
@@ -104,6 +148,25 @@ int global::SetAcceptGaps(bool Value)
 {
     Actions.set(Action_AcceptGaps, Value);
     return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetVersion(const char* Value)
+{
+    if (Value[0] == '1' && !Value[1])
+    {
+        Actions.set(Action_VersionValueIsAuto, false);
+        Actions.set(Action_Version2, false);
+        return 0;
+    }
+    if (Value[0] == '2' && !Value[1])
+    {
+        Actions.set(Action_VersionValueIsAuto, false);
+        Actions.set(Action_Version2);
+        return 0;
+    }
+    cerr << "Error: unknown version value '" << Value << "'." << endl;
+    return 1;
 }
 
 //---------------------------------------------------------------------------
@@ -117,6 +180,18 @@ int global::SetCoherency(bool Value)
 int global::SetConch(bool Value)
 {
     Actions.set(Action_Conch, Value);
+    if (Value)
+    {
+        SetDecode(false);
+        SetEncode(false);
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetDecode(bool Value)
+{
+    Actions.set(Action_Decode, Value);
     return 0;
 }
 
@@ -124,6 +199,32 @@ int global::SetConch(bool Value)
 int global::SetEncode(bool Value)
 {
     Actions.set(Action_Encode, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetInfo(bool Value)
+{
+    Actions.set(Action_Info, Value);
+    if (Value)
+    {
+        SetDecode(false);
+        SetEncode(false);
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetFrameMd5(bool Value)
+{
+    Actions.set(Action_FrameMd5, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetFrameMd5FileName(const char* FileName)
+{
+    FrameMd5FileName = FileName;
     return 0;
 }
 
@@ -137,15 +238,19 @@ int global::SetHash(bool Value)
 //---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
-    if (int ReturnValue = SetCheck(Value))
+    if (int ReturnValue = SetInfo(Value))
         return ReturnValue;
-    if (int ReturnValue = SetCheckPadding(Value))
+    if (int ReturnValue = SetConch(Value))
+        return ReturnValue;
+    if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitely set no check
+        return ReturnValue;
+    if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitely set no check padding
         return ReturnValue;
     if (int ReturnValue = SetAcceptGaps(Value))
         return ReturnValue;
     if (int ReturnValue = SetCoherency(Value))
         return ReturnValue;
-    if (int ReturnValue = SetConch(Value))
+    if (int ReturnValue = SetDecode(Value))
         return ReturnValue;
     if (int ReturnValue = SetEncode(Value))
         return ReturnValue;
@@ -181,13 +286,13 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (strcmp(argv[i], "copy") == 0)
         {
             OutputOptions["c:a"] = argv[i];
-            License.Encoder(Encoder_PCM);
+            License.Encoder(encoder::PCM);
             return 0;
         }
         if (strcmp(argv[i], "flac") == 0)
         {
             OutputOptions["c:a"] = argv[i];
-            License.Encoder(Encoder_FLAC);
+            License.Encoder(encoder::FLAC);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -199,7 +304,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (!strcmp(argv[i], "ffv1"))
         {
             OutputOptions["c:v"] = argv[i];
-            License.Encoder(Encoder_FFV1);
+            License.Encoder(encoder::FFV1);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -213,7 +318,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
          || !strcmp(argv[i], "2"))
         {
             OutputOptions["coder"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -226,7 +331,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
          || !strcmp(argv[i], "1"))
         {
             OutputOptions["context"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -249,7 +354,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (atof(argv[i]))
         {
             VideoInputOptions["framerate"] = argv[i];
-            License.Feature(Feature_InputOptions);
+            License.Feature(feature::InputOptions);
             return 0;
         }
         return 0;
@@ -261,7 +366,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (atoi(argv[i]))
         {
             OutputOptions["g"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a number\n";
@@ -276,7 +381,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
          || !strcmp(argv[i], "3"))
         {
             OutputOptions["level"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -289,7 +394,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
          || !strcmp(argv[i], "warning"))
         {
             OutputOptions["loglevel"] = argv[i];
-            License.Feature(Feature_GeneralOptions);
+            License.Feature(feature::GeneralOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -297,20 +402,20 @@ int global::SetOption(const char* argv[], int& i, int argc)
     if (strcmp(argv[i], "-n") == 0)
     {
         OutputOptions["n"] = string();
+        OutputOptions.erase("y");
         Mode = AlwaysNo; // Also RAWcooked itself
-        License.Feature(Feature_GeneralOptions);
+        License.Feature(feature::GeneralOptions);
         return 0;
     }
     if (!strcmp(argv[i], "-slicecrc"))
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        int SliceCount = atoi(argv[i]);
         if (!strcmp(argv[i], "0")
          || !strcmp(argv[i], "1"))
         {
             OutputOptions["slicecrc"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -323,7 +428,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (SliceCount) //TODO: not all slice counts are accepted by FFmpeg, we should filter
         {
             OutputOptions["slices"] = argv[i];
-            License.Feature(Feature_EncodingOptions);
+            License.Feature(feature::EncodingOptions);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -333,14 +438,15 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
         OutputOptions["threads"] = argv[i];
-        License.Feature(Feature_GeneralOptions);
+        License.Feature(feature::GeneralOptions);
         return 0;
     }
     if (strcmp(argv[i], "-y") == 0)
     {
         OutputOptions["y"] = string();
+        OutputOptions.erase("n");
         Mode = AlwaysYes; // Also RAWcooked itself
-        License.Feature(Feature_GeneralOptions);
+        License.Feature(feature::GeneralOptions);
         return 0;
     }
 
@@ -355,14 +461,16 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     AttachmentMaxSize = (size_t)-1;
     IgnoreLicenseKey = !License.IsSupported_License();
+    SubLicenseId = 0;
+    SubLicenseDur = 1;
     ShowLicenseKey = false;
     StoreLicenseKey = false;
     DisplayCommand = false;
     AcceptFiles = false;
     OutputFileName_IsProvided = false;
     Quiet = false;
-    Check = false;
     Actions.set(Action_Encode);
+    Actions.set(Action_Decode);
     Actions.set(Action_Coherency);
     Hashes = hashes(&Errors);
     ProgressIndicator_Thread = NULL;
@@ -398,7 +506,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             AttachmentMaxSize = atoi(argv[++i]);
-            License.Feature(Feature_GeneralOptions);
+            License.Feature(feature::GeneralOptions);
         }
         else if ((strcmp(argv[i], "--bin-name") == 0 || strcmp(argv[i], "-b") == 0))
         {
@@ -420,7 +528,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
             else
             {
                 int Value = SetCheck(true);
-                License.Feature(Feature_GeneralOptions);
                 if (Value)
                     return Value;
             }
@@ -454,11 +561,31 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetDisplayCommand();
             if (Value)
                 return Value;
-            License.Feature(Feature_GeneralOptions);
+            License.Feature(feature::GeneralOptions);
+        }
+        else if (strcmp(argv[i], "--decode") == 0)
+        {
+            int Value = SetDecode(true);
+            if (Value)
+                return Value;
         }
         else if (strcmp(argv[i], "--encode") == 0)
         {
             int Value = SetEncode(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--framemd5") == 0)
+        {
+            int Value = SetFrameMd5(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--framemd5-name") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetFrameMd5FileName(argv[++i]);
             if (Value)
                 return Value;
         }
@@ -480,11 +607,23 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--info") == 0)
+        {
+            int Value = SetInfo(true);
+            if (Value)
+                return Value;
+        }
         else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0))
         {
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-accept-gaps") == 0)
+        {
+            int Value = SetAcceptGaps(false);
             if (Value)
                 return Value;
         }
@@ -512,6 +651,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--no-decode") == 0)
+        {
+            int Value = SetDecode(false);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--no-encode") == 0)
         {
             int Value = SetEncode(false);
@@ -524,9 +669,27 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--no-info") == 0)
+        {
+            int Value = SetInfo(false);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--none") == 0)
         {
             int Value = SetAll(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--quick-check") == 0)
+        {
+            int Value = SetQuickCheck();
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--quick-check-padding") == 0)
+        {
+            int Value = SetQuickCheckPadding();
             if (Value)
                 return Value;
         }
@@ -544,20 +707,43 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--output-version") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            if (int Value = SetVersion(argv[++i]))
+                return Value;
+        }
         else if (strcmp(argv[i], "--quiet") == 0)
         {
             Quiet = true;
-            License.Feature(Feature_GeneralOptions);
+            License.Feature(feature::GeneralOptions);
         }
         else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0))
         {
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
-            rawcooked_reversibility_data_FileName = argv[++i];
+            rawcooked_reversibility_FileName = argv[++i];
         }
         else if (strcmp(argv[i], "--show-license") == 0 || strcmp(argv[i], "--show-licence") == 0)
         {
             ShowLicenseKey = true;
+        }
+        else if (strcmp(argv[i], "--sublicense") == 0 || strcmp(argv[i], "--sublicence") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            License.Feature(feature::SubLicense);
+            if (auto Value = SetSubLicenseId(atoi(argv[++i])))
+                return Value;
+        }
+        else if (strcmp(argv[i], "--sublicense-dur") == 0 || strcmp(argv[i], "--sublicence-dur") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            License.Feature(feature::SubLicense);
+            if (auto Value = SetSubLicenseDur(atoi(argv[++i])))
+                return Value;
         }
         else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0))
         {
@@ -580,9 +766,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
     // License
     if (License.LoadLicense(LicenseKey, StoreLicenseKey))
         return true;
-    License.ShowLicense(ShowLicenseKey);
-    if (ShowLicenseKey)
-        return 1;
     if (!License.IsSupported())
     {
         cerr << "\nOne or more requested features are not supported with the current license key.\n";
@@ -591,6 +774,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
             return 1;
         cerr << "       Ignoring the license for the moment.\n" << endl;
     }
+    if (License.ShowLicense(ShowLicenseKey, SubLicenseId, SubLicenseDur))
+        return 1;
+    if (Inputs.empty() && (ShowLicenseKey || SubLicenseId))
+        return 0;
 
     return 0;
 }
@@ -727,7 +914,7 @@ void global::ProgressIndicator_Show()
 
             ProgressIndicator_Value = ProgressIndicator_New;
         }
-    } while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout, ProgressIndicator_Current != ProgressIndicator_Total);
+    } while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && ProgressIndicator_Current != ProgressIndicator_Total);
 
     // Show summary
     cerr << '\r';

@@ -8,15 +8,17 @@
 #include "CLI/Global.h"
 #include "CLI/Input.h"
 #include "CLI/Output.h"
-#include "Lib/Matroska/Matroska_Common.h"
-#include "Lib/DPX/DPX.h"
-#include "Lib/TIFF/TIFF.h"
-#include "Lib/WAV/WAV.h"
-#include "Lib/AIFF/AIFF.h"
-#include "Lib/FFV1/FFV1_Frame.h"
-#include "Lib/RawFrame/RawFrame.h"
-#include "Lib/RAWcooked/RAWcooked.h"
+#include "Lib/Compressed/Matroska/Matroska.h"
+#include "Lib/Uncompressed/DPX/DPX.h"
+#include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/EXR/EXR.h"
+#include "Lib/Uncompressed/WAV/WAV.h"
+#include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/CoDec/FFV1/FFV1_Frame.h"
+#include "Lib/Utils/RawFrame/RawFrame.h"
+#include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
+#include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
 #include <map>
 #include <sstream>
 #include <cstdio>
@@ -84,7 +86,7 @@ struct parse_info
     bool   IsDetected;
     bool   Problem;
 
-    bool ParseFile_Input(input_base& Input);
+    bool ParseFile_Input(input_base& Input, bool OverrideCheckPadding = false);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
 
     parse_info():
@@ -94,10 +96,12 @@ struct parse_info
 };
 
 //---------------------------------------------------------------------------
-bool parse_info::ParseFile_Input(input_base& SingleFile)
+bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPadding)
 {
     // Init
     SingleFile.Actions = Global.Actions;
+    if (OverrideCheckPadding)
+        SingleFile.Actions.set(Action_CheckPadding);
     SingleFile.Hashes = &Global.Hashes;
     SingleFile.FileName = &RAWcooked.OutputFileName;
     SingleFile.InputInfo = &InputInfo;
@@ -110,8 +114,31 @@ bool parse_info::ParseFile_Input(input_base& SingleFile)
     if (SingleFile.IsDetected() && SingleFile.ParserCode != Parser_Unknown && SingleFile.ParserCode != Parser_HashSum)
         IsDetected = true;
 
-    if (Global.Errors.HasErrors())
+    if (SingleFile.ParserCode == Parser_EXR && IsDetected && !Global.Actions[Action_Check])
+    {
+        Global.ProgressIndicator_Stop();
+        cerr << "EXR support depends a lot on the FFmpeg version you have, it is safer to double check the output,\n"
+            "use --check for adding checks after the encoding." << endl;
         return true;
+    }
+
+    if (Global.Errors.HasErrors())
+    {
+        if (strstr(Global.Errors.ErrorMessage(), "becoming too big"))
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Error: the reversibility file is becoming big.\n"
+                "       FFmpeg, used for muxing the output, has some issues with big\n"
+                "       attachments, and such big reversibility file is not expected\n"
+                "       with such compression, we prefer to be safe and we reject the\n"
+                "       compression.\n"
+                "       Use \"--version 2\" option for supporting\n"
+                "       such big reversibility file. Decoding will not be possible\n"
+                "       with RAWcooked older than version 21.09.\n"
+                << endl;
+        }
+        return true;
+    }
     return false;
 }
 
@@ -132,7 +159,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     FormatPath(RAWcooked.OutputFileName);
 
     // Parse
-    if (ParseFile_Input((input_base&)SingleFile))
+    if (ParseFile_Input((input_base&)SingleFile, !Global.Actions[Action_CheckPaddingOptionIsSet]))
         return true;
     if (!IsDetected)
         return false;
@@ -141,10 +168,71 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
         Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, FileList, Global.Actions, &Global.Errors);
+
+    if (SingleFile.Version() == rawcooked::version::v2)
+    {
+        Global.ProgressIndicator_Stop();
+        if (Global.Actions[Action_VersionValueIsAuto])
+        {
+            cerr << "Info: big reversibility file supported is needed,\n"
+                << "      decoding is not possible with RAWcooked older than version 21.09.\n"
+                << endl;
+
+            if (!Global.Actions[Action_Check])
+            {
+                cerr << "Info: RAWcooked reversibility file version is set to 2.\n"
+                    << endl;
+
+                Global.SetVersion("2");
+            }
+        }
+
+        if (!Global.Actions[Action_Check])
+        {
+            cerr << "Info: this is a preview release,\n"
+                << "      --check is set in order to verify the reversibility.\n"
+                << endl;
+
+            Global.SetCheck(true);
+        }
+    }
+
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
     {
+        // OverrideCheckPadding info
+        bool OverrideCheckPadding = !Global.Actions[Action_CheckPadding] && SingleFile.RAWcooked && SingleFile.RAWcooked->InData;
+        if (OverrideCheckPadding) // There are non-zero padding bits
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Info: non-zero padding bits found in first file,\n"
+                << "      forcing the check of padding bits for all files.\n" << endl;
+        }
+        else if (SingleFile.MayHavePaddingBits() && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
+        {
+            Global.ProgressIndicator_Stop();
+            if (Global.Actions[Action_Check])
+            {
+                cerr << "Info: data can contain non-zero padding bits, padding bits will be\n"
+                    "      checked only during reversibility check so after encoding,\n"
+                    "      and will throw an error if non-zero padding bits are found\n"
+                    "      at this moment, and in that case you'll have to re-encode with\n"
+                    "      --check-padding option.\n" << endl;
+            }
+            else
+            {
+                cerr << "Error: data may contain non-zero padding bits but padding would never\n"
+                    "       be tested with the current options, there is a risk of non-\n"
+                    "       reversibility, use --no-check-padding for explicitely indicate\n"
+                    "       that you are fine with that else use --check-padding for checking\n"
+                    "       the padding bits before encoding, or alternatively use --check for\n"
+                    "       checking padding bits after encoding (you'll have to re-encode\n"
+                    "       with --check-padding option if non-zero padding bits are found).\n" << endl;
+                return true;
+            }
+        }
+
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
         for (size_t i = 1; i < SingleFile.InputInfo->FrameCount; i++)
@@ -155,7 +243,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
             FormatPath(RAWcooked.OutputFileName);
 
-            if (ParseFile_Input((input_base&)SingleFile))
+            if (ParseFile_Input((input_base&)SingleFile, OverrideCheckPadding))
                 return true;
         }
     }
@@ -215,6 +303,21 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             stringstream t;
             t << TIFF.slice_x * TIFF.slice_y;
+            ParseInfo.Slices = t.str();
+        }
+    }
+
+    // EXR
+    if (!ParseInfo.IsDetected)
+    {
+        exr EXR(&Global.Errors);
+        if (ParseInfo.ParseFile_Input(EXR, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
+        {
+            stringstream t;
+            t << EXR.slice_x * EXR.slice_y;
             ParseInfo.Slices = t.str();
         }
     }
@@ -315,31 +418,85 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
     // Matroska
     int ReturnValue = 0;
-    bool NoOutputCheck = Global.Check && !Global.OutputFileName_IsProvided;
+    bool NoOutputCheck = (Global.Actions[Action_Check] || !Global.Actions[Action_Decode]) && !Global.OutputFileName_IsProvided;
+    bool HasCheckedReversibility = !NoOutputCheck;
+    auto DoesNotHaveReversibility = false;
     if (!ParseInfo.IsDetected)
     {
-        matroska M(OutputDirectoryName, &Global.Mode, Ask_Callback, &Global.Errors);
-        M.Quiet = Global.Quiet;
-        M.NoWrite = Global.Check;
-        M.NoOutputCheck = NoOutputCheck;
-        if (NoOutputCheck)
-            NoOutputCheck = M.Hashes_FromRAWcooked ? false : true; // If hashes are present in the file, output was checked by using hashes
-        if (ParseInfo.ParseFile_Input(M))
+        // Threads
+        unsigned threads;
+        auto OutputOptions_Threads = Global.OutputOptions.find("threads");
+        if (OutputOptions_Threads != Global.OutputOptions.end())
+            threads = stoul(OutputOptions_Threads->second);
+        else
+            threads = 0;
+        if (!threads)
+            threads = thread::hardware_concurrency();
+        ThreadPool* Thread_Pool;
+        if (threads > 1)
+        {
+            Thread_Pool = new ThreadPool(threads);
+            Thread_Pool->init();
+        }
+        else
+            Thread_Pool = nullptr;
+
+        matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
+        M->Quiet = Global.Quiet;
+        M->NoOutputCheck = NoOutputCheck;
+        if (ParseInfo.ParseFile_Input(*M))
         {
             ReturnValue = 1;
         }
+        else if (M->IsDetected())
+        {
+            if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
+                HasCheckedReversibility = true;
+
+            if (Global.Actions[Action_Info])
+            {
+                if (!M->RAWcooked_LibraryNameVersion_Get().empty())
+                {
+                    cout << "\nInfo: Reversibility data created by " << M->RAWcooked_LibraryNameVersion_Get() << '.';
+                }
+                else if (!Global.Actions[Action_Decode])
+                {
+                    cout << "\nInfo: No reversibility data found.";
+                }
+                if (M->Hashes_FromRAWcooked)
+                {
+                    cout << "\nInfo: Uncompressed file hashes (used by reversibility check) present.";
+                }
+                if (M->Hashes_FromAttachments && M->Hashes_FromAttachments->HashFiles_Count())
+                {
+                    cout << "\nInfo: " << M->Hashes_FromAttachments->HashFiles_Count() << " hash file (used by conformance check) found.";
+                }
+                cout << endl;
+            }
+            if (Global.Actions[Action_Decode] || Global.Actions[Action_Check])
+            {
+                if (M->RAWcooked_LibraryNameVersion_Get().empty())
+                {
+                    cerr << "\nError: No reversibility data found.";
+                    ReturnValue = 1;
+                    DoesNotHaveReversibility = true;
+                }
+            }
+        }
+        delete M;
+        delete Thread_Pool;
     }
 
     // End
-    if (ParseInfo.IsDetected && !Global.Quiet)
+    if (ParseInfo.IsDetected && !Global.Quiet && !DoesNotHaveReversibility)
     {
-        if (!Global.Check)
+        if (Global.Actions[Action_Decode])
             cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
-        else if (!Global.Errors.HasErrors())
-            cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, no issue detected." << endl;
+        if (Global.Actions[Action_Check] && !Global.Errors.HasErrors())
+            cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, no issue detected." << endl;
     }
-    if (Global.Check && Global.Errors.HasErrors())
-        cout << '\n' << (NoOutputCheck ? "Decoding" : "Reversability") << " was checked, issues detected, see below." << endl;
+    if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
+        cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, issues detected, see below." << endl;
 
     return ReturnValue;
 }
@@ -369,12 +526,12 @@ int ParseFile(size_t Files_Pos)
 
     // Attachments
     size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
-    if (ParseInfo.FileMap.Buffer_Size >= AttachmentSizeFinal)
+    if (ParseInfo.FileMap.Size() >= AttachmentSizeFinal)
     {
         cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
         return 1;
     }
-    if (ParseInfo.FileMap.Buffer_Size) // Ignoring file with size of 0
+    if (!ParseInfo.FileMap.Empty()) // Ignoring file with size of 0
     {
         attachment Attachment;
         Attachment.FileName_In = *ParseInfo.Name;
@@ -389,7 +546,7 @@ int main(int argc, const char* argv[])
 {
     // Global configuration
     Global.Ask_Callback = Ask_Callback;
-    
+
     // Manage command line
     if (int Value = Global.ManageCommandLine(argv, argc))
         return Value;
@@ -401,11 +558,18 @@ int main(int argc, const char* argv[])
         [](const string& l, const string& r) {return doj::alphanum_comp(l, r) < 0; });
 
     // Parse files
-    RAWcooked.FileName = Global.rawcooked_reversibility_data_FileName;
+    RAWcooked.FileName = Global.rawcooked_reversibility_FileName;
+    if (Global.Actions[Action_VersionValueIsAuto])
+        RAWcooked.Version = rawcooked::version::mini;
+    else if (Global.Actions[Action_Version2])
+        RAWcooked.Version = rawcooked::version::v2;
     int Value = 0;
-    for (int i = 0; i < Input.Files.size(); i++)
-        if (Value = ParseFile(i))
+    for (size_t i = 0; i < Input.Files.size(); i++)
+    {
+        Value = ParseFile(i);
+        if (Value)
             break;
+    }
     RAWcooked.Close();
 
     // Coherency checks
@@ -426,36 +590,87 @@ int main(int argc, const char* argv[])
     // Progress indicator
     Global.ProgressIndicator_Stop();
 
+    // Info
+    if (!Global.Quiet)
+    {
+        for (size_t i = 0; i < Output.Streams.size(); i++)
+        {
+            cerr << "Track " << i + 1 << ':' << endl;
+            if (Output.Streams[i].FileName_Template.empty())
+            {
+                cerr << "  " << Output.Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+            }
+            else
+            {
+                cerr << "  " << Output.Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+                cerr << " (" << Output.Streams[i].FileName_StartNumber << " --> " << Output.Streams[i].FileName_EndNumber;
+                if (!Output.Streams[i].FileList.empty())
+                    cerr << ", with gaps";
+                cerr << ')' << endl;
+            }
+            cerr << "  " << Output.Streams[i].Flavor << endl;
+            if (Output.Streams[i].Problem)
+                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
+        }
+    }
+
     if (!Value && Global.Errors.HasWarnings())
     {
         cerr << Global.Errors.ErrorMessage() << endl;
         switch (Global.Mode)
         {
-            case AlwaysNo: Value = 1; break;
-            case AlwaysYes: break;
-            default:
-                if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
-                 || (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
-                {
-                    cerr << "Do you want to continue despite warnings? [y/N] ";
-                    string Result;
-                    getline(cin, Result);
-                    if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
-                        Value = 1;
-                }
+        case AlwaysNo: Value = 1; break;
+        case AlwaysYes: break;
+        default:
+            if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
+                || (Global.Actions[Action_Check] && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
+            {
+                cerr << "Do you want to continue despite warnings? [y/N] ";
+                string Result;
+                getline(cin, Result);
+                if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
+                    Value = 1;
+            }
         }
     }
 
     // FFmpeg
     if (!Value && Global.Actions[Action_Encode])
-        Value = Output.Process(Global);
+        Value = Output.Process(Global, RAWcooked.Version == rawcooked::version::v2);
+
+    // Handling of big reversibility files
+    if (!Value && Global.Actions[Action_Encode] && RAWcooked.Version == rawcooked::version::v2 && !Output.Streams.empty())
+    {
+        rawcooked RAWcooked_Big;
+        RAWcooked_Big.Version = rawcooked::version::v2;
+        filemap ReversibilityFile;
+        if (Global.DisplayCommand)
+        {
+            RAWcooked.Close();
+            RAWcooked.Rename(Global.rawcooked_reversibility_FileName + ".tmp");
+            ReversibilityFile.Open_ReadMode(RAWcooked.FileName);
+            RAWcooked_Big.FileName = Global.rawcooked_reversibility_FileName;
+        }
+        else
+        {
+            ReversibilityFile.Open_ReadMode(Global.rawcooked_reversibility_FileName);
+            RAWcooked_Big.FileName = Global.OutputFileName;
+        }
+        RAWcooked_Big.ReversibilityFile = &ReversibilityFile;
+        RAWcooked_Big.Parse();
+        if (Global.DisplayCommand)
+        {
+            ReversibilityFile.Close();
+            RAWcooked.Delete();
+        }
+    }
 
     // RAWcooked file
     if (!Global.DisplayCommand)
         RAWcooked.Delete();
 
     // Check result
-    if (Global.Check && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
+    if (!Value && !Global.DisplayCommand && (!Global.Actions[Action_CheckOptionIsSet] || Global.Actions[Action_Check]) && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
     {
         parse_info ParseInfo;
         Value = ParseInfo.FileMap.Open_ReadMode(Global.OutputFileName);
@@ -464,7 +679,7 @@ int main(int argc, const char* argv[])
             // Configure for a 2nd pass
             ParseInfo.Name = NULL;
             Global.OutputFileName = Global.Inputs[0];
-            if (!Global.Actions[Action_Hash])
+            if (!Global.Actions[Action_Hash]) // If hashes are present in the file, output is checked by using hashes
                 Global.OutputFileName_IsProvided = true;
             RAWcooked.OutputFileName.clear();
 
@@ -477,7 +692,15 @@ int main(int argc, const char* argv[])
             Global.OutputFileName.resize(Path_Pos);
 
             // Parse (check mode)
+            Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
+            Global.Actions.set(Action_Decode, false); // Override config
             Value = ParseFile_Compressed(ParseInfo);
+            if (!Value && !ParseInfo.IsDetected)
+            {
+                cout << '\n' << "Error: " << Global.OutputFileName << endl;
+                cout << "       output file can not be checked! Is it fine?" << endl;
+                Value = 1;
+            }
         }
     }
 

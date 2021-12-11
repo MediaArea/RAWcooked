@@ -21,7 +21,7 @@ while read line ; do
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         # check presence of reversibility data file with --display-command
-        run_rawcooked --file -d "${file}/"
+        run_rawcooked --no-check-padding --file -d "${file}/"
         check_success "file rejected at input" "file accepted at input"
 
         if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
@@ -33,7 +33,7 @@ while read line ; do
         mv -f "${file}.rawcooked_reversibility_data" "${file}.rawcooked_reversibility_data.save"
 
         # check if reversibility data file is cleaned when using internal encoder
-        run_rawcooked --file "${file}/"
+        run_rawcooked --no-check-padding --file "${file}/"
         check_success "file rejected at input" "file accepted at input"
         if [ -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, reversibility data file not cleaned after encoding" >&${fd}
@@ -43,7 +43,7 @@ while read line ; do
         fi
 
         # check if reversibility data file is cleaned with -n option and an existing mkv
-        run_rawcooked -n "${file}/"
+        run_rawcooked --no-check-padding -n "${file}/"
         if [ -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, reversibility data file not cleaned with -n option and an existing mkv" >&${fd}
             status=1
@@ -54,7 +54,7 @@ while read line ; do
 
         # check if stale reversibility data file is preserved with -n option
         cp -f "${file}.rawcooked_reversibility_data.save" "${file}.rawcooked_reversibility_data"
-        run_rawcooked -n "${file}/"
+        run_rawcooked --no-check-padding -n "${file}/"
         check_failure "file rejected due to -n option and stale reversibility data file" "file accepted despite -n option and stale reversibility data file"
         if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, stale reversibility data file removed despite -n option" >&${fd}
@@ -65,7 +65,7 @@ while read line ; do
 
         # check for error with -y option and an read only stale reversibility data file
         chmod 0444 "${file}.rawcooked_reversibility_data"
-        run_rawcooked -y "${file}/"
+        run_rawcooked --no-check-padding -y "${file}/"
         check_failure "file rejected due to read only stale reversibility data file" "file accepted despite read only stale reversibility data file"
         if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, read only stale reversibility data file removed" >&${fd}
@@ -76,7 +76,7 @@ while read line ; do
 
         # check for error with -y option and an stale reversibility data file with no rights
         chmod 0000 "${file}.rawcooked_reversibility_data"
-        run_rawcooked -y "${file}/"
+        run_rawcooked --no-check-padding -y "${file}/"
         check_failure "file rejected due to insufficient rights on stale reversibility data file" "file accepted despite insufficient rights on stale reversibility data file"
         if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, reversibility data file removed despite insufficient rights" >&${fd}
@@ -87,7 +87,7 @@ while read line ; do
         chmod 0644 "${file}.rawcooked_reversibility_data"
 
         # check if stale reversibility data file is deleted with -y option
-        run_rawcooked -y "${file}/"
+        run_rawcooked --no-check-padding -y "${file}/"
         check_success "file rejected due to stale reversibility data file, despite -y" "file accepted with -y option and an stale reversibility data file"
         if [ -e "${file}.rawcooked_reversibility_data" ] ; then
             echo "NOK: ${test}/${file}, stale reversibility data file not removed despite -y option" >&${fd}

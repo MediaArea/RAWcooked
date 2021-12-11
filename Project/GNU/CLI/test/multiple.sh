@@ -16,7 +16,7 @@ while read line ; do
     fi
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
-        run_rawcooked --file -d ${files}
+        run_rawcooked --check-padding --file -d ${files}
         if ! check_success "file rejected at input" "file accepted at input" ; then
             clean
             continue

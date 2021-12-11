@@ -2,7 +2,7 @@
 # Maintainer: MediaArea.net SARL <info@mediaarea.net>
 
 pkgname=('rawcooked')
-pkgver=18.10.1
+pkgver=21.09
 pkgrel=1
 pkgdesc="Encodes RAW audio-visual data while permitting reversibility"
 url="http://mediaarea.net"
@@ -13,13 +13,13 @@ arch=('i686' 'x86_64')
 
 prepare() {
 
-    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    cd "${srcdir}"/rawcooked-"${pkgver}"/Project/GNU/CLI
     sh ./autogen
     ./configure --prefix=/usr
 }
 
 build() {
-    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    cd "${srcdir}"/rawcooked-"${pkgver}"/Project/GNU/CLI
     make
 }
 
@@ -27,9 +27,9 @@ package_rawcooked() {
     pkgdesc="${pkgdesc} (CLI)"
     depends=('libzen')
 
-    cd "${srcdir}"/rawcooked/Project/GNU/CLI
+    cd "${srcdir}"/rawcooked-"${pkgver}"/Project/GNU/CLI
     make DESTDIR="${pkgdir}" install
 
-    install -D -m 0644 "${srcdir}"/rawcooked/History_CLI.txt "${pkgdir}"/usr/share/docs/${pkgname}/History.txt
-    install -D -m 0644 "${srcdir}"/rawcooked/License.html "${pkgdir}"/usr/share/licenses/${pkgname}/License.html
+    install -D -m 0644 "${srcdir}"/rawcooked-"${pkgver}"/History_CLI.txt "${pkgdir}"/usr/share/docs/${pkgname}/History.txt
+    install -D -m 0644 "${srcdir}"/rawcooked-"${pkgver}"/License.html "${pkgdir}"/usr/share/licenses/${pkgname}/License.html
 }

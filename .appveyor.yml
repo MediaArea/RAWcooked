@@ -12,11 +12,11 @@ build:
 
 before_test:
 - ps: |
-    git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles.git Project/GNU/CLI/test/TestingFiles
-    Invoke-WebRequest https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip -OutFile ffmpeg-latest-win64-static.zip
-    Expand-Archive ffmpeg-latest-win64-static.zip -DestinationPath .
-    Copy-Item ffmpeg-latest-win64-static/bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg
-    Copy-Item ffmpeg-latest-win64-static/bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg.exe
+    git clone https://github.com/MediaArea/RAWCooked-RegressionTestingFiles-Light.git Project/GNU/CLI/test/TestingFiles
+    Invoke-WebRequest https://www.mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Windows_Static_x64.zip -OutFile FFmpeg_Bin_Latest_Windows_Static_x64.zip
+    Expand-Archive FFmpeg_Bin_Latest_Windows_Static_x64.zip -DestinationPath .
+    Copy-Item bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg
+    Copy-Item bin/ffmpeg.exe -Destination Project/GNU/CLI/ffmpeg.exe
     Copy-Item Project/MSVC2019/x64/Release/RAWcooked.exe -Destination Project/GNU/CLI/rawcooked
 
 test_script:
@@ -53,14 +53,18 @@ test_script:
     $env:Path += ";$(Get-Location)"
 
     Run-Test test1
+    Run-Test test1b
     Run-Test test2
     Run-Test test3
+    Run-Test pcm
+    Run-Test paddingbits
     Run-Test version
     Run-Test notfound
     Run-Test check
     Run-Test legacy
     Run-Test multiple
     Run-Test gaps
+    Run-Test framerate
     Run-Test increasingdigitcount
 
     if ($fail -eq $true) {

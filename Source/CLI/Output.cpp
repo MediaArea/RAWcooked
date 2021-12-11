@@ -6,17 +6,23 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Output.h"
-#include "Lib/RAWcooked/IntermediateWrite.h"
+#include "Lib/Compressed/RAWcooked/IntermediateWrite.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#if defined(_WIN32) || defined(_WINDOWS)
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h>
+#endif
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-int output::Process(global& Global)
+int output::Process(global& Global, bool IgnoreReversibilityFile)
 {
     if (!Streams.empty())
-        return FFmpeg_Command(Global.Inputs[0].c_str(), Global);
+        return FFmpeg_Command(Global.Inputs[0].c_str(), Global, IgnoreReversibilityFile);
     else if (!Attachments.empty())
     {
         cerr << "Error: no A/V content detected.\nPlease contact info@mediaarea.net if you want support of such content." << endl;
@@ -27,7 +33,7 @@ int output::Process(global& Global)
 }
 
 //---------------------------------------------------------------------------
-int output::FFmpeg_Command(const char* FileName, global& Global)
+int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReversibilityFile)
 {
     // Defaults
     if (int Value = Global.SetDefaults())
@@ -68,6 +74,9 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         else
             Global.VideoInputOptions["framerate"] = "24"; // Forcing framerate to 24 in case nothing is available in the input files and command line. TODO: find some autodetect of frame rate based on audio duration
     }
+    auto FrameRate = Global.VideoInputOptions.find("framerate");
+    if (FrameRate != Global.VideoInputOptions.end())
+        Global.VideoInputOptions["r"] = FrameRate->second;
 
     string Command;
     if (Global.BinName.empty())
@@ -76,12 +85,13 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
         Command += Global.BinName;
 
     // Disable stdin for ffmpeg
-    Command += " -nostdin";
+    if (Global.OutputOptions.find("n") != Global.OutputOptions.end() && Global.OutputOptions.find("y") != Global.OutputOptions.end())
+        Command += " -nostdin";
 
     // Info
     bool Problem = false;
 
-    if (Streams.size() > 2 && !Global.License.IsSupported(Feature_MultipleTracks))
+    if (Streams.size() > 2 && !Global.License.IsSupported(feature::MultipleTracks))
     {
         if (!Global.Quiet)
             cerr << "*** More than 2 tracks is not supported by the current license key. ***" << endl;
@@ -92,26 +102,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     vector<intermediate_write*> FilesToRemove;
     for (size_t i = 0; i < Streams.size(); i++)
     {
-        // Info
-        if (!Global.Quiet)
-        {
-            cerr << "Track " << i + 1 << ':' << endl;
-            if (Streams[i].FileName_Template.empty())
-            {
-                cerr << "  " << Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-            }
-            else
-            {
-                cerr << "  " << Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Streams[i].FileName.size()) ? Global.Inputs[0].size() : Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-                cerr << " (" << Streams[i].FileName_StartNumber << " --> " << Streams[i].FileName_EndNumber;
-                if (!Streams[i].FileList.empty())
-                    cerr << ", with gaps";
-                cerr << ')' << endl;
-            }
-            cerr << "  " << Streams[i].Flavor << endl;
-            if (Streams[i].Problem)
-                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
-        }
         if (Streams[i].Problem)
             Problem = true;
 
@@ -129,6 +119,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Command += " -f image2 -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -f image2 -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
+            {
+                Command += " -f image2 -c:v exr -consider_float16_as_uint16 1";
+                Global.OutputOptions["metadata:s:v"] = "WARNING=\"Pixel content is IEEE 754 floating-point format\"";
+            }
 
             // FileName_StartNumber (if needed)
             if (!Streams[i].FileName_StartNumber.empty())
@@ -173,12 +168,31 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                             auto& FileList = Streams[i].FileList;
                             decltype(Streams[i].FileList) FileList_Temp;
                             FileList_Temp.reserve(FileList.size());
+                            char* CurrentPath = nullptr;
                             for (size_t i = 0; i < FileList.size();)
                             {
                                 auto j = FileList.find('\n', i);
                                 if (j == string::npos)
                                     j = FileList.size();
                                 FileList_Temp += "file '";
+#if defined(_WIN32) || defined(_WINDOWS)
+                                if (i + 2 < FileList.size() && FileList[i + 1] != ':' && FileList[i + 2] != PathSeparator && !CurrentPath)
+#else
+                                if (FileList[i] != PathSeparator && !CurrentPath)
+#endif
+                                {
+                                    CurrentPath = new char[FILENAME_MAX];
+                                    if (!getcwd(CurrentPath, FILENAME_MAX))
+                                    {
+                                        delete CurrentPath;
+                                        CurrentPath = nullptr;
+                                    }
+                                }
+                                if (CurrentPath)
+                                {
+                                    FileList_Temp.append(CurrentPath);
+                                    FileList_Temp.append(1, PathSeparator);
+                                }
                                 FileList_Temp.append(FileList, i, j - i);
                                 i = j + 1;
                                 FileList_Temp += "'\nduration ";
@@ -202,6 +216,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                                     FrameTimeStamp_Num -= FrameRate_Num;
                                 }
                             }
+                            delete[] CurrentPath;
                             FileList = FileList_Temp;
                         }
                     }
@@ -216,17 +231,19 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
                 Command += " -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
+                Command += " -c:v exr -consider_float16_as_uint16 1";
 
             // Write the list of files
             auto FileList_File = new intermediate_write;
-            FileList_File->FileName = Global.rawcooked_reversibility_data_FileName;
+            FileList_File->FileName = Global.rawcooked_reversibility_FileName;
             FileList_File->FileName += '.';
             FileList_File->FileName += to_string(i);
             FileList_File->FileName += ".FileList.txt";
             FileList_File->Errors = &Global.Errors;
             FileList_File->Mode = &Global.Mode;
             FileList_File->Ask_Callback = Global.Ask_Callback;
-            FileList_File->WriteToDisk((uint8_t*)Streams[i].FileList.c_str(), Streams[i].FileList.size());
+            FileList_File->WriteToDisk((const uint8_t*)Streams[i].FileList.c_str(), Streams[i].FileList.size());
             FileList_File->Close();
             FilesToRemove.push_back(FileList_File);
 
@@ -271,13 +288,17 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
             cerr << "  " << Attachments[i].FileName_Out.substr(Attachments[i].FileName_Out.find_first_of("/\\")+1) << endl;
         }
 
-        stringstream t;
-        t << MapPos++;
-        Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
+        if (!Global.Actions[Action_Version2])
+        {
+            stringstream t;
+            t << MapPos++;
+            Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
+        }
     }
     stringstream t;
     t << MapPos++;
-    Command += " -attach \"" + Global.rawcooked_reversibility_data_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
+    if (!IgnoreReversibilityFile)
+        Command += " -attach \"" + Global.rawcooked_reversibility_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
         Global.OutputFileName = FileName;
@@ -292,6 +313,24 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     Command += " -f matroska \"";
     Command += Global.OutputFileName;
     Command += '\"';
+
+    if (Global.Actions[Action_FrameMd5])
+    {
+        if (Global.FrameMd5FileName.empty())
+        {
+            Global.FrameMd5FileName = FileName;
+            if (Global.FrameMd5FileName.back() == '/'
+            #if defined(_WIN32) || defined(_WINDOWS)
+                || Global.FrameMd5FileName.back() == '\\'
+            #endif // defined(_WIN32) || defined(_WINDOWS)
+                )
+                Global.FrameMd5FileName.pop_back();
+            Global.FrameMd5FileName += ".framemd5";
+        }
+        Command += " -f framemd5 \"";
+        Command += Global.FrameMd5FileName;
+        Command += '\"';
+    }
 
     // Info
     if (Problem)
@@ -308,7 +347,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global)
     }
 
     if (Global.DisplayCommand)
+    {
         cout << Command;
+        if (Global.Actions[Action_Version2])
+            cout << " && cat " << Global.rawcooked_reversibility_FileName << " >> " << Global.OutputFileName << " && rm " << Global.rawcooked_reversibility_FileName;
+    }
     else
     {
         int Value = system(Command.c_str());
