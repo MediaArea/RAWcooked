@@ -124,6 +124,10 @@ struct aiff_tested AIFF_Tested[] =
     { sample_rate_code::_44100, 24, 2, endianness::BE },
     { sample_rate_code::_44100, 24, 6, endianness::BE },
     { sample_rate_code::_44100, 24, 8, endianness::BE },
+    { sample_rate_code::_44100, 32, 1, endianness::BE },
+    { sample_rate_code::_44100, 32, 2, endianness::BE },
+    { sample_rate_code::_44100, 32, 6, endianness::BE },
+    { sample_rate_code::_44100, 32, 8, endianness::BE },
     { sample_rate_code::_48000,  8, 1, endianness::LE },
     { sample_rate_code::_48000,  8, 1, endianness::BE },
     { sample_rate_code::_48000,  8, 2, endianness::LE },
@@ -144,6 +148,10 @@ struct aiff_tested AIFF_Tested[] =
     { sample_rate_code::_48000, 24, 2, endianness::BE },
     { sample_rate_code::_48000, 24, 6, endianness::BE },
     { sample_rate_code::_48000, 24, 8, endianness::BE },
+    { sample_rate_code::_48000, 32, 1, endianness::BE },
+    { sample_rate_code::_48000, 32, 2, endianness::BE },
+    { sample_rate_code::_48000, 32, 6, endianness::BE },
+    { sample_rate_code::_48000, 32, 8, endianness::BE },
     { sample_rate_code::_96000,  8, 1, endianness::LE },
     { sample_rate_code::_96000,  8, 1, endianness::BE },
     { sample_rate_code::_96000,  8, 2, endianness::LE },
@@ -164,6 +172,10 @@ struct aiff_tested AIFF_Tested[] =
     { sample_rate_code::_96000, 24, 2, endianness::BE },
     { sample_rate_code::_96000, 24, 6, endianness::BE },
     { sample_rate_code::_96000, 24, 8, endianness::BE },
+    { sample_rate_code::_96000, 32, 1, endianness::BE },
+    { sample_rate_code::_96000, 32, 2, endianness::BE },
+    { sample_rate_code::_96000, 32, 6, endianness::BE },
+    { sample_rate_code::_96000, 32, 8, endianness::BE },
 };
 static_assert(aiff::flavor_Max == sizeof(AIFF_Tested) / sizeof(aiff_tested), IncoherencyMessage);
 
