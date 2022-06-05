@@ -33,20 +33,24 @@ format_kind FormatKind(format Format)
 }
 
 //---------------------------------------------------------------------------
-static const char* Format_CodecID_[] =
+struct codecid_mapping
 {
-    nullptr,
-    "V_FFV1",
-    "A_FLAC",
-    "A_PCM/INT/LIT",
-    "V_MS/VFW/FOURCC",
+    const char* CodecID;
+    format Format;
 };
-static_assert(format_Max == sizeof(Format_CodecID_) / sizeof(const char*), IncoherencyMessage);
+static codecid_mapping Format_CodecID_[] =
+{
+    { "A_FLAC", format::FLAC},
+    { "A_PCM/INT/BIG", format::PCM},
+    { "A_PCM/INT/LIT", format::PCM},
+    { "V_FFV1", format::FFV1},
+    { "V_MS/VFW/FOURCC", format::VFW},
+};
 format Format_FromCodecID(const char* Name)
 {
     for (const auto& Item : Format_CodecID_)
-        if (Item && !strcmp(Name, Item))
-            return (format)(&Item - Format_CodecID_);
+        if (!strcmp(Name, Item.CodecID))
+            return Item.Format;
     return format::None;
 }
 
