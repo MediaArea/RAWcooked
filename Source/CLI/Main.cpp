@@ -252,6 +252,26 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     if (!Problem)
         Problem = !Global.License.IsSupported(SingleFile.ParserCode, SingleFile.Flavor);
 
+    // Technical limitations
+    if (SingleFile.ParserCode >= Parser_WAV && SingleFile.ParserCode < Uncompressed_Max && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24)
+    {
+        const auto& c_a = Global.OutputOptions.find("c:a");
+        if (c_a == Global.OutputOptions.end())
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Info: FLAC encoding is not supported with " << to_string(((input_base_uncompressed_audio*)&SingleFile)->BitDepth()) << "-bit audio input,\n"
+                    "      using audio copy (no compression).\n"<< endl;
+            Global.OutputOptions["c:a"] = "copy";
+        }
+        else if (c_a->second == "flac")
+        {
+            Global.ProgressIndicator_Stop();
+            cerr << "Error: FLAC encoding is not supported with " << to_string(((input_base_uncompressed_audio*)&SingleFile)->BitDepth()) << "-bit audio input,\n"
+                    "       use -c:a copy.\n" << endl;
+            return true;
+        }
+    }
+
     return false;
 }
 

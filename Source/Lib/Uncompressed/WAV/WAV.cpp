@@ -133,6 +133,10 @@ struct wav_tested WAV_Tested[] =
     { sample_per_sec_code::_44100, 24, 2 },
     { sample_per_sec_code::_44100, 24, 6 },
     { sample_per_sec_code::_44100, 24, 8 },
+    { sample_per_sec_code::_44100, 32, 1 },
+    { sample_per_sec_code::_44100, 32, 2 },
+    { sample_per_sec_code::_44100, 32, 6 },
+    { sample_per_sec_code::_44100, 32, 8 },
     { sample_per_sec_code::_48000,  8, 1 },
     { sample_per_sec_code::_48000,  8, 2 },
     { sample_per_sec_code::_48000,  8, 6 },
@@ -145,6 +149,10 @@ struct wav_tested WAV_Tested[] =
     { sample_per_sec_code::_48000, 24, 2 },
     { sample_per_sec_code::_48000, 24, 6 },
     { sample_per_sec_code::_48000, 24, 8 },
+    { sample_per_sec_code::_48000, 32, 1 },
+    { sample_per_sec_code::_48000, 32, 2 },
+    { sample_per_sec_code::_48000, 32, 6 },
+    { sample_per_sec_code::_48000, 32, 8 },
     { sample_per_sec_code::_96000,  8, 1 },
     { sample_per_sec_code::_96000,  8, 2 },
     { sample_per_sec_code::_96000,  8, 6 },
@@ -157,6 +165,10 @@ struct wav_tested WAV_Tested[] =
     { sample_per_sec_code::_96000, 24, 2 },
     { sample_per_sec_code::_96000, 24, 6 },
     { sample_per_sec_code::_96000, 24, 8 },
+    { sample_per_sec_code::_96000, 32, 1 },
+    { sample_per_sec_code::_96000, 32, 2 },
+    { sample_per_sec_code::_96000, 32, 6 },
+    { sample_per_sec_code::_96000, 32, 8 },
 };
 static_assert(wav::flavor_Max == sizeof(WAV_Tested) / sizeof(wav_tested), IncoherencyMessage);
 
