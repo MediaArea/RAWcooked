@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Input.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 #include "Lib/Utils/FileIO/Input_Base.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include <iostream>

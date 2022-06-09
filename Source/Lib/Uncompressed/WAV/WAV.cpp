@@ -94,81 +94,74 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 using namespace wav_issue;
 
 //---------------------------------------------------------------------------
-// Enums
-enum class sample_per_sec_code : uint8_t
-{
-    _44100,
-    _48000,
-    _96000,
-};
-
-//---------------------------------------------------------------------------
 // Tested cases
 struct wav_tested
 {
-    sample_per_sec_code         SamplesPerSecCode;
-    uint8_t                     BitDepth;
-    uint8_t                     Channels;
+    samplerate_code             SamplesPerSecCode;
+    bitdepth                    BitDepth;
+    channels                    Channels;
+    sign                        Sign;
 
     bool operator == (const wav_tested& Value) const
     {
         return SamplesPerSecCode == Value.SamplesPerSecCode
             && BitDepth == Value.BitDepth
             && Channels == Value.Channels
+            && Sign == Value.Sign
             ;
     }
 };
 
 struct wav_tested WAV_Tested[] =
 {
-    { sample_per_sec_code::_44100,  8, 1 },
-    { sample_per_sec_code::_44100,  8, 2 },
-    { sample_per_sec_code::_44100,  8, 6 },
-    { sample_per_sec_code::_44100,  8, 8 },
-    { sample_per_sec_code::_44100, 16, 1 },
-    { sample_per_sec_code::_44100, 16, 2 },
-    { sample_per_sec_code::_44100, 16, 6 },
-    { sample_per_sec_code::_44100, 16, 8 },
-    { sample_per_sec_code::_44100, 24, 1 },
-    { sample_per_sec_code::_44100, 24, 2 },
-    { sample_per_sec_code::_44100, 24, 6 },
-    { sample_per_sec_code::_44100, 24, 8 },
-    { sample_per_sec_code::_44100, 32, 1 },
-    { sample_per_sec_code::_44100, 32, 2 },
-    { sample_per_sec_code::_44100, 32, 6 },
-    { sample_per_sec_code::_44100, 32, 8 },
-    { sample_per_sec_code::_48000,  8, 1 },
-    { sample_per_sec_code::_48000,  8, 2 },
-    { sample_per_sec_code::_48000,  8, 6 },
-    { sample_per_sec_code::_48000,  8, 8 },
-    { sample_per_sec_code::_48000, 16, 1 },
-    { sample_per_sec_code::_48000, 16, 2 },
-    { sample_per_sec_code::_48000, 16, 6 },
-    { sample_per_sec_code::_48000, 16, 8 },
-    { sample_per_sec_code::_48000, 24, 1 },
-    { sample_per_sec_code::_48000, 24, 2 },
-    { sample_per_sec_code::_48000, 24, 6 },
-    { sample_per_sec_code::_48000, 24, 8 },
-    { sample_per_sec_code::_48000, 32, 1 },
-    { sample_per_sec_code::_48000, 32, 2 },
-    { sample_per_sec_code::_48000, 32, 6 },
-    { sample_per_sec_code::_48000, 32, 8 },
-    { sample_per_sec_code::_96000,  8, 1 },
-    { sample_per_sec_code::_96000,  8, 2 },
-    { sample_per_sec_code::_96000,  8, 6 },
-    { sample_per_sec_code::_96000,  8, 8 },
-    { sample_per_sec_code::_96000, 16, 1 },
-    { sample_per_sec_code::_96000, 16, 2 },
-    { sample_per_sec_code::_96000, 16, 6 },
-    { sample_per_sec_code::_96000, 16, 8 },
-    { sample_per_sec_code::_96000, 24, 1 },
-    { sample_per_sec_code::_96000, 24, 2 },
-    { sample_per_sec_code::_96000, 24, 6 },
-    { sample_per_sec_code::_96000, 24, 8 },
-    { sample_per_sec_code::_96000, 32, 1 },
-    { sample_per_sec_code::_96000, 32, 2 },
-    { sample_per_sec_code::_96000, 32, 6 },
-    { sample_per_sec_code::_96000, 32, 8 },
+    { samplerate_code::_44100,  8, 1, sign::U },
+    { samplerate_code::_44100,  8, 2, sign::U },
+    { samplerate_code::_44100,  8, 6, sign::U },
+    { samplerate_code::_44100,  8, 8, sign::U },
+    { samplerate_code::_44100, 16, 1, sign::S },
+    { samplerate_code::_44100, 16, 2, sign::S },
+    { samplerate_code::_44100, 16, 6, sign::S },
+    { samplerate_code::_44100, 16, 8, sign::S },
+    { samplerate_code::_44100, 24, 1, sign::S },
+    { samplerate_code::_44100, 24, 2, sign::S },
+    { samplerate_code::_44100, 24, 6, sign::S },
+    { samplerate_code::_44100, 24, 8, sign::S },
+    { samplerate_code::_44100, 32, 1, sign::S },
+    { samplerate_code::_44100, 32, 2, sign::S },
+    { samplerate_code::_44100, 32, 6, sign::S },
+    { samplerate_code::_44100, 32, 8, sign::S },
+    { samplerate_code::_48000,  8, 1, sign::U },
+    { samplerate_code::_48000,  8, 2, sign::U },
+    { samplerate_code::_48000,  8, 6, sign::U },
+    { samplerate_code::_48000,  8, 8, sign::U },
+    { samplerate_code::_48000, 16, 1, sign::S },
+    { samplerate_code::_48000, 16, 2, sign::S },
+    { samplerate_code::_48000, 16, 6, sign::S },
+    { samplerate_code::_48000, 16, 8, sign::S },
+    { samplerate_code::_48000, 24, 1, sign::S },
+    { samplerate_code::_48000, 24, 2, sign::S },
+    { samplerate_code::_48000, 24, 6, sign::S },
+    { samplerate_code::_48000, 24, 8, sign::S },
+    { samplerate_code::_48000, 32, 1, sign::S },
+    { samplerate_code::_48000, 32, 2, sign::S },
+    { samplerate_code::_48000, 32, 6, sign::S },
+    { samplerate_code::_48000, 32, 8, sign::S },
+    { samplerate_code::_96000,  8, 1, sign::U },
+    { samplerate_code::_96000,  8, 2, sign::U },
+    { samplerate_code::_96000,  8, 6, sign::U },
+    { samplerate_code::_96000,  8, 8, sign::U },
+    { samplerate_code::_96000, 16, 1, sign::S },
+    { samplerate_code::_96000, 16, 2, sign::S },
+    { samplerate_code::_96000, 16, 6, sign::S },
+    { samplerate_code::_96000, 16, 8, sign::S },
+    { samplerate_code::_96000, 24, 1, sign::S },
+    { samplerate_code::_96000, 24, 2, sign::S },
+    { samplerate_code::_96000, 24, 6, sign::S },
+    { samplerate_code::_96000, 24, 8, sign::S },
+    { samplerate_code::_96000, 32, 1, sign::S },
+    { samplerate_code::_96000, 32, 2, sign::S },
+    { samplerate_code::_96000, 32, 6, sign::S },
+    { samplerate_code::_96000, 32, 8, sign::S },
 };
 static_assert(wav::flavor_Max == sizeof(WAV_Tested) / sizeof(wav_tested), IncoherencyMessage);
 
@@ -235,7 +228,7 @@ void wav::ParseBuffer()
         return;
     SetDetected();
 
-    Flavor = flavor_Max; // Used for detected if fmt chunk is parsed
+    Flavor = (decltype(Flavor))-1;
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer.Size();
     Levels[0].SubElements = &wav::SubElements__;
@@ -320,7 +313,7 @@ void wav::WAVE()
 void wav::WAVE_data()
 {
     // Test if fmt chunk was parsed
-    if (!HasErrors() && Flavor == flavor_Max)
+    if (!HasErrors() && Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::fmt__Location);
 
     // Coherency test
@@ -371,11 +364,6 @@ void wav::WAVE_fmt_()
     }
 
     uint16_t FormatTag = Get_L2();
-    if (FormatTag != 1 && FormatTag != 0xFFFE)
-        Unsupported(unsupported::fmt__FormatTag);
-
-    wav_tested Info;
-
     uint16_t Channels = Get_L2();
     uint32_t SamplesPerSec = Get_L4();
     uint32_t AvgBytesPerSec = Get_L4();
@@ -427,33 +415,31 @@ void wav::WAVE_fmt_()
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
          && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
             Unsupported(unsupported::fmt__ChannelMask);
-        uint32_t SubFormat1 = Get_L4();
+        FormatTag = Get_L4();
         uint32_t SubFormat2 = Get_L4();
         uint32_t SubFormat3 = Get_B4();
         uint64_t SubFormat4 = Get_B4();
-        if (SubFormat1 != 0x00000001
-         || SubFormat2 != 0x00100000
+        if (SubFormat2 != 0x00100000
          || SubFormat3 != 0x800000aa
          || SubFormat4 != 0x00389b71)
             Unsupported(unsupported::fmt__SubFormat);
     }
 
     // Supported?
-    if (BitDepth > (decltype(wav_tested::BitDepth))-1
-        || Channels > (decltype(wav_tested::Channels))-1)
+    if (FormatTag != 1 && FormatTag != 0xFFFE)
+        Unsupported(unsupported::fmt__FormatTag);
+    if ((FormatTag != 1 && FormatTag != 3)
+     || Channels > (decltype(wav_tested::Channels))-1
+     || BitDepth > (decltype(wav_tested::BitDepth))-1)
     {
         Unsupported(unsupported::Flavor);
         return;
     }
-    switch (SamplesPerSec)
-    {
-    case 44100: Info.SamplesPerSecCode = sample_per_sec_code::_44100; break;
-    case 48000: Info.SamplesPerSecCode = sample_per_sec_code::_48000; break;
-    case 96000: Info.SamplesPerSecCode = sample_per_sec_code::_96000; break;
-    default   : Info.SamplesPerSecCode = (decltype(Info.SamplesPerSecCode))-1;
-    }
+    wav_tested Info;
+    Info.SamplesPerSecCode = SampleRate2Code(SamplesPerSec);
     Info.BitDepth = (decltype(wav_tested::BitDepth))BitDepth;
     Info.Channels = (decltype(wav_tested::Channels))Channels;
+    Info.Sign = Info.BitDepth <= 8 ? sign::U: sign::S;
     for (const auto& WAV_Tested_Item : WAV_Tested)
     {
         if (WAV_Tested_Item == Info)
@@ -490,45 +476,23 @@ uint8_t wav::BitDepth()
 }
 
 //---------------------------------------------------------------------------
+sign wav::Sign()
+{
+    return WAV_Tested[Flavor].Sign;
+}
+
+//---------------------------------------------------------------------------
 endianness wav::Endianness()
 {
     return endianness::LE;
 }
 
 //---------------------------------------------------------------------------
-static const char* SamplesPerSec_String(wav::flavor Flavor)
-{
-    switch (WAV_Tested[(size_t)Flavor].SamplesPerSecCode)
-    {
-    case sample_per_sec_code::_44100: return "44";
-    case sample_per_sec_code::_48000: return "48";
-    case sample_per_sec_code::_96000: return "96";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
-static string BitDepth_String(wav::flavor Flavor)
-{
-    return to_string(WAV_Tested[(size_t)Flavor].BitDepth);
-}
-
-//---------------------------------------------------------------------------
-static string Channels_String(wav::flavor Flavor)
-{
-    return to_string(WAV_Tested[(size_t)Flavor].Channels);
-}
-
-//---------------------------------------------------------------------------
 string WAV_Flavor_String(uint8_t Flavor)
 {
-    string ToReturn("WAV/PCM/");
-    ToReturn += SamplesPerSec_String((wav::flavor)Flavor);
-    ToReturn += "kHz/";
-    ToReturn += BitDepth_String((wav::flavor)Flavor);
-    ToReturn += "bit/";
-    ToReturn += Channels_String((wav::flavor)Flavor);
-    ToReturn += "ch/LE";
+    const auto& Info = WAV_Tested[(size_t)Flavor];
+    string ToReturn("WAV/");
+    ToReturn += PCM_Flavor_String(Info.BitDepth, Info.Sign, endianness::LE, Info.Channels, Info.SamplesPerSecCode);
     return ToReturn;
 }
 

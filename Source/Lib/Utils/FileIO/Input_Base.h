@@ -192,6 +192,7 @@ public:
 
     // Info about formats
     virtual uint8_t             BitDepth() = 0;
+    virtual sign                Sign() = 0;
     virtual endianness          Endianness() = 0;
 };
 

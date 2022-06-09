@@ -11,7 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"
 #include <map>

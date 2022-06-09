@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 #include "zlib.h"
 #include <algorithm>
 #include <cstring>

@@ -30,6 +30,7 @@ public:
     // General info
     string                      Flavor_String();
     uint8_t                     BitDepth();
+    sign                        Sign();
     endianness                  Endianness();
 
     ENUM_BEGIN(flavor)
