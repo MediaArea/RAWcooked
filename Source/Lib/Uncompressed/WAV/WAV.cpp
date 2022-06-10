@@ -45,7 +45,7 @@ static const char* MessageText[] =
 {
     // Unsupported
     "RF64 (4GB+ WAV)",
-    "fmt FormatTag not WAVE_FORMAT_PCM 1",
+    "fmt FormatTag not WAVE_FORMAT_PCM 1 or 3",
     "fmt AvgBytesPerSec",
     "fmt BlockAlign",
     "fmt extension",
@@ -127,9 +127,13 @@ struct wav_tested WAV_Tested[] =
     { samplerate_code::_44100, 24, 6, sign::S },
     { samplerate_code::_44100, 24, 8, sign::S },
     { samplerate_code::_44100, 32, 1, sign::S },
+    { samplerate_code::_44100, 32, 1, sign::F },
     { samplerate_code::_44100, 32, 2, sign::S },
+    { samplerate_code::_44100, 32, 2, sign::F },
     { samplerate_code::_44100, 32, 6, sign::S },
+    { samplerate_code::_44100, 32, 6, sign::F },
     { samplerate_code::_44100, 32, 8, sign::S },
+    { samplerate_code::_44100, 32, 8, sign::F },
     { samplerate_code::_48000,  8, 1, sign::U },
     { samplerate_code::_48000,  8, 2, sign::U },
     { samplerate_code::_48000,  8, 6, sign::U },
@@ -143,9 +147,13 @@ struct wav_tested WAV_Tested[] =
     { samplerate_code::_48000, 24, 6, sign::S },
     { samplerate_code::_48000, 24, 8, sign::S },
     { samplerate_code::_48000, 32, 1, sign::S },
+    { samplerate_code::_48000, 32, 1, sign::F },
     { samplerate_code::_48000, 32, 2, sign::S },
+    { samplerate_code::_48000, 32, 2, sign::F },
     { samplerate_code::_48000, 32, 6, sign::S },
+    { samplerate_code::_48000, 32, 6, sign::F },
     { samplerate_code::_48000, 32, 8, sign::S },
+    { samplerate_code::_48000, 32, 8, sign::F },
     { samplerate_code::_96000,  8, 1, sign::U },
     { samplerate_code::_96000,  8, 2, sign::U },
     { samplerate_code::_96000,  8, 6, sign::U },
@@ -159,9 +167,13 @@ struct wav_tested WAV_Tested[] =
     { samplerate_code::_96000, 24, 6, sign::S },
     { samplerate_code::_96000, 24, 8, sign::S },
     { samplerate_code::_96000, 32, 1, sign::S },
+    { samplerate_code::_96000, 32, 1, sign::F },
     { samplerate_code::_96000, 32, 2, sign::S },
+    { samplerate_code::_96000, 32, 2, sign::F },
     { samplerate_code::_96000, 32, 6, sign::S },
+    { samplerate_code::_96000, 32, 6, sign::F },
     { samplerate_code::_96000, 32, 8, sign::S },
+    { samplerate_code::_96000, 32, 8, sign::F },
 };
 static_assert(wav::flavor_Max == sizeof(WAV_Tested) / sizeof(wav_tested), IncoherencyMessage);
 
@@ -426,7 +438,7 @@ void wav::WAVE_fmt_()
     }
 
     // Supported?
-    if (FormatTag != 1 && FormatTag != 0xFFFE)
+    if (FormatTag != 1 && FormatTag != 3 && FormatTag != 0xFFFE)
         Unsupported(unsupported::fmt__FormatTag);
     if ((FormatTag != 1 && FormatTag != 3)
      || Channels > (decltype(wav_tested::Channels))-1
@@ -439,7 +451,7 @@ void wav::WAVE_fmt_()
     Info.SamplesPerSecCode = SampleRate2Code(SamplesPerSec);
     Info.BitDepth = (decltype(wav_tested::BitDepth))BitDepth;
     Info.Channels = (decltype(wav_tested::Channels))Channels;
-    Info.Sign = Info.BitDepth <= 8 ? sign::U: sign::S;
+    Info.Sign = FormatTag == 3 ? sign::F : Info.BitDepth <= 8 ? sign::U: sign::S;
     for (const auto& WAV_Tested_Item : WAV_Tested)
     {
         if (WAV_Tested_Item == Info)
