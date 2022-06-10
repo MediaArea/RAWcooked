@@ -80,21 +80,31 @@
 #  define bswap16(x)     __builtin_bswap16((x))
 #  define bswap32(x)     __builtin_bswap32((x))
 #  define bswap64(x)     __builtin_bswap64((x))
-#elif defined(__has_builtin) && __has_builtin(__builtin_bswap64)  /* for clang; gcc 5 fails on this and && shortcircuit fails; must be after GCC check */
-#  define bswap16(x)     __builtin_bswap16((x))
-#  define bswap32(x)     __builtin_bswap32((x))
-#  define bswap64(x)     __builtin_bswap64((x))
-#else
+#elif defined(__has_builtin)
+#  if __has_builtin (__builtin_bswap64)  /* for clang; gcc 5 fails on this and && shortcircuit fails; must be after GCC check */
+#    define bswap16(x)     __builtin_bswap16((x))
+#    define bswap32(x)     __builtin_bswap32((x))
+#    define bswap64(x)     __builtin_bswap64((x))
+#  endif
+#endif
+
     /* even in this case, compilers often optimize by using native instructions */
+#if !defined(bswap16)
     static inline uint16_t bswap16(uint16_t x) {
-		return ((( x  >> 8 ) & 0xffu ) | (( x  & 0xffu ) << 8 ));
-	}
+        return ((( x  >> 8 ) & 0xffu ) | (( x  & 0xffu ) << 8 ));
+    }
+#endif
+
+#if !defined(bswap32)
     static inline uint32_t bswap32(uint32_t x) {
         return ((( x & 0xff000000u ) >> 24 ) |
                 (( x & 0x00ff0000u ) >> 8  ) |
                 (( x & 0x0000ff00u ) << 8  ) |
                 (( x & 0x000000ffu ) << 24 ));
     }
+#endif
+
+#if !defined(bswap64)
     static inline uint64_t bswap64(uint64_t x) {
         return ((( x & 0xff00000000000000ull ) >> 56 ) |
                 (( x & 0x00ff000000000000ull ) >> 40 ) |
