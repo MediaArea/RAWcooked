@@ -135,7 +135,7 @@ static const char* TypeText[] =
     "v2f",
 };
 
-enum class type : uint8_t
+enum class item_type : uint8_t
 {
     box2i,
     chlist,
@@ -150,7 +150,7 @@ enum class type : uint8_t
     v2f,
     Max
 };
-static_assert((size_t)type::Max == sizeof(TypeText) / sizeof(const char*), IncoherencyMessage);
+static_assert((size_t)item_type::Max == sizeof(TypeText) / sizeof(const char*), IncoherencyMessage);
 
 //---------------------------------------------------------------------------
 // Tested cases
@@ -298,12 +298,12 @@ void exr::ParseBuffer()
         #define CASE_S(_NAME,_TYPE) else if (!strcmp(_NAME, name) && !strcmp(TypeText[(int)_TYPE], type)){Buffer_Offset += Size;} // Supported and skipped
         #define CASE_S_STARTWITH(_NAME) else if (!strncmp(_NAME, name, strlen(_NAME))){Buffer_Offset += Size;} // Supported and skipped
         if (false);
-        CASE_S("acesImageContainerFlag", type::Int)
-        CASE_S("adoptedNeutral", type::v2f)
+        CASE_S("acesImageContainerFlag", item_type::Int)
+        CASE_S("adoptedNeutral", item_type::v2f)
         CASE_S_STARTWITH("arri.")
         CASE_S_STARTWITH("camera")
-        CASE_S("capDate", type::String)
-        CASE_F("captureRate", type::rational)
+        CASE_S("capDate", item_type::String)
+        CASE_F("captureRate", item_type::rational)
         {
             if (Size != 8)
             {
@@ -318,7 +318,7 @@ void exr::ParseBuffer()
                     InputInfo->FrameRate = ((decltype(InputInfo->FrameRate))FrameRate_N) / FrameRate_D;
             }
         }
-        CASE_F("channels", type::chlist)
+        CASE_F("channels", item_type::chlist)
         {
             if (!Size)
             {
@@ -390,10 +390,10 @@ void exr::ParseBuffer()
                 default:;
             }
         }
-        CASE_S("chromaticities", type::chromaticities)
+        CASE_S("chromaticities", item_type::chromaticities)
         CASE_S_STARTWITH("com.arri.")
-        CASE_S("comments", type::String)
-        CASE_F("compression", type::compression)
+        CASE_S("comments", item_type::String)
+        CASE_F("compression", item_type::compression)
         {
             if (Size != 1)
             {
@@ -406,7 +406,7 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::compression);
             }
         }
-        CASE_F("dataWindow", type::box2i)
+        CASE_F("dataWindow", item_type::box2i)
         {
             if (Size != 16)
             {
@@ -423,7 +423,7 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::dataWindow);
             }
         }
-        CASE_F("displayWindow", type::box2i)
+        CASE_F("displayWindow", item_type::box2i)
         {
             if (Size != 16)
             {
@@ -442,10 +442,10 @@ void exr::ParseBuffer()
                     displayIsPresent = true;
             }
         }
-        CASE_S("expTime", type::Float)
-        CASE_S("focalLength", type::Float)
-        CASE_S("focus", type::Float)
-        CASE_F("framesPerSecond", type::rational)
+        CASE_S("expTime", item_type::Float)
+        CASE_S("focalLength", item_type::Float)
+        CASE_S("focus", item_type::Float)
+        CASE_F("framesPerSecond", item_type::rational)
         {
             if (Size != 8)
             {
@@ -462,8 +462,8 @@ void exr::ParseBuffer()
                     InputInfo->FrameRate = ((decltype(InputInfo->FrameRate))FrameRate_N) / FrameRate_D;
             }
         }
-        CASE_S("imageCounter", type::Int)
-        CASE_F("imageRotation", type::Float)
+        CASE_S("imageCounter", item_type::Int)
+        CASE_F("imageRotation", item_type::Float)
         {
             if (Size != 4)
             {
@@ -477,10 +477,10 @@ void exr::ParseBuffer()
             }
         }
         CASE_S_STARTWITH("interim.")
-        CASE_S("isoSpeed", type::Float)
-        CASE_S("lensMake", type::String)
-        CASE_S("lensSerialNumber", type::String)
-        CASE_F("lineOrder", type::lineOrder)
+        CASE_S("isoSpeed", item_type::Float)
+        CASE_S("lensMake", item_type::String)
+        CASE_S("lensSerialNumber", item_type::String)
+        CASE_F("lineOrder", item_type::lineOrder)
         {
             if (Size != 1)
             {
@@ -493,15 +493,15 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::lineOrder);
             }
         }
-        CASE_S("originalImageFlag", type::Int)
-        CASE_S("owner", type::String)
-        CASE_S("pixelAspectRatio", type::Float)
-        CASE_S("reelName", type::String)
-        CASE_S("recorderFirmwareVersion", type::String)
-        CASE_S("recorderMake", type::String)
-        CASE_S("recorderModel", type::String)
-        CASE_S("reelName", type::String)
-        CASE_F("screenWindowCenter", type::v2f)
+        CASE_S("originalImageFlag", item_type::Int)
+        CASE_S("owner", item_type::String)
+        CASE_S("pixelAspectRatio", item_type::Float)
+        CASE_S("reelName", item_type::String)
+        CASE_S("recorderFirmwareVersion", item_type::String)
+        CASE_S("recorderMake", item_type::String)
+        CASE_S("recorderModel", item_type::String)
+        CASE_S("reelName", item_type::String)
+        CASE_F("screenWindowCenter", item_type::v2f)
         {
             if (Size != 8)
             {
@@ -514,7 +514,7 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::screenWindowCenter);
             }
         }
-        CASE_F("screenWindowWidth", type::Float)
+        CASE_F("screenWindowWidth", item_type::Float)
         {
             if (Size != 4)
             {
@@ -527,9 +527,9 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::screenWindowWidth);
             }
         }
-        CASE_S("storageMediaSerialNumber", type::String)
-        CASE_S("timeCode", type::timecode)
-        CASE_S("timecodeRate", type::Int)
+        CASE_S("storageMediaSerialNumber", item_type::String)
+        CASE_S("timeCode", item_type::timecode)
+        CASE_S("timecodeRate", item_type::Int)
         else
         {
             UnsupportedFieldName = true;
