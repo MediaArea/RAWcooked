@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\CoDec\Wrapper.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Common\Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h" />
@@ -27,7 +28,6 @@
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h" />
-    <ClInclude Include="..\..\..\Source\Lib\Config.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\Buffer\Buffer.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.h" />
@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\Wrapper.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Common\Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp" />

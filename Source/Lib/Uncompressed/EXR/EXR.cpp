@@ -120,18 +120,6 @@ using namespace exr_issue;
 
 //---------------------------------------------------------------------------
 // Enums
-enum class colorspace : uint8_t
-{
-    RGB,
-};
-
-enum class pixeltype : uint8_t
-{
-    Uint,
-    Half,
-    Float,
-};
-
 static const char* TypeText[] =
 {
     "box2i",
@@ -169,7 +157,8 @@ static_assert((size_t)type::Max == sizeof(TypeText) / sizeof(const char*), Incoh
 struct exr_tested
 {
     colorspace                  ColorSpace;
-    pixeltype                   pixelType;
+    bitdepth                    BitDepth;
+    sign                        pixelType;
 
     bool operator == (const exr_tested &Value) const
     {
@@ -185,7 +174,7 @@ struct exr_also
 
 struct exr_tested EXR_Tested[] =
 {
-    { colorspace::RGB      , pixeltype::Half },
+    { colorspace::RGB      , 16, sign::F },
 };
 static_assert(exr::flavor_Max == sizeof(EXR_Tested) / sizeof(exr_tested), IncoherencyMessage);
 
@@ -236,7 +225,8 @@ void exr::ParseBuffer()
     IsBigEndian = false;
     exr_tested Info;
     Info.ColorSpace = (colorspace)-1;
-    Info.pixelType = (pixeltype)-1;
+    Info.BitDepth = (uint8_t)-1;
+    Info.pixelType = (sign)-1;
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t displayWidth = 0;
@@ -336,6 +326,7 @@ void exr::ParseBuffer()
                 return;
             }
             uint32_t ColorSpace = 0;
+            uint32_t pixelType = 0;
             uint8_t Count = 0;
             size_t End = Buffer_Offset + Size - 1;
             while (17 <= End - Buffer_Offset) // channelName ending null + pixelType + Others
@@ -366,11 +357,10 @@ void exr::ParseBuffer()
 
                 // pixelType
                 auto pixelTypeValue = Get_L4();
-                auto pixelType = (pixelTypeValue >= (1 << sizeof(Info.pixelType))) ? (pixeltype)-1 : (pixeltype)pixelTypeValue;
                 if (!Count)
-                    Info.pixelType = pixelType; // Storing the first value
-                else if (pixelType != Info.pixelType)// Testing that all but first values are same
-                    Info.pixelType = (pixeltype)-1;
+                    pixelType = pixelTypeValue; // Storing the first value
+                else if (pixelTypeValue != pixelType)// Testing that all but first values are same
+                    pixelType = (uint32_t)-1;
 
                 // Others
                 if (Get_L4() || Get_L4() != 1 || Get_L4() != 1)
@@ -392,7 +382,13 @@ void exr::ParseBuffer()
                 case 0x00524742: Info.ColorSpace = colorspace::RGB; break;
                 default:;
             }
-
+            switch (pixelType)
+            {
+                case 0: Info.BitDepth = 32; Info.pixelType = sign::U; break;
+                case 1: Info.BitDepth = 16; Info.pixelType = sign::F; break;
+                case 2: Info.BitDepth = 32; Info.pixelType = sign::F; break;
+                default:;
+            }
         }
         CASE_S("chromaticities", type::chromaticities)
         CASE_S_STARTWITH("com.arri.")
@@ -652,52 +648,10 @@ size_t exr::PixelsPerBlock(exr::flavor /*Flavor*/)
 }
 
 //---------------------------------------------------------------------------
-static colorspace ColorSpace(exr::flavor Flavor)
-{
-    return EXR_Tested[(size_t)Flavor].ColorSpace;
-}
-static const char* ColorSpace_String(exr::flavor Flavor)
-{
-    switch (ColorSpace(Flavor))
-    {
-    case colorspace::RGB : return "RGB";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
-static uint8_t BitDepth(exr::flavor /*Flavor*/)
-{
-    return 16;
-}
-static const char* BitDepth_String(exr::flavor /*Flavor*/)
-{
-    return "16";
-}
-
-//---------------------------------------------------------------------------
-static const char* PixelType_String(exr::flavor Flavor)
-{
-    switch (EXR_Tested[(size_t)Flavor].pixelType)
-    {
-    case pixeltype::Float : return "Float";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
 string EXR_Flavor_String(uint8_t Flavor)
 {
-    string ToReturn("EXR/Raw/");
-    ToReturn += ColorSpace_String((exr::flavor)Flavor);
-    ToReturn += '/';
-    ToReturn += BitDepth_String((exr::flavor)Flavor);
-    ToReturn += "bit";
-    const char* Value = PixelType_String((exr::flavor)Flavor);
-    if (Value && Value[0])
-    {
-        ToReturn += '/';
-        ToReturn += Value;
-    }
+    const auto& Info = EXR_Tested[(size_t)Flavor];
+    string ToReturn("EXR/");
+    ToReturn += Raw_Flavor_String(Info.BitDepth, Info.pixelType, endianness::BE, Info.ColorSpace);
     return ToReturn;
 }

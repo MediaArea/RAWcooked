@@ -6,7 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Compressed/RAWcooked/IntermediateWrite.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 using namespace std;
 
 //---------------------------------------------------------------------------

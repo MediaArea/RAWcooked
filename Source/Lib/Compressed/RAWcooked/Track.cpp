@@ -54,8 +54,7 @@ bool track_info::Init(const uint8_t* BaseData)
     {
         auto Wrapper2 = (audio_wrapper*)Wrapper;
         auto Parser2 = (input_base_uncompressed_audio*)Parser;
-        Wrapper2->SetEndianness(Parser2->Endianness());
-        Wrapper2->SetOutputBitDepth(Parser2->BitDepth());
+        Wrapper2->SetConfig(Parser2->BitDepth(), Parser2->Sign(), Parser2->Endianness());
         delete Parser; // No more used
         break;
     }

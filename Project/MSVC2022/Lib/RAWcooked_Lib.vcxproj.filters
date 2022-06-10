@@ -157,6 +157,12 @@
     <Filter Include="Header Files\Transform">
       <UniqueIdentifier>{4d9df808-fb06-4aea-b0cd-3f01c462a047}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Common">
+      <UniqueIdentifier>{c703348e-b64a-4d5c-8252-720b54def92a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Common">
+      <UniqueIdentifier>{5730fc35-f20a-41a0-a71f-6ea55856d565}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h">
@@ -182,9 +188,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h">
       <Filter>Header Files\Utils\RawFrame</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\Config.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.h">
       <Filter>Header Files\Uncompressed\DPX</Filter>
@@ -387,6 +390,9 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h">
       <Filter>ThirdParty</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Common\Common.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp">
@@ -544,6 +550,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp">
       <Filter>Source Files\Transform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Common\Common.cpp">
+      <Filter>Source Files\Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

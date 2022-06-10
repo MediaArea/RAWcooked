@@ -11,7 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Utils/Buffer/Buffer.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 #include <cstring>
 #include <vector>
 using namespace std;
