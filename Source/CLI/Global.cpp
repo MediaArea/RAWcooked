@@ -593,12 +593,18 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetFrameMd5An(true);
             if (Value)
                 return Value;
+            Value = SetFrameMd5(true);
+            if (Value)
+                return Value;
         }
         else if (strcmp(argv[i], "--framemd5-name") == 0)
         {
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetFrameMd5FileName(argv[++i]);
+            if (Value)
+                return Value;
+            Value = SetFrameMd5(true);
             if (Value)
                 return Value;
         }
