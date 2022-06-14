@@ -98,6 +98,7 @@ private:
     int SetEncode(bool Value);
     int SetInfo(bool Value);
     int SetFrameMd5(bool Value);
+    int SetFrameMd5An(bool Value);
     int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
     int SetAll(bool Value);

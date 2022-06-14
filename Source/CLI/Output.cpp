@@ -327,6 +327,10 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                 Global.FrameMd5FileName.pop_back();
             Global.FrameMd5FileName += ".framemd5";
         }
+        if (Global.Actions[Action_FrameMd5An])
+        {
+            Command += " -an";
+        }
         Command += " -f framemd5 \"";
         Command += Global.FrameMd5FileName;
         Command += '\"';

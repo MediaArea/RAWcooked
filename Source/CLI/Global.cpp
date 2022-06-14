@@ -222,6 +222,13 @@ int global::SetFrameMd5(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetFrameMd5An(bool Value)
+{
+    Actions.set(Action_FrameMd5An, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetFrameMd5FileName(const char* FileName)
 {
     FrameMd5FileName = FileName;
@@ -578,6 +585,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--framemd5") == 0)
         {
             int Value = SetFrameMd5(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--framemd5-an") == 0)
+        {
+            int Value = SetFrameMd5An(true);
             if (Value)
                 return Value;
         }
