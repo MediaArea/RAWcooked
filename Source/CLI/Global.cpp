@@ -411,7 +411,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
         OutputOptions["n"] = string();
         OutputOptions.erase("y");
         Mode = AlwaysNo; // Also RAWcooked itself
-        License.Feature(feature::GeneralOptions);
         return 0;
     }
     if (!strcmp(argv[i], "-slicecrc"))
@@ -453,7 +452,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
         OutputOptions["y"] = string();
         OutputOptions.erase("n");
         Mode = AlwaysYes; // Also RAWcooked itself
-        License.Feature(feature::GeneralOptions);
         return 0;
     }
 
