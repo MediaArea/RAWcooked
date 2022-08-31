@@ -25,7 +25,7 @@ jobs:
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew update
-            brew install automake truncate
+            brew install coreutils automake
           fi
       - name: FFmpeg
         run: | 
