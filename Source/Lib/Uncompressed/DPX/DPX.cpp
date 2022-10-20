@@ -128,7 +128,7 @@ enum class packing : uint8_t
 {
     Packed,
     FilledA,
-    MethodB,
+    FilledB,
 };
 
 //---------------------------------------------------------------------------
@@ -178,6 +178,8 @@ struct dpx_tested DPX_Tested[] =
     { colorspace::RGBA     , 16, endianness::LE, packing::Packed , 1,  8 }, // 1x4x16-bit in 4x16-bit
     { colorspace::RGBA     , 16, endianness::BE, packing::Packed , 1,  8 }, // 1x4x16-bit in 4x16-bit
     { colorspace::Y        ,  8, endianness::LE, packing::Packed , 1,  1 }, // 1x1x 8-bit in 1x 8-bit
+    { colorspace::Y        , 10, endianness::BE, packing::FilledA, 3,  4 }, // 3x1x16-bit in 1x32-bit
+    { colorspace::Y        , 10, endianness::BE, packing::FilledB, 3,  4 }, // 3x1x16-bit in 1x32-bit
     { colorspace::Y        , 16, endianness::LE, packing::Packed , 1,  2 }, // 1x1x16-bit in 1x16-bit
     { colorspace::Y        , 16, endianness::BE, packing::Packed , 1,  2 }, // 1x1x16-bit in 1x16-bit
 };
@@ -365,6 +367,14 @@ void dpx::ParseBuffer()
                 break;
             }
         }
+    }
+    switch ((flavor)Flavor)
+    {
+        case flavor::Raw_Y_10_FilledA_BE:
+        case flavor::Raw_Y_10_FilledB_BE:
+            Flavor = (decltype(Flavor))-1; // TODO: actually not yet ready, currently disabling them
+            break;
+        default: ;
     }
     if (Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::Flavor);
@@ -583,7 +593,7 @@ static const char* Packing_String(packing Packing)
     {
     case packing::Packed : return "Packed";
     case packing::FilledA: return "FilledA";
-    case packing::MethodB: return "FilledB";
+    case packing::FilledB: return "FilledB";
     default: return nullptr;
     }
 }
