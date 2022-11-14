@@ -81,6 +81,26 @@ pushd "${files_path}" >/dev/null 2>&1
 
     mkdir "${directory}"|| fatal "internal" "mkdir command failed"
 
+    # generate SD frame
+    ffmpeg -nostdin -f lavfi -i color=c=black:size=360x4 -vframes 1 -start_number 0 "${directory}/sd.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
+    
+    run_rawcooked -y -level 0 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 0 -slices 1 "${directory}"
+    check_success "options rejected" "options accepted"
+    run_rawcooked -y -level 0 -slices 4 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 3 "${directory}"
+    check_success "options rejected" "options accepted"
+    run_rawcooked -y -level 3 -slices 1 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 3 -slices 4 "${directory}"
+    check_success "options rejected" "options accepted"
+
+    rm -r "${directory}"|| fatal "internal" "rm command failed"
+
+    mkdir "${directory}"|| fatal "internal" "mkdir command failed"
+
     # generate video and attachment source directory
     ffmpeg -nostdin -f lavfi -i testsrc=size=16x16 -t 1 -start_number 0 "${directory}/%03d.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
     echo "a" > "${directory}/attachment"

@@ -824,9 +824,19 @@ int global::SetDefaults()
         if (OutputOptions.find("g") == OutputOptions.end())
             OutputOptions["g"] = "1"; // Intra
         if (OutputOptions.find("level") == OutputOptions.end())
-            OutputOptions["level"] = "3"; // FFV1 v3
+        {
+            auto slices = OutputOptions.find("slices");
+            if (slices != OutputOptions.end() && slices->second == "1")
+                OutputOptions["level"] = "1"; // FFV1 v1 when no slice
+            else
+                OutputOptions["level"] = "3"; // FFV1 v3
+        }
         if (OutputOptions.find("slicecrc") == OutputOptions.end())
-            OutputOptions["slicecrc"] = "1"; // Slice CRC on
+        {
+            auto Level = OutputOptions.find("level");
+            if (Level == OutputOptions.end() || (Level->second != "0" && Level->second != "1"))
+                OutputOptions["slicecrc"] = "1"; // Slice CRC on
+        }
 
         // Check incompatible options
         if (OutputOptions["level"] == "0" || OutputOptions["level"] == "1")
