@@ -104,6 +104,9 @@ void ffv1_frame::SetHeight(uint32_t height)
 //---------------------------------------------------------------------------
 bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 {
+    if (!Buffer_Size)
+        return true;
+
     P.ConfigurationRecord_IsPresent = true;
     Clear();
 
@@ -130,11 +133,6 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
 {
-    if (P.num_h_slices >= P.width)
-        return P.Error("FFV1-HEADER-num_h_slices:1");
-    if (P.num_v_slices >= P.height)
-        return P.Error("FFV1-HEADER-num_v_slices:1");
-
     if (!Slices)
     {
         if (P.ConfigurationRecord_IsPresent)
@@ -157,17 +155,16 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
     if (!KeyFrame_IsPresent)
         return P.Error("FFV1-FRAME-key_frame-NOINFIRSTFRAME:1");
 
-    if (P.ConfigurationRecord_IsPresent)
-    {
-        //Frame
-        //delete RawFrame;
-        //RawFrame = new raw_frame;
-        RawFrame->Create(P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
-    }
-
     size_t Slices_Size = 0;
     if (P.ConfigurationRecord_IsPresent)
     {
+        if (P.num_h_slices >= P.width)
+            return P.Error("FFV1-HEADER-num_h_slices:1");
+        if (P.num_v_slices >= P.height)
+            return P.Error("FFV1-HEADER-num_v_slices:1");
+
+        RawFrame->Create(P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
+
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)
         {

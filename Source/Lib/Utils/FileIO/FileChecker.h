@@ -31,6 +31,7 @@ namespace filechecker_issue
             Frame_Compressed_Extra,
             Frame_Source_Missing,
             Frame_Source_Extra,
+            Format_Undetected,
             Max
         };
 
