@@ -78,6 +78,7 @@ enum class samplerate_code : uint8_t
 //---------------------------------------------------------------------------
 // Conversions
 samplerate_code SampleRate2Code(uint32_t SampleRate);
+size_t Colorspace2Count(colorspace ColorSpace);
 
 //---------------------------------------------------------------------------
 // Display

@@ -41,6 +41,21 @@ samplerate_code SampleRate2Code(uint32_t SampleRate)
     }
 }
 
+//---------------------------------------------------------------------------
+size_t Colorspace2Count(colorspace ColorSpace)
+{
+    switch (ColorSpace)
+    {
+    case colorspace::RGB:
+        return 3;
+    case colorspace::RGBA:
+        return 4;
+    case colorspace::Y:
+        return 1;
+    default: return -1;
+    }
+}
+
 //***************************************************************************
 // Display
 //***************************************************************************
