@@ -55,9 +55,9 @@ static const char* MessageText[] =
     "screenWindowCenter",
     "screenWindowWidth",
     //"Encoding",
-    "Header field name",
-    "Flavor (colorSpace / pixelType combination)",
-    "Internal error",
+    "header field name",
+    "flavor (colorSpace / pixelType combination)",
+    "internal error",
 };
 
 enum code : uint8_t

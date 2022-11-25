@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
+#include "Lib/ThirdParty/endianness.h"
 #include <sstream>
 #include <ios>
 using namespace std;
@@ -23,9 +24,9 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file smaller than expected",
-    "Version number of header format",
-    "Offset to data",
-    "Expected data size is bigger than real file size",
+    "version number of header format",
+    "offset to data",
+    "expected data size is bigger than real file size",
 };
 
 enum code : uint8_t
@@ -45,18 +46,18 @@ namespace unsupported
 static const char* MessageText[] =
 {
     // Unsupported
-    "Offset to image data in bytes",
-    "Encryption key",
-    "Image orientation",
-    "Number of image elements",
-    "Data sign",
-    "Encoding",
-    "End-of-line padding",
+    "offset to image data in bytes",
+    "encryption key",
+    "image orientation",
+    "number of image elements",
+    "data sign",
+    "encoding",
+    "end-of-line padding",
     "\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"",
     "\"Frame rate of original (frames/s)\" or \"Temporal sampling rate or frame rate (Hz)\" not present",
-    "Flavor (Descriptor / BitDepth / Packing / Endianness combination)",
-    "Pixels in slice not on a 32-bit boundary",
-    "Internal error",
+    "flavor (Descriptor / BitDepth / Packing / Endianness combination)",
+    "pixels in slice not on a 32-bit boundary",
+    "internal error",
 };
 
 enum code : uint8_t
@@ -85,12 +86,12 @@ namespace invalid
 
 static const char* MessageText[] =
 {
-    "Offset to image data in bytes",
-    "Total image file size",
-    "Version number of header format",
-    "Ditto key",
-    "Ditto key is set to \"same as the previous frame\" but header data differs",
-    "Number of image elements",
+    "offset to image data in bytes",
+    "total image file size",
+    "version number of header format",
+    "ditto key",
+    "ditto key is set to \"same as the previous frame\" but header data differs",
+    "number of image elements",
 };
 
 enum code : uint8_t
