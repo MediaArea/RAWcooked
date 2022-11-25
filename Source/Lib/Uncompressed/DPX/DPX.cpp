@@ -434,31 +434,34 @@ void dpx::ParseBuffer()
         SetSupported();
 
     // Testing padding bits
-    if (IsSupported() && MayHavePaddingBits() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
+    if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
     {
-        uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
-        uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
-        size_t i = OffsetToData;
-        if (IsBigEndian)
-            i += Step - 1;
-        for (; i < OffsetAfterData; i += Step)
-            if (Buffer[i] & Mask)
-                break;
-        if (i < OffsetAfterData)
+        bool HasPaddingBitsNotZero = false;
+        if (MayHavePaddingBits())
         {
-            // Non-zero padding bit found, storing data
-            auto Temp_Size = OffsetAfterData - OffsetToData;
-            if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
-                In.Create(Temp_Size);
-            memset(In.Data(), 0x00, Temp_Size);
+            uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
+            uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
+            size_t i = OffsetToData;
+            if (IsBigEndian)
+                i += Step - 1;
             for (; i < OffsetAfterData; i += Step)
-                In[i - OffsetToData] = Buffer[i] & Mask;
+                if (Buffer[i] & Mask)
+                    break;
+            if (i < OffsetAfterData)
+            {
+                // Non-zero padding bit found, storing data
+                HasPaddingBitsNotZero = true;
+                auto Temp_Size = OffsetAfterData - OffsetToData;
+                if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
+                    In.Create(Temp_Size);
+                memset(In.Data(), 0x00, Temp_Size);
+                for (; i < OffsetAfterData; i += Step)
+                    In[i - OffsetToData] = Buffer[i] & Mask;
+            }
         }
-        else
+        if (!HasPaddingBitsNotZero)
             In.Clear();
     }
-    else
-        In.Clear();
 
     // Write RAWcooked file
     if (IsSupported() && RAWcooked)

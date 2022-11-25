@@ -438,7 +438,7 @@ int ParseFile_Compressed(parse_info& ParseInfo)
 
     // Matroska
     int ReturnValue = 0;
-    bool NoOutputCheck = (Global.Actions[Action_Check] || !Global.Actions[Action_Decode]) && !Global.OutputFileName_IsProvided;
+    bool NoOutputCheck = !Global.Actions[Action_Decode] && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     auto DoesNotHaveReversibility = false;
     if (!ParseInfo.IsDetected)
