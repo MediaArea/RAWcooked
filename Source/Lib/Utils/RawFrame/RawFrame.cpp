@@ -67,8 +67,16 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height)
     {
         case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
-                Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private)));
-        default: ;
+        {
+            size_t ExtraBytes;
+            if (dpx::PixelsPerBlock((dpx::flavor)Flavor_Private) != 1)
+                ExtraBytes = height * MaxHorizontalSlicesCount * 4;
+            else
+                ExtraBytes = 0;
+
+            Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private), 0, 0, 32, ExtraBytes));
+        }
+        default:;
     }
 }
 
