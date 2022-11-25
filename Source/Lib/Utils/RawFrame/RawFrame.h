@@ -240,6 +240,8 @@ public:
     // Processing
     void Process();
     raw_frame_process* FrameProcess = nullptr;
+    void Finalize(size_t num_h_slices, size_t num_v_slices) { if (Finalize_Function) Finalize_Function(this, num_h_slices, num_v_slices); }
+    void (*Finalize_Function)(raw_frame*, size_t, size_t) = nullptr;
 
 //private:
     buffer_or_view              Buffer_;
