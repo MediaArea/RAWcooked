@@ -132,7 +132,7 @@ bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPaddi
                 "       attachments, and such big reversibility file is not expected\n"
                 "       with such compression, we prefer to be safe and we reject the\n"
                 "       compression.\n"
-                "       Use \"--version 2\" option for supporting\n"
+                "       Use \"--output-version 2\" option for supporting\n"
                 "       such big reversibility file. Decoding will not be possible\n"
                 "       with RAWcooked older than version 21.09.\n"
                 << endl;
