@@ -632,7 +632,7 @@ void exr::BufferOverflow()
 //---------------------------------------------------------------------------
 string exr::Flavor_String()
 {
-    return EXR_Flavor_String(Flavor);
+    return EXR_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------

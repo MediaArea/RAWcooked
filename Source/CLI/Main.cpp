@@ -209,7 +209,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             cerr << "Info: non-zero padding bits found in first file,\n"
                 << "      forcing the check of padding bits for all files.\n" << endl;
         }
-        else if (SingleFile.MayHavePaddingBits() && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
+        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
         {
             Global.ProgressIndicator_Stop();
             if (Global.Actions[Action_Check])
@@ -250,7 +250,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
 
     // License
     if (!Problem)
-        Problem = !Global.License.IsSupported(SingleFile.ParserCode, SingleFile.Flavor);
+        Problem = !Global.License.IsSupported(SingleFile.ParserCode, (uint8_t)SingleFile.Flavor);
 
     // Technical limitations
     if (SingleFile.ParserCode >= Parser_WAV && SingleFile.ParserCode < Uncompressed_Max && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24)

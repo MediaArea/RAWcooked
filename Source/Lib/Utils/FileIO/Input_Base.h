@@ -150,7 +150,7 @@ public:
     virtual ~uncompressed();
 
     // Info
-    flavor                      Flavor = (flavor)-1;
+    uint64_t                    Flavor = (uint64_t)-1;
     virtual string              Flavor_String() = 0;
 
     // Common info
@@ -159,7 +159,6 @@ public:
 
     // Features
     rawcooked::version          Version() { return RAWcooked ? RAWcooked->Version : rawcooked::version::v1; }
-    virtual bool                MayHavePaddingBits() { return false; }
 };
 
 class input_base_uncompressed : public input_base, public uncompressed

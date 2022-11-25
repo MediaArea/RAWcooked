@@ -131,6 +131,10 @@ enum class packing : uint8_t
     FilledA,
     FilledB,
 };
+enum flags : uint8_t
+{
+    None = 0,
+};
 
 //---------------------------------------------------------------------------
 // Tested cases
@@ -141,10 +145,6 @@ struct dpx_tested
     endianness                  Endianness;
     packing                     Packing;
 
-    // Additional info not for comparison
-    uint8_t                     PixelsPerBlock;
-    uint8_t                     BytesPerBlock;
-
     bool operator == (const dpx_tested &Value) const
     {
         return ColorSpace == Value.ColorSpace
@@ -154,37 +154,48 @@ struct dpx_tested
             ;
     }
 };
+struct dpx_info
+{
+    uint8_t                     PixelsPerBlock;
+    uint8_t                     BytesPerBlock;
+    uint8_t                     Flags;
+};
+struct dpx_tested_info
+{
+    dpx_tested                  Test;
+    dpx_info                    Info;
+};
 struct dpx_also
 {
-    dpx_tested                    Test;
+    dpx_tested                  Test;
     dpx::flavor                 Flavor;
 };
 
-struct dpx_tested DPX_Tested[] =
+struct dpx_tested_info DPX_Tested[] =
 {
-    { colorspace::RGB      ,  8, endianness::LE, packing::Packed , 1,  3 }, // 1x3x 8-bit in 1x24-bit
-    { colorspace::RGB      , 10, endianness::LE, packing::FilledA, 1,  4 }, // 1x3x10-bit in 1x32-bit including 1x2-bit padding
-    { colorspace::RGB      , 10, endianness::BE, packing::FilledA, 1,  4 }, // 1x3x10-bit in 1x32-bit including 1x2-bit padding
-    { colorspace::RGB      , 12, endianness::LE, packing::FilledA, 1,  6 }, // 1x3x12-bit in 3x16-bit including 3x4-bit padding
-    { colorspace::RGB      , 12, endianness::BE, packing::Packed , 8, 36 }, // 8x3x12-bit in 9x32-bit
-    { colorspace::RGB      , 12, endianness::BE, packing::FilledA, 1,  6 }, // 1x3x12-bit in 3x16-bit including 3x4-bit padding
-    { colorspace::RGB      , 16, endianness::LE, packing::Packed , 1,  6 }, // 1x3x16-bit in 3x16-bit
-    { colorspace::RGB      , 16, endianness::BE, packing::Packed , 1,  6 }, // 1x3x16-bit in 3x16-bit
-    { colorspace::RGBA     ,  8, endianness::LE, packing::Packed , 1,  4 }, // 1x4x 8-bit in 1x32-bit
-    { colorspace::RGBA     , 10, endianness::LE, packing::FilledA, 3, 16 }, // 3x4x10-bit in 3x40-bit including 4x2-bit padding
-    { colorspace::RGBA     , 10, endianness::BE, packing::FilledA, 3, 16 }, // 3x4x10-bit in 3x40-bit including 4x2-bit padding
-    { colorspace::RGBA     , 12, endianness::LE, packing::FilledA, 1,  8 }, // 1x4x12-bit in 4x16-bit including 4x4-bit padding
-    { colorspace::RGBA     , 12, endianness::BE, packing::Packed , 2, 12 }, // 2x4x12-bit in 2x48-bit including 2x4-bit padding
-    { colorspace::RGBA     , 12, endianness::BE, packing::FilledA, 1,  8 }, // 1x4x12-bit in 4x16-bit including 4x4-bit padding
-    { colorspace::RGBA     , 16, endianness::LE, packing::Packed , 1,  8 }, // 1x4x16-bit in 4x16-bit
-    { colorspace::RGBA     , 16, endianness::BE, packing::Packed , 1,  8 }, // 1x4x16-bit in 4x16-bit
-    { colorspace::Y        ,  8, endianness::LE, packing::Packed , 1,  1 }, // 1x1x 8-bit in 1x 8-bit
-    { colorspace::Y        , 10, endianness::BE, packing::FilledA, 3,  4 }, // 3x1x16-bit in 1x32-bit
-    { colorspace::Y        , 10, endianness::BE, packing::FilledB, 3,  4 }, // 3x1x16-bit in 1x32-bit
-    { colorspace::Y        , 16, endianness::LE, packing::Packed , 1,  2 }, // 1x1x16-bit in 1x16-bit
-    { colorspace::Y        , 16, endianness::BE, packing::Packed , 1,  2 }, // 1x1x16-bit in 1x16-bit
+    { { colorspace::RGB     ,  8, endianness::LE, packing::Packed }, { 1,  3, None } },                                         // 1x3x 8-bit in 1x24-bit
+    { { colorspace::RGB     , 10, endianness::LE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::RGB     , 10, endianness::BE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::RGB     , 12, endianness::LE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
+    { { colorspace::RGB     , 12, endianness::BE, packing::Packed }, { 8, 36, None } },                                         // 8x3x12-bit in 9x32-bit
+    { { colorspace::RGB     , 12, endianness::BE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
+    { { colorspace::RGB     , 16, endianness::LE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
+    { { colorspace::RGB     , 16, endianness::BE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
+    { { colorspace::RGBA    ,  8, endianness::LE, packing::Packed }, { 1,  4, None } },                                         // 1x4x 8-bit in 1x32-bit
+    { { colorspace::RGBA    , 10, endianness::LE, packing::FilledA}, { 3, 16, None } },                                         // 3x4x10-bit in 3x40-bit including 4x2-bit padding
+    { { colorspace::RGBA    , 10, endianness::BE, packing::FilledA}, { 3, 16, None } },                                         // 3x4x10-bit in 3x40-bit including 4x2-bit padding
+    { { colorspace::RGBA    , 12, endianness::LE, packing::FilledA}, { 1,  8, None } },                                         // 1x4x12-bit in 4x16-bit including 4x4-bit padding
+    { { colorspace::RGBA    , 12, endianness::BE, packing::Packed }, { 2, 12, None } },                                         // 2x4x12-bit in 2x48-bit including 2x4-bit padding
+    { { colorspace::RGBA    , 12, endianness::BE, packing::FilledA}, { 1,  8, None } },                                         // 1x4x12-bit in 4x16-bit including 4x4-bit padding
+    { { colorspace::RGBA    , 16, endianness::LE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
+    { { colorspace::RGBA    , 16, endianness::BE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
+    { { colorspace::Y       ,  8, endianness::LE, packing::Packed }, { 1,  1, None } },                                         // 1x1x 8-bit in 1x 8-bit
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 16, endianness::LE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
+    { { colorspace::Y       , 16, endianness::BE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
 };
-static_assert(dpx::flavor_Max == sizeof(DPX_Tested) / sizeof(dpx_tested), IncoherencyMessage);
+static_assert(dpx::flavor_Max == sizeof(DPX_Tested) / sizeof(dpx_tested_info), IncoherencyMessage);
 
 struct dpx_also DPX_Also[] =
 {
@@ -352,7 +363,7 @@ void dpx::ParseBuffer()
     // Supported?
     for (const auto& DPX_Tested_Item : DPX_Tested)
     {
-        if (DPX_Tested_Item == Info)
+        if (DPX_Tested_Item.Test == Info)
         {
             Flavor = (decltype(Flavor))(&DPX_Tested_Item - DPX_Tested);
             break;
@@ -434,11 +445,12 @@ void dpx::ParseBuffer()
     if (!HasErrors())
         SetSupported();
 
+
     // Testing padding bits
     if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
     {
-        bool HasPaddingBitsNotZero = false;
-        if (MayHavePaddingBits())
+        bool AsPaddingBitsNotZero = false;
+        if (MayHavePaddingBits((flavor)Flavor))
         {
             uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
             uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
@@ -451,7 +463,7 @@ void dpx::ParseBuffer()
             if (i < OffsetAfterData)
             {
                 // Non-zero padding bit found, storing data
-                HasPaddingBitsNotZero = true;
+                AsPaddingBitsNotZero = true;
                 auto Temp_Size = OffsetAfterData - OffsetToData;
                 if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
                     In.Create(Temp_Size);
@@ -460,7 +472,7 @@ void dpx::ParseBuffer()
                     In[i - OffsetToData] = Buffer[i] & Mask;
             }
         }
-        if (!HasPaddingBitsNotZero)
+        if (!AsPaddingBitsNotZero)
             In.Clear();
     }
 
@@ -561,33 +573,40 @@ void dpx::ConformanceCheck()
 }
 
 //---------------------------------------------------------------------------
-bool dpx::MayHavePaddingBits()
-{
-    if ((flavor)Flavor == (flavor)-1)
-        return false;
-
-    auto Flavor_BitDepth = DPX_Tested[(size_t)Flavor].BitDepth;
-    auto Flavor_Packing = DPX_Tested[(size_t)Flavor].Packing;
-
-    return (Flavor_BitDepth == 10 || Flavor_BitDepth == 12) && Flavor_Packing == packing::FilledA;
-}
-
-//---------------------------------------------------------------------------
 string dpx::Flavor_String()
 {
-    return DPX_Flavor_String(Flavor);
+    return DPX_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------
 size_t dpx::BytesPerBlock(dpx::flavor Flavor)
 {
-    return DPX_Tested[(size_t)Flavor].BytesPerBlock;
+    return DPX_Tested[(uint8_t)Flavor].Info.BytesPerBlock;
 }
 
 //---------------------------------------------------------------------------
 size_t dpx::PixelsPerBlock(dpx::flavor Flavor)
 {
-    return DPX_Tested[(size_t)Flavor].PixelsPerBlock;
+    return DPX_Tested[(uint8_t)Flavor].Info.PixelsPerBlock;
+}
+
+//---------------------------------------------------------------------------
+bool dpx::MayHavePaddingBits(dpx::flavor Flavor)
+{
+    if ((flavor)Flavor == (flavor)-1)
+        return false;
+
+    const auto& Info = DPX_Tested[(uint8_t)Flavor].Test;
+    switch (Info.Packing)
+    {
+    case packing::FilledA:
+    case packing::FilledB:
+        break;
+    default:
+        return false;
+    }
+
+    return Info.BitDepth % 8;
 }
 
 //---------------------------------------------------------------------------
@@ -605,7 +624,7 @@ static const char* Packing_String(packing Packing)
 //---------------------------------------------------------------------------
 string DPX_Flavor_String(uint8_t Flavor)
 {
-    const auto& Info = DPX_Tested[(size_t)Flavor];
+    const auto& Info = DPX_Tested[(uint8_t)Flavor].Test;
     string ToReturn("DPX/");
     ToReturn += Raw_Flavor_String(Info.BitDepth, sign::U, Info.Endianness, Info.ColorSpace);
     if (Info.BitDepth % 8)

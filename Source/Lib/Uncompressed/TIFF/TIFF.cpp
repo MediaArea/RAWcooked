@@ -697,7 +697,7 @@ void tiff::BufferOverflow()
 //---------------------------------------------------------------------------
 string tiff::Flavor_String()
 {
-    return TIFF_Flavor_String(Flavor);
+    return TIFF_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------

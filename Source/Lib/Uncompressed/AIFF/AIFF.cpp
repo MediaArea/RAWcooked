@@ -310,7 +310,7 @@ void aiff::BufferOverflow()
 //---------------------------------------------------------------------------
 string aiff::Flavor_String()
 {
-    return AIFF_Flavor_String(Flavor);
+    return AIFF_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------
