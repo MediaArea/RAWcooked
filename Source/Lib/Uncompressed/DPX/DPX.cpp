@@ -135,6 +135,7 @@ enum flags : uint8_t
 {
     None = 0,
     BlockSpan = 1 << 0,
+    VFlip = 1 << 1,
 };
 
 //---------------------------------------------------------------------------
@@ -178,7 +179,7 @@ struct dpx_tested_info DPX_Tested[] =
     { { colorspace::RGB     , 10, endianness::LE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::RGB     , 10, endianness::BE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::RGB     , 12, endianness::LE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
-    { { colorspace::RGB     , 12, endianness::BE, packing::Packed }, { 8, 36, BlockSpan } },                                    // 8x3x12-bit in 9x32-bit
+    { { colorspace::RGB     , 12, endianness::BE, packing::Packed }, { 8, 36, BlockSpan | VFlip } },                            // 8x3x12-bit in 9x32-bit
     { { colorspace::RGB     , 12, endianness::BE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
     { { colorspace::RGB     , 16, endianness::LE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
     { { colorspace::RGB     , 16, endianness::BE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
@@ -305,8 +306,7 @@ void dpx::ParseBuffer()
     if (Encryption != (uint32_t)-1 && Encryption != 0) // One file found with Encryption of 0 but not encrypted, we accept it.
         Unsupported(unsupported::Encryption);
     Buffer_Offset = 768;
-    if (Get_X2() != 0)
-        Unsupported(unsupported::Orientation);
+    uint16_t Orientation = Get_X2();
     if (Get_X2() != 1)
         Unsupported(unsupported::NumberOfElements);
     uint32_t Width = Get_X4();
@@ -391,6 +391,8 @@ void dpx::ParseBuffer()
     }
     if (Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::Flavor);
+    if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
+        Unsupported(unsupported::Orientation);
     if (HasErrors())
         return;
 
@@ -467,6 +469,9 @@ void dpx::ParseBuffer()
     if (!HasErrors())
         SetSupported();
 
+    // Addition settings
+    if (Orientation == 2)
+        Flavor |= (uint64_t)1 << (int)feature::VFlip;
 
     // Testing padding bits
     if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)

@@ -166,16 +166,23 @@ public:
         auto Width = Plane->Width();
         auto PixelsPerBlock = dpx::PixelsPerBlock((dpx::flavor)RawFrame->Flavor_Private);
         auto HasBlockSpan = (x_offset % PixelsPerBlock) || ((x_offset + w) % PixelsPerBlock);
+        bool VFlip = dpx::IsVFlip(RawFrame->Flavor_Private);
 
-        if (!HasBlockSpan)
+        if (!HasBlockSpan && !VFlip)
         {
             FrameBufferBefore = nullptr;
             Data_Temp_Pos_Begin = 0;
             return;
         }
 
-        if (!x_offset && !y_offset)
+        if (HasBlockSpan && !x_offset && !y_offset)
             RawFrame->Finalize_Function = transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE_Finalize;
+
+        if (VFlip)
+        {
+            auto Height = Plane->Height();
+            y_offset = Height - 1 - y_offset;
+        }
 
         auto FullLineBitCount = Width * 36;
         auto FullLineBlockCount = FullLineBitCount / 32;
@@ -188,11 +195,14 @@ public:
 
         FrameBuffer = Plane->Buffer_Data() + (y_offset * FullLineBlockCount + SliceBeginBlockCount) * 4;
         NextLine_Offset = SliceBeginBlockCount - SliceEndBlockCount; // -(SliceEndBlockCount - SliceBeginBlockCount)
-        NextLine_Offset += FullLineBlockCount;
+        if (VFlip)
+            NextLine_Offset -= FullLineBlockCount;
+        else
+            NextLine_Offset += FullLineBlockCount;
         NextLine_Offset *= 4;
         Data_Temp_Pos_Begin = x_offset % 8;
         
-        if (x_offset + w < Width)
+        if (HasBlockSpan && x_offset + w < Width)
             FrameBufferBefore = Plane->Buffer_Extra().Data() + (MaxHorizontalSlicesCount * y_offset + (x_offset + w - 1) / w) * 4;
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
