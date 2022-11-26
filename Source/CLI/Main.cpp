@@ -197,6 +197,24 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         }
     }
 
+    if (SingleFile.ParserCode == Parser_DPX)
+    {
+        bool ForceCheck = false;
+        if (dpx::IsVFlip(SingleFile.Flavor))
+        {
+            Global.OutputOptions["vf"] = "vflip"; // TODO: better management of such FFmpeg option
+            ForceCheck = true; // TODO: quicker check of FFmpeg support of DPX orientation
+        }
+        if (ForceCheck && !Global.Actions[Action_Check])
+        {
+            cerr << "Info: this is a preview release,\n"
+                << "      --check is set in order to verify the reversibility.\n"
+                << endl;
+
+            Global.SetCheck(true);
+        }
+    }
+
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else

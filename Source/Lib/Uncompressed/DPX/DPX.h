@@ -62,12 +62,14 @@ public:
     enum class feature
     {
         BlockSpan = 8,
+        VFlip,
     };
 
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
     static bool                 MayHavePaddingBits(flavor Flavor);
+    inline static bool          IsVFlip(uint64_t Flavor) { return Flavor & ((uint64_t)1 << (int)feature::VFlip); }
 
 private:
     void                        ParseBuffer();
