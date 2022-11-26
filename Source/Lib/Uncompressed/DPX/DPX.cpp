@@ -58,6 +58,7 @@ static const char* MessageText[] =
     "flavor (Descriptor / BitDepth / Packing / Endianness combination)",
     "pixels in slice not on a 32-bit boundary",
     "internal error",
+    "(non conforming) alternate end of line non padding",
 };
 
 enum code : uint8_t
@@ -74,6 +75,7 @@ enum code : uint8_t
     Flavor,
     PixelBoundaries,
     InternalError,
+    Altern,
     Max
 };
 
@@ -136,6 +138,7 @@ enum flags : uint8_t
     None = 0,
     BlockSpan = 1 << 0,
     VFlip = 1 << 1,
+    Altern = 1 << 2,
 };
 
 //---------------------------------------------------------------------------
@@ -192,8 +195,8 @@ struct dpx_tested_info DPX_Tested[] =
     { { colorspace::RGBA    , 16, endianness::LE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
     { { colorspace::RGBA    , 16, endianness::BE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
     { { colorspace::Y       ,  8, endianness::LE, packing::Packed }, { 1,  1, None } },                                         // 1x1x 8-bit in 1x 8-bit
-    { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
-    { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::Y       , 16, endianness::LE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
     { { colorspace::Y       , 16, endianness::BE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
 };
@@ -341,7 +344,10 @@ void dpx::ParseBuffer()
         OffsetToData = OffsetToImageData;
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
-   
+    bool IsAltern = Info.BitDepth == 10
+                 && (!memcmp(Buffer.Data() +  160, "Lasergraphics Inc.", 18) // Creator
+                  || !memcmp(Buffer.Data() + 1556, "Scanity", 7)); // Input device name
+
     if (IndustryHeaderSize && InputInfo)
     {
         Buffer_Offset = 1724;
@@ -381,18 +387,12 @@ void dpx::ParseBuffer()
             }
         }
     }
-    switch ((flavor)Flavor)
-    {
-        case flavor::Raw_Y_10_FilledA_BE:
-        case flavor::Raw_Y_10_FilledB_BE:
-            Flavor = (decltype(Flavor))-1; // TODO: actually not yet ready, currently disabling them
-            break;
-        default: ;
-    }
     if (Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::Flavor);
     if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
         Unsupported(unsupported::Orientation);
+    if (IsAltern && !(DPX_Tested[Flavor].Info.Flags & Altern))
+        Unsupported(unsupported::Altern);
     if (HasErrors())
         return;
 
@@ -448,8 +448,16 @@ void dpx::ParseBuffer()
     size_t ContentSize_Multiplier = BytesPerBlock((flavor)Flavor);
     if (MayHavePaddingBits((flavor)Flavor))
     {
-        auto BlockCountPerLine = (Width + Slice_Multiplier - 1) / PixelsPerBlock((flavor)Flavor);
-        OffsetAfterData += BlockCountPerLine * ContentSize_Multiplier * Height;
+        if (IsAltern)
+        {
+            auto BlockCountPerLine = (Width * Height + Slice_Multiplier - 1) / PixelsPerBlock((flavor)Flavor);
+            OffsetAfterData += BlockCountPerLine * ContentSize_Multiplier;
+        }
+        else
+        {
+            auto BlockCountPerLine = (Width + Slice_Multiplier - 1) / PixelsPerBlock((flavor)Flavor);
+            OffsetAfterData += BlockCountPerLine * ContentSize_Multiplier * Height;
+        }
     }
     else
     {
@@ -472,6 +480,8 @@ void dpx::ParseBuffer()
     // Addition settings
     if (Orientation == 2)
         Flavor |= (uint64_t)1 << (int)feature::VFlip;
+    if (IsAltern)
+        Flavor |= (uint64_t)1 << (int)feature::Altern;
 
     // Testing padding bits
     if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
@@ -482,8 +492,11 @@ void dpx::ParseBuffer()
             uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
             uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
             size_t i = OffsetToData;
-            if (IsBigEndian)
+            bool IsB = DPX_Tested[(uint8_t)Flavor].Test.Packing == packing::FilledB;
+            if (IsBigEndian ^ IsB)
                 i += Step - 1;
+            if (IsB)
+                Mask <<= Info.BitDepth == 10 ? 6 : 4;
             for (; i < OffsetAfterData; i += Step)
                 if (Buffer[i] & Mask)
                     break;
@@ -524,6 +537,52 @@ void dpx::ParseBuffer()
                     }
                     for (; i < OffsetAfterData; i += Step)
                         *((uint32_t*)(In.Data() + i - OffsetToData)) = hton(ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask);
+                }
+            }
+        }
+        if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE || (flavor)Flavor == flavor::Raw_Y_10_FilledB_BE)
+        {
+            size_t RemainingPaddingBits;
+            if (IsAltern)
+                RemainingPaddingBits = (Width * Height) % 3;
+            else
+                RemainingPaddingBits = Width % 3;
+            if (RemainingPaddingBits)
+            {
+                size_t i;
+                size_t Step;
+                RemainingPaddingBits *= 10;
+                if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE)
+                    RemainingPaddingBits += 2;
+                uint32_t Mask = ((uint32_t)-1) << RemainingPaddingBits;
+                if ((flavor)Flavor != flavor::Raw_Y_10_FilledA_BE)
+                    Mask &= ((uint32_t)-1) >> 2;
+                if (IsAltern)
+                {
+                    i = OffsetAfterData - 4;
+                    Step = 4;
+                }
+                else
+                {
+                    size_t BytesPerLineMinus4 = (Width * 10 / 32) * 4;
+                    i = OffsetToData + BytesPerLineMinus4;
+                    Step = BytesPerLineMinus4 + 4;
+                }
+                for (; i < OffsetAfterData; i += Step)
+                    if (ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask)
+                        break;
+                if (i < OffsetAfterData)
+                {
+                    // Non-zero padding bit found, storing data
+                    AsPaddingBitsNotZero = true;
+                    auto Temp_Size = OffsetAfterData - OffsetToData;
+                    if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
+                    {
+                        In.Create(Temp_Size);
+                        memset(In.Data(), 0x00, Temp_Size);
+                    }
+                    for (; i < OffsetAfterData; i += Step)
+                        *((uint32_t*)(In.Data() + i - OffsetToData)) |= hton(ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask);
                 }
             }
         }

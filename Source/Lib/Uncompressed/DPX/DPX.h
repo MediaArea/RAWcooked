@@ -63,6 +63,7 @@ public:
     {
         BlockSpan = 8,
         VFlip,
+        Altern,
     };
 
     // Info about flavors
@@ -70,6 +71,7 @@ public:
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
     static bool                 MayHavePaddingBits(flavor Flavor);
     inline static bool          IsVFlip(uint64_t Flavor) { return Flavor & ((uint64_t)1 << (int)feature::VFlip); }
+    inline static bool          IsAltern(uint64_t Flavor) { return Flavor & ((uint64_t)1 << (int)dpx::feature::Altern); }
 
 private:
     void                        ParseBuffer();
