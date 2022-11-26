@@ -48,10 +48,10 @@ public:
     {
         const auto& Plane = RawFrame->Plane(0);
         FrameBuffer = Plane->Buffer().Data()
-            + y_offset * Plane->AllBytesPerLine()
-            + x_offset * Plane->BytesPerBlock() / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
+            + y_offset * (Plane->BitsPerLine() / 8)
+            + x_offset * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
 
-        NextLine_Offset = Plane->AllBytesPerLine() - w * Plane->BytesPerBlock() / Plane->PixelsPerBlock();
+        NextLine_Offset = (Plane->BitsPerLine() / 8) - w * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock();
     }
 
     inline void Next()
@@ -630,12 +630,10 @@ public:
         w(w)
     {
         const auto& Plane = RawFrame->Plane(0);
-        FrameBuffer = Plane->Buffer().Data();
-        FrameBuffer += y_offset * Plane->AllBytesPerLine();
-
+        FrameBuffer = Plane->Buffer_Data(0, y_offset); // x_offset span is not supported
         if (x_offset)
         {
-            FrameBuffer += x_offset * Plane->BytesPerBlock() / Plane->PixelsPerBlock() / Plane_Count;
+            FrameBuffer += x_offset * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock() / Plane_Count;
         }
         else
         {
@@ -644,14 +642,14 @@ public:
             {
                 auto* FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer_Temp2;
                 FrameBuffer_Temp_32[0] = htol((uint32_t)(y_offset + y));
-                FrameBuffer_Temp_32[1] = htol((uint32_t)Plane->ValidBytesPerLine());
-                FrameBuffer_Temp2 += Plane->AllBytesPerLine();
+                FrameBuffer_Temp_32[1] = htol((uint32_t)(Plane->ValidBitsPerLine() / 8));
+                FrameBuffer_Temp2 += (Plane->BitsPerLine() / 8);
             }
         }
 
         FrameBuffer += 8;
-        FrameWidth = Plane->Width_;
-        NextLine_Offset = Plane->AllBytesPerLine() - w * Plane->BytesPerBlock() / Plane->PixelsPerBlock() / Plane_Count;
+        FrameWidth = Plane->Width();
+        NextLine_Offset = (Plane->BitsPerLine() / 8) - w * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock() / Plane_Count;
     }
 
     inline void Next()
@@ -721,7 +719,7 @@ case FORMAT::flavor::FLAVOR: \
     return new transform_##TRANSFORMSTYLE##_##FORMAT##_##FLAVOR(RawFrame, x_offset, y_offset, w, h); \
 
 //---------------------------------------------------------------------------
-transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t Bits, size_t x_offset, size_t y_offset, size_t w, size_t h)
+transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /*Bits*/, size_t x_offset, size_t y_offset, size_t w, size_t h)
 {
     switch (PixStyle)
     {

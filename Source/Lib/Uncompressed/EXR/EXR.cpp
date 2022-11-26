@@ -55,9 +55,9 @@ static const char* MessageText[] =
     "screenWindowCenter",
     "screenWindowWidth",
     //"Encoding",
-    "Header field name",
-    "Flavor (colorSpace / pixelType combination)",
-    "Internal error",
+    "header field name",
+    "flavor (colorSpace / pixelType combination)",
+    "internal error",
 };
 
 enum code : uint8_t
@@ -632,7 +632,7 @@ void exr::BufferOverflow()
 //---------------------------------------------------------------------------
 string exr::Flavor_String()
 {
-    return EXR_Flavor_String(Flavor);
+    return EXR_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------

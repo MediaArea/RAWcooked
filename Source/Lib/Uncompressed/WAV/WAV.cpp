@@ -478,7 +478,7 @@ void wav::BufferOverflow()
 //---------------------------------------------------------------------------
 string wav::Flavor_String()
 {
-    return WAV_Flavor_String(Flavor);
+    return WAV_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------

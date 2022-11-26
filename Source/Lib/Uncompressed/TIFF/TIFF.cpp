@@ -74,8 +74,8 @@ static const char* MessageText[] =
     "IFD tag",
     "IFD unknown tag",
     "incoherent StripOffsets",
-    "Flavor (PhotometricInterpretation / SamplesPerPixel / BitsPerSample / Endianness combination)",
-    "Pixels in slice not on a 32-bit boundary",
+    "flavor (PhotometricInterpretation / SamplesPerPixel / BitsPerSample / Endianness combination)",
+    "pixels in slice not on a 32-bit boundary",
     "Compression",
 };
 
@@ -697,7 +697,7 @@ void tiff::BufferOverflow()
 //---------------------------------------------------------------------------
 string tiff::Flavor_String()
 {
-    return TIFF_Flavor_String(Flavor);
+    return TIFF_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------
