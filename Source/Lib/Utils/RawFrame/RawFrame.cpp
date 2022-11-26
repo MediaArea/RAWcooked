@@ -73,8 +73,18 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height)
                 ExtraBytes = height * MaxHorizontalSlicesCount * 4;
             else
                 ExtraBytes = 0;
-
-            Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private), 0, 0, 32, ExtraBytes));
+            size_t WidthPadding;
+            if (dpx::IsAltern(Flavor_Private))
+            {
+                size_t width_Remaining = width % 3;
+                if (width_Remaining)
+                    WidthPadding = width_Remaining * 10 - 32;
+                else
+                    WidthPadding = 0;
+            }
+            else
+                WidthPadding = 0;
+            Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private), 0, WidthPadding, 32, ExtraBytes));
         }
         default:;
     }

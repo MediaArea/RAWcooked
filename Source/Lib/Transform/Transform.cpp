@@ -661,6 +661,153 @@ public:
 };
 
 //---------------------------------------------------------------------------
+void transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
+{
+    const auto& Plane = RawFrame->Plane(0);
+    auto FrameBufferBefore = Plane->Buffer_Extra().Data();
+    if (!FrameBufferBefore)
+        return;
+
+    const auto Width = Plane->Width();
+    const auto Height = Plane->Height();
+    auto PixelCount = Width * Height;
+    auto Altern = dpx::IsAltern(RawFrame->Flavor_Private);
+    if (Altern && PixelCount % 3)
+    {
+        // Last frame block is never written by the transform, setting to 0
+        auto FrameBuffer = Plane->Buffer().Data() + Plane->Buffer().Size() - 4;
+        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+        *FrameBuffer_Temp_32 = 0;
+    }
+
+    size_t Slices_w = Width / num_h_slices;
+    for (size_t y = 0; y < Height; y++)
+    {
+        for (size_t slice_x = 0; slice_x < num_h_slices - (Altern ? 0 : 1); slice_x++)
+        {
+            auto x = slice_x * Width / num_h_slices;
+            auto x2 = (slice_x + 1) * Width / num_h_slices;
+            if (Altern && !((y * Width + x2) % 3))
+                continue;
+            auto FrameBuffer = Plane->Buffer_Data(x2, y, true);
+            auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+            auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
+            *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
+        }
+        FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+    }
+}
+
+template <int Offset> class transform_passthrough_dpx_Raw_Y_10_FilledX_BE : public transform_dpx
+{
+public:
+    transform_passthrough_dpx_Raw_Y_10_FilledX_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_dpx(RawFrame, x_offset, y_offset, w, h)
+    {
+        const auto& Plane = RawFrame->Plane(0);
+        Width = Plane->Width();
+        auto PixelsPerBlock = dpx::PixelsPerBlock((dpx::flavor)RawFrame->Flavor_Private);
+        Altern = dpx::IsAltern(RawFrame->Flavor_Private);
+        bool HasBlockSpan;
+        if (Altern)
+            HasBlockSpan = true;
+        else
+            HasBlockSpan = (x_offset % PixelsPerBlock) || ((x_offset + w) % PixelsPerBlock);
+
+        if (!HasBlockSpan)
+        {
+            FrameBufferBefore = nullptr;
+            Data_Temp_Pos_Begin = 0;
+            return;
+        }
+
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize;
+
+        if (Altern)
+        {
+            auto PixelCountBefore = y_offset * Width + x_offset;
+            auto SliceBeginBlockCount = PixelCountBefore / 3;
+
+            FrameBuffer = Plane->Buffer_Data() + SliceBeginBlockCount * 4;
+            Data_Temp_Pos_Begin = PixelCountBefore % 3;
+        }
+        else
+        {
+            auto FullLineBlockCount = Width / 3;
+            if (Width % 3)
+                FullLineBlockCount++;
+            auto SliceBeginBlockCount = x_offset / 3;
+            auto SliceEndBlockCount = (x_offset + w) / 3;
+
+            NextLine_Offset = SliceBeginBlockCount - SliceEndBlockCount; // -(SliceEndBlockCount - SliceBeginBlockCount)
+            NextLine_Offset += FullLineBlockCount;
+            NextLine_Offset *= 4;
+
+            FrameBuffer = Plane->Buffer_Data(x_offset, y_offset);
+            Data_Temp_Pos_Begin = x_offset % 3;
+        }
+
+        if ((Altern || x_offset + w < Width))
+            FrameBufferBefore = Plane->Buffer_Extra().Data() + (MaxHorizontalSlicesCount * y_offset + (x_offset + w - 1) / w) * 4;
+        else
+            FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
+    };
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        uint32_t Data_Temp = 0;
+        auto Data_Temp_Pos = Data_Temp_Pos_Begin;
+        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+
+        for (size_t x = 0; x < w; x++)
+        {
+            Data_Temp |= ((uint32_t)y[x]) << (Data_Temp_Pos * 10 + Offset);
+            if (Data_Temp_Pos == 2)
+            {
+                *(FrameBuffer_Temp_32++) = htob(Data_Temp);
+                Data_Temp = 0;
+                Data_Temp_Pos = 0;
+                continue;
+            }
+            Data_Temp_Pos++;
+        }
+        if (FrameBufferBefore)
+        {
+            auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore;
+            *FrameBufferBefore_Temp_32 = htob(Data_Temp);
+            if ((intptr_t)NextLine_Offset < 0)
+                FrameBufferBefore -= MaxHorizontalSlicesCount * 4;
+            else
+                FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+        }
+        else if (!Altern && Data_Temp_Pos)
+        {
+            *FrameBuffer_Temp_32 = htob(Data_Temp);
+        }
+        if (Altern)
+        {
+            auto NextPixelCountBefore = Data_Temp_Pos + Width - w;
+            auto NextBlockOffset = NextPixelCountBefore / 3;
+            Data_Temp_Pos_Begin = NextPixelCountBefore % 3;
+            FrameBuffer_Temp_32 += NextBlockOffset;
+        }
+        FrameBuffer = (uint8_t*)FrameBuffer_Temp_32;
+        if (!Altern)
+            Next();
+     }
+
+protected:
+    uint8_t*    FrameBufferBefore;
+    uint32_t    Data_Temp_Pos_Begin;
+    size_t      Width;
+    bool        Altern;
+};
+
+#define transform_passthrough_dpx_Raw_Y_10_FilledA_BE transform_passthrough_dpx_Raw_Y_10_FilledX_BE<2>
+#define transform_passthrough_dpx_Raw_Y_10_FilledB_BE transform_passthrough_dpx_Raw_Y_10_FilledX_BE<0>
+
+//---------------------------------------------------------------------------
 class transform_passthrough_dpx_Raw_Y_16_LE : public transform_dpx
 {
 public:
@@ -864,6 +1011,8 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
     TRANSFORM_PIX_BEGIN(YUVA)
         TRANSFORM_FLAVOR_BEGIN(dpx, DPX)
             TRANSFORM_CASE(passthrough, dpx, Raw_Y_8)
+            TRANSFORM_CASE(passthrough, dpx, Raw_Y_10_FilledA_BE)
+            TRANSFORM_CASE(passthrough, dpx, Raw_Y_10_FilledB_BE)
             TRANSFORM_CASE(passthrough, dpx, Raw_Y_16_LE)
             TRANSFORM_CASE(passthrough, dpx, Raw_Y_16_BE)
         TRANSFORM_FLAVOR_END()

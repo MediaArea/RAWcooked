@@ -205,6 +205,14 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             Global.OutputOptions["vf"] = "vflip"; // TODO: better management of such FFmpeg option
             ForceCheck = true; // TODO: quicker check of FFmpeg support of DPX orientation
         }
+        switch ((dpx::flavor)SingleFile.Flavor)
+        {
+        case dpx::flavor::Raw_Y_10_FilledA_BE: // TODO: remove when we are confident enough, old FFmpeg are not fully compatible and future FFmpeg may change their behavior
+        case dpx::flavor::Raw_Y_10_FilledB_BE:
+            ForceCheck = true; // TODO: quicker check of FFmpeg support of alternate EOL
+            break;
+        default:;
+        }
         if (ForceCheck && !Global.Actions[Action_Check])
         {
             cerr << "Info: this is a preview release,\n"
