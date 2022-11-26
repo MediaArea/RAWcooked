@@ -59,6 +59,11 @@ public:
         Raw_Y_16_BE,
     ENUM_END(flavor)
 
+    enum class feature
+    {
+        BlockSpan = 8,
+    };
+
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
