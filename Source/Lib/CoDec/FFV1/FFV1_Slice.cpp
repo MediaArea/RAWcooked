@@ -232,7 +232,16 @@ bool slice::Parse()
         //Frame
         //delete RawFrame;
         //RawFrame = new raw_frame;
-        RawFrame->Create(P->colorspace_type, P->width, P->height, P->bits_per_raw_sample, P->chroma_planes, P->alpha_plane, ((size_t)1 << P->log2_h_chroma_subsample), ((size_t)1 << P->log2_v_chroma_subsample));
+        size_t info = 0
+            | ((P->bits_per_raw_sample - 1)         <<  0)
+            | (P->chroma_planes                     <<  6)
+            | (P->alpha_plane                       <<  7)
+            | ((1 << P->log2_h_chroma_subsample)    <<  8)
+            | ((1 << P->log2_v_chroma_subsample)    << 12)
+            | (P->colorspace_type                   << 16)
+            | ((P->num_h_slices - 1)                << 24)
+            ;
+        RawFrame->Create(P->width, P->height, info);
     }
 
     // CRC check
