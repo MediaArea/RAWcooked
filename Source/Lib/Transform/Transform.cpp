@@ -135,6 +135,7 @@ void transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE_Finalize(raw_frame* RawFrame
 {
     const auto& Plane = RawFrame->Plane(0);
     auto FrameBufferBefore = Plane->Buffer_Extra().Data();
+    auto Line_SliceCount = Plane->Line_SliceCount();
 
     const auto Width = Plane->Width();
     const auto Height = Plane->Height();
@@ -152,7 +153,7 @@ void transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE_Finalize(raw_frame* RawFrame
             auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
             *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
         }
-        FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+        FrameBufferBefore += Line_SliceCount * 4;
     }
 }
 
@@ -203,7 +204,11 @@ public:
         Data_Temp_Pos_Begin = x_offset % 8;
         
         if (HasBlockSpan && x_offset + w < Width)
-            FrameBufferBefore = Plane->Buffer_Extra().Data() + (MaxHorizontalSlicesCount * y_offset + (x_offset + w - 1) / w) * 4;
+        {
+            auto Line_SliceCount = Plane->Line_SliceCount();
+            FrameBufferBefore = Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + (x_offset + 1) * Line_SliceCount / Width) * 4;
+            FrameBufferBefore_Offset = (uint32_t)(Line_SliceCount * 4);
+        }
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
     }
@@ -295,9 +300,9 @@ public:
                 auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore;
                 *FrameBufferBefore_Temp_32 = htob(Data_Temp);
                 if ((intptr_t)NextLine_Offset < 0)
-                    FrameBufferBefore -= MaxHorizontalSlicesCount * 4;
+                    FrameBufferBefore -= FrameBufferBefore_Offset;
                 else
-                    FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+                    FrameBufferBefore += FrameBufferBefore_Offset;
             }
             else
             {
@@ -312,6 +317,7 @@ public:
 protected:
     uint8_t*    FrameBufferBefore;
     uint32_t    Data_Temp_Pos_Begin;
+    uint32_t    FrameBufferBefore_Offset;
 };
 
 //---------------------------------------------------------------------------
@@ -670,6 +676,7 @@ void transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize(raw_frame* RawFrame,
 
     const auto Width = Plane->Width();
     const auto Height = Plane->Height();
+    const auto Line_SliceCount = Plane->Line_SliceCount();
     auto PixelCount = Width * Height;
     auto Altern = dpx::IsAltern(RawFrame->Flavor_Private);
     if (Altern && PixelCount % 3)
@@ -694,7 +701,7 @@ void transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize(raw_frame* RawFrame,
             auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
             *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
         }
-        FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+        FrameBufferBefore += Line_SliceCount * 4;
     }
 }
 
@@ -749,7 +756,11 @@ public:
         }
 
         if ((Altern || x_offset + w < Width))
-            FrameBufferBefore = Plane->Buffer_Extra().Data() + (MaxHorizontalSlicesCount * y_offset + (x_offset + w - 1) / w) * 4;
+        {
+            auto Line_SliceCount = Plane->Line_SliceCount();
+            FrameBufferBefore = Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + (x_offset + 1) * Line_SliceCount / Width) * 4;
+            FrameBufferBefore_Offset = (uint32_t)(Line_SliceCount * 4);
+        }
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
     };
@@ -777,9 +788,9 @@ public:
             auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore;
             *FrameBufferBefore_Temp_32 = htob(Data_Temp);
             if ((intptr_t)NextLine_Offset < 0)
-                FrameBufferBefore -= MaxHorizontalSlicesCount * 4;
+                FrameBufferBefore -= FrameBufferBefore_Offset;
             else
-                FrameBufferBefore += MaxHorizontalSlicesCount * 4;
+                FrameBufferBefore += FrameBufferBefore_Offset;
         }
         else if (!Altern && Data_Temp_Pos)
         {
@@ -800,6 +811,7 @@ public:
 protected:
     uint8_t*    FrameBufferBefore;
     uint32_t    Data_Temp_Pos_Begin;
+    uint32_t    FrameBufferBefore_Offset;
     size_t      Width;
     bool        Altern;
 };

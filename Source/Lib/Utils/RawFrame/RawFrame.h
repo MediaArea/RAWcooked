@@ -18,9 +18,6 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-static const size_t MaxHorizontalSlicesCount = 64;
-
-//---------------------------------------------------------------------------
 class raw_frame;
 class raw_frame_process
 {
@@ -36,11 +33,12 @@ public:
 
     struct plane
     {
-        plane(size_t NewWidth, size_t NewHeight, size_t NewBitsPerBlock, size_t NewPixelsPerBlock = 1, size_t Line_BitsBefore = 0, size_t Line_BitsAfter = 0, size_t Line_Alignment = 0, size_t ExtraBytes = 0)
+        plane(size_t NewWidth, size_t NewHeight, size_t NewBitsPerBlock, size_t NewPixelsPerBlock = 1, size_t Line_BitsBefore = 0, size_t Line_BitsAfter = 0, size_t Line_Alignment = 0, size_t Line_SliceCount = 0)
             :
             Line_BitsBefore_(Line_BitsBefore),
             Line_BitsAfter_(Line_BitsAfter),
             Line_Alignment_(Line_Alignment),
+            Line_SliceCount_(Line_SliceCount),
             Width_(NewWidth),
             Height_(NewHeight),
             BitsPerBlock_(NewBitsPerBlock),
@@ -68,8 +66,8 @@ public:
             if (BitSize & 0x7)
                 ByteSize++;
             Buffer_.Create(ByteSize);
-            if (ExtraBytes)
-                Buffer_Extra_.Create(ExtraBytes);
+            if (Line_SliceCount_)
+                Buffer_Extra_.Create(Height_ * Line_SliceCount_ * (Line_Alignment / 8));
         }
 
         const buffer& Buffer() const
@@ -137,6 +135,11 @@ public:
             return Line_BitsAfter_;
         }
 
+        size_t Line_SliceCount() const
+        {
+            return Line_SliceCount_;
+        }
+
         size_t Width() const
         {
             return Width_;
@@ -163,6 +166,7 @@ public:
         size_t                  Line_BitsBefore_;
         size_t                  Line_BitsAfter_;
         size_t                  Line_Alignment_;
+        size_t                  Line_SliceCount_;
         size_t                  Width_;
         size_t                  Height_;
         size_t                  BitsPerBlock_;
@@ -234,8 +238,8 @@ public:
             delete Plane;
     }
 
-    // Creation
-    void Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
+    // Creation (info: 0-5: bits_per_raw_sample-1, 6: chroma_planes, 7: alpha_plane, 8-11: h_chroma_subsample, 12-15: v_chroma_subsample, 16-23: colorspace_type, 24-31: line_slice_count-1)
+    void Create(size_t width, size_t height, size_t info);
 
     // Info
     size_t FrameSize() const;
@@ -254,7 +258,7 @@ public:
     buffer_or_view              Post_;
     buffer_or_view              In_;
     void FFmpeg_Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
-    void DPX_Create(size_t colorspace_type, size_t width, size_t height);
+    void DPX_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
     void TIFF_Create(size_t colorspace_type, size_t width, size_t height);
     void EXR_Create(size_t colorspace_type, size_t width, size_t height);
     void MergeIn();

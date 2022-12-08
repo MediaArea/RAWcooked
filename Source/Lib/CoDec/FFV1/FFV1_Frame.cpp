@@ -163,7 +163,16 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         if (P.num_v_slices >= P.height)
             return P.Error("FFV1-HEADER-num_v_slices:1");
 
-        RawFrame->Create(P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
+        size_t info = 0
+        | ((P.bits_per_raw_sample - 1)          <<  0)
+        | (P.chroma_planes                      <<  6)
+        | (P.alpha_plane                        <<  7)
+        | ((1 << P.log2_h_chroma_subsample)     <<  8)
+        | ((1 << P.log2_v_chroma_subsample)     << 12)
+        | (P.colorspace_type                    << 16)
+        | ((P.num_h_slices - 1)                 << 24)
+        ;
+      RawFrame->Create(P.width, P.height, info);
 
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)

@@ -13,7 +13,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-void raw_frame::Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample)
+void raw_frame::Create(size_t width, size_t height, size_t info)
 {
     if (!Planes_.empty())
         return; //TODO: manage when it changes
@@ -22,12 +22,35 @@ void raw_frame::Create(size_t colorspace_type, size_t width, size_t height, size
         delete Plane;
     Planes_.clear();
 
+    auto colorspace_type = (info >> 16) & 0xFF;
     switch (Flavor)
     {
-        case flavor::FFmpeg: FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample); break;
-        case flavor::DPX: DPX_Create(colorspace_type, width, height); break;
-        case flavor::TIFF: TIFF_Create(colorspace_type, width, height); break;
-        case flavor::EXR: EXR_Create(colorspace_type, width, height); break;
+        case flavor::FFmpeg:
+        {
+            auto bits_per_raw_sample    = ((info >>  0) & 0x3F) + 1;
+            auto chroma_planes          =  (info >>  6) & 0x01;
+            auto alpha_plane            =  (info >>  7) & 0x01;
+            auto h_chroma_subsample     =  (info >>  8) & 0x0F;
+            auto v_chroma_subsample     =  (info >> 12) & 0x0F;
+            FFmpeg_Create(colorspace_type, width, height, bits_per_raw_sample, chroma_planes, alpha_plane, h_chroma_subsample, v_chroma_subsample);
+            break;
+        }
+        case flavor::DPX:
+        {
+            auto line_slice_count       = ((info >> 24) & 0xFF) + 1;
+            DPX_Create(colorspace_type, width, height, line_slice_count);
+            break;
+        }
+        case flavor::TIFF:
+        {
+            TIFF_Create(colorspace_type, width, height); 
+            break;
+        }
+        case flavor::EXR:
+        {
+            EXR_Create(colorspace_type, width, height); 
+            break;
+        }
         case flavor::None:;
     }
 }
@@ -61,18 +84,15 @@ void raw_frame::FFmpeg_Create(size_t colorspace_type, size_t width, size_t heigh
 }
 
 //---------------------------------------------------------------------------
-void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height)
+void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count)
 {
     switch (colorspace_type)
     {
         case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
         {
-            size_t ExtraBytes;
-            if (dpx::PixelsPerBlock((dpx::flavor)Flavor_Private) != 1)
-                ExtraBytes = height * MaxHorizontalSlicesCount * 4;
-            else
-                ExtraBytes = 0;
+            if (dpx::PixelsPerBlock((dpx::flavor)Flavor_Private) == 1)
+                line_slice_count = 0;
             size_t WidthPadding;
             if (dpx::IsAltern(Flavor_Private))
             {
@@ -84,7 +104,7 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height)
             }
             else
                 WidthPadding = 0;
-            Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private), 0, WidthPadding, 32, ExtraBytes));
+            Planes_.push_back(new plane(width, height, dpx::BytesPerBlock((dpx::flavor)Flavor_Private) * 8, dpx::PixelsPerBlock((dpx::flavor)Flavor_Private), 0, WidthPadding, 32, line_slice_count));
         }
         default:;
     }
