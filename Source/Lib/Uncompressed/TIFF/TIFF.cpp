@@ -74,8 +74,8 @@ static const char* MessageText[] =
     "IFD tag",
     "IFD unknown tag",
     "incoherent StripOffsets",
-    "Flavor (PhotometricInterpretation / SamplesPerPixel / BitsPerSample / Endianness combination)",
-    "Pixels in slice not on a 32-bit boundary",
+    "flavor (PhotometricInterpretation / SamplesPerPixel / BitsPerSample / Endianness combination)",
+    "pixels in slice not on a 32-bit boundary",
     "Compression",
 };
 
@@ -127,62 +127,37 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 using namespace tiff_issue;
 
 //---------------------------------------------------------------------------
-// Enums
-enum class colorspace : uint8_t
-{
-    RGB,
-    RGBA,
-    Y,
-};
-
-//---------------------------------------------------------------------------
 // Tested cases
 struct tiff_tested
 {
     colorspace                  ColorSpace;
-    uint8_t                     BitsPerSample;
+    bitdepth                    BitsPerSample;
     endianness                  Endianness;
+
+    // Additional info not for comparison
+    uint8_t                     BytesPerBlock;
 
     bool operator == (const tiff_tested &Value) const
     {
-        return ColorSpace == Value.ColorSpace
-            && BitsPerSample == Value.BitsPerSample
-            && Endianness == Value.Endianness;
+        return BitsPerSample == Value.BitsPerSample
+            && Endianness == Value.Endianness
+            && ColorSpace == Value.ColorSpace
+            ;
     }
 };
 
 struct tiff_tested TIFF_Tested[] =
 {
-    { colorspace::RGB     ,  8, endianness::LE},
-    { colorspace::RGB     , 16, endianness::LE},
-    { colorspace::RGB     , 16, endianness::BE},
-    { colorspace::RGBA    ,  8, endianness::LE},
-    { colorspace::RGBA    , 16, endianness::LE},
-    { colorspace::Y       ,  8, endianness::BE},
-    { colorspace::Y       , 16, endianness::LE},
-    { colorspace::Y       , 16, endianness::BE},
+    { colorspace::RGB     ,  8, endianness::LE, 3 }, // 1x3x 8-bit in 3x 8-bit
+    { colorspace::RGB     , 16, endianness::LE, 6 }, // 1x3x16-bit in 3x16-bit
+    { colorspace::RGB     , 16, endianness::BE, 6 }, // 1x3x16-bit in 3x16-bit
+    { colorspace::RGBA    ,  8, endianness::LE, 4 }, // 1x4x 8-bit in 4x 8-bit
+    { colorspace::RGBA    , 16, endianness::LE, 8 }, // 1x4x16-bit in 4x16-bit
+    { colorspace::Y       ,  8, endianness::BE, 1 }, // 1x4x 8-bit in 1x 8-bit
+    { colorspace::Y       , 16, endianness::LE, 2 }, // 1x1x16-bit in 1x16-bit
+    { colorspace::Y       , 16, endianness::BE, 2 }, // 1x1x16-bit in 1x16-bit
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), IncoherencyMessage);
-
-//---------------------------------------------------------------------------
-// Info
-struct tiff_info
-{
-    uint8_t                     BytesPerBlock;
-};
-
-struct tiff_info TIFF_Info[] =
-{
-    { 3 }, // 1x3x 8-bit in 3x 8-bit
-    { 6 }, // 1x3x16-bit in 3x16-bit
-    { 6 }, // 1x3x16-bit in 3x16-bit
-    { 4 }, // 1x4x 8-bit in 4x 8-bit
-    { 8 }, // 1x4x16-bit in 4x16-bit
-    { 1 }, // 1x4x 8-bit in 1x 8-bit
-    { 2 }, // 1x1x16-bit in 1x16-bit
-    { 2 }, // 1x1x16-bit in 1x16-bit
-};
-static_assert(tiff::flavor_Max == sizeof(TIFF_Info) / sizeof(tiff_info), IncoherencyMessage);
 
 //***************************************************************************
 // TIFF
@@ -722,13 +697,13 @@ void tiff::BufferOverflow()
 //---------------------------------------------------------------------------
 string tiff::Flavor_String()
 {
-    return TIFF_Flavor_String(Flavor);
+    return TIFF_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------
 size_t tiff::BytesPerBlock(tiff::flavor Flavor)
 {
-    return TIFF_Info[(size_t)Flavor].BytesPerBlock;
+    return TIFF_Tested[(size_t)Flavor].BytesPerBlock;
 }
 
 //---------------------------------------------------------------------------
@@ -738,55 +713,10 @@ size_t tiff::PixelsPerBlock(tiff::flavor /*Flavor*/)
 }
 
 //---------------------------------------------------------------------------
-static const char* ColorSpace_String(tiff::flavor Flavor)
-{
-    switch (TIFF_Tested[(size_t)Flavor].ColorSpace)
-    {
-    case colorspace::RGB : return "RGB";
-    case colorspace::RGBA: return "RGBA";
-    case colorspace::Y: return "Y";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
-static uint8_t BitsPerSample(tiff::flavor Flavor)
-{
-    return TIFF_Tested[(size_t)Flavor].BitsPerSample;
-}
-static const char* BitsPerSample_String(tiff::flavor Flavor)
-{
-    switch (TIFF_Tested[(size_t)Flavor].BitsPerSample)
-    {
-    case  8: return "8";
-    case 16: return "16";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
-static const char* Endianess_String(tiff::flavor Flavor)
-{
-    switch (TIFF_Tested[(size_t)Flavor].Endianness)
-    {
-    case endianness::LE: return BitsPerSample(Flavor) == 8 ? nullptr : "LE";
-    case endianness::BE: return "BE";
-    default: return nullptr;
-    }
-}
-//---------------------------------------------------------------------------
 string TIFF_Flavor_String(uint8_t Flavor)
 {
-    string ToReturn("TIFF/Raw/");
-    ToReturn += ColorSpace_String((tiff::flavor)Flavor);
-    ToReturn += '/';
-    ToReturn += BitsPerSample_String((tiff::flavor)Flavor);
-    ToReturn += "bit/U";
-    const char* Value = Endianess_String((tiff::flavor)Flavor);
-    if (Value)
-    {
-        ToReturn += '/';
-        ToReturn += Value;
-    }
+    const auto& Info = TIFF_Tested[(size_t)Flavor];
+    string ToReturn("TIFF/");
+    ToReturn += Raw_Flavor_String(Info.BitsPerSample, sign::U, Info.Endianness, Info.ColorSpace);
     return ToReturn;
 }

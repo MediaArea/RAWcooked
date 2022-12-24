@@ -222,6 +222,13 @@ int global::SetFrameMd5(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetFrameMd5An(bool Value)
+{
+    Actions.set(Action_FrameMd5An, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetFrameMd5FileName(const char* FileName)
 {
     FrameMd5FileName = FileName;
@@ -404,7 +411,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
         OutputOptions["n"] = string();
         OutputOptions.erase("y");
         Mode = AlwaysNo; // Also RAWcooked itself
-        License.Feature(feature::GeneralOptions);
         return 0;
     }
     if (!strcmp(argv[i], "-slicecrc"))
@@ -446,7 +452,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
         OutputOptions["y"] = string();
         OutputOptions.erase("n");
         Mode = AlwaysYes; // Also RAWcooked itself
-        License.Feature(feature::GeneralOptions);
         return 0;
     }
 
@@ -581,11 +586,23 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--framemd5-an") == 0)
+        {
+            int Value = SetFrameMd5An(true);
+            if (Value)
+                return Value;
+            Value = SetFrameMd5(true);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--framemd5-name") == 0)
         {
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetFrameMd5FileName(argv[++i]);
+            if (Value)
+                return Value;
+            Value = SetFrameMd5(true);
             if (Value)
                 return Value;
         }
@@ -807,9 +824,19 @@ int global::SetDefaults()
         if (OutputOptions.find("g") == OutputOptions.end())
             OutputOptions["g"] = "1"; // Intra
         if (OutputOptions.find("level") == OutputOptions.end())
-            OutputOptions["level"] = "3"; // FFV1 v3
+        {
+            auto slices = OutputOptions.find("slices");
+            if (slices != OutputOptions.end() && slices->second == "1")
+                OutputOptions["level"] = "1"; // FFV1 v1 when no slice
+            else
+                OutputOptions["level"] = "3"; // FFV1 v3
+        }
         if (OutputOptions.find("slicecrc") == OutputOptions.end())
-            OutputOptions["slicecrc"] = "1"; // Slice CRC on
+        {
+            auto Level = OutputOptions.find("level");
+            if (Level == OutputOptions.end() || (Level->second != "0" && Level->second != "1"))
+                OutputOptions["slicecrc"] = "1"; // Slice CRC on
+        }
 
         // Check incompatible options
         if (OutputOptions["level"] == "0" || OutputOptions["level"] == "1")

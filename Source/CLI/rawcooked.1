@@ -209,8 +209,15 @@ Compute the framemd5 of input frames and store it to a sidecar file.
 .br
 See FFmpeg framemd5 documentation for more information.
 .TP
+.B --framemd5-an
+Disable audio streams in framemd5 output.
+.br
+Imply --framemd5.
+.TP
 .B --framemd5-name \fIvalue\fR
 Set the name of the framemd5 file to \fIvalue\fR.
+.br
+Imply --framemd5.
 .br
 Default value is \fI${Input}.framemd5\fR.
 .TP
@@ -290,7 +297,7 @@ This command works the same as the encoding of raw audio-visual data, but decode
 .br
 It can be used in conjunction with opposing commands. For example if you want to use this command without --conch, you can add --no-conch after the --all and the conch command will be skipped.
 .SH COPYRIGHT
-Copyright (c) 2018-2021 MediaArea.net SARL & AV Preservation by reto.ch
+Copyright (c) 2018-2022 MediaArea.net SARL & AV Preservation by reto.ch
 .SH LICENSE
 \fBRAWcooked\fR is released under a BSD License.
 .SH DISCLAIMER

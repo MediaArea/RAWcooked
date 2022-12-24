@@ -54,8 +54,7 @@ bool track_info::Init(const uint8_t* BaseData)
     {
         auto Wrapper2 = (audio_wrapper*)Wrapper;
         auto Parser2 = (input_base_uncompressed_audio*)Parser;
-        Wrapper2->SetEndianness(Parser2->Endianness());
-        Wrapper2->SetOutputBitDepth(Parser2->BitDepth());
+        Wrapper2->SetConfig(Parser2->BitDepth(), Parser2->Sign(), Parser2->Endianness());
         delete Parser; // No more used
         break;
     }
@@ -90,8 +89,12 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
         if (FrameWriter->OutputFileName.empty() && ReversibilityData->Count())
             Undecodable(reversibility_issue::undecodable::ReversibilityData_FrameCount);
     }
-    if (Wrapper)
-        Wrapper->Process(Data, Size);
+    if (!Wrapper)
+    {
+        Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
+        return true;
+    }
+    Wrapper->Process(Data, Size);
     if (!ReversibilityData->Unique())
     {
         if (Actions[Action_Conch] || Actions[Action_Coherency])
@@ -115,7 +118,7 @@ bool track_info::OutOfBand(const uint8_t* Data, size_t Size)
         Format = format::None;
 
         // Special case, real format is inside the VFW block
-        if (Size <= 0x28)
+        if (Size < 0x28)
             return true;
 
         uint32_t VFW_Size = ((uint32_t)Data[0]) | (((uint32_t)Data[1]) << 8) | (((uint32_t)Data[2]) << 16) | (((uint32_t)Data[3]) << 24);

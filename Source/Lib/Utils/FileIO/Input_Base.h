@@ -39,6 +39,7 @@ enum action : uint8_t
     Action_CheckOptionIsSet,
     Action_Info,
     Action_FrameMd5,
+    Action_FrameMd5An,
     Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
     Action_Max
 };
@@ -149,7 +150,7 @@ public:
     virtual ~uncompressed();
 
     // Info
-    flavor                      Flavor = (flavor)-1;
+    uint64_t                    Flavor = (uint64_t)-1;
     virtual string              Flavor_String() = 0;
 
     // Common info
@@ -158,7 +159,6 @@ public:
 
     // Features
     rawcooked::version          Version() { return RAWcooked ? RAWcooked->Version : rawcooked::version::v1; }
-    virtual bool                MayHavePaddingBits() { return false; }
 };
 
 class input_base_uncompressed : public input_base, public uncompressed
@@ -192,6 +192,7 @@ public:
 
     // Info about formats
     virtual uint8_t             BitDepth() = 0;
+    virtual sign                Sign() = 0;
     virtual endianness          Endianness() = 0;
 };
 

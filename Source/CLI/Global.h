@@ -11,7 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include "CLI/Config.h"
-#include "Lib/Config.h"
+#include "Lib/Common/Common.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"
 #include <map>
@@ -98,6 +98,7 @@ private:
     int SetEncode(bool Value);
     int SetInfo(bool Value);
     int SetFrameMd5(bool Value);
+    int SetFrameMd5An(bool Value);
     int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
     int SetAll(bool Value);

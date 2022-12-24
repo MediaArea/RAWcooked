@@ -54,12 +54,16 @@ class audio_wrapper : public base_wrapper
 {
 public:
     // Config
-    void                        SetOutputBitDepth(uint8_t BitDepth);
-    void                        SetEndianness(endianness Endianness);
+    void                        SetConfig(uint8_t BitDepth, sign Sign, endianness Endianness);
 
 protected:
-    uint8_t                     OutputBitDepth_ = 0;
-    endianness                  Endianness_ = endianness::LE;
+    uint8_t                     OutputBitDepth = 0;
+    union sign_or_endianness
+    {
+        sign                    Sign = sign::U;
+        endianness              Endianness;
+    };
+    sign_or_endianness          SignOrEndianess;
 };
 
 #endif

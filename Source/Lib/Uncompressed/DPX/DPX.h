@@ -39,30 +39,39 @@ public:
         Raw_RGB_8,
         Raw_RGB_10_FilledA_LE,
         Raw_RGB_10_FilledA_BE,
-        Raw_RGB_12_Packed_BE,
         Raw_RGB_12_FilledA_LE,
+        Raw_RGB_12_Packed_BE,
         Raw_RGB_12_FilledA_BE,
         Raw_RGB_16_LE,
         Raw_RGB_16_BE,
         Raw_RGBA_8,
         Raw_RGBA_10_FilledA_LE,
         Raw_RGBA_10_FilledA_BE,
-        Raw_RGBA_12_Packed_BE,
         Raw_RGBA_12_FilledA_LE,
+        Raw_RGBA_12_Packed_BE,
         Raw_RGBA_12_FilledA_BE,
         Raw_RGBA_16_LE,
         Raw_RGBA_16_BE,
         Raw_Y_8,
+        Raw_Y_10_FilledA_BE,
+        Raw_Y_10_FilledB_BE,
         Raw_Y_16_LE,
         Raw_Y_16_BE,
     ENUM_END(flavor)
 
-    // Features
-    bool                        MayHavePaddingBits();
+    enum class feature
+    {
+        BlockSpan = 8,
+        VFlip,
+        Altern,
+    };
 
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
+    static bool                 MayHavePaddingBits(flavor Flavor);
+    inline static bool          IsVFlip(uint64_t Flavor) { return Flavor & ((uint64_t)1 << (int)feature::VFlip); }
+    inline static bool          IsAltern(uint64_t Flavor) { return Flavor & ((uint64_t)1 << (int)dpx::feature::Altern); }
 
 private:
     void                        ParseBuffer();

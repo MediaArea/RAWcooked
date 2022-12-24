@@ -104,6 +104,9 @@ void ffv1_frame::SetHeight(uint32_t height)
 //---------------------------------------------------------------------------
 bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 {
+    if (!Buffer_Size)
+        return true;
+
     P.ConfigurationRecord_IsPresent = true;
     Clear();
 
@@ -130,11 +133,6 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
 {
-    if (P.num_h_slices >= P.width)
-        return P.Error("FFV1-HEADER-num_h_slices:1");
-    if (P.num_v_slices >= P.height)
-        return P.Error("FFV1-HEADER-num_v_slices:1");
-
     if (!Slices)
     {
         if (P.ConfigurationRecord_IsPresent)
@@ -157,17 +155,25 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
     if (!KeyFrame_IsPresent)
         return P.Error("FFV1-FRAME-key_frame-NOINFIRSTFRAME:1");
 
-    if (P.ConfigurationRecord_IsPresent)
-    {
-        //Frame
-        //delete RawFrame;
-        //RawFrame = new raw_frame;
-        RawFrame->Create(P.colorspace_type, P.width, P.height, P.bits_per_raw_sample, P.chroma_planes, P.alpha_plane, ((size_t)1 << P.log2_h_chroma_subsample), ((size_t)1 << P.log2_v_chroma_subsample));
-    }
-
     size_t Slices_Size = 0;
     if (P.ConfigurationRecord_IsPresent)
     {
+        if (P.num_h_slices >= P.width)
+            return P.Error("FFV1-HEADER-num_h_slices:1");
+        if (P.num_v_slices >= P.height)
+            return P.Error("FFV1-HEADER-num_v_slices:1");
+
+        size_t info = 0
+        | ((P.bits_per_raw_sample - 1)          <<  0)
+        | (P.chroma_planes                      <<  6)
+        | (P.alpha_plane                        <<  7)
+        | ((1 << P.log2_h_chroma_subsample)     <<  8)
+        | ((1 << P.log2_v_chroma_subsample)     << 12)
+        | (P.colorspace_type                    << 16)
+        | ((P.num_h_slices - 1)                 << 24)
+        ;
+      RawFrame->Create(P.width, P.height, info);
+
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)
         {
@@ -215,6 +221,8 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         for (size_t i = Slices_Size; i <= Slices_Size; i--)
             Frame_Thread(Slices[i].Content);
     }
+
+    RawFrame->Finalize(P.num_h_slices, P.num_v_slices);
 
     return false;
 }

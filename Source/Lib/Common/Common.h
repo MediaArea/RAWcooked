@@ -40,12 +40,7 @@ typedef std::array<uint8_t, 16> md5;
 
 //---------------------------------------------------------------------------
 // Platform specific
-inline void FormatPath(string& s)
-{
-    string::size_type i = 0;
-    while ((i = s.find('\\', i)) != string::npos)
-        s[i++] = '/';
-}
+void FormatPath(string& s);
 #if defined(_WIN32) || defined(_WINDOWS)
     static const char PathSeparator = '\\';
 #else
@@ -53,12 +48,48 @@ inline void FormatPath(string& s)
 #endif
 
 //---------------------------------------------------------------------------
-// Common types - Endianess info
+// Common types
+typedef uint8_t bitdepth;
+enum class sign : uint8_t
+{
+    U, // Unsigned
+    S, // Signed
+    F, // Float
+};
 enum class endianness : bool
 {
-    LE, // Or Unsigned for 8-bit
-    BE, // Or Signed for 8-bit
+    LE, // Little Endian
+    BE, // Big Endian
 };
+enum class colorspace : uint8_t
+{
+    RGB,
+    RGBA,
+    Y,
+};
+typedef uint8_t channels;
+enum class samplerate_code : uint8_t
+{
+    _44100,
+    _48000,
+    _96000,
+};
+
+//---------------------------------------------------------------------------
+// Conversions
+samplerate_code SampleRate2Code(uint32_t SampleRate);
+size_t Colorspace2Count(colorspace ColorSpace);
+
+//---------------------------------------------------------------------------
+// Display
+const char* Sign_String(sign Sign);
+const char* Endianess_String(endianness Endianness);
+const char* ColorSpace_String(colorspace ColorSpace);
+const char* SamplesPerSec_String(samplerate_code SampleRateCode);
+string BitDepth_String(bitdepth BitDepth);
+string Channels_String(channels Channels);
+string Raw_Flavor_String(bitdepth BitDepth, sign Sign, endianness Endianness, colorspace ColorSpace);
+string PCM_Flavor_String(bitdepth BitDepth, sign Sign, endianness Endianness, channels Channels, samplerate_code SamplesPerSecCode);
 
 //---------------------------------------------------------------------------
 // Enums

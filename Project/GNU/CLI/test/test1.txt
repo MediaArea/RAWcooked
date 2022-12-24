@@ -19,13 +19,13 @@ Formats/AIFF/Flavors/44100_24_2_S_BE/44100_24_2_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_24_6_S_BE/44100_24_6_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_24_8_S_BE/44100_24_8_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_32_1_F_BE/44100_32_1_F_BE.aiff fail
-Formats/AIFF/Flavors/44100_32_1_S_BE/44100_32_1_S_BE.aiff fail
+Formats/AIFF/Flavors/44100_32_1_S_BE/44100_32_1_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_32_2_F_BE/44100_32_2_F_BE.aiff fail
-Formats/AIFF/Flavors/44100_32_2_S_BE/44100_32_2_S_BE.aiff fail
+Formats/AIFF/Flavors/44100_32_2_S_BE/44100_32_2_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_32_6_F_BE/44100_32_6_F_BE.aiff fail
-Formats/AIFF/Flavors/44100_32_6_S_BE/44100_32_6_S_BE.aiff fail
+Formats/AIFF/Flavors/44100_32_6_S_BE/44100_32_6_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_32_8_F_BE/44100_32_8_F_BE.aiff fail
-Formats/AIFF/Flavors/44100_32_8_S_BE/44100_32_8_S_BE.aiff fail
+Formats/AIFF/Flavors/44100_32_8_S_BE/44100_32_8_S_BE.aiff pass
 Formats/AIFF/Flavors/44100_64_1_F_BE/44100_64_1_F_BE.aiff fail
 Formats/AIFF/Flavors/44100_64_2_F_BE/44100_64_2_F_BE.aiff fail
 Formats/AIFF/Flavors/44100_64_6_F_BE/44100_64_6_F_BE.aiff fail
@@ -51,13 +51,13 @@ Formats/AIFF/Flavors/48000_24_2_S_BE/48000_24_2_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_24_6_S_BE/48000_24_6_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_24_8_S_BE/48000_24_8_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_32_1_F_BE/48000_32_1_F_BE.aiff fail
-Formats/AIFF/Flavors/48000_32_1_S_BE/48000_32_1_S_BE.aiff fail
+Formats/AIFF/Flavors/48000_32_1_S_BE/48000_32_1_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_32_2_F_BE/48000_32_2_F_BE.aiff fail
-Formats/AIFF/Flavors/48000_32_2_S_BE/48000_32_2_S_BE.aiff fail
+Formats/AIFF/Flavors/48000_32_2_S_BE/48000_32_2_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_32_6_F_BE/48000_32_6_F_BE.aiff fail
-Formats/AIFF/Flavors/48000_32_6_S_BE/48000_32_6_S_BE.aiff fail
+Formats/AIFF/Flavors/48000_32_6_S_BE/48000_32_6_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_32_8_F_BE/48000_32_8_F_BE.aiff fail
-Formats/AIFF/Flavors/48000_32_8_S_BE/48000_32_8_S_BE.aiff fail
+Formats/AIFF/Flavors/48000_32_8_S_BE/48000_32_8_S_BE.aiff pass
 Formats/AIFF/Flavors/48000_64_1_F_BE/48000_64_1_F_BE.aiff fail
 Formats/AIFF/Flavors/48000_64_2_F_BE/48000_64_2_F_BE.aiff fail
 Formats/AIFF/Flavors/48000_64_6_F_BE/48000_64_6_F_BE.aiff fail
@@ -83,13 +83,13 @@ Formats/AIFF/Flavors/96000_24_2_S_BE/96000_24_2_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_24_6_S_BE/96000_24_6_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_24_8_S_BE/96000_24_8_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_32_1_F_BE/96000_32_1_F_BE.aiff fail
-Formats/AIFF/Flavors/96000_32_1_S_BE/96000_32_1_S_BE.aiff fail
+Formats/AIFF/Flavors/96000_32_1_S_BE/96000_32_1_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_32_2_F_BE/96000_32_2_F_BE.aiff fail
-Formats/AIFF/Flavors/96000_32_2_S_BE/96000_32_2_S_BE.aiff fail
+Formats/AIFF/Flavors/96000_32_2_S_BE/96000_32_2_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_32_6_F_BE/96000_32_6_F_BE.aiff fail
-Formats/AIFF/Flavors/96000_32_6_S_BE/96000_32_6_S_BE.aiff fail
+Formats/AIFF/Flavors/96000_32_6_S_BE/96000_32_6_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_32_8_F_BE/96000_32_8_F_BE.aiff fail
-Formats/AIFF/Flavors/96000_32_8_S_BE/96000_32_8_S_BE.aiff fail
+Formats/AIFF/Flavors/96000_32_8_S_BE/96000_32_8_S_BE.aiff pass
 Formats/AIFF/Flavors/96000_64_1_F_BE/96000_64_1_F_BE.aiff fail
 Formats/AIFF/Flavors/96000_64_2_F_BE/96000_64_2_F_BE.aiff fail
 Formats/AIFF/Flavors/96000_64_6_F_BE/96000_64_6_F_BE.aiff fail
@@ -125,6 +125,24 @@ Formats/DPX/Flavors/RGB_12_FilledA_LE/checkerboard_1080p_nuke_littleendian_12bit
 Formats/DPX/Flavors/RGB_12_Packed_BE/12bit.dpx pass
 Formats/DPX/Flavors/RGB_12_Packed_BE/af093_ifa2006350_10000086400.dpx pass
 Formats/DPX/Flavors/RGB_12_Packed_BE/RGB_12_bit.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_08x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_08x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_09x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_09x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_10x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_10x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_11x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_11x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_12x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_12x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_13x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_13x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_14x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_14x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_15x4.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_15x4_orientation0.dpx pass
+Formats/DPX/Flavors/RGB_12_Packed_BE/086449_modified_4300x64_orientation0.dpx pass
 Formats/DPX/Flavors/RGB_16F_Packed_BE/RGB_half_float_16_bit.dpx fail
 Formats/DPX/Flavors/RGB_16_FilledA_BE/checkerboard_1080p_nuke_bigendian_16bit_noalpha.dpx pass
 Formats/DPX/Flavors/RGB_16_FilledA_LE/checkerboard_1080p_nuke_littleendian_16bit_noalpha.dpx pass
@@ -133,6 +151,35 @@ Formats/DPX/Flavors/RGB_16_Packed_BE/058142ce-aeb9-4f5c-b3c7-7590f09c757d_000900
 Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_LE/Dufay_000001.dpx pass
 Formats/DPX/Flavors/Y_8_Packed_LE/FFmpeg_gray.dpx pass
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4_Lasergraphics_padding_not_zero.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4_padding_not_zero.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_5x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_5x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_6x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_6x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_7x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_7x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_8x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_8x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_9x4.dpx
+Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_9x4_Lasergraphics.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_4x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_4x4_Scanity.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_4x4_Scanity_no_frame_padding.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_4x4_Scanity_padding_not_zero.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_4x4_padding_not_zero.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_5x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_5x4_Scanity.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_6x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_6x4_Scanity.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_7x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_7x4_Scanity.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_8x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_8x4_Scanity.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_9x4.dpx
+Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_9x4_Scanity.dpx
 Formats/DPX/Flavors/Y_16_FilledA_BE/0000001.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_BE/FFmpeg_gray16be.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_LE/FFmpeg_gray16le.dpx pass
@@ -201,14 +248,14 @@ Formats/WAV/Flavors/44100_24_1_S_LE/44100_24_1_S_LE.wav pass
 Formats/WAV/Flavors/44100_24_2_S_LE/44100_24_2_S_LE.wav pass
 Formats/WAV/Flavors/44100_24_6_S_LE/44100_24_6_S_LE.wav pass
 Formats/WAV/Flavors/44100_24_8_S_LE/44100_24_8_S_LE.wav pass
-Formats/WAV/Flavors/44100_32_1_F_LE/44100_32_1_F_LE.wav fail
-Formats/WAV/Flavors/44100_32_1_S_LE/44100_32_1_S_LE.wav fail
-Formats/WAV/Flavors/44100_32_2_F_LE/44100_32_2_F_LE.wav fail
-Formats/WAV/Flavors/44100_32_2_S_LE/44100_32_2_S_LE.wav fail
-Formats/WAV/Flavors/44100_32_6_F_LE/44100_32_6_F_LE.wav fail
-Formats/WAV/Flavors/44100_32_6_S_LE/44100_32_6_S_LE.wav fail
-Formats/WAV/Flavors/44100_32_8_F_LE/44100_32_8_F_LE.wav fail
-Formats/WAV/Flavors/44100_32_8_S_LE/44100_32_8_S_LE.wav fail
+Formats/WAV/Flavors/44100_32_1_F_LE/44100_32_1_F_LE.wav pass
+Formats/WAV/Flavors/44100_32_1_S_LE/44100_32_1_S_LE.wav pass
+Formats/WAV/Flavors/44100_32_2_F_LE/44100_32_2_F_LE.wav pass
+Formats/WAV/Flavors/44100_32_2_S_LE/44100_32_2_S_LE.wav pass
+Formats/WAV/Flavors/44100_32_6_F_LE/44100_32_6_F_LE.wav pass
+Formats/WAV/Flavors/44100_32_6_S_LE/44100_32_6_S_LE.wav pass
+Formats/WAV/Flavors/44100_32_8_F_LE/44100_32_8_F_LE.wav pass
+Formats/WAV/Flavors/44100_32_8_S_LE/44100_32_8_S_LE.wav pass
 Formats/WAV/Flavors/44100_64_1_F_LE/44100_64_1_F_LE.wav fail
 Formats/WAV/Flavors/44100_64_1_S_LE/44100_64_1_S_LE.wav fail
 Formats/WAV/Flavors/44100_64_2_F_LE/44100_64_2_F_LE.wav fail
@@ -229,14 +276,15 @@ Formats/WAV/Flavors/48000_24_1_S_LE/48000_24_1_S_LE.wav pass
 Formats/WAV/Flavors/48000_24_2_S_LE/48000_24_2_S_LE.wav pass
 Formats/WAV/Flavors/48000_24_6_S_LE/48000_24_6_S_LE.wav pass
 Formats/WAV/Flavors/48000_24_8_S_LE/48000_24_8_S_LE.wav pass
-Formats/WAV/Flavors/48000_32_1_F_LE/48000_32_1_F_LE.wav fail
-Formats/WAV/Flavors/48000_32_1_S_LE/48000_32_1_S_LE.wav fail
-Formats/WAV/Flavors/48000_32_2_F_LE/48000_32_2_F_LE.wav fail
-Formats/WAV/Flavors/48000_32_2_S_LE/48000_32_2_S_LE.wav fail
-Formats/WAV/Flavors/48000_32_6_F_LE/48000_32_6_F_LE.wav fail
-Formats/WAV/Flavors/48000_32_6_S_LE/48000_32_6_S_LE.wav fail
-Formats/WAV/Flavors/48000_32_8_F_LE/48000_32_8_F_LE.wav fail
-Formats/WAV/Flavors/48000_32_8_S_LE/48000_32_8_S_LE.wav fail
+Formats/WAV/Flavors/48000_32_1_F_LE/48000_32_1_F_LE.wav pass
+Formats/WAV/Flavors/48000_32_1_S_LE/48000_32_1_S_LE.wav pass
+Formats/WAV/Flavors/48000_32_2_F_LE/48000_32_2_F_LE.wav pass
+Formats/WAV/Flavors/48000_32_2_F_LE/48000_32_2_F_LE_CodecID3.wav pass
+Formats/WAV/Flavors/48000_32_2_S_LE/48000_32_2_S_LE.wav pass
+Formats/WAV/Flavors/48000_32_6_F_LE/48000_32_6_F_LE.wav pass
+Formats/WAV/Flavors/48000_32_6_S_LE/48000_32_6_S_LE.wav pass
+Formats/WAV/Flavors/48000_32_8_F_LE/48000_32_8_F_LE.wav pass
+Formats/WAV/Flavors/48000_32_8_S_LE/48000_32_8_S_LE.wav pass
 Formats/WAV/Flavors/48000_64_1_F_LE/48000_64_1_F_LE.wav fail
 Formats/WAV/Flavors/48000_64_1_S_LE/48000_64_1_S_LE.wav fail
 Formats/WAV/Flavors/48000_64_2_F_LE/48000_64_2_F_LE.wav fail
@@ -257,14 +305,14 @@ Formats/WAV/Flavors/96000_24_1_S_LE/96000_24_1_S_LE.wav pass
 Formats/WAV/Flavors/96000_24_2_S_LE/96000_24_2_S_LE.wav pass
 Formats/WAV/Flavors/96000_24_6_S_LE/96000_24_6_S_LE.wav pass
 Formats/WAV/Flavors/96000_24_8_S_LE/96000_24_8_S_LE.wav pass
-Formats/WAV/Flavors/96000_32_1_F_LE/96000_32_1_F_LE.wav fail
-Formats/WAV/Flavors/96000_32_1_S_LE/96000_32_1_S_LE.wav fail
-Formats/WAV/Flavors/96000_32_2_F_LE/96000_32_2_F_LE.wav fail
-Formats/WAV/Flavors/96000_32_2_S_LE/96000_32_2_S_LE.wav fail
-Formats/WAV/Flavors/96000_32_6_F_LE/96000_32_6_F_LE.wav fail
-Formats/WAV/Flavors/96000_32_6_S_LE/96000_32_6_S_LE.wav fail
-Formats/WAV/Flavors/96000_32_8_F_LE/96000_32_8_F_LE.wav fail
-Formats/WAV/Flavors/96000_32_8_S_LE/96000_32_8_S_LE.wav fail
+Formats/WAV/Flavors/96000_32_1_F_LE/96000_32_1_F_LE.wav pass
+Formats/WAV/Flavors/96000_32_1_S_LE/96000_32_1_S_LE.wav pass
+Formats/WAV/Flavors/96000_32_2_F_LE/96000_32_2_F_LE.wav pass
+Formats/WAV/Flavors/96000_32_2_S_LE/96000_32_2_S_LE.wav pass
+Formats/WAV/Flavors/96000_32_6_F_LE/96000_32_6_F_LE.wav pass
+Formats/WAV/Flavors/96000_32_6_S_LE/96000_32_6_S_LE.wav pass
+Formats/WAV/Flavors/96000_32_8_F_LE/96000_32_8_F_LE.wav pass
+Formats/WAV/Flavors/96000_32_8_S_LE/96000_32_8_S_LE.wav pass
 Formats/WAV/Flavors/96000_64_1_F_LE/96000_64_1_F_LE.wav fail
 Formats/WAV/Flavors/96000_64_1_S_LE/96000_64_1_S_LE.wav fail
 Formats/WAV/Flavors/96000_64_2_F_LE/96000_64_2_F_LE.wav fail

@@ -30,6 +30,7 @@ public:
     // General info
     string                      Flavor_String();
     uint8_t                     BitDepth();
+    sign                        Sign();
     endianness                  Endianness();
 
     // Flavors
@@ -54,6 +55,10 @@ public:
         PCM_44100_24_2_BE,
         PCM_44100_24_6_BE,
         PCM_44100_24_8_BE,
+        PCM_44100_32_1_BE,
+        PCM_44100_32_2_BE,
+        PCM_44100_32_6_BE,
+        PCM_44100_32_8_BE,
         PCM_48000_8_1_U,
         PCM_48000_8_1_S,
         PCM_48000_8_2_U,
@@ -74,6 +79,10 @@ public:
         PCM_48000_24_2_BE,
         PCM_48000_24_6_BE,
         PCM_48000_24_8_BE,
+        PCM_48000_32_1_BE,
+        PCM_48000_32_2_BE,
+        PCM_48000_32_6_BE,
+        PCM_48000_32_8_BE,
         PCM_96000_8_1_U,
         PCM_96000_8_1_S,
         PCM_96000_8_2_U,
@@ -94,6 +103,10 @@ public:
         PCM_96000_24_2_BE,
         PCM_96000_24_6_BE,
         PCM_96000_24_8_BE,
+        PCM_96000_32_1_BE,
+        PCM_96000_32_2_BE,
+        PCM_96000_32_6_BE,
+        PCM_96000_32_8_BE,
     ENUM_END(flavor)
 
 private:

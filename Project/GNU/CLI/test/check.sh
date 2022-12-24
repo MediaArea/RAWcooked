@@ -6,6 +6,29 @@ script_path="${PWD}/test"
 test="check"
 
 # local helper functions
+find() {
+    local old="${1}" len="$((${#1} / 2))" file="${2}" size="$(${fsize} ${2})" occurence="${3}" chunk_size=256 pos=0 found=0
+    while ((pos < size)) ; do
+        local chunk="$(xxd -u -p -c ${chunk_size} -l ${chunk_size} -s ${pos} ${file})"
+        local prefix="${chunk%%${old}*}"
+
+        if ((${#prefix} < ${#chunk})) ; then
+            ((pos += ${#prefix} / 2))
+            ((found += 1))
+            if ((found == occurence)) ; then
+                break
+            fi
+            ((pos += len))
+            continue
+        fi
+        ((pos += chunk_size - len + 1))
+    done
+
+    ((found == occurence)) && return 0
+
+    return 1
+}
+
 find_and_replace() {
     local old="${1}" new="${2}" len="$((${#1} / 2))" file="${3}" size="$(${fsize} ${3})" occurence="${4}" chunk_size=256 pos=0 found=0
     while ((pos < size)) ; do
@@ -58,6 +81,26 @@ pushd "${files_path}" >/dev/null 2>&1
 
     mkdir "${directory}"|| fatal "internal" "mkdir command failed"
 
+    # generate SD frame
+    ffmpeg -nostdin -f lavfi -i color=c=black:size=360x4 -vframes 1 -start_number 0 "${directory}/sd.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
+    
+    run_rawcooked -y -level 0 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 0 -slices 1 "${directory}"
+    check_success "options rejected" "options accepted"
+    run_rawcooked -y -level 0 -slices 4 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 3 "${directory}"
+    check_success "options rejected" "options accepted"
+    run_rawcooked -y -level 3 -slices 1 "${directory}"
+    check_failure "options rejected" "options accepted"
+    run_rawcooked -y -level 3 -slices 4 "${directory}"
+    check_success "options rejected" "options accepted"
+
+    rm -r "${directory}"|| fatal "internal" "rm command failed"
+
+    mkdir "${directory}"|| fatal "internal" "mkdir command failed"
+
     # generate video and attachment source directory
     ffmpeg -nostdin -f lavfi -i testsrc=size=16x16 -t 1 -start_number 0 "${directory}/%03d.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
     echo "a" > "${directory}/attachment"
@@ -93,7 +136,11 @@ pushd "${files_path}" >/dev/null 2>&1
     # missing attachment
     cp -f "${file}.orig" "${file}" || fatal "internal" "mv command failed"
 
-    find_and_replace "61A70100" "EC80EC02" "${file}" 1
+    if find "61A70100" "${file}" 1 ; then
+        find_and_replace "61A70100" "EC80EC02" "${file}" 1
+    else
+        find_and_replace "61A7" "42EC" "${file}" 1
+    fi
     run_rawcooked --check "${file}" -o ./
     check_failure "test failed on mkv with missing attachment and output set to source directory" "test succeeded on mkv with missing attachment and output set to source directory"
     run_rawcooked --check "${file}"
@@ -102,7 +149,11 @@ pushd "${files_path}" >/dev/null 2>&1
     # missing reversibility file
     cp -f "${file}.orig" "${file}" || fatal "internal" "mv command failed"
 
-    find_and_replace "61A70100" "EC80EC02" "${file}" 2
+    if find "61A70100" "${file}" 2 ; then
+        find_and_replace "61A70100" "EC80EC02" "${file}" 2
+    else
+        find_and_replace "61A7" "42EC" "${file}" 2
+    fi
     run_rawcooked --check "${file}" -o ./
     check_failure "test failed on mkv with missing reversibility file and output set to source directory" "test succeeded on mkv with missing reversibility file and output set to source directory"
     run_rawcooked --check "${file}"

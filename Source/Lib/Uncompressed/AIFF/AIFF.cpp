@@ -46,7 +46,7 @@ static const char* MessageText[] =
     // Unsupported
     "COMM compressionType not known PCM",
     "COMM chunk not before data chunk",
-    "Flavor (sampleRate / sampleSize / numChannels / Endianness combination)",
+    "Flavor (sampleRate / sampleSize / numChannels / Sign / Endianness combination)",
 };
 
 enum code : uint8_t
@@ -76,21 +76,13 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 using namespace aiff_issue;
 
 //---------------------------------------------------------------------------
-// Enums
-enum class sample_rate_code : uint8_t
-{
-    _44100,
-    _48000,
-    _96000,
-};
-    
-//---------------------------------------------------------------------------
 // Tested cases
 struct aiff_tested
 {
-    sample_rate_code            sampleRateCode;
-    uint8_t                     sampleSize;
-    uint8_t                     numChannels;
+    samplerate_code             sampleRateCode;
+    bitdepth                    sampleSize;
+    channels                    numChannels;
+    sign                        Sign;
     endianness                  Endianness;
 
     bool operator == (const aiff_tested& Value) const
@@ -98,72 +90,86 @@ struct aiff_tested
         return sampleRateCode == Value.sampleRateCode
             && sampleSize == Value.sampleSize
             && numChannels == Value.numChannels
-            && Endianness == Value.Endianness;
+            && Sign == Value.Sign
+            && Endianness == Value.Endianness
+            ;
     }
 };
 
 struct aiff_tested AIFF_Tested[] =
 {
-    { sample_rate_code::_44100,  8, 1, endianness::LE },
-    { sample_rate_code::_44100,  8, 1, endianness::BE },
-    { sample_rate_code::_44100,  8, 2, endianness::LE },
-    { sample_rate_code::_44100,  8, 2, endianness::BE },
-    { sample_rate_code::_44100,  8, 6, endianness::LE },
-    { sample_rate_code::_44100,  8, 6, endianness::BE },
-    { sample_rate_code::_44100,  8, 8, endianness::LE },
-    { sample_rate_code::_44100,  8, 8, endianness::BE },
-    { sample_rate_code::_44100, 16, 1, endianness::LE },
-    { sample_rate_code::_44100, 16, 1, endianness::BE },
-    { sample_rate_code::_44100, 16, 2, endianness::LE },
-    { sample_rate_code::_44100, 16, 2, endianness::BE },
-    { sample_rate_code::_44100, 16, 6, endianness::LE },
-    { sample_rate_code::_44100, 16, 6, endianness::BE },
-    { sample_rate_code::_44100, 16, 8, endianness::LE },
-    { sample_rate_code::_44100, 16, 8, endianness::BE },
-    { sample_rate_code::_44100, 24, 1, endianness::BE },
-    { sample_rate_code::_44100, 24, 2, endianness::BE },
-    { sample_rate_code::_44100, 24, 6, endianness::BE },
-    { sample_rate_code::_44100, 24, 8, endianness::BE },
-    { sample_rate_code::_48000,  8, 1, endianness::LE },
-    { sample_rate_code::_48000,  8, 1, endianness::BE },
-    { sample_rate_code::_48000,  8, 2, endianness::LE },
-    { sample_rate_code::_48000,  8, 2, endianness::BE },
-    { sample_rate_code::_48000,  8, 6, endianness::LE },
-    { sample_rate_code::_48000,  8, 6, endianness::BE },
-    { sample_rate_code::_48000,  8, 8, endianness::LE },
-    { sample_rate_code::_48000,  8, 8, endianness::BE },
-    { sample_rate_code::_48000, 16, 1, endianness::LE },
-    { sample_rate_code::_48000, 16, 1, endianness::BE },
-    { sample_rate_code::_48000, 16, 2, endianness::LE },
-    { sample_rate_code::_48000, 16, 2, endianness::BE },
-    { sample_rate_code::_48000, 16, 6, endianness::LE },
-    { sample_rate_code::_48000, 16, 6, endianness::BE },
-    { sample_rate_code::_48000, 16, 8, endianness::LE },
-    { sample_rate_code::_48000, 16, 8, endianness::BE },
-    { sample_rate_code::_48000, 24, 1, endianness::BE },
-    { sample_rate_code::_48000, 24, 2, endianness::BE },
-    { sample_rate_code::_48000, 24, 6, endianness::BE },
-    { sample_rate_code::_48000, 24, 8, endianness::BE },
-    { sample_rate_code::_96000,  8, 1, endianness::LE },
-    { sample_rate_code::_96000,  8, 1, endianness::BE },
-    { sample_rate_code::_96000,  8, 2, endianness::LE },
-    { sample_rate_code::_96000,  8, 2, endianness::BE },
-    { sample_rate_code::_96000,  8, 6, endianness::BE },
-    { sample_rate_code::_96000,  8, 6, endianness::LE },
-    { sample_rate_code::_96000,  8, 8, endianness::BE },
-    { sample_rate_code::_96000,  8, 8, endianness::LE },
-    { sample_rate_code::_96000, 16, 1, endianness::LE },
-    { sample_rate_code::_96000, 16, 1, endianness::BE },
-    { sample_rate_code::_96000, 16, 2, endianness::LE },
-    { sample_rate_code::_96000, 16, 2, endianness::BE },
-    { sample_rate_code::_96000, 16, 6, endianness::LE },
-    { sample_rate_code::_96000, 16, 6, endianness::BE },
-    { sample_rate_code::_96000, 16, 8, endianness::LE },
-    { sample_rate_code::_96000, 16, 8, endianness::BE },
-    { sample_rate_code::_96000, 24, 1, endianness::BE },
-    { sample_rate_code::_96000, 24, 2, endianness::BE },
-    { sample_rate_code::_96000, 24, 6, endianness::BE },
-    { sample_rate_code::_96000, 24, 8, endianness::BE },
+    { samplerate_code::_44100,  8, 1, sign::U, endianness::LE},
+    { samplerate_code::_44100,  8, 1, sign::S, endianness::LE},
+    { samplerate_code::_44100,  8, 2, sign::U, endianness::LE},
+    { samplerate_code::_44100,  8, 2, sign::S, endianness::LE},
+    { samplerate_code::_44100,  8, 6, sign::U, endianness::LE},
+    { samplerate_code::_44100,  8, 6, sign::S, endianness::LE},
+    { samplerate_code::_44100,  8, 8, sign::U, endianness::LE},
+    { samplerate_code::_44100,  8, 8, sign::S, endianness::LE},
+    { samplerate_code::_44100, 16, 1, sign::S, endianness::LE},
+    { samplerate_code::_44100, 16, 1, sign::S, endianness::BE},
+    { samplerate_code::_44100, 16, 2, sign::S, endianness::LE},
+    { samplerate_code::_44100, 16, 2, sign::S, endianness::BE},
+    { samplerate_code::_44100, 16, 6, sign::S, endianness::LE},
+    { samplerate_code::_44100, 16, 6, sign::S, endianness::BE},
+    { samplerate_code::_44100, 16, 8, sign::S, endianness::LE},
+    { samplerate_code::_44100, 16, 8, sign::S, endianness::BE},
+    { samplerate_code::_44100, 24, 1, sign::S, endianness::BE},
+    { samplerate_code::_44100, 24, 2, sign::S, endianness::BE},
+    { samplerate_code::_44100, 24, 6, sign::S, endianness::BE},
+    { samplerate_code::_44100, 24, 8, sign::S, endianness::BE},
+    { samplerate_code::_44100, 32, 1, sign::S, endianness::BE},
+    { samplerate_code::_44100, 32, 2, sign::S, endianness::BE},
+    { samplerate_code::_44100, 32, 6, sign::S, endianness::BE},
+    { samplerate_code::_44100, 32, 8, sign::S, endianness::BE},
+    { samplerate_code::_48000,  8, 1, sign::U, endianness::LE},
+    { samplerate_code::_48000,  8, 1, sign::S, endianness::LE},
+    { samplerate_code::_48000,  8, 2, sign::U, endianness::LE},
+    { samplerate_code::_48000,  8, 2, sign::S, endianness::LE},
+    { samplerate_code::_48000,  8, 6, sign::U, endianness::LE},
+    { samplerate_code::_48000,  8, 6, sign::S, endianness::LE},
+    { samplerate_code::_48000,  8, 8, sign::U, endianness::LE},
+    { samplerate_code::_48000,  8, 8, sign::S, endianness::LE},
+    { samplerate_code::_48000, 16, 1, sign::S, endianness::LE},
+    { samplerate_code::_48000, 16, 1, sign::S, endianness::BE},
+    { samplerate_code::_48000, 16, 2, sign::S, endianness::LE},
+    { samplerate_code::_48000, 16, 2, sign::S, endianness::BE},
+    { samplerate_code::_48000, 16, 6, sign::S, endianness::LE},
+    { samplerate_code::_48000, 16, 6, sign::S, endianness::BE},
+    { samplerate_code::_48000, 16, 8, sign::S, endianness::LE},
+    { samplerate_code::_48000, 16, 8, sign::S, endianness::BE},
+    { samplerate_code::_48000, 24, 1, sign::S, endianness::BE},
+    { samplerate_code::_48000, 24, 2, sign::S, endianness::BE},
+    { samplerate_code::_48000, 24, 6, sign::S, endianness::BE},
+    { samplerate_code::_48000, 24, 8, sign::S, endianness::BE},
+    { samplerate_code::_48000, 32, 1, sign::S, endianness::BE},
+    { samplerate_code::_48000, 32, 2, sign::S, endianness::BE},
+    { samplerate_code::_48000, 32, 6, sign::S, endianness::BE},
+    { samplerate_code::_48000, 32, 8, sign::S, endianness::BE},
+    { samplerate_code::_96000,  8, 1, sign::U, endianness::LE},
+    { samplerate_code::_96000,  8, 1, sign::S, endianness::LE},
+    { samplerate_code::_96000,  8, 2, sign::U, endianness::LE},
+    { samplerate_code::_96000,  8, 2, sign::S, endianness::LE},
+    { samplerate_code::_96000,  8, 6, sign::S, endianness::LE},
+    { samplerate_code::_96000,  8, 6, sign::U, endianness::LE},
+    { samplerate_code::_96000,  8, 8, sign::S, endianness::LE},
+    { samplerate_code::_96000,  8, 8, sign::U, endianness::LE},
+    { samplerate_code::_96000, 16, 1, sign::S, endianness::LE},
+    { samplerate_code::_96000, 16, 1, sign::S, endianness::BE},
+    { samplerate_code::_96000, 16, 2, sign::S, endianness::LE},
+    { samplerate_code::_96000, 16, 2, sign::S, endianness::BE},
+    { samplerate_code::_96000, 16, 6, sign::S, endianness::LE},
+    { samplerate_code::_96000, 16, 6, sign::S, endianness::BE},
+    { samplerate_code::_96000, 16, 8, sign::S, endianness::LE},
+    { samplerate_code::_96000, 16, 8, sign::S, endianness::BE},
+    { samplerate_code::_96000, 24, 1, sign::S, endianness::BE},
+    { samplerate_code::_96000, 24, 2, sign::S, endianness::BE},
+    { samplerate_code::_96000, 24, 6, sign::S, endianness::BE},
+    { samplerate_code::_96000, 24, 8, sign::S, endianness::BE},
+    { samplerate_code::_96000, 32, 1, sign::S, endianness::BE},
+    { samplerate_code::_96000, 32, 2, sign::S, endianness::BE},
+    { samplerate_code::_96000, 32, 6, sign::S, endianness::BE},
+    { samplerate_code::_96000, 32, 8, sign::S, endianness::BE},
 };
 static_assert(aiff::flavor_Max == sizeof(AIFF_Tested) / sizeof(aiff_tested), IncoherencyMessage);
 
@@ -225,7 +231,7 @@ void aiff::ParseBuffer()
         return;
     SetDetected();
 
-    Flavor = flavor_Max; // Used for detected if COMM chunk is parsed
+    Flavor = (decltype(Flavor))-1;
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer.Size();
     Levels[0].SubElements = &aiff::SubElements__;
@@ -293,12 +299,6 @@ void aiff::ParseBuffer()
         if (Buffer_Offset < Levels[Level].Offset_End)
             Level++;
     }
-
-    if (Flavor == (uint8_t)-1)
-    {
-        Unsupported(unsupported::Flavor);
-        return;
-    }
 }
 
 //---------------------------------------------------------------------------
@@ -310,13 +310,19 @@ void aiff::BufferOverflow()
 //---------------------------------------------------------------------------
 string aiff::Flavor_String()
 {
-    return AIFF_Flavor_String(Flavor);
+    return AIFF_Flavor_String((uint8_t)Flavor);
 }
 
 //---------------------------------------------------------------------------
 uint8_t aiff::BitDepth()
 {
     return AIFF_Tested[Flavor].sampleSize;
+}
+
+//---------------------------------------------------------------------------
+sign aiff::Sign()
+{
+    return AIFF_Tested[Flavor].Sign;
 }
 
 //---------------------------------------------------------------------------
@@ -356,7 +362,6 @@ void aiff::AIFF_COMM()
     Get_B4(); // numSamplesFrames
     uint16_t sampleSize = Get_B2();
     long double sampleRate = Get_BF10();
-    Info.Endianness = endianness::BE;
     if (Levels[Level].Offset_End - Buffer_Offset)
     {
         uint32_t compressionType = Get_B4();
@@ -364,15 +369,23 @@ void aiff::AIFF_COMM()
         {
         case 0x4E4F4E45: // NONE
         case 0x74776F73: // twos
+            Info.Endianness = endianness::BE;
+            Info.Sign = sign::S;
             break;
         case 0x72617720: // raw
         case 0x736F7774: // sowt
             Info.Endianness = endianness::LE;
+            Info.Sign = sampleSize > 8 ? sign::S : sign::U;
             break;
         default:
             Unsupported(unsupported::COMM_compressionType_NotPcm);
             return;
         }
+    }
+    else
+    {
+        Info.Sign = sign::S;
+        Info.Endianness = sampleSize > 8 ? endianness::BE : endianness::LE;
     }
 
     // Supported?
@@ -385,15 +398,9 @@ void aiff::AIFF_COMM()
         Unsupported(unsupported::Flavor);
         return;
     }
-    switch ((unsigned int)sampleRate)
-    {
-    case 44100: Info.sampleRateCode = sample_rate_code::_44100; break;
-    case 48000: Info.sampleRateCode = sample_rate_code::_48000; break;
-    case 96000: Info.sampleRateCode = sample_rate_code::_96000; break;
-    default   : Info.sampleRateCode = (decltype(Info.sampleRateCode))-1;
-    }
     Info.sampleSize = (decltype(aiff_tested::sampleSize))sampleSize;
     Info.numChannels = (decltype(aiff_tested::numChannels))numChannels;
+    Info.sampleRateCode = SampleRate2Code((uint32_t)sampleRate);
     for (const auto& AIFF_Tested_Item : AIFF_Tested)
     {
         if (AIFF_Tested_Item == Info)
@@ -412,7 +419,7 @@ void aiff::AIFF_COMM()
 void aiff::AIFF_SSND()
 {
     // Test if fmt chunk was parsed
-    if (!HasErrors() && Flavor == flavor_Max)
+    if (!HasErrors() && Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::COMM_Location);
 
     // Can we compress?
@@ -443,63 +450,10 @@ void aiff::AIFF_SSND()
 }
 
 //---------------------------------------------------------------------------
-static const char* sampleRate_String(aiff::flavor Flavor)
-{
-    switch (AIFF_Tested[(size_t)Flavor].sampleRateCode)
-    {
-    case sample_rate_code::_44100: return "44";
-    case sample_rate_code::_48000: return "48";
-    case sample_rate_code::_96000: return "96";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
-static uint8_t sampleSize(aiff::flavor Flavor)
-{
-    return AIFF_Tested[(size_t)Flavor].sampleSize;
-}
-static string sampleSize_String(aiff::flavor Flavor)
-{
-    return to_string(AIFF_Tested[(size_t)Flavor].sampleSize);
-}
-
-//---------------------------------------------------------------------------
-static string numChannels_String(aiff::flavor Flavor)
-{
-    return to_string(AIFF_Tested[(size_t)Flavor].numChannels);
-}
-
-//---------------------------------------------------------------------------
-static endianness Endianness(aiff::flavor Flavor)
-{
-    return AIFF_Tested[(size_t)Flavor].Endianness;
-}
-static const char* Endianess_String(aiff::flavor Flavor)
-{
-    switch (Endianness(Flavor))
-    {
-    case endianness::LE: return sampleSize(Flavor) == 8 ? "U" : "LE";
-    case endianness::BE: return sampleSize(Flavor) == 8 ? "S" : "BE";
-    default: return nullptr;
-    }
-}
-
-//---------------------------------------------------------------------------
 string AIFF_Flavor_String(uint8_t Flavor)
 {
-    string ToReturn("AIFF/PCM/");
-    ToReturn += sampleRate_String((aiff::flavor)Flavor);
-    ToReturn += "kHz/";
-    ToReturn += sampleSize_String((aiff::flavor)Flavor);
-    ToReturn += "bit/";
-    ToReturn += numChannels_String((aiff::flavor)Flavor);
-    ToReturn += "ch";
-    const char* Value = Endianess_String((aiff::flavor)Flavor);
-    if (Value)
-    {
-        ToReturn += '/';
-        ToReturn += Value;
-    }
+    const auto& Info = AIFF_Tested[(size_t)Flavor];
+    string ToReturn("AIFF/");
+    ToReturn += PCM_Flavor_String(Info.sampleSize, Info.Sign, Info.Endianness, Info.numChannels, Info.sampleRateCode);
     return ToReturn;
 }

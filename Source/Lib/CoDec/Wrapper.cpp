@@ -33,32 +33,38 @@ format_kind FormatKind(format Format)
 }
 
 //---------------------------------------------------------------------------
-static const char* Format_CodecID_[] =
+struct codecid_mapping
 {
-    nullptr,
-    "V_FFV1",
-    "A_FLAC",
-    "A_PCM/INT/LIT",
-    "V_MS/VFW/FOURCC",
+    const char* CodecID;
+    format Format;
 };
-static_assert(format_Max == sizeof(Format_CodecID_) / sizeof(const char*), IncoherencyMessage);
+static codecid_mapping Format_CodecID_[] =
+{
+    { "A_FLAC", format::FLAC},
+    { "A_PCM/FLOAT/IEEE", format::PCM},
+    { "A_PCM/INT/BIG", format::PCM},
+    { "A_PCM/INT/LIT", format::PCM},
+    { "V_FFV1", format::FFV1},
+    { "V_MS/VFW/FOURCC", format::VFW},
+};
 format Format_FromCodecID(const char* Name)
 {
     for (const auto& Item : Format_CodecID_)
-        if (Item && !strcmp(Name, Item))
-            return (format)(&Item - Format_CodecID_);
+        if (!strcmp(Name, Item.CodecID))
+            return Item.Format;
     return format::None;
 }
 
 //---------------------------------------------------------------------------
-void audio_wrapper::SetOutputBitDepth(uint8_t BitDepth)
+void audio_wrapper::SetConfig(uint8_t BitDepth, sign Sign, endianness Endianness)
 {
-    OutputBitDepth_ = BitDepth;
-}
-
-void audio_wrapper::SetEndianness(endianness Endianness)
-{
-    Endianness_ = Endianness;
+    OutputBitDepth = BitDepth;
+    if (Sign == sign::F)
+        SignOrEndianess.Sign = sign::S;
+    else if (OutputBitDepth <= 8)
+        SignOrEndianess.Sign = Sign;
+    else
+        SignOrEndianess.Endianness = Endianness;
 }
 
 //---------------------------------------------------------------------------
@@ -232,7 +238,7 @@ void flac_wrapper::FLAC_Tell(uint64_t* absolute_byte_offset)
 void flac_wrapper::FLAC_Metadata(uint8_t channels, uint8_t bits_per_sample)
 {
     channels_ = channels;
-    OutputBitDepth_ = bits_per_sample; // Value can be modified later by container information
+    OutputBitDepth = bits_per_sample; // Value can be modified later by container information
     bits_per_sample_ = bits_per_sample;
 }
 
@@ -241,27 +247,27 @@ void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
 {
     auto& Buffer = RawFrame->Buffer();
     if (!Buffer.Data())
-        Buffer.Create(16384 / 8 * OutputBitDepth_ * channels_); // 16384 is the max blocksize in spec
+        Buffer.Create(16384 / 8 * OutputBitDepth * channels_); // 16384 is the max blocksize in spec
     auto Data = Buffer.DataForModification();
 
     // Converting libFLAC output to WAV style
     uint8_t channels = channels_;
-    switch (OutputBitDepth_)
+    switch (OutputBitDepth)
     {
     case 8:
         switch (bits_per_sample_)
         {
         case 8:
-            switch (Endianness_)
+            switch (SignOrEndianess.Sign)
             {
-            case endianness::BE:
+            case sign::S:
                 for (size_t i = 0; i < blocksize; i++)
                     for (size_t j = 0; j < channels; j++)
                     {
                         *(Data++) = (uint8_t)(buffer[j][i]);
                     }
                 break;
-            case endianness::LE:
+            case sign::U:
                 for (size_t i = 0; i < blocksize; i++)
                     for (size_t j = 0; j < channels; j++)
                     {
@@ -271,16 +277,16 @@ void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
             }
             break;
         case 16:
-            switch (Endianness_)
+            switch (SignOrEndianess.Sign)
             {
-            case endianness::BE:
+            case sign::S:
                 for (size_t i = 0; i < blocksize; i++)
                     for (size_t j = 0; j < channels; j++)
                     {
                         *(Data++) = (uint8_t)(buffer[j][i] >> 8);
                     }
                 break;
-            case endianness::LE:
+            case sign::U:
                 for (size_t i = 0; i < blocksize; i++)
                     for (size_t j = 0; j < channels; j++)
                     {
@@ -292,7 +298,7 @@ void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
         }
         break;
     case 16:
-        switch (Endianness_)
+        switch (SignOrEndianess.Endianness)
         {
         case endianness::BE:
             for (size_t i = 0; i < blocksize; i++)
@@ -313,7 +319,30 @@ void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
         }
         break;
     case 24:
-        switch (Endianness_)
+        switch (SignOrEndianess.Endianness)
+        {
+        case endianness::BE:
+            for (size_t i = 0; i < blocksize; i++)
+                for (size_t j = 0; j < channels; j++)
+                {
+                    *(Data++) = (uint8_t)(buffer[j][i] >> 16);
+                    *(Data++) = (uint8_t)(buffer[j][i] >> 8);
+                    *(Data++) = (uint8_t)(buffer[j][i]);
+                }
+            break;
+        case endianness::LE:
+            for (size_t i = 0; i < blocksize; i++)
+                for (size_t j = 0; j < channels; j++)
+                {
+                    *(Data++) = (uint8_t)(buffer[j][i]);
+                    *(Data++) = (uint8_t)(buffer[j][i] >> 8);
+                    *(Data++) = (uint8_t)(buffer[j][i] >> 16);
+                }
+            break;
+        }
+        break;
+    case 32:
+        switch (SignOrEndianess.Endianness)
         {
         case endianness::BE:
             for (size_t i = 0; i < blocksize; i++)

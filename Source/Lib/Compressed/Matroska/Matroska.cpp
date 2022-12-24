@@ -788,9 +788,7 @@ void matroska::Segment_Cluster()
     // Init
     for (const auto& TrackInfo_Current : TrackInfo)
         if (TrackInfo_Current && TrackInfo_Current->Init(Buffer.Data()))
-        {
-            //TODO handle errors
-        }
+            Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
 }
 
 //---------------------------------------------------------------------------
@@ -862,7 +860,8 @@ void matroska::Segment_Tracks_TrackEntry_CodecID()
 void matroska::Segment_Tracks_TrackEntry_CodecPrivate()
 {
     track_info* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
-    TrackInfo_Current->OutOfBand(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    if (TrackInfo_Current->OutOfBand(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset))
+        Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
 }
 
 //---------------------------------------------------------------------------

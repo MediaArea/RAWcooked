@@ -14,6 +14,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/CoDec/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Slice.cpp \
     ../../../Source/Lib/CoDec/Wrapper.cpp \
+    ../../../Source/Lib/Common/Common.cpp \
     ../../../Source/Lib/Compressed/Matroska/Matroska.cpp \
     ../../../Source/Lib/Compressed/RAWcooked/IntermediateWrite.cpp \
     ../../../Source/Lib/Compressed/RAWcooked/RAWcooked.cpp \

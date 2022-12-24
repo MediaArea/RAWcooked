@@ -30,6 +30,7 @@ public:
     // General info
     string                      Flavor_String();
     uint8_t                     BitDepth();
+    sign                        Sign();
     endianness                  Endianness();
 
     ENUM_BEGIN(flavor)
@@ -45,6 +46,14 @@ public:
         PCM_44100_24_2_LE,
         PCM_44100_24_6_LE,
         PCM_44100_24_8_LE,
+        PCM_44100_32_1_LE,
+        PCM_44100_32_1_LE_F,
+        PCM_44100_32_2_LE,
+        PCM_44100_32_2_LE_F,
+        PCM_44100_32_6_LE,
+        PCM_44100_32_6_LE_F,
+        PCM_44100_32_8_LE,
+        PCM_44100_32_8_LE_F,
         PCM_48000_8_1_U,
         PCM_48000_8_2_U,
         PCM_48000_8_6_U,
@@ -57,6 +66,14 @@ public:
         PCM_48000_24_2_LE,
         PCM_48000_24_6_LE,
         PCM_48000_24_8_LE,
+        PCM_48000_32_1_LE,
+        PCM_48000_32_1_LE_F,
+        PCM_48000_32_2_LE,
+        PCM_48000_32_2_LE_F,
+        PCM_48000_32_6_LE,
+        PCM_48000_32_6_LE_F,
+        PCM_48000_32_8_LE,
+        PCM_48000_32_8_LE_F,
         PCM_96000_8_1_U,
         PCM_96000_8_2_U,
         PCM_96000_8_6_U,
@@ -69,6 +86,14 @@ public:
         PCM_96000_24_2_LE,
         PCM_96000_24_6_LE,
         PCM_96000_24_8_LE,
+        PCM_96000_32_1_LE,
+        PCM_96000_32_1_LE_F,
+        PCM_96000_32_2_LE,
+        PCM_96000_32_2_LE_F,
+        PCM_96000_32_6_LE,
+        PCM_96000_32_6_LE_F,
+        PCM_96000_32_8_LE,
+        PCM_96000_32_8_LE_F,
     ENUM_END(flavor)
 
 private:
