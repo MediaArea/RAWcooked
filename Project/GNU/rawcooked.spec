@@ -23,8 +23,8 @@ BuildRequires:  automake
 BuildRequires:  autoconf
 BuildRequires:	dos2unix
 
-%if 0%{?rhel_version} >= 800 || 0%{?centos_version} >= 800
-BuildRequires:  gdb
+%if 0%{?rhel} >= 8
+BuildRequires:  alternatives
 %endif
 
 %description
