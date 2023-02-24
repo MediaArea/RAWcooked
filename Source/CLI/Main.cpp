@@ -250,7 +250,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             {
                 cerr << "Error: data may contain non-zero padding bits but padding would never\n"
                     "       be tested with the current options, there is a risk of non-\n"
-                    "       reversibility, use --no-check-padding for explicitely indicate\n"
+                    "       reversibility, use --no-check-padding for explicitly indicate\n"
                     "       that you are fine with that else use --check-padding for checking\n"
                     "       the padding bits before encoding, or alternatively use --check for\n"
                     "       checking padding bits after encoding (you'll have to re-encode\n"
@@ -539,10 +539,10 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         if (Global.Actions[Action_Decode])
             cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
         if (Global.Actions[Action_Check] && !Global.Errors.HasErrors())
-            cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, no issue detected." << endl;
+            cout << '\n' << (HasCheckedReversibility ? "Reversibility" : "Decoding") << " was checked, no issue detected." << endl;
     }
     if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
-        cout << '\n' << (HasCheckedReversibility ? "Reversability" : "Decoding") << " was checked, issues detected, see below." << endl;
+        cout << '\n' << (HasCheckedReversibility ? "Reversibility" : "Decoding") << " was checked, issues detected, see below." << endl;
 
     return ReturnValue;
 }
@@ -571,7 +571,7 @@ int ParseFile(size_t Files_Pos)
         return 0;
 
     // Attachments
-    size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary choosen
+    size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary chosen
     if (ParseInfo.FileMap.Size() >= AttachmentSizeFinal)
     {
         cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
