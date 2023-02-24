@@ -34,7 +34,7 @@ while read line ; do
         run_rawcooked --check --check-padding ${file_input}
         check_success "integrated check failed" "integrated check checked"
         rm  "${file}.mkv"
-        if ! contains "Reversability was checked, no issue detected." "${cmd_stdout}" ; then
+        if ! contains "Reversibility was checked, no issue detected." "${cmd_stdout}" ; then
             echo "NOK: ${test}, wrong integrated check output, ${cmd_stdout}" >&${fd}
             status=1
             clean
@@ -66,7 +66,7 @@ while read line ; do
 
         run_rawcooked "${file}.mkv" --check -o "${file}/.."
         check_success "encoded files check failed" "encoded files checked"
-        if ! contains "Reversability was checked, no issue detected." "${cmd_stdout}" ; then
+        if ! contains "Reversibility was checked, no issue detected." "${cmd_stdout}" ; then
             echo "NOK: ${test}, wrong encoded files check output, ${cmd_stdout}" >&${fd}
             status=1
             clean
