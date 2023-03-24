@@ -29,6 +29,7 @@ public:
     // Options
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
+    vector<string>              MoreOutputOptions;
     size_t                      AttachmentMaxSize;
     string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
@@ -107,6 +108,10 @@ private:
     thread*                     ProgressIndicator_Thread;
     size_t                      ProgressIndicator_Current;
     size_t                      ProgressIndicator_Total;
+
+    // Temp
+    bool                        NextFileNameIsOutput = false;
+    bool                        OptionsForOtherFiles = false;
 };
 
 #endif

@@ -354,18 +354,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
         }
         return 0;
     }
-    if (!strcmp(argv[i], "-framerate"))
-    {
-        if (++i >= argc)
-            return Error_NotTested(argv[i - 1]);
-        if (atof(argv[i]))
-        {
-            VideoInputOptions["framerate"] = argv[i];
-            License.Feature(feature::InputOptions);
-            return 0;
-        }
-        return 0;
-    }
     if (!strcmp(argv[i], "-g"))
     {
         if (++i >= argc)
@@ -393,25 +381,16 @@ int global::SetOption(const char* argv[], int& i, int argc)
         }
         return Error_NotTested(argv[i - 1], argv[i]);
     }
-    if (!strcmp(argv[i], "-loglevel"))
+    if (!strcmp(argv[i], "-map"))
     {
         if (++i >= argc)
             return Error_NotTested(argv[i - 1]);
-        if (!strcmp(argv[i], "error")
-         || !strcmp(argv[i], "warning"))
+        if (!strcmp(argv[i], "0"))
         {
-            OutputOptions["loglevel"] = argv[i];
-            License.Feature(feature::GeneralOptions);
+            // Do nothing
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
-    }
-    if (strcmp(argv[i], "-n") == 0)
-    {
-        OutputOptions["n"] = string();
-        OutputOptions.erase("y");
-        Mode = AlwaysNo; // Also RAWcooked itself
-        return 0;
     }
     if (!strcmp(argv[i], "-slicecrc"))
     {
@@ -438,21 +417,6 @@ int global::SetOption(const char* argv[], int& i, int argc)
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
-    }
-    if (!strcmp(argv[i], "-threads"))
-    {
-        if (++i >= argc)
-            return Error_NotTested(argv[i - 1]);
-        OutputOptions["threads"] = argv[i];
-        License.Feature(feature::GeneralOptions);
-        return 0;
-    }
-    if (strcmp(argv[i], "-y") == 0)
-    {
-        OutputOptions["y"] = string();
-        OutputOptions.erase("n");
-        Mode = AlwaysYes; // Also RAWcooked itself
-        return 0;
     }
 
     return Error_NotTested(argv[i]);
@@ -733,8 +697,8 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if (strcmp(argv[i], "--quiet") == 0)
         {
+            OutputOptions["loglevel"] = "warning";
             Quiet = true;
-            License.Feature(feature::GeneralOptions);
         }
         else if ((strcmp(argv[i], "--rawcooked-file-name") == 0 || strcmp(argv[i], "-r") == 0))
         {
@@ -770,9 +734,83 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (!strcmp(argv[i], "-i"))
+        {
+            if (OptionsForOtherFiles)
+            {
+                cerr << "-i after first output file name not tested\n";
+                return 1;
+            }
+            if (++i >= argc)
+                return Error_NotTested(argv[i - 1]);
+            Inputs.push_back(argv[i]);
+            NextFileNameIsOutput = true;
+            if (auto Value = SetAcceptFiles())
+                return Value;
+        }
+        else if (!strcmp(argv[i], "-framerate"))
+        {
+            if (OptionsForOtherFiles)
+            {
+                cerr << "-framerate after first output file name not tested\n";
+                return 1;
+            }
+            if (++i >= argc)
+                return Error_NotTested(argv[i - 1]);
+            if (!atof(argv[i]))
+            {
+                cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a number\n";
+                return 1;
+            }
+            VideoInputOptions["framerate"] = argv[i];
+            License.Feature(feature::InputOptions);
+        }
+        else if (!strcmp(argv[i], "-loglevel") || !strcmp(argv[i], "-v"))
+        {
+            if (++i >= argc)
+                return Error_NotTested(argv[i - 1]);
+            if (strcmp(argv[i], "error")
+             && strcmp(argv[i], "warning"))
+                return Error_NotTested(argv[i - 1], argv[i]);
+            OutputOptions["loglevel"] = argv[i];
+            Quiet = true;
+        }
+        else if (strcmp(argv[i], "-n") == 0)
+        {
+            OutputOptions["n"] = string();
+            OutputOptions.erase("y");
+            Mode = AlwaysNo; // Also RAWcooked itself
+        }
+        else if (!strcmp(argv[i], "-threads"))
+        {
+            if (++i >= argc)
+                return Error_NotTested(argv[i - 1]);
+            OutputOptions["threads"] = argv[i];
+            License.Feature(feature::GeneralOptions);
+        }
+        else if (strcmp(argv[i], "-y") == 0)
+        {
+            OutputOptions["y"] = string();
+            OutputOptions.erase("n");
+            Mode = AlwaysYes; // Also RAWcooked itself
+        }
+        else if (OptionsForOtherFiles)
+        {
+            MoreOutputOptions.push_back(argv[i]);
+        }
         else if (argv[i][0] == '-' && argv[i][1] != '\0')
         {
             int Value = SetOption(argv, i, argc);
+            if (Value)
+                return Value;
+        }
+        else if (NextFileNameIsOutput)
+        {
+            int Value = SetOutputFileName(argv[i]);
+            if (Value)
+                return Value;
+            OptionsForOtherFiles = true;
+            Value = SetAcceptFiles();
             if (Value)
                 return Value;
         }
