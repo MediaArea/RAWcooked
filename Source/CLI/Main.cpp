@@ -73,7 +73,7 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
 //---------------------------------------------------------------------------
 struct parse_info
 {
-    string* Name;
+    string* Name = {};
     filemap FileMap;
     vector<string> RemovedFiles;
     string FileName_Template;
@@ -83,16 +83,13 @@ struct parse_info
     string Flavor;
     string Slices;
     input_info InputInfo;
-    bool   IsDetected;
-    bool   Problem;
+    size_t StreamCountMinus1 = 0;
+    bool   IsDetected = false;
+    bool   IsContainer = false;
+    bool   Problem = false;
 
     bool ParseFile_Input(input_base& Input, bool OverrideCheckPadding = false);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
-
-    parse_info():
-        IsDetected(false),
-        Problem(false)
-    {}
 };
 
 //---------------------------------------------------------------------------
@@ -415,6 +412,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         Stream.Flavor = ParseInfo.Flavor;
         Stream.Problem = ParseInfo.Problem;
 
+        Stream.StreamCountMinus1 = ParseInfo.StreamCountMinus1;
+        Stream.IsContainer = ParseInfo.IsContainer;
         Stream.Slices = ParseInfo.Slices;
         map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
         if (FrameRateFromOptions != Global.VideoInputOptions.end())

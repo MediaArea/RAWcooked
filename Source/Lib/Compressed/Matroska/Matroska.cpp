@@ -40,6 +40,7 @@ static const char* MessageText[] =
     "file smaller than expected",
     "segment size is set as unknown, maybe due to partial encoding",
     "segment end offset is bigger than file size, maybe due to truncated file",
+    "Unreadable output file header",
 };
 
 enum code : uint8_t
@@ -47,6 +48,7 @@ enum code : uint8_t
     BufferOverflow,
     UnknownSizeSegment,
     BiggerSizeSegment,
+    ReversibilityData_UnreadableFrameHeader,
     Max
 };
 
@@ -140,6 +142,10 @@ ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedSegment)
 ELEMENT_VOID(      70, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryName)
 ELEMENT_VOID(      71, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryVersion)
 ELEMENT_VOID(      72, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_PathSeparator)
+ELEMENT_VOID(       5, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_InData)
+ELEMENT_VOID(      20, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileHash)
+ELEMENT_VOID(      10, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileName)
+ELEMENT_VOID(      30, Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileSize)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments_AttachedFile_FileData_RawCookedTrack)
@@ -212,6 +218,7 @@ void matroska::Shutdown()
         delete TrackInfo_Current;
     }
     TrackInfo.clear();
+    End();
 
     // Hashes
     if ((Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) && Hashes_FromRAWcooked)
@@ -702,6 +709,47 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_PathSe
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileHash()
+{
+    if (!Hashes_FromRAWcooked)
+        return; // Not needed
+    if (!RAWcooked_FileNameIsValid)
+        return; // File name should come first. TODO: support when file name comes after
+    if (Levels[Level].Offset_End - Buffer_Offset != 17 || Buffer[Buffer_Offset] != 0x80)
+        return; // MD5 support only
+    Buffer_Offset++;
+
+    if (!ReversibilityData)
+    {
+        ReversibilityData = new reversibility();
+        ReversibilityData->SetBaseData(Buffer.Data());
+    }
+
+    array<uint8_t, 16> Hash;
+    memcpy(Hash.data(), Buffer.Data() + Buffer_Offset, Hash.size());
+    //Hashes_FromRAWcooked->FromHashFile(ReversibilityData->Data(reversibility::element::FileName, 0), Hash); //TODO: correclty manage hashes
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileSize()
+{
+    uint64_t Value = 0;
+    for (uint64_t Size = Levels[Level].Offset_End - Buffer_Offset; Size; Size--)
+    {
+        Value <<= 8;
+        Value |= Buffer[Buffer_Offset++];
+    }
+
+    if (!ReversibilityData)
+    {
+        ReversibilityData = new reversibility();
+        ReversibilityData->SetBaseData(Buffer.Data());
+    }
+
+    ReversibilityData->SetFileSize(Value);
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack()
 {
     IsList = true;
@@ -798,6 +846,8 @@ void matroska::Segment_Cluster()
     for (const auto& TrackInfo_Current : TrackInfo)
         if (TrackInfo_Current && TrackInfo_Current->Init(Buffer.Data()))
             Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
+    if (ReversibilityData && !FrameWriter_Template->Compound)
+        InitOutput_Find();
 }
 
 //---------------------------------------------------------------------------
@@ -1093,6 +1143,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
         case type::Track_MaskBase:
             Data->SetDataMask(Element, buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
             return;
+        case type::Segment_:
         case type::Track_:
             Data->SetUnique();
             break;
@@ -1143,4 +1194,76 @@ bool matroska::UnknownSize(uint64_t Name, uint64_t Size)
     // Continue
     Levels[Level].Offset_End = Levels[Level - 1].Offset_End;
     return false;
+}
+
+//---------------------------------------------------------------------------
+void matroska::End()
+{
+    if (!Actions[Action_Decode] && !Actions[Action_Check])
+    {
+        return;
+    }
+
+    // Write end of the file if the file is unique per track
+    if (ReversibilityData && ReversibilityData->Unique())
+    {
+        FrameWriter_Template->OutputFileName = ReversibilityData->Data(reversibility::element::FileName, 0);
+        FrameWriter_Template->Mode[frame_writer::IsNotBegin] = true;
+        FrameWriter_Template->Mode[frame_writer::IsNotEnd] = false;
+        raw_frame RawFrame;
+        RawFrame.FrameProcess = FrameWriter_Template;
+        //RawFrame.Process(); //TODO: correclty manage hashes
+    }
+}
+
+//---------------------------------------------------------------------------
+#define TEST_OUTPUT(_NAME, _FLAVOR) { if (auto Parser = InitOutput(new _NAME(Errors), raw_frame::flavor::_FLAVOR)) return Parser; }
+input_base_uncompressed_compound* matroska::InitOutput_Find()
+{
+    if (!ReversibilityData)
+        return nullptr;
+
+    return nullptr;
+}
+
+//---------------------------------------------------------------------------
+input_base_uncompressed_compound* matroska::InitOutput(input_base_uncompressed_compound* PotentialParser, raw_frame::flavor Flavor)
+{
+    PotentialParser->Actions.set(Action_Encode);
+    PotentialParser->Actions.set(Action_AcceptTruncated);
+    if (ReversibilityData->Unique())
+    {
+        // The begin of the content will not be parsed again, checking now
+        if (Actions[Action_Conch])
+            PotentialParser->Actions.set(Action_Conch);
+        if (Actions[Action_Coherency])
+            PotentialParser->Actions.set(Action_Coherency);
+    }
+    if (PotentialParser->Parse(ReversibilityData->Data(reversibility::element::InData)))
+    {
+        delete PotentialParser;
+        return nullptr;
+    }
+
+    if (!PotentialParser->IsSupported())
+    {
+        delete PotentialParser;
+        Undecodable(matroska_issue::undecodable::ReversibilityData_UnreadableFrameHeader);
+        return nullptr;
+    }
+
+    if (!ReversibilityData->Unique())
+    {
+        // The begin of the content will be checked by frame
+        if (Actions[Action_Conch])
+            PotentialParser->Actions.set(Action_Conch);
+        if (Actions[Action_Coherency])
+            PotentialParser->Actions.set(Action_Coherency);
+    }
+
+    FrameWriter_Template->Compound = PotentialParser;
+    for (auto TrackInfo_Item : TrackInfo)
+        TrackInfo_Item->UpdateReversibility(ReversibilityData, FrameWriter_Template->Compound, Flavor);
+
+    return PotentialParser;
 }

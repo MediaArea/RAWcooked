@@ -275,6 +275,15 @@ void track_info::End(size_t i)
 }
 
 //---------------------------------------------------------------------------
+void track_info::UpdateReversibility(reversibility* ContainerReversibility, input_base_uncompressed_compound* Compound, raw_frame::flavor Flavor)
+{
+    FrameWriter->OutputFileName = ContainerReversibility->Data(reversibility::element::FileName);
+    FormatPath(FrameWriter->OutputFileName);
+    FrameWriter->Compound = Compound;
+    RawFrame->Flavor = Flavor;
+}
+
+//---------------------------------------------------------------------------
 //
 track_info::track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool_) :
     input_base(Errors, Parser_ReversibilityData),

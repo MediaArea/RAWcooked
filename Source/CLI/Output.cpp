@@ -55,7 +55,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         if (!Slices.empty())
             Global.OutputOptions["slices"] = Slices;
     }
-    if (Global.VideoInputOptions.find("framerate") == Global.VideoInputOptions.end())
+    if ((Streams.size() != 1 || !Streams[0].IsContainer) && Global.VideoInputOptions.find("framerate") == Global.VideoInputOptions.end())
     {
         // Looking if any video stream has a frame rate
         string FrameRate;
@@ -269,7 +269,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         }
     }
     else
-        MapPos++;
+        MapPos += Streams.front().StreamCountMinus1 + 1;
 
     // Output
     for (map<string, string>::iterator Option = Global.OutputOptions.begin(); Option != Global.OutputOptions.end(); Option++)

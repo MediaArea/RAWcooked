@@ -15,6 +15,7 @@
 #include <bitset>
 class matroska;
 struct file_output;
+class input_base_uncompressed_compound;
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -25,6 +26,7 @@ public:
     // Constructor / Destructor
     frame_writer(const string& BaseDirectory_Source, user_mode* UserMode_Soure, ask_callback Ask_Callback_Source, matroska* M_Source, errors* Errors_Source = nullptr) :
         Output(nullptr),
+        Compound(nullptr),
         BaseDirectory(BaseDirectory_Source),
         UserMode(UserMode_Soure),
         Ask_Callback(Ask_Callback_Source),
@@ -35,6 +37,7 @@ public:
     }
     frame_writer(const frame_writer& Source) :
         Output(nullptr),
+        Compound(Source.Compound),
         Mode(Source.Mode),
         BaseDirectory(Source.BaseDirectory),
         UserMode(Source.UserMode),
@@ -63,6 +66,7 @@ public:
     };
     bitset<mode_Max>            Mode;
     string                      OutputFileName;
+    input_base_uncompressed_compound* Compound = nullptr;
 
 private:
     // Actions

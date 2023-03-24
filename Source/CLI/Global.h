@@ -78,8 +78,6 @@ public:
 
     int SetCheck(bool Value);
     int SetVersion(const char* Value);
-
-private:
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
     int SetBinName(const char* FileName);
@@ -104,6 +102,7 @@ private:
     int SetHash(bool Value);
     int SetAll(bool Value);
 
+private:
     // Progress indicator
     thread*                     ProgressIndicator_Thread;
     size_t                      ProgressIndicator_Current;

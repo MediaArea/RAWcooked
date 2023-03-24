@@ -598,11 +598,12 @@ void rawcooked::Parse()
             Writer.Block_Begin(Name_RawCookedSegment);
             Writer.String(Name_RawCooked_LibraryName, LibraryName);
             Writer.String(Name_RawCooked_LibraryVersion, LibraryVersion);
-            Writer.Block_End();
+            if (!IsContainer)
+                Writer.Block_End();
         }
 
         // Track (or attachment) only
-        if (!BlockCount)
+        if (!BlockCount && !IsContainer)
         {
             Writer.Block_Begin(IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack);
             if (!Unique && FirstFrame[(size_t)element::MaskFileName])
