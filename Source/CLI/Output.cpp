@@ -313,6 +313,11 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     Command += " -f matroska \"";
     Command += Global.OutputFileName;
     Command += '\"';
+    for (const auto& Option : Global.MoreOutputOptions)
+    {
+        Command += ' ';
+        Command += Option;
+    }
 
     if (Global.Actions[Action_FrameMd5])
     {
