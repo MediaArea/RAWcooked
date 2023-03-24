@@ -152,6 +152,7 @@ private:
 
     string                      RAWcooked_LibraryName;
     string                      RAWcooked_LibraryVersion;
+    reversibility*              ReversibilityData = nullptr;
     vector<track_info*>         TrackInfo;
     size_t                      TrackInfo_Pos;
     vector<uint8_t>             ID_to_TrackOrder;

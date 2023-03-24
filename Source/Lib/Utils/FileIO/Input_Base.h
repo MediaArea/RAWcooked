@@ -196,6 +196,13 @@ public:
     virtual endianness          Endianness() = 0;
 };
 
+struct file_output
+{
+    file                        Write;
+    filemap                     Read;
+    size_t                      Offset = 0;
+};
+
 class unknown : public input_base_uncompressed
 {
 public:

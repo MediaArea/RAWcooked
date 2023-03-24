@@ -198,6 +198,7 @@ matroska::~matroska()
     delete Hashes_FromRAWcooked;
     delete Hashes_FromAttachments;
     delete FrameWriter_Template;
+    delete ReversibilityData;
 }
 
 //---------------------------------------------------------------------------
@@ -352,6 +353,8 @@ void matroska::ParseBuffer()
         {
             FileMap->Remap();
             Buffer = *FileMap;
+            if (ReversibilityData)
+                ReversibilityData->SetBaseData(Buffer.Data());
             for (const auto& TrackInfo_Current : TrackInfo)
                 if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                     TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
@@ -367,6 +370,8 @@ void matroska::ParseBuffer()
 
             FileMap->Remap();
             Buffer = *FileMap;
+            if (ReversibilityData)
+                ReversibilityData->SetBaseData(Buffer.Data());
             for (const auto& TrackInfo_Current : TrackInfo)
                 if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                     TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
@@ -456,6 +461,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         // This is a RAWcooked file, not intended to be demuxed
         IsList = true;
         TrackInfo_Pos = (size_t)-1;
+        if (ReversibilityData)
+            ReversibilityData->SetBaseData(Buffer.Data());
         for (const auto& TrackInfo_Current : TrackInfo)
             if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                 TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
@@ -477,6 +484,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData()
         // This is a RAWcooked file, not intended to be demuxed
         IsList = true;
         TrackInfo_Pos = (size_t)-1;
+        if (ReversibilityData)
+            ReversibilityData->SetBaseData(Buffer.Data());
         for (const auto& TrackInfo_Current : TrackInfo)
             if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                 TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
@@ -1064,7 +1073,12 @@ void matroska::Uncompress(buffer& Output)
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type)
 {
-    auto& ReversibilityData = TrackInfo[TrackInfo_Pos]->ReversibilityData;
+    auto& Data = TrackInfo_Pos==(uint64_t)-1 ? ReversibilityData : TrackInfo[TrackInfo_Pos]->ReversibilityData;
+    if (!Data)
+    {
+        Data = new reversibility();
+        Data->SetBaseData(Buffer.Data());
+    }
 
     switch (Element)
     {
@@ -1077,15 +1091,15 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
     switch (Type)
     {
         case type::Track_MaskBase:
-            ReversibilityData->SetDataMask(Element, buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
+            Data->SetDataMask(Element, buffer_view(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset));
             return;
         case type::Track_:
-            ReversibilityData->SetUnique();
+            Data->SetUnique();
             break;
         default:;
     }
 
-    ReversibilityData->SetData(Element, Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset, Type == type::Block_MaskAddition);
+    Data->SetData(Element, Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset, Type == type::Block_MaskAddition);
 }
 
 //---------------------------------------------------------------------------

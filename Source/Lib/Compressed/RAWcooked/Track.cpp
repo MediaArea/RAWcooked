@@ -25,13 +25,14 @@ bool track_info::Init(const uint8_t* BaseData)
     RawFrame = new raw_frame;
     RawFrame->FrameProcess = FrameWriter;
 
-    ReversibilityData->StartParsing(BaseData);
-    RawFrame->SetPre(ReversibilityData->Data(reversibility::element::BeforeData));
-    RawFrame->SetPost(ReversibilityData->Data(reversibility::element::AfterData));
+    if (ReversibilityData)
+    {
+        ReversibilityData->StartParsing(BaseData);
+        RawFrame->SetPre(ReversibilityData->Data(reversibility::element::BeforeData));
+        RawFrame->SetPost(ReversibilityData->Data(reversibility::element::AfterData));
+    }
 
     auto Parser = InitOutput_Find();
-    if (!Parser)
-        return true;
 
     if (!Wrapper)
     {
@@ -52,10 +53,14 @@ bool track_info::Init(const uint8_t* BaseData)
     }
     case format_kind::audio:
     {
-        auto Wrapper2 = (audio_wrapper*)Wrapper;
-        auto Parser2 = (input_base_uncompressed_audio*)Parser;
-        Wrapper2->SetConfig(Parser2->BitDepth(), Parser2->Sign(), Parser2->Endianness());
-        delete Parser; // No more used
+        if (Parser)
+        {
+            auto Wrapper2 = (audio_wrapper*)Wrapper;
+            auto Parser2 = (input_base_uncompressed_audio*)Parser;
+            Wrapper2->SetConfig(Parser2->BitDepth(), Parser2->Sign(), Parser2->Endianness());
+            delete Parser; // No more used
+            Parser = nullptr;
+        }
         break;
     }
     case format_kind::unknown:;
@@ -63,7 +68,7 @@ bool track_info::Init(const uint8_t* BaseData)
 
     RawFrame->SetPost(buffer_or_view());
 
-    if (ReversibilityData->Unique())
+    if (ReversibilityData && ReversibilityData->Unique())
     {
         FrameWriter->OutputFileName = ReversibilityData->Data(reversibility::element::FileName);
         FormatPath(FrameWriter->OutputFileName);
@@ -79,7 +84,7 @@ bool track_info::Init(const uint8_t* BaseData)
 //---------------------------------------------------------------------------
 bool track_info::Process(const uint8_t* Data, size_t Size)
 {
-    if (!ReversibilityData->Unique())
+    if (ReversibilityData && !ReversibilityData->Unique())
     {
         RawFrame->SetPre(ReversibilityData->Data(reversibility::element::BeforeData));
         RawFrame->SetPost(ReversibilityData->Data(reversibility::element::AfterData));
@@ -95,7 +100,7 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
         return true;
     }
     Wrapper->Process(Data, Size);
-    if (!ReversibilityData->Unique())
+    if (ReversibilityData && !ReversibilityData->Unique())
     {
         if (Actions[Action_Conch] || Actions[Action_Coherency])
         {
@@ -157,6 +162,9 @@ bool track_info::OutOfBand(const uint8_t* Data, size_t Size)
 #define TEST_OUTPUT(_NAME, _FLAVOR) { if (auto Parser = InitOutput(new _NAME(Errors), raw_frame::flavor::_FLAVOR)) return Parser; }
 input_base_uncompressed* track_info::InitOutput_Find()
 {
+    if (!ReversibilityData)
+        return nullptr;
+        
     switch (FormatKind(Format))
     {
     case format_kind::video:
@@ -223,7 +231,7 @@ void track_info::End(size_t i)
     }
 
     // Write end of the file if the file is unique per track
-    if (ReversibilityData->Unique())
+    if (ReversibilityData && ReversibilityData->Unique())
     {
         RawFrame->AssignBufferView(nullptr, 0);
         RawFrame->SetPre(buffer_or_view());
@@ -234,7 +242,7 @@ void track_info::End(size_t i)
     }
 
     // Checks
-    if (!ReversibilityData->Unique() && Errors)
+    if (ReversibilityData && !ReversibilityData->Unique() && Errors)
     {
         if (auto ExtraCount = ReversibilityData->ExtraCount())
         {
@@ -270,7 +278,7 @@ void track_info::End(size_t i)
 //
 track_info::track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool_) :
     input_base(Errors, Parser_ReversibilityData),
-    ReversibilityData(new reversibility()),
+    ReversibilityData(nullptr),
     FrameWriter(new frame_writer(FrameWriter_Source)),
     Pool(Pool_)
 {

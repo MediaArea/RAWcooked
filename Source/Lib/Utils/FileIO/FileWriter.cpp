@@ -62,16 +62,23 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 frame_writer::~frame_writer()
 {
     delete (MD5_CTX*)MD5;
+    delete Output;
 }
 
+//---------------------------------------------------------------------------
 void frame_writer::FrameCall(raw_frame* RawFrame)
 {
+    if (!Output)
+    {
+        Output = new file_output;
+    }
+
     if (!Mode[IsNotBegin])
     {
         if (!Mode[NoWrite])
         {
             // Open output file in writing mode only if the file does not exist
-            file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
+            file::return_value Result = Output->Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
             switch (Result)
             {
                 case file::OK:
@@ -89,26 +96,26 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             }
         }
 
-        if (!Mode[NoOutputCheck] && !File_Write.IsOpen())
+        if (!Mode[NoOutputCheck] && !Output->Write.IsOpen())
         {
             // File already exists, we want to check it
-            if (File_Read.Open_ReadMode(BaseDirectory + OutputFileName))
+            if (Output->Read.Open_ReadMode(BaseDirectory + OutputFileName))
             {
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 SizeOnDisk = (size_t)-1;
                 if (Errors)
                     Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Source_Missing, OutputFileName);
                 return;
             }
-            SizeOnDisk = File_Read.Size();
+            SizeOnDisk = Output->Read.Size();
         }
         else
             SizeOnDisk = (size_t)-1;
-        Offset = 0;
+        Output->Offset = 0;
     }
 
     // Do we need to write or check?
-    if (Offset == (size_t)-1)
+    if (Output->Offset == (size_t)-1)
         return; // File is flagged as already with wrong data
 
     // Check hash operation
@@ -139,11 +146,11 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                 
     // Check file operation
     bool DataIsCheckedAndOk;
-    if (File_Read.IsOpen())
+    if (Output->Read.IsOpen())
     {
         if (!CheckFile(RawFrame))
         {
-            if (Mode[IsNotEnd] || Offset == File_Read.Size())
+            if (Mode[IsNotEnd] || Output->Offset == Output->Read.Size())
                 return; // All is OK
             DataIsCheckedAndOk = true;
         }
@@ -151,7 +158,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             DataIsCheckedAndOk = false;
 
         // Files don't match, decide what we should do (overwrite or don't overwrite, log check error or don't log)
-        File_Read.Close();
+        Output->Read.Close();
         bool HasNoError = false;
         if (!Mode[NoWrite] && UserMode)
         {
@@ -162,7 +169,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             }
             if (NewMode == AlwaysYes)
             {
-                if (file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, false))
+                if (file::return_value Result = Output->Write.Open_WriteMode(BaseDirectory, OutputFileName, false))
                 {
                     if (Errors)
                         switch (Result)
@@ -171,16 +178,16 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                         case file::Error_FileCreate:            Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileCreate, OutputFileName); break;
                         default:                                Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName); break;
                         }
-                    Offset = (size_t)-1;
+                    Output->Offset = (size_t)-1;
                     return;
                 }
-                if (Offset)
+                if (Output->Offset)
                 {
-                    if (File_Write.Seek(Offset))
+                    if (Output->Write.Seek(Output->Offset))
                     {
                         if (Errors)
                             Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileSeek, OutputFileName);
-                        Offset = (size_t)-1;
+                        Output->Offset = (size_t)-1;
                         return;
                     }
                 }
@@ -193,7 +200,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         {
             if (Errors)
                 Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
-            Offset = (size_t)-1;
+            Output->Offset = (size_t)-1;
             return;
         }
     }
@@ -201,7 +208,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         DataIsCheckedAndOk = false;
 
     // Write file operation
-    if (File_Write.IsOpen())
+    if (Output->Write.IsOpen())
     {
         // Write in the created file or file with wrong data being replaced
         if (!DataIsCheckedAndOk)
@@ -210,7 +217,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             {
                 if (Errors)
                     Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 return;
             }
         }
@@ -218,23 +225,23 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         if (!Mode[IsNotEnd])
         {
             // Set end of file if necessary
-            if (SizeOnDisk != (size_t)-1 && Offset != SizeOnDisk)
+            if (SizeOnDisk != (size_t)-1 && Output->Offset != SizeOnDisk)
             {
-                if (File_Write.SetEndOfFile())
+                if (Output->Write.SetEndOfFile())
                 {
                     if (Errors)
                         Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                    Offset = (size_t)-1;
+                    Output->Offset = (size_t)-1;
                     return;
                 }
             }
 
             // Close file
-            if (File_Write.Close())
+            if (Output->Write.Close())
             {
                 if (Errors)
                     Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 return;
             }
         }
@@ -259,14 +266,14 @@ bool WriteFile_Write(size_t& Offset, file& File_Write, const buffer_base& Buffer
 }
 bool frame_writer::WriteFile(raw_frame* RawFrame)
 {
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Pre()))
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Pre()))
         return true;
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Buffer()))
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Buffer()))
         return true;
     for (const auto& Plane : RawFrame->Planes())
-        if (Plane && WriteFile_Write(Offset, File_Write, Plane->Buffer()))
+        if (Plane && WriteFile_Write(Output->Offset, Output->Write, Plane->Buffer()))
             return true;
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Post()))
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Post()))
         return true;
     return false;
 }
@@ -290,19 +297,19 @@ bool CheckFile_Compare(size_t& Offset, const filemap& File, const buffer_base& B
 }
 bool frame_writer::CheckFile(raw_frame* RawFrame)
 {
-    size_t Offset_Current = Offset;
+    size_t Offset_Current = Output->Offset;
 
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Pre()))
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Pre()))
         return true;
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Buffer()))
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Buffer()))
         return true;
     for (const auto& Plane : RawFrame->Planes())
-        if (Plane && CheckFile_Compare(Offset_Current, File_Read, Plane->Buffer()))
+        if (Plane && CheckFile_Compare(Offset_Current, Output->Read, Plane->Buffer()))
             return true;
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Post()))
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Post()))
         return true;
 
-    Offset = Offset_Current;
+    Output->Offset = Offset_Current;
     return false;
 }
 
