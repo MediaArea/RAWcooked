@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Uncompressed/AVI/AVI.h"
+#include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 //---------------------------------------------------------------------------
 
@@ -95,28 +96,7 @@ using namespace avi_issue;
 
 //---------------------------------------------------------------------------
 // Tested cases
-struct avi_tested
-{
-    samplerate_code             SamplesPerSecCode;
-    bitdepth                    BitDepth;
-    channels                    Channels;
-    sign                        Sign;
-
-    bool operator == (const avi_tested& Value) const
-    {
-        return SamplesPerSecCode == Value.SamplesPerSecCode
-            && BitDepth == Value.BitDepth
-            && Channels == Value.Channels
-            && Sign == Value.Sign
-            ;
-    }
-};
-
-struct avi_tested AVI_Tested[] =
-{
-    { samplerate_code::_48000, 16, 2, sign::S },
-};
-static_assert(avi::flavor_Max == sizeof(AVI_Tested) / sizeof(avi_tested), IncoherencyMessage);
+extern wav::flavor Wav_CheckSupported(uint16_t FormatTag, uint16_t Channels, uint32_t SamplesPerSec, uint16_t BitDepth);
 
 //---------------------------------------------------------------------------
 
@@ -417,29 +397,8 @@ void avi::AVI__hdrl_strl_strf_auds()
     }
 
     // Supported?
-    if (FormatTag != 1 && FormatTag != 3 && FormatTag != 0xFFFE)
-        Unsupported(unsupported::fmt__FormatTag);
-    if ((FormatTag != 1 && FormatTag != 3)
-     || Channels > (decltype(avi_tested::Channels))-1
-     || BitDepth > (decltype(avi_tested::BitDepth))-1)
-    {
-        Unsupported(unsupported::Flavor);
-        return;
-    }
-    avi_tested Info;
-    Info.SamplesPerSecCode = SampleRate2Code(SamplesPerSec);
-    Info.BitDepth = (decltype(avi_tested::BitDepth))BitDepth;
-    Info.Channels = (decltype(avi_tested::Channels))Channels;
-    Info.Sign = FormatTag == 3 ? sign::F : Info.BitDepth <= 8 ? sign::U: sign::S;
-    for (const auto& AVI_Tested_Item : AVI_Tested)
-    {
-        if (AVI_Tested_Item == Info)
-        {
-            Flavor = (decltype(Flavor))(&AVI_Tested_Item - AVI_Tested);
-            break;
-        }
-    }
-    if (Flavor == (decltype(Flavor))-1)
+    auto WavFlavor = Wav_CheckSupported(FormatTag, Channels, SamplesPerSec, BitDepth);
+    if (WavFlavor == (decltype(WavFlavor))-1)
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
@@ -489,6 +448,7 @@ void avi::AVI__hdrl_strl_strf_vids()
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
+    Flavor = (decltype(Flavor))flavor::v210;
 
     // Slices count
     // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
@@ -656,25 +616,24 @@ string avi::Flavor_String()
 //---------------------------------------------------------------------------
 uint8_t avi::BitDepth()
 {
-    return AVI_Tested[Flavor].BitDepth;
+    return WAV_BitDepth((wav::flavor)Flavor);
 }
 
 //---------------------------------------------------------------------------
 sign avi::Sign()
 {
-    return AVI_Tested[Flavor].Sign;
+    return WAV_Sign((wav::flavor)Flavor);
 }
 
 //---------------------------------------------------------------------------
 endianness avi::Endianness()
 {
-    return endianness::LE;
+    return WAV_Endianness((wav::flavor)Flavor);
 }
 
 //---------------------------------------------------------------------------
 string AVI_Flavor_String(uint8_t Flavor)
 {
-    const auto& Info = AVI_Tested[(size_t)Flavor];
     string ToReturn("AVI/v210");
     return ToReturn;
 }

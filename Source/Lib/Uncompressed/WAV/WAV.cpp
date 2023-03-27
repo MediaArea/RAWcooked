@@ -177,6 +177,23 @@ struct wav_tested WAV_Tested[] =
 };
 static_assert(wav::flavor_Max == sizeof(WAV_Tested) / sizeof(wav_tested), IncoherencyMessage);
 
+wav::flavor Wav_CheckSupported(uint16_t FormatTag, uint16_t Channels, uint32_t SamplesPerSec, uint16_t BitDepth)
+{
+    if ((FormatTag != 1 && FormatTag != 3)
+     || Channels > (decltype(wav_tested::Channels))-1
+     || BitDepth > (decltype(wav_tested::BitDepth))-1)
+        return (wav::flavor)-1;
+    wav_tested Info;
+    Info.SamplesPerSecCode = SampleRate2Code(SamplesPerSec);
+    Info.BitDepth = (decltype(wav_tested::BitDepth))BitDepth;
+    Info.Channels = (decltype(wav_tested::Channels))Channels;
+    Info.Sign = FormatTag == 3 ? sign::F : BitDepth <= 8 ? sign::U : sign::S;
+    for (const auto& WAV_Tested_Item : WAV_Tested)
+        if (WAV_Tested_Item == Info)
+            return (wav::flavor)(&WAV_Tested_Item - WAV_Tested);
+
+    return (wav::flavor)-1;
+}
 //---------------------------------------------------------------------------
 
 
@@ -438,32 +455,12 @@ void wav::WAVE_fmt_()
     }
 
     // Supported?
-    if (FormatTag != 1 && FormatTag != 3 && FormatTag != 0xFFFE)
-        Unsupported(unsupported::fmt__FormatTag);
-    if ((FormatTag != 1 && FormatTag != 3)
-     || Channels > (decltype(wav_tested::Channels))-1
-     || BitDepth > (decltype(wav_tested::BitDepth))-1)
-    {
-        Unsupported(unsupported::Flavor);
-        return;
-    }
-    wav_tested Info;
-    Info.SamplesPerSecCode = SampleRate2Code(SamplesPerSec);
-    Info.BitDepth = (decltype(wav_tested::BitDepth))BitDepth;
-    Info.Channels = (decltype(wav_tested::Channels))Channels;
-    Info.Sign = FormatTag == 3 ? sign::F : Info.BitDepth <= 8 ? sign::U: sign::S;
-    for (const auto& WAV_Tested_Item : WAV_Tested)
-    {
-        if (WAV_Tested_Item == Info)
-        {
-            Flavor = (decltype(Flavor))(&WAV_Tested_Item - WAV_Tested);
-            break;
-        }
-    }
-    if (Flavor == (decltype(Flavor))-1)
+    auto WavFlavor = Wav_CheckSupported(FormatTag, Channels, SamplesPerSec, BitDepth);
+    if (WavFlavor == (decltype(WavFlavor))-1)
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
+    Flavor = (decltype(Flavor))WavFlavor;
 
     if (InputInfo && !InputInfo->SampleRate)
         InputInfo->SampleRate = SamplesPerSec;
@@ -486,15 +483,27 @@ uint8_t wav::BitDepth()
 {
     return WAV_Tested[Flavor].BitDepth;
 }
+uint8_t WAV_BitDepth(wav::flavor Flavor)
+{
+    return WAV_Tested[(uint8_t)Flavor].BitDepth;
+}
 
 //---------------------------------------------------------------------------
 sign wav::Sign()
 {
     return WAV_Tested[Flavor].Sign;
 }
+sign WAV_Sign(wav::flavor Flavor)
+{
+    return WAV_Tested[(uint8_t)Flavor].Sign;
+}
 
 //---------------------------------------------------------------------------
 endianness wav::Endianness()
+{
+    return endianness::LE;
+}
+endianness WAV_Endianness(wav::flavor Flavor)
 {
     return endianness::LE;
 }
