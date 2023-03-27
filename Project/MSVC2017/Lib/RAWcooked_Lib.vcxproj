@@ -26,6 +26,7 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h" />
     <ClInclude Include="..\..\..\Source\Lib\Transform\Transform.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\Buffer\Buffer.h" />
@@ -103,6 +104,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\EXR\EXR.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.cpp" />

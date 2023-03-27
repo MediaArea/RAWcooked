@@ -312,5 +312,11 @@ void input_base_uncompressed::RegisterAsAttachment()
         RAWcooked->IsAttachment = true;
         RAWcooked->Parse();
     }
-
 }
+
+//---------------------------------------------------------------------------
+input_base_uncompressed_compound::~input_base_uncompressed_compound()
+{
+    delete (MD5_CTX*)MD5;
+}
+

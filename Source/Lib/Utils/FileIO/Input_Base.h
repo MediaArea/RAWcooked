@@ -196,6 +196,50 @@ public:
     virtual endianness          Endianness() = 0;
 };
 
+struct file_output
+{
+    file                        Write;
+    filemap                     Read;
+    size_t                      Offset = 0;
+};
+
+class input_base_uncompressed_compound : public input_base_uncompressed_audio
+{
+public:
+    // Constructor/Destructor
+    input_base_uncompressed_compound(parser ParserCode) : input_base_uncompressed_audio(ParserCode) {}
+    input_base_uncompressed_compound(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base_uncompressed_audio(Errors, ParserCode, IsSequence) {}
+    virtual ~input_base_uncompressed_compound();
+
+    // Info about formats
+    virtual size_t              GetStreamCount() = 0;
+
+    // Demux
+    uint64_t                    InputOutput_Diff = 0;
+    string                      Output_FileName;
+    struct position
+    {
+        uint16_t                Index;
+        uint32_t                Size;
+        uint64_t                Input_Offset;
+        uint64_t                Output_Offset;
+        buffer*                 Buffer;
+
+        ~position()
+        {
+            delete Buffer;
+        }
+    };
+    vector<position>            Positions;
+    size_t                      Positions_Offset_InFileWritten = 0;
+    size_t                      Positions_Offset_Video = 0;
+    size_t                      Positions_Offset_Audio = 0;
+    size_t                      Positions_Offset_Audio_AdditionalBytes = 0;
+    buffer                      Input;
+    file_output                 Output;
+    void*                       MD5 = nullptr; // MD5_CTX*
+};
+
 class unknown : public input_base_uncompressed
 {
 public:

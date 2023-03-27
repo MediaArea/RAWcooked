@@ -63,6 +63,7 @@ public:
         Block_MaskAddition,
         Track_,
         Track_MaskBase,
+        Segment_,
     };
 
     // Info
@@ -126,6 +127,10 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_LibraryVersion);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_PathSeparator);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileHash);
+    MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileSize);
+    MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Segment_, FileName);
+    MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Segment_, InData);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack);
     MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Track_, FileName);
     MATROSKA_ELEM_XY(Segment_Attachments_AttachedFile_FileData_RawCooked, Track_, AfterData);
@@ -152,6 +157,7 @@ private:
 
     string                      RAWcooked_LibraryName;
     string                      RAWcooked_LibraryVersion;
+    reversibility*              ReversibilityData = nullptr;
     vector<track_info*>         TrackInfo;
     size_t                      TrackInfo_Pos;
     vector<uint8_t>             ID_to_TrackOrder;
@@ -189,6 +195,9 @@ private:
     void                        StoreFromCurrentToEndOfElement(buffer& Output);
     void                        RejectIncompatibleVersions();
     bool                        UnknownSize(uint64_t Name, uint64_t Size);
+    void                        End();
+    input_base_uncompressed_compound* InitOutput_Find();
+    input_base_uncompressed_compound* InitOutput(input_base_uncompressed_compound* PotentialParser, raw_frame::flavor Flavor);
 };
 
 //---------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
@@ -73,7 +74,7 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
 //---------------------------------------------------------------------------
 struct parse_info
 {
-    string* Name;
+    string* Name = {};
     filemap FileMap;
     vector<string> RemovedFiles;
     string FileName_Template;
@@ -83,16 +84,13 @@ struct parse_info
     string Flavor;
     string Slices;
     input_info InputInfo;
-    bool   IsDetected;
-    bool   Problem;
+    size_t StreamCountMinus1 = 0;
+    bool   IsDetected = false;
+    bool   IsContainer = false;
+    bool   Problem = false;
 
     bool ParseFile_Input(input_base& Input, bool OverrideCheckPadding = false);
     bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
-
-    parse_info():
-        IsDetected(false),
-        Problem(false)
-    {}
 };
 
 //---------------------------------------------------------------------------
@@ -213,6 +211,19 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             break;
         default:;
         }
+        if (ForceCheck && !Global.Actions[Action_Check])
+        {
+            cerr << "Info: this is a preview release,\n"
+                << "      --check is set in order to verify the reversibility.\n"
+                << endl;
+
+            Global.SetCheck(true);
+        }
+    }
+
+    if (SingleFile.ParserCode == Parser_AVI)
+    {
+        bool ForceCheck = true; // TODO: remove when we are confident enough
         if (ForceCheck && !Global.Actions[Action_Check])
         {
             cerr << "Info: this is a preview release,\n"
@@ -368,6 +379,24 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         }
     }
 
+    // AVI
+    if (!ParseInfo.IsDetected)
+    {
+        avi AVI(&Global.Errors);
+        if (ParseInfo.ParseFile_Input(AVI, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
+        {
+            Global.SetAcceptFiles();
+            ParseInfo.IsContainer = true;
+            ParseInfo.StreamCountMinus1 = AVI.GetStreamCount() - 1;
+            stringstream t;
+            t << AVI.slice_x * AVI.slice_y;
+            ParseInfo.Slices = t.str();
+        }
+    }
+
     // Unknown (but test if it is hashsum first)
     if (!ParseInfo.IsDetected)
     {
@@ -415,6 +444,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         Stream.Flavor = ParseInfo.Flavor;
         Stream.Problem = ParseInfo.Problem;
 
+        Stream.StreamCountMinus1 = ParseInfo.StreamCountMinus1;
+        Stream.IsContainer = ParseInfo.IsContainer;
         Stream.Slices = ParseInfo.Slices;
         map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
         if (FrameRateFromOptions != Global.VideoInputOptions.end())

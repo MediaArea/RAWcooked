@@ -366,7 +366,9 @@ void slice::SliceContent_PlaneThenLine()
         h = h_Save >> P->log2_v_chroma_subsample;
         if (h_Save & ((1 << P->log2_v_chroma_subsample) - 1))
             h++; //Is ceil
+        memset(SamplesBuffer, 0, 2 * (w_Save + 3) * sizeof(pixel_t));
         SliceContent_PlaneThenLine(Transform, SamplesBuffer, 1);
+        memset(SamplesBuffer, 0, 2 * (w_Save + 3) * sizeof(pixel_t));
         SliceContent_PlaneThenLine(Transform, SamplesBuffer, 1);
         }
 

@@ -163,6 +163,12 @@
     <Filter Include="Header Files\Common">
       <UniqueIdentifier>{5730fc35-f20a-41a0-a71f-6ea55856d565}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Uncompressed\AVI">
+      <UniqueIdentifier>{9ebd8c72-db0c-48c1-8ba8-b4e867551ad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\AVI">
+      <UniqueIdentifier>{2bc33129-6e73-401f-a81b-c32caa839efa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h">
@@ -393,6 +399,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Common\Common.h">
       <Filter>Header Files\Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.h">
+      <Filter>Header Files\Uncompressed\AVI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\Lib\Utils\CRC32\ZenCRC32.cpp">
@@ -553,6 +562,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Common\Common.cpp">
       <Filter>Source Files\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.cpp">
+      <Filter>Source Files\Uncompressed\AVI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

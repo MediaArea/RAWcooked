@@ -37,6 +37,7 @@ public:
 
     md5*                        HashValue = nullptr;
     bool                        IsAttachment = false;
+    bool                        IsContainer = false;
 
     void                        Parse();
     void                        ResetTrack();

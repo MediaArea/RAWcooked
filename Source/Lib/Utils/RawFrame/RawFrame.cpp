@@ -9,6 +9,7 @@
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
 #include "Lib/Uncompressed/EXR/EXR.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include <algorithm>
 //---------------------------------------------------------------------------
 
@@ -51,6 +52,7 @@ void raw_frame::Create(size_t width, size_t height, size_t info)
             EXR_Create(colorspace_type, width, height); 
             break;
         }
+        case flavor::AVI: AVI_Create(colorspace_type, width, height); break;
         case flavor::None:;
     }
 }
@@ -131,6 +133,18 @@ void raw_frame::EXR_Create(size_t colorspace_type, size_t width, size_t height)
         case 1: // JPEG2000-RCT --> RGB
                 Planes_.push_back(new plane(width, height, exr::BytesPerBlock((exr::flavor)Flavor_Private) * 8, exr::PixelsPerBlock((exr::flavor)Flavor_Private), 0, 8 * 8));
         default: ;
+    }
+}
+
+//---------------------------------------------------------------------------
+void raw_frame::AVI_Create(size_t colorspace_type, size_t width, size_t height)
+{
+    switch (colorspace_type)
+    {
+    case 0: // YUV
+    case 1: // JPEG2000-RCT --> RGB
+        Planes_.push_back(new plane(width, height, avi::BytesPerBlock((avi::flavor)Flavor_Private) * 8, avi::PixelsPerBlock((avi::flavor)Flavor_Private)));
+    default:;
     }
 }
 

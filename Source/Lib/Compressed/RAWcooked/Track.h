@@ -93,6 +93,9 @@ public:
     void                        SetWidth(uint32_t NewWidth) { Width = NewWidth; }
     void                        SetHeight(uint32_t NewHeight) { Height = NewHeight; }
 
+    // Late updates
+    void                        UpdateReversibility(reversibility* Reversibility, input_base_uncompressed_compound* Compound, raw_frame::flavor Flavor);
+
 private:
     ThreadPool*                 Pool = nullptr;
     frame_writer*               FrameWriter = nullptr;

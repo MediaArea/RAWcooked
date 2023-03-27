@@ -59,19 +59,45 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 } // filewriter_issue
 
 //---------------------------------------------------------------------------
+bool CheckFile_Compare(size_t& Offset, const filemap& File, const buffer_base& Buffer);
+
+//---------------------------------------------------------------------------
 frame_writer::~frame_writer()
 {
-    delete (MD5_CTX*)MD5;
+    if (!Compound)
+    {
+        delete (MD5_CTX*)MD5;
+        delete Output;
+    }
 }
 
+//---------------------------------------------------------------------------
 void frame_writer::FrameCall(raw_frame* RawFrame)
 {
+    if (!Output)
+    {
+        if (Compound)
+        {
+            Output = &Compound->Output;
+            if (Output->Write.IsOpen() || Output->Read.IsOpen())
+            {
+                Mode[frame_writer::IsNotBegin] = true;
+                Mode[frame_writer::IsNotEnd] = true;
+            }
+            MD5 = Compound->MD5;
+        }
+        else
+        {
+            Output = new file_output;
+        }
+    }
+
     if (!Mode[IsNotBegin])
     {
         if (!Mode[NoWrite])
         {
             // Open output file in writing mode only if the file does not exist
-            file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
+            file::return_value Result = Output->Write.Open_WriteMode(BaseDirectory, OutputFileName, true);
             switch (Result)
             {
                 case file::OK:
@@ -89,26 +115,71 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             }
         }
 
-        if (!Mode[NoOutputCheck] && !File_Write.IsOpen())
+        Output->Offset = 0;
+        if (!Mode[NoOutputCheck] && !Output->Write.IsOpen())
         {
             // File already exists, we want to check it
-            if (File_Read.Open_ReadMode(BaseDirectory + OutputFileName))
+            if (Output->Read.Open_ReadMode(BaseDirectory + OutputFileName))
             {
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 SizeOnDisk = (size_t)-1;
                 if (Errors)
                     Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Frame_Source_Missing, OutputFileName);
                 return;
             }
-            SizeOnDisk = File_Read.Size();
+            SizeOnDisk = Output->Read.Size();
+            if (Compound)
+            {
+                // Do we need to write or check?
+                if (Output->Offset == (size_t)-1)
+                    return; // File is flagged as already with wrong data
+
+                if (!Mode[NoOutputCheck])
+                {
+                    if (CheckFile_Compare(Output->Offset, Output->Read, buffer_view(Compound->Input.Data(), Compound->Positions[0].Input_Offset))) // Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
+                    {
+                        if (Errors)
+                            Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
+                        Output->Offset = (size_t)-1;
+                        return;
+                    }
+                }
+                Mode[frame_writer::IsNotBegin] = true;
+                Mode[frame_writer::IsNotEnd] = true;
+            }
         }
         else
+        {
             SizeOnDisk = (size_t)-1;
-        Offset = 0;
+            if (Compound)
+            {
+                if (!Mode[NoOutputCheck])
+                    Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
+                Mode[frame_writer::IsNotBegin] = true;
+                Mode[frame_writer::IsNotEnd] = true;
+            }
+        }
+        if (Compound)
+        {
+            // Check hash operation
+            if (M->Hashes || M->Hashes_FromRAWcooked || M->Hashes_FromAttachments)
+            {
+                if (!MD5)
+                {
+                    if (!Compound->MD5)
+                        Compound->MD5 = new MD5_CTX;
+                    MD5 = Compound->MD5;
+                }
+                MD5_Init((MD5_CTX*)MD5);
+                MD5_Update((MD5_CTX*)MD5, Compound->Input.Data(), (unsigned long)Compound->Positions[0].Input_Offset);
+                Mode[frame_writer::IsNotBegin] = true;
+                Mode[frame_writer::IsNotEnd] = true;
+            }
+        }
     }
 
     // Do we need to write or check?
-    if (Offset == (size_t)-1)
+    if (Output->Offset == (size_t)-1)
         return; // File is flagged as already with wrong data
 
     // Check hash operation
@@ -139,11 +210,11 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                 
     // Check file operation
     bool DataIsCheckedAndOk;
-    if (File_Read.IsOpen())
+    if (Output->Read.IsOpen())
     {
         if (!CheckFile(RawFrame))
         {
-            if (Mode[IsNotEnd] || Offset == File_Read.Size())
+            if (Mode[IsNotEnd] || Output->Offset == Output->Read.Size())
                 return; // All is OK
             DataIsCheckedAndOk = true;
         }
@@ -151,7 +222,14 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             DataIsCheckedAndOk = false;
 
         // Files don't match, decide what we should do (overwrite or don't overwrite, log check error or don't log)
-        File_Read.Close();
+        Output->Read.Close();
+        if (Compound)
+        {
+            if (Errors)
+                Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
+            Output->Offset = (size_t)-1;
+            return;
+        }
         bool HasNoError = false;
         if (!Mode[NoWrite] && UserMode)
         {
@@ -162,7 +240,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             }
             if (NewMode == AlwaysYes)
             {
-                if (file::return_value Result = File_Write.Open_WriteMode(BaseDirectory, OutputFileName, false))
+                if (file::return_value Result = Output->Write.Open_WriteMode(BaseDirectory, OutputFileName, false))
                 {
                     if (Errors)
                         switch (Result)
@@ -171,16 +249,16 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                         case file::Error_FileCreate:            Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileCreate, OutputFileName); break;
                         default:                                Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName); break;
                         }
-                    Offset = (size_t)-1;
+                    Output->Offset = (size_t)-1;
                     return;
                 }
-                if (Offset)
+                if (Output->Offset)
                 {
-                    if (File_Write.Seek(Offset))
+                    if (Output->Write.Seek(Output->Offset))
                     {
                         if (Errors)
                             Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileSeek, OutputFileName);
-                        Offset = (size_t)-1;
+                        Output->Offset = (size_t)-1;
                         return;
                     }
                 }
@@ -193,7 +271,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         {
             if (Errors)
                 Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
-            Offset = (size_t)-1;
+            Output->Offset = (size_t)-1;
             return;
         }
     }
@@ -201,7 +279,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         DataIsCheckedAndOk = false;
 
     // Write file operation
-    if (File_Write.IsOpen())
+    if (Output->Write.IsOpen())
     {
         // Write in the created file or file with wrong data being replaced
         if (!DataIsCheckedAndOk)
@@ -210,7 +288,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             {
                 if (Errors)
                     Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 return;
             }
         }
@@ -218,23 +296,23 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         if (!Mode[IsNotEnd])
         {
             // Set end of file if necessary
-            if (SizeOnDisk != (size_t)-1 && Offset != SizeOnDisk)
+            if (SizeOnDisk != (size_t)-1 && Output->Offset != SizeOnDisk)
             {
-                if (File_Write.SetEndOfFile())
+                if (Output->Write.SetEndOfFile())
                 {
                     if (Errors)
                         Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                    Offset = (size_t)-1;
+                    Output->Offset = (size_t)-1;
                     return;
                 }
             }
 
             // Close file
-            if (File_Write.Close())
+            if (Output->Write.Close())
             {
                 if (Errors)
                     Errors->Error(IO_FileWriter, error::type::Undecodable, (error::generic::code)filewriter_issue::undecodable::FileWrite, OutputFileName);
-                Offset = (size_t)-1;
+                Output->Offset = (size_t)-1;
                 return;
             }
         }
@@ -259,14 +337,127 @@ bool WriteFile_Write(size_t& Offset, file& File_Write, const buffer_base& Buffer
 }
 bool frame_writer::WriteFile(raw_frame* RawFrame)
 {
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Pre()))
+    if (Compound)
+    {
+        buffer_view ToWrite;
+        uint16_t Index;
+        size_t* Positions_StreamOffsetTemp;
+        size_t* AdditionalBytesTemp;
+        size_t AdditionalBytesTemp_Fake = 0;
+        if (RawFrame->Buffer().Size() == 0) //TODO
+        {
+            ToWrite = RawFrame->Plane(0)->Buffer();
+            Index = 0;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Video;
+            AdditionalBytesTemp = &AdditionalBytesTemp_Fake;
+        }
+        else
+        {
+            ToWrite = RawFrame->Buffer();
+            Index = 1;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Audio;
+            AdditionalBytesTemp = &Compound->Positions_Offset_Audio_AdditionalBytes;
+        }
+        size_t& Positions_StreamOffset = *Positions_StreamOffsetTemp;
+        size_t& AdditionalBytes = *AdditionalBytesTemp;
+        size_t SizeToWrite = ToWrite.Size();
+        size_t SizeWritten = 0;
+        while (SizeToWrite)
+        {
+            // Find the next frame
+            while (Compound->Positions[Positions_StreamOffset].Index != Index)
+                Positions_StreamOffset++;
+
+            auto SizeOfFrame = Compound->Positions[Positions_StreamOffset].Size - AdditionalBytes;
+            if (SizeToWrite < SizeOfFrame || Positions_StreamOffset != Compound->Positions_Offset_InFileWritten)
+            {
+                // Store the content for later
+                if (!Compound->Positions[Positions_StreamOffset].Buffer)
+                {
+                    Compound->Positions[Positions_StreamOffset].Buffer = new buffer();
+                    Compound->Positions[Positions_StreamOffset].Buffer->Create(SizeOfFrame);
+                }
+                auto SizeToWriteInThisFrame = SizeToWrite >= SizeOfFrame ? SizeOfFrame : SizeToWrite;
+                memcpy(Compound->Positions[Positions_StreamOffset].Buffer->Data() + AdditionalBytes, ToWrite.Data() + SizeWritten, SizeToWriteInThisFrame);
+                SizeWritten += SizeToWriteInThisFrame;
+
+                if (SizeToWrite < SizeOfFrame)
+                {
+                    // Still need the frame
+                    AdditionalBytes += SizeToWrite;
+                    SizeToWrite = 0;
+                }
+                else
+                {
+                    AdditionalBytes = 0;
+                    SizeToWrite -= SizeOfFrame;
+
+                    // Find the next frame
+                    Positions_StreamOffset++;
+                    while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                        Positions_StreamOffset++;
+                }
+            }
+            else
+            {
+                if (AdditionalBytes)
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    if (Output->Write.Write(Buffer_Before->Data(), AdditionalBytes))
+                        return true;
+                    delete Buffer_Before;
+                    Buffer_Before = nullptr;
+                }
+                if (Output->Write.Write(ToWrite.Data() + SizeWritten, SizeOfFrame))
+                    return true;
+                SizeWritten += SizeOfFrame;
+                AdditionalBytes = 0;
+                SizeToWrite -= SizeOfFrame;
+
+                // Find the next frame
+                Positions_StreamOffset++;
+                while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                    Positions_StreamOffset++;
+
+                do
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    if (Buffer_Before && Buffer_Before->Size() != 0)
+                    {
+                        if (Output->Write.Write(Buffer_Before->Data(), Buffer_Before->Size()))
+                            return true;
+                        delete Buffer_Before;
+                        Buffer_Before = nullptr;
+                    }
+
+                    uint64_t Input_Offset;
+                    Compound->Positions_Offset_InFileWritten++;
+                    if (Compound->Positions_Offset_InFileWritten == Compound->Positions.size())
+                    {
+                        Input_Offset = Compound->Input.Size();
+                    }
+                    else
+                    {
+                        Input_Offset = Compound->Positions[Compound->Positions_Offset_InFileWritten].Input_Offset;
+                    }
+                    auto Size = Input_Offset - Compound->Positions[Compound->Positions_Offset_InFileWritten - 1].Input_Offset;
+                    if (Output->Write.Write(Compound->Input.Data() + Input_Offset - Size, Size))
+                        return true;
+                } while (Compound->Positions_Offset_InFileWritten < Compound->Positions.size() && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Video && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Audio);
+            }
+        }
+
+        return false;
+    }
+    
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Pre()))
         return true;
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Buffer()))
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Buffer()))
         return true;
     for (const auto& Plane : RawFrame->Planes())
-        if (Plane && WriteFile_Write(Offset, File_Write, Plane->Buffer()))
+        if (Plane && WriteFile_Write(Output->Offset, Output->Write, Plane->Buffer()))
             return true;
-    if (WriteFile_Write(Offset, File_Write, RawFrame->Post()))
+    if (WriteFile_Write(Output->Offset, Output->Write, RawFrame->Post()))
         return true;
     return false;
 }
@@ -290,19 +481,141 @@ bool CheckFile_Compare(size_t& Offset, const filemap& File, const buffer_base& B
 }
 bool frame_writer::CheckFile(raw_frame* RawFrame)
 {
-    size_t Offset_Current = Offset;
+    if (Compound)
+    {
+        size_t Offset_Current = Output->Offset;
 
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Pre()))
+        buffer_view ToWrite;
+        uint16_t Index;
+        size_t* Positions_StreamOffsetTemp;
+        size_t* AdditionalBytesTemp;
+        size_t AdditionalBytesTemp_Fake = 0;
+        if (RawFrame->Buffer().Size() == 0) //TODO
+        {
+            ToWrite = RawFrame->Plane(0)->Buffer();
+            Index = 0;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Video;
+            AdditionalBytesTemp = &AdditionalBytesTemp_Fake;
+        }
+        else
+        {
+            ToWrite = RawFrame->Buffer();
+            Index = 1;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Audio;
+            AdditionalBytesTemp = &Compound->Positions_Offset_Audio_AdditionalBytes;
+        }
+        size_t& Positions_StreamOffset = *Positions_StreamOffsetTemp;
+        size_t& AdditionalBytes = *AdditionalBytesTemp;
+
+        // Save
+        auto Positions_StreamOffset_Save = Positions_StreamOffset;
+        auto AdditionalBytes_Save = AdditionalBytes;
+        auto Positions_Offset_InFileWritten_Save = Compound->Positions_Offset_InFileWritten;
+
+        size_t SizeToWrite = ToWrite.Size();
+        size_t SizeWritten = 0;
+        while (SizeToWrite)
+        {
+            // Find the next frame
+            while (Compound->Positions[Positions_StreamOffset].Index != Index)
+                Positions_StreamOffset++;
+
+            auto SizeOfFrame = Compound->Positions[Positions_StreamOffset].Size - AdditionalBytes;
+            if (SizeToWrite < SizeOfFrame || Positions_StreamOffset != Compound->Positions_Offset_InFileWritten)
+            {
+                // Store the content for later
+                if (!Compound->Positions[Positions_StreamOffset].Buffer)
+                {
+                    Compound->Positions[Positions_StreamOffset].Buffer = new buffer();
+                    Compound->Positions[Positions_StreamOffset].Buffer->Create(SizeOfFrame);
+                }
+                auto SizeToWriteInThisFrame = SizeToWrite >= SizeOfFrame ? SizeOfFrame : SizeToWrite;
+                memcpy(Compound->Positions[Positions_StreamOffset].Buffer->Data() + AdditionalBytes, ToWrite.Data() + SizeWritten, SizeToWriteInThisFrame);
+                SizeWritten += SizeToWriteInThisFrame;
+
+                if (SizeToWrite < SizeOfFrame)
+                {
+                    // Still need the frame
+                    AdditionalBytes += SizeToWrite;
+                    SizeToWrite = 0;
+                }
+                else
+                {
+                    AdditionalBytes = 0;
+                    SizeToWrite -= SizeOfFrame;
+
+                    // Find the next frame
+                    Positions_StreamOffset++;
+                    while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                        Positions_StreamOffset++;
+                }
+            }
+            else
+            {
+                if (AdditionalBytes)
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    if (CheckFile_Compare(Offset_Current, Output->Read, buffer_view(Buffer_Before->Data(), AdditionalBytes))) // Output->Write.Write(Buffer_Before->Data(), AdditionalBytes);
+                        return true;
+                    delete Buffer_Before;
+                    Buffer_Before = nullptr;
+                }
+                if (CheckFile_Compare(Offset_Current, Output->Read, buffer_view(ToWrite.Data() + SizeWritten, SizeOfFrame))) // Output->Write.Write(ToWrite.Data() + SizeWritten, SizeOfFrame))
+                    return true;
+                SizeWritten += SizeOfFrame;
+                AdditionalBytes = 0;
+                SizeToWrite -= SizeOfFrame;
+
+                // Find the next frame
+                Positions_StreamOffset++;
+                while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                    Positions_StreamOffset++;
+
+                do
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    if (Buffer_Before && Buffer_Before->Size() != 0)
+                    {
+                        if (CheckFile_Compare(Offset_Current, Output->Read, *Buffer_Before)) // Output->Write.Write(Buffer_Before->Data(), Buffer_Before->Size());
+                            return true;
+                        delete Buffer_Before;
+                        Buffer_Before = nullptr;
+                    }
+
+                    uint64_t Input_Offset;
+                    Compound->Positions_Offset_InFileWritten++;
+                    if (Compound->Positions_Offset_InFileWritten == Compound->Positions.size())
+                    {
+                        Input_Offset = Compound->Input.Size();
+                    }
+                    else
+                    {
+                        Input_Offset = Compound->Positions[Compound->Positions_Offset_InFileWritten].Input_Offset;
+                    }
+                    auto Size = Input_Offset - Compound->Positions[Compound->Positions_Offset_InFileWritten - 1].Input_Offset;
+                    if (CheckFile_Compare(Offset_Current, Output->Read, buffer_view(Compound->Input.Data() + Input_Offset - Size, Size))) // Output->Write.Write(Compound->Input.Data() + Input_Offset - Size, Size);
+                        return true;
+                } while (Compound->Positions_Offset_InFileWritten < Compound->Positions.size() && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Video && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Audio);
+            }
+        }
+
+        Output->Offset = Offset_Current;
+        return false;
+    }
+
+    size_t Offset_Current = Output->Offset;
+
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Pre()))
         return true;
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Buffer()))
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Buffer()))
         return true;
     for (const auto& Plane : RawFrame->Planes())
-        if (Plane && CheckFile_Compare(Offset_Current, File_Read, Plane->Buffer()))
+        if (Plane && CheckFile_Compare(Offset_Current, Output->Read, Plane->Buffer()))
             return true;
-    if (CheckFile_Compare(Offset_Current, File_Read, RawFrame->Post()))
+    if (CheckFile_Compare(Offset_Current, Output->Read, RawFrame->Post()))
         return true;
 
-    Offset = Offset_Current;
+    Output->Offset = Offset_Current;
     return false;
 }
 

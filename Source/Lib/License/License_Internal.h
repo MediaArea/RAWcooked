@@ -15,6 +15,7 @@
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/License/License.h"
 //---------------------------------------------------------------------------
 
@@ -98,6 +99,7 @@ static const license_info License_Infos[] =
     { "EXR flavors"         , exr::flavor_Max       , EXR_Flavor_String     },
     { "WAV flavors"         , wav::flavor_Max       , WAV_Flavor_String     },
     { "AIFF flavors"        , aiff::flavor_Max      , AIFF_Flavor_String    },
+    { "AVI flavors"         , avi::flavor_Max       , AVI_Flavor_String     },
 };
 const size_t License_Infos_Size = License_Parser_Offset + Uncompressed_Max;
 static_assert(sizeof(License_Infos) / sizeof(license_info) == License_Infos_Size, "license_info issue");

@@ -30,6 +30,7 @@ enum parser
     Parser_EXR,
     Parser_WAV,
     Parser_AIFF,
+    Parser_AVI,
     Uncompressed_Max, // After this line, this isn't parsers of uncompressed data
     Parser_Matroska = Uncompressed_Max,
     Parser_ReversibilityData,

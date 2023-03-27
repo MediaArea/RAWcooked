@@ -28,11 +28,9 @@ struct stream
     string                      Flavor;
     string                      Slices;
     string                      FrameRate;
-    bool                        Problem;
-
-    stream()
-        : Problem(false)
-    {}
+    size_t                      StreamCountMinus1 = 0;
+    bool                        IsContainer = false;
+    bool                        Problem = false;
 };
 struct attachment
 {
