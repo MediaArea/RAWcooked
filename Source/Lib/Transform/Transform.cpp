@@ -9,6 +9,7 @@
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/ThirdParty/endianness.h"
 //---------------------------------------------------------------------------
@@ -957,6 +958,99 @@ public:
 };
 
 //***************************************************************************
+// v210
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+class transform_v210 : public transform_base
+{
+public:
+    transform_v210(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        w(w),
+        h(h)
+    {
+        const auto& Plane = RawFrame->Plane(0);
+        FrameBuffer = Plane->Buffer().Data()
+            + y_offset * (Plane->BitsPerLine() / 8)
+            + x_offset * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
+
+        NextLine_Offset = Plane->Width() * 8 / 3;
+        Line = h;
+        Pass = 0;
+    }
+
+    inline void Next()
+    {
+        FrameBuffer += NextLine_Offset;
+    }
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+
+        switch (Pass)
+        {
+        case 0:
+            for (size_t x = 0; x < w; x += 3)
+            {
+                *(FrameBuffer_Temp_32++) = htol(((uint32_t)y[x    ] << 10)                             );
+                *(FrameBuffer_Temp_32++) = htol(((uint32_t)y[x + 1]      ) | ((uint32_t)y[x + 2] << 20));
+            }
+            break;
+        case 1:
+            for (size_t x = 0; x < w; x += 3)
+            {
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x    ]      ));
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 1] << 10));
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 2] << 20));
+                FrameBuffer_Temp_32++;
+            }
+            break;
+        case 2:
+            for (size_t x = 0; x < w; x += 3)
+            {
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x    ] << 20));
+                FrameBuffer_Temp_32++;
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 1]      ));
+                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 2] << 10));
+            }
+            break;
+        }
+
+        Next();
+        Line--;
+        if (!Line)
+        {
+            FrameBuffer -= h * NextLine_Offset;
+            Line = h;
+            if (!Pass)
+                w /= 2;
+            Pass++;
+        }
+    }
+
+protected:
+    uint8_t*    FrameBuffer;
+    size_t      w;
+    size_t      h;
+    size_t      NextLine_Offset;
+    size_t      Line;
+    size_t      Pass;
+};
+
+//***************************************************************************
+// AVI
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+class transform_passthrough_avi_v210 : public transform_v210
+{
+public:
+    transform_passthrough_avi_v210(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_v210(RawFrame, x_offset, y_offset, w, h) {};
+};
+
+//***************************************************************************
 // List
 //***************************************************************************
 
@@ -1032,6 +1126,9 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_8_U)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_LE)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_BE)
+        TRANSFORM_FLAVOR_END()
+        TRANSFORM_FLAVOR_BEGIN(avi, AVI)
+            TRANSFORM_CASE(passthrough, avi, v210)
         TRANSFORM_FLAVOR_END()
     TRANSFORM_PIX_END()
     default:

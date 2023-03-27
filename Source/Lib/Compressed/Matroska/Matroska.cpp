@@ -10,6 +10,7 @@
 #include "Lib/Utils/FileIO/FileChecker.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
 #include "Lib/Compressed/RAWcooked/Track.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -1222,6 +1223,8 @@ input_base_uncompressed_compound* matroska::InitOutput_Find()
 {
     if (!ReversibilityData)
         return nullptr;
+
+    TEST_OUTPUT(avi, AVI);
 
     return nullptr;
 }

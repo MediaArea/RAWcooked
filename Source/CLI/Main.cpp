@@ -14,6 +14,7 @@
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
@@ -220,6 +221,19 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         }
     }
 
+    if (SingleFile.ParserCode == Parser_AVI)
+    {
+        bool ForceCheck = true; // TODO: remove when we are confident enough
+        if (ForceCheck && !Global.Actions[Action_Check])
+        {
+            cerr << "Info: this is a preview release,\n"
+                << "      --check is set in order to verify the reversibility.\n"
+                << endl;
+
+            Global.SetCheck(true);
+        }
+    }
+
     if (RemovedFiles.empty())
         RemovedFiles.push_back(*Name);
     else
@@ -361,6 +375,24 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             stringstream t;
             t << EXR.slice_x * EXR.slice_y;
+            ParseInfo.Slices = t.str();
+        }
+    }
+
+    // AVI
+    if (!ParseInfo.IsDetected)
+    {
+        avi AVI(&Global.Errors);
+        if (ParseInfo.ParseFile_Input(AVI, Input, Files_Pos))
+            return 1;
+
+        if (ParseInfo.IsDetected)
+        {
+            Global.SetAcceptFiles();
+            ParseInfo.IsContainer = true;
+            ParseInfo.StreamCountMinus1 = AVI.GetStreamCount() - 1;
+            stringstream t;
+            t << AVI.slice_x * AVI.slice_y;
             ParseInfo.Slices = t.str();
         }
     }
