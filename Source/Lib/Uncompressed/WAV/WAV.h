@@ -128,7 +128,10 @@ private:
     WAV_ELEMENT(Void);
 };
 
-string WAV_Flavor_String(uint8_t Flavor);
+string              WAV_Flavor_String(uint8_t Flavor);
+uint8_t             WAV_BitDepth(wav::flavor Flavor);
+sign                WAV_Sign(wav::flavor Flavor);
+endianness          WAV_Endianness(wav::flavor Flavor);
 
 //---------------------------------------------------------------------------
 #endif
