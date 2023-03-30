@@ -64,11 +64,9 @@ bool CheckFile_Compare(size_t& Offset, const filemap& File, const buffer_base& B
 //---------------------------------------------------------------------------
 frame_writer::~frame_writer()
 {
-    if (!Compound)
-    {
-        delete (MD5_CTX*)MD5;
-        delete Output;
-    }
+    if (Compound)
+        return;
+    delete Output;
 }
 
 //---------------------------------------------------------------------------
@@ -84,7 +82,6 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                 Mode[frame_writer::IsNotBegin] = true;
                 Mode[frame_writer::IsNotEnd] = true;
             }
-            MD5 = Compound->MD5;
         }
         else
         {
@@ -115,6 +112,21 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
             }
         }
 
+        // Check hash operation
+        if (((M->Hashes && M->Hashes->HashFiles_Count()) || M->Hashes_FromRAWcooked || M->Hashes_FromAttachments) && (!Compound || Mode[NoOutputCheck])) // TODO: remove last check when hash and output check at same time is supported for Compound output
+        {
+            bool IsNew = !Output->MD5;
+            if (IsNew)
+                Output->MD5 = new MD5_CTX;
+
+            if (!Compound || IsNew)
+            {
+                MD5_Init((MD5_CTX*)Output->MD5);
+                if (Compound)
+                    MD5_Update((MD5_CTX*)Output->MD5, Compound->Input.Data(), (unsigned long)Compound->Positions[0].Input_Offset);
+            }
+        }
+
         Output->Offset = 0;
         if (!Mode[NoOutputCheck] && !Output->Write.IsOpen())
         {
@@ -128,53 +140,30 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
                 return;
             }
             SizeOnDisk = Output->Read.Size();
-            if (Compound)
-            {
-                // Do we need to write or check?
-                if (Output->Offset == (size_t)-1)
-                    return; // File is flagged as already with wrong data
 
-                if (!Mode[NoOutputCheck])
+            if (Compound && !Mode[NoOutputCheck])
+            {
+                if (CheckFile_Compare(Output->Offset, Output->Read, buffer_view(Compound->Input.Data(), Compound->Positions[0].Input_Offset))) // Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
                 {
-                    if (CheckFile_Compare(Output->Offset, Output->Read, buffer_view(Compound->Input.Data(), Compound->Positions[0].Input_Offset))) // Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
-                    {
-                        if (Errors)
-                            Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
-                        Output->Offset = (size_t)-1;
-                        return;
-                    }
+                    if (Errors)
+                        Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::FileComparison, OutputFileName);
+                    Output->Offset = (size_t)-1;
+                    return;
                 }
-                Mode[frame_writer::IsNotBegin] = true;
-                Mode[frame_writer::IsNotEnd] = true;
             }
         }
         else
         {
             SizeOnDisk = (size_t)-1;
-            if (Compound)
-            {
-                if (!Mode[NoOutputCheck])
-                    Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
-                Mode[frame_writer::IsNotBegin] = true;
-                Mode[frame_writer::IsNotEnd] = true;
-            }
+
+            if (Compound && !Mode[NoOutputCheck])
+                Output->Write.Write(Compound->Input.Data(), Compound->Positions[0].Input_Offset);
         }
+
         if (Compound)
         {
-            // Check hash operation
-            if ((M->Hashes && M->Hashes->HashFiles_Count()) || M->Hashes_FromRAWcooked || M->Hashes_FromAttachments)
-            {
-                if (!MD5)
-                {
-                    if (!Compound->MD5)
-                        Compound->MD5 = new MD5_CTX;
-                    MD5 = Compound->MD5;
-                }
-                MD5_Init((MD5_CTX*)MD5);
-                MD5_Update((MD5_CTX*)MD5, Compound->Input.Data(), (unsigned long)Compound->Positions[0].Input_Offset);
-                Mode[frame_writer::IsNotBegin] = true;
-                Mode[frame_writer::IsNotEnd] = true;
-            }
+            Mode[frame_writer::IsNotBegin] = true;
+            Mode[frame_writer::IsNotEnd] = true;
         }
     }
 
@@ -183,21 +172,14 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         return; // File is flagged as already with wrong data
 
     // Check hash operation
-    if ((M->Hashes && M->Hashes->HashFiles_Count()) || M->Hashes_FromRAWcooked || M->Hashes_FromAttachments)
+    if (Output->MD5)
     {
-        if (!Mode[IsNotBegin])
-        {
-            if (!MD5)
-                MD5 = new MD5_CTX;
-            MD5_Init((MD5_CTX*)MD5);
-        }
-
         CheckMD5(RawFrame);
 
         if (!Mode[IsNotEnd])
         {
             md5 MD5_Result;
-            MD5_Final(MD5_Result.data(), (MD5_CTX*)MD5);
+            MD5_Final(MD5_Result.data(), (MD5_CTX*)Output->MD5);
 
             if (M->Hashes && M->Hashes->HashFiles_Count())
                 M->Hashes->FromFile(OutputFileName, MD5_Result);
@@ -615,20 +597,20 @@ bool frame_writer::CheckMD5(raw_frame* RawFrame)
 {
     const auto Pre = RawFrame->Pre();
     if (Pre.Size())
-        MD5_Update((MD5_CTX*)MD5, Pre.Data(), (unsigned long)Pre.Size());
+        MD5_Update((MD5_CTX*)Output->MD5, Pre.Data(), (unsigned long)Pre.Size());
     const auto Buffer = RawFrame->Buffer();
     if (Buffer.Size())
-        MD5_Update((MD5_CTX*)MD5, Buffer.Data(), (unsigned long)Buffer.Size());
+        MD5_Update((MD5_CTX*)Output->MD5, Buffer.Data(), (unsigned long)Buffer.Size());
     for (const auto& Plane : RawFrame->Planes())
         if (Plane)
         {
             const auto& Buffer = Plane->Buffer();
             if (Buffer.Size())
-                MD5_Update((MD5_CTX*)MD5, Buffer.Data(), (unsigned long)Buffer.Size());
+                MD5_Update((MD5_CTX*)Output->MD5, Buffer.Data(), (unsigned long)Buffer.Size());
         }
     const auto Post = RawFrame->Post();
     if (Post.Size())
-        MD5_Update((MD5_CTX*)MD5, Post.Data(), (unsigned long)Post.Size());
+        MD5_Update((MD5_CTX*)Output->MD5, Post.Data(), (unsigned long)Post.Size());
 
     return false;
 }

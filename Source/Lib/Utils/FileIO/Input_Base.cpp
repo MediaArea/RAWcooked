@@ -315,7 +315,7 @@ void input_base_uncompressed::RegisterAsAttachment()
 }
 
 //---------------------------------------------------------------------------
-input_base_uncompressed_compound::~input_base_uncompressed_compound()
+file_output::~file_output()
 {
     delete (MD5_CTX*)MD5;
 }

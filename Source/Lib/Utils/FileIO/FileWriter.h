@@ -31,8 +31,7 @@ public:
         UserMode(UserMode_Soure),
         Ask_Callback(Ask_Callback_Source),
         M(M_Source),
-        Errors(Errors_Source),
-        MD5(nullptr)
+        Errors(Errors_Source)
     {
     }
     frame_writer(const frame_writer& Source) :
@@ -44,8 +43,7 @@ public:
         Ask_Callback(Source.Ask_Callback),
         M(Source.M),
         Errors(Source.Errors),
-        SizeOnDisk(Source.SizeOnDisk),
-        MD5(Source.MD5)
+        SizeOnDisk(Source.SizeOnDisk)
     {
     }
     frame_writer(const frame_writer* Source) :
@@ -82,7 +80,6 @@ private:
     matroska*                   M;
     errors*                     Errors;
     size_t                      SizeOnDisk;
-    void*                       MD5;
 };
 
 #endif
