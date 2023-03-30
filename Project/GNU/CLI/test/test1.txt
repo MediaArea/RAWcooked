@@ -97,6 +97,8 @@ Formats/AIFF/Flavors/96000_64_8_F_BE/96000_64_8_F_BE.aiff fail
 Formats/DPX/Features/EndOfImagePadding/cropped_DPX_137_4K_10bit.dpx pass
 Formats/DPX/Features/JunkAfterData/uncropped_DPX_4K_16bit_Overscan15pros.CutFrom3640to128Height.Padding.dpx pass
 Formats/DPX/Features/OffsetToData/8bit-OffsetToData0.dpx pass
+Formats/DPX/Features/Version/V1.0i/V1.0i.dpx pass
+Formats/DPX/Features/Version/v2.0/v2.0.dpx pass
 Formats/DPX/Flavors/A_8_Packed_BE/Alpha_8_bit.dpx fail
 Formats/DPX/Flavors/RGBA_8_FilledA_BE/checkerboard_1080p_nuke_bigendian_8bit_alpha.dpx pass
 Formats/DPX/Flavors/RGBA_8_Packed_BE/8bit_a.dpx pass

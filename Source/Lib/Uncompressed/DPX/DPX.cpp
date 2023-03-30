@@ -288,12 +288,13 @@ void dpx::ParseBuffer()
     SetDetected();
 
     uint32_t OffsetToImageData = Get_X4();
-    uint64_t VersionNumber = Get_B8() >> 24;
-    switch (VersionNumber)
+    uint64_t VersionNumberBig = Get_B4();
+    switch (VersionNumberBig)
     {
-    case 0x56312E3000LL:
-    case 0x56322E3000LL:
-    case 0x76312E3000LL:
+    case 0x56312E30LL:
+    case 0x56322E30LL:
+    case 0x76312E30LL:
+    case 0x76322E30LL:
         break;
     default:
         Undecodable(undecodable::VersionNumber);
