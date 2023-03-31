@@ -595,6 +595,117 @@ bool frame_writer::CheckFile(raw_frame* RawFrame)
 //---------------------------------------------------------------------------
 bool frame_writer::CheckMD5(raw_frame* RawFrame)
 {
+    if (Compound)
+    {
+        buffer_view ToWrite;
+        uint16_t Index;
+        size_t* Positions_StreamOffsetTemp;
+        size_t* AdditionalBytesTemp;
+        size_t AdditionalBytesTemp_Fake = 0;
+        if (RawFrame->Buffer().Size() == 0) //TODO
+        {
+            if (RawFrame->Planes().empty())
+                return false;
+            ToWrite = RawFrame->Plane(0)->Buffer();
+            Index = 0;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Video;
+            AdditionalBytesTemp = &AdditionalBytesTemp_Fake;
+        }
+        else
+        {
+            ToWrite = RawFrame->Buffer();
+            Index = 1;
+            Positions_StreamOffsetTemp = &Compound->Positions_Offset_Audio;
+            AdditionalBytesTemp = &Compound->Positions_Offset_Audio_AdditionalBytes;
+        }
+        size_t& Positions_StreamOffset = *Positions_StreamOffsetTemp;
+        size_t& AdditionalBytes = *AdditionalBytesTemp;
+        size_t SizeToWrite = ToWrite.Size();
+        size_t SizeWritten = 0;
+        while (SizeToWrite)
+        {
+            // Find the next frame
+            while (Compound->Positions[Positions_StreamOffset].Index != Index)
+                Positions_StreamOffset++;
+
+            auto SizeOfFrame = Compound->Positions[Positions_StreamOffset].Size - AdditionalBytes;
+            if (SizeToWrite < SizeOfFrame || Positions_StreamOffset != Compound->Positions_Offset_InFileWritten)
+            {
+                // Store the content for later
+                if (!Compound->Positions[Positions_StreamOffset].Buffer)
+                {
+                    Compound->Positions[Positions_StreamOffset].Buffer = new buffer();
+                    Compound->Positions[Positions_StreamOffset].Buffer->Create(SizeOfFrame);
+                }
+                auto SizeToWriteInThisFrame = SizeToWrite >= SizeOfFrame ? SizeOfFrame : SizeToWrite;
+                memcpy(Compound->Positions[Positions_StreamOffset].Buffer->Data() + AdditionalBytes, ToWrite.Data() + SizeWritten, SizeToWriteInThisFrame);
+                SizeWritten += SizeToWriteInThisFrame;
+
+                if (SizeToWrite < SizeOfFrame)
+                {
+                    // Still need the frame
+                    AdditionalBytes += SizeToWrite;
+                    SizeToWrite = 0;
+                }
+                else
+                {
+                    AdditionalBytes = 0;
+                    SizeToWrite -= SizeOfFrame;
+
+                    // Find the next frame
+                    Positions_StreamOffset++;
+                    while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                        Positions_StreamOffset++;
+                }
+            }
+            else
+            {
+                if (AdditionalBytes)
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    MD5_Update((MD5_CTX*)Output->MD5, Buffer_Before->Data(), (unsigned long)AdditionalBytes); // Output->Write.Write(Buffer_Before->Data(), AdditionalBytes);
+                    delete Buffer_Before;
+                    Buffer_Before = nullptr;
+                }
+                MD5_Update((MD5_CTX*)Output->MD5, ToWrite.Data() + SizeWritten, (unsigned long)SizeOfFrame); // Output->Write.Write(ToWrite.Data() + SizeWritten, SizeOfFrame))
+                SizeWritten += SizeOfFrame;
+                AdditionalBytes = 0;
+                SizeToWrite -= SizeOfFrame;
+
+                // Find the next frame
+                Positions_StreamOffset++;
+                while (Positions_StreamOffset < Compound->Positions.size() && Compound->Positions[Positions_StreamOffset].Index != Index)
+                    Positions_StreamOffset++;
+
+                do
+                {
+                    auto& Buffer_Before = Compound->Positions[Compound->Positions_Offset_InFileWritten].Buffer;
+                    if (Buffer_Before && Buffer_Before->Size() != 0)
+                    {
+                        MD5_Update((MD5_CTX*)Output->MD5, Buffer_Before->Data(), (unsigned long)Buffer_Before->Size()); // Output->Write.Write(Buffer_Before->Data(), Buffer_Before->Size());
+                        delete Buffer_Before;
+                        Buffer_Before = nullptr;
+                    }
+
+                    uint64_t Input_Offset;
+                    Compound->Positions_Offset_InFileWritten++;
+                    if (Compound->Positions_Offset_InFileWritten == Compound->Positions.size())
+                    {
+                        Input_Offset = Compound->Input.Size();
+                    }
+                    else
+                    {
+                        Input_Offset = Compound->Positions[Compound->Positions_Offset_InFileWritten].Input_Offset;
+                    }
+                    auto Size = Input_Offset - Compound->Positions[Compound->Positions_Offset_InFileWritten - 1].Input_Offset;
+                    MD5_Update((MD5_CTX*)Output->MD5, Compound->Input.Data() + Input_Offset - Size, (unsigned long)Size); // Output->Write.Write(Compound->Input.Data() + Input_Offset - Size, Size);
+                } while (Compound->Positions_Offset_InFileWritten < Compound->Positions.size() && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Video && Compound->Positions_Offset_InFileWritten < Compound->Positions_Offset_Audio);
+            }
+        }
+
+        return false;
+    }
+
     const auto Pre = RawFrame->Pre();
     if (Pre.Size())
         MD5_Update((MD5_CTX*)Output->MD5, Pre.Data(), (unsigned long)Pre.Size());
