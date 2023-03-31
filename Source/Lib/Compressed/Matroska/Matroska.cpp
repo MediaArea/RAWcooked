@@ -728,7 +728,8 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedSegment_FileHa
 
     array<uint8_t, 16> Hash;
     memcpy(Hash.data(), Buffer.Data() + Buffer_Offset, Hash.size());
-    //Hashes_FromRAWcooked->FromHashFile(ReversibilityData->Data(reversibility::element::FileName, 0), Hash); //TODO: correclty manage hashes
+    if (NoOutputCheck) // TODO: remove check when hash and output check at same time is supported for Compound output
+        Hashes_FromRAWcooked->FromHashFile(ReversibilityData->Data(reversibility::element::FileName, 0), Hash); //TODO: correclty manage hashes
 }
 
 //---------------------------------------------------------------------------
@@ -1213,7 +1214,8 @@ void matroska::End()
         FrameWriter_Template->Mode[frame_writer::IsNotEnd] = false;
         raw_frame RawFrame;
         RawFrame.FrameProcess = FrameWriter_Template;
-        //RawFrame.Process(); //TODO: correclty manage hashes
+        if (NoOutputCheck) // TODO: remove check when hash and output check at same time is supported for Compound output
+            RawFrame.Process();
     }
 }
 
