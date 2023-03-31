@@ -1,3 +1,14 @@
+Version 23.03, 2023-03-31
+-------------
+AVI/v210
+DPX 10-bit Y filled
+DPX RGB 12-bit Packed BE vflip
+DPX RGB 12-bit Packed BE with non 8-pixel aligned width
+32-bit (integer and float) PCM in WAV
+Support of uncommon DPX version strings
+Support of -i input_file options1 output_file1 options2 output_file2 (FFmpeg style)
+Fix issues with FFV1 v0/v1 and/or 1 slice
+
 Version 21.09, 2021-09-03
 -------------
 Y support (DPX and TIFF, 8- and 16-bit)
