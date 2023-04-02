@@ -112,7 +112,7 @@ ReturnValue Help(const char* Name)
         "       --output-version value\n"
         "              Set the version of the output..\n"
         "              The default output value is 1.\n"
-        "              Other possible value is 2. This is a previeww release, this value\n"
+        "              Other possible value is 2. This is a preview release, this value\n"
         "              should be used used only when you know why you do it.\n"
         "\n"
         "       --bin-name value | -b value\n"
