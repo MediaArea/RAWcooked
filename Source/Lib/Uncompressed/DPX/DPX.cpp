@@ -346,6 +346,7 @@ void dpx::ParseBuffer()
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
     bool IsAltern = Info.BitDepth == 10
+                 && Info.ColorSpace != colorspace::RGB
                  && (!memcmp(Buffer.Data() +  160, "Lasergraphics Inc.", 18) // Creator
                   || !memcmp(Buffer.Data() + 1556, "Scanity", 7)); // Input device name
 
