@@ -508,7 +508,7 @@ void avi::AVI__hdrl_strl_strh()
 void avi::AVI__movi()
 {
     // Test if fmt chunk was parsed
-    if (!HasErrors() && (Tracks.size() != 2 || Tracks[0].fccType != 0x76696473 || Tracks[1].fccType != 0x61756473))
+    if (!HasErrors() && (Tracks.empty() || Tracks.size() > 2 || Tracks[0].fccType != 0x76696473 || (Tracks.size() == 2 && Tracks[1].fccType != 0x61756473)))
         Unsupported(unsupported::Flavor);
 
     if (HasErrors())
