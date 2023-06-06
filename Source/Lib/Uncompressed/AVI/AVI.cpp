@@ -446,7 +446,7 @@ void avi::AVI__hdrl_strl_strf_vids()
         Unsupported(unsupported::Flavor);
     else if (BitCount != 24 && BitCount != 20) // v210 spec specifies 24 but in reality it is 20, we accept both
         Unsupported(unsupported::Flavor);
-    else if (Width * Height * 20 != SizeOfImage * 8 && Width * Height * 20 * 32 / 30 != SizeOfImage * 8) // Either with or without padding is found, accpeting both
+    else if (Width * Height * 20 != SizeOfImage * 8 && Width * Height * 24 != SizeOfImage * 8 && Width * Height * 20 * 32 / 30 != SizeOfImage * 8) // Either with or without padding, accepting both
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
