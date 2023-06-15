@@ -139,6 +139,7 @@ ELEMENT_VOID(73747268, AVI__hdrl_strl_strh)
 ELEMENT_END()
 
 ELEMENT_BEGIN(AVI__movi)
+ELEMENT_VOID(30306462, AVI__movi_00db)
 ELEMENT_VOID(30306463, AVI__movi_00dc)
 ELEMENT_VOID(30317762, AVI__movi_01wb)
 ELEMENT_END()
@@ -148,6 +149,7 @@ ELEMENT_CASE(4C4953546D6F7669LL, AVI__movi)
 ELEMENT_END()
 
 ELEMENT_BEGIN(AVIX_movi)
+ELEMENT_VOID(30306462, AVI__movi_00db)
 ELEMENT_VOID(30306463, AVI__movi_00dc)
 ELEMENT_VOID(30317762, AVI__movi_01wb)
 ELEMENT_END()
@@ -516,6 +518,12 @@ void avi::AVI__movi()
 }
 
 //---------------------------------------------------------------------------
+void avi::AVI__movi_00db()
+{
+    AVI__movi_00dc();
+}
+
+//---------------------------------------------------------------------------
 void avi::AVI__movi_00dc()
 {
     if (Actions[Action_AcceptTruncated])
@@ -587,6 +595,12 @@ void avi::AVIX()
 void avi::AVIX_movi()
 {
     AVI__movi();
+}
+
+//---------------------------------------------------------------------------
+void avi::AVIX_movi_00db()
+{
+    AVI__movi_00dc();
 }
 
 //---------------------------------------------------------------------------
