@@ -55,8 +55,18 @@ static const char* MessageText[] =
     "fmt ChannelMask",
     "fmt SubFormat not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71",
     "fmt chunk not before data chunk",
-    "Flavor (SamplesPerSec / BitDepth / Channels / Endianness combination)",
+    "fmt FormatTag not same as track fccHandler",
+    "audio flavor (SamplesPerSec / BitDepth / Channels / Endianness combination)",
+    "video strf size",
+    "video strf fccHandler not same as track fccHandler",
+    "video compression",
+    "video width",
+    "video BitCount",
+    "video SizeOfImage",
     "pixels in slice not on a 4x32-bit boundary",
+    "track count",
+    "video not first",
+    "audio not second",
 };
 
 enum code : uint8_t
@@ -71,8 +81,18 @@ enum code : uint8_t
     fmt__ChannelMask,
     fmt__SubFormat,
     fmt__Location,
-    Flavor,
-    PixelBoundaries,
+    fmt_FormatTag_fccHandler,
+    fmt_Flavor,
+    vids_Size,
+    vids_fccHandler,
+    vids_Compression,
+    vids_Width,
+    vids_BitCount,
+    vids_SizeOfImage,
+    vids_PixelBoundaries,
+    TrackCount,
+    VideoNotFirst,
+    AudioNotSecond,
     Max
 };
 
@@ -401,7 +421,7 @@ void avi::AVI__hdrl_strl_strf_auds()
     // Supported?
     auto WavFlavor = Wav_CheckSupported(FormatTag, Channels, SamplesPerSec, BitDepth);
     if (WavFlavor == (decltype(WavFlavor))-1)
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::fmt_Flavor);
     if (HasErrors())
         return;
 
@@ -411,7 +431,7 @@ void avi::AVI__hdrl_strl_strf_auds()
     // AVI specific checks
     auto& Track = Tracks.back();
     if (Track.fccHandler && !(Track.fccHandler && 0xFFFF) && ((FormatTag >> 8) | (FormatTag << 8)) != Track.fccHandler)
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::fmt_FormatTag_fccHandler);
 }
 
 //---------------------------------------------------------------------------
@@ -419,13 +439,13 @@ void avi::AVI__hdrl_strl_strf_vids()
 {
     if (Levels[Level].Offset_End - Buffer_Offset != 40)
     {
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_Size);
         return;
     }
     uint32_t Size = Get_L4();
     if (Size != 40)
     {
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_Size);
         return;
     }
     Width = Get_L4();
@@ -437,17 +457,17 @@ void avi::AVI__hdrl_strl_strf_vids()
 
     auto& Track = Tracks.back();
     if (Track.fccHandler && Compression != Track.fccHandler)
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_fccHandler);
 
     // Supported?
     if (Compression != 0x76323130)
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_Compression);
     else if (Width % 48)
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_Width);
     else if (BitCount != 24 && BitCount != 20) // v210 spec specifies 24 but in reality it is 20, we accept both
-        Unsupported(unsupported::Flavor);
-    else if (Width * Height * 20 != SizeOfImage * 8 && Width * Height * 20 * 32 / 30 != SizeOfImage * 8) // Either with or without padding is found, accpeting both
-        Unsupported(unsupported::Flavor);
+        Unsupported(unsupported::vids_BitCount);
+    else if (Width * Height * 20 != SizeOfImage * 8 && Width * Height * 24 != SizeOfImage * 8 && Width * Height * 20 * 32 / 30 != SizeOfImage * 8) // Either with or without padding, accepting both
+        Unsupported(unsupported::vids_SizeOfImage);
     if (HasErrors())
         return;
     Flavor = (decltype(Flavor))flavor::v210;
@@ -485,7 +505,7 @@ void avi::AVI__hdrl_strl_strf_vids()
                 break;
         }
         if (slice_x == 0)
-            Unsupported(unsupported::PixelBoundaries);
+            Unsupported(unsupported::vids_PixelBoundaries);
     }
     slice_y = slice_x;
 }
@@ -508,8 +528,15 @@ void avi::AVI__hdrl_strl_strh()
 void avi::AVI__movi()
 {
     // Test if fmt chunk was parsed
-    if (!HasErrors() && (Tracks.size() != 2 || Tracks[0].fccType != 0x76696473 || Tracks[1].fccType != 0x61756473))
-        Unsupported(unsupported::Flavor);
+    if (Tracks.empty() || Tracks.size() > 2)
+        Unsupported(unsupported::TrackCount);
+    else
+    {
+        if (Tracks[0].fccType != 0x76696473)
+            Unsupported(unsupported::VideoNotFirst);
+        if (Tracks.size() == 2 && Tracks[1].fccType != 0x61756473)
+            Unsupported(unsupported::AudioNotSecond);
+    }
 
     if (HasErrors())
         Buffer_Offset = FileSize;
