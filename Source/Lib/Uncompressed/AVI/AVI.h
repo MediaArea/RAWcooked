@@ -89,10 +89,12 @@ private:
     AVI_ELEMENT(AVI__hdrl_strl_strf);
     AVI_ELEMENT(AVI__hdrl_strl_strh);
     AVI_ELEMENT(AVI__movi);
+    AVI_ELEMENT(AVI__movi_00db);
     AVI_ELEMENT(AVI__movi_00dc);
     AVI_ELEMENT(AVI__movi_01wb);
     AVI_ELEMENT(AVIX);
     AVI_ELEMENT(AVIX_movi);
+    AVI_ELEMENT(AVIX_movi_00db);
     AVI_ELEMENT(AVIX_movi_00dc);
     AVI_ELEMENT(AVIX_movi_01wb);
     AVI_ELEMENT(Void);
