@@ -32,6 +32,7 @@ public:
     uint8_t                     BitDepth();
     sign                        Sign();
     endianness                  Endianness();
+    uint8_t                     Channels();
 
     ENUM_BEGIN(flavor)
         PCM_44100_8_1_U,
@@ -132,6 +133,7 @@ string              WAV_Flavor_String(uint8_t Flavor);
 uint8_t             WAV_BitDepth(wav::flavor Flavor);
 sign                WAV_Sign(wav::flavor Flavor);
 endianness          WAV_Endianness(wav::flavor Flavor);
+uint8_t             WAV_Channels(wav::flavor Flavor);
 
 //---------------------------------------------------------------------------
 #endif

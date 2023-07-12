@@ -509,6 +509,16 @@ endianness WAV_Endianness(wav::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
+uint8_t wav::Channels()
+{
+    return WAV_Tested[Flavor].Channels;
+}
+uint8_t WAV_Channels(wav::flavor Flavor)
+{
+    return WAV_Tested[(uint8_t)Flavor].Channels;
+}
+
+//---------------------------------------------------------------------------
 string WAV_Flavor_String(uint8_t Flavor)
 {
     const auto& Info = WAV_Tested[(size_t)Flavor];
