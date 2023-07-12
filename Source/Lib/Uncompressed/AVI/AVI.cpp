@@ -407,7 +407,14 @@ void avi::AVI__hdrl_strl_strf_auds()
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
          && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
-            Unsupported(unsupported::fmt__ChannelMask);
+        {
+            bool ChannelCountSupported=false;
+            for (auto i=0; i<wav::flavor_Max; i++)
+                if (WAV_Channels((wav::flavor)i)==Channels)
+                    ChannelCountSupported=true;
+            if (ChannelCountSupported) //If no flavor has such channel count, error will be raised later about channel count, better error report than here
+                Unsupported(unsupported::fmt__ChannelMask);
+        }
         FormatTag = Get_L4();
         uint32_t SubFormat2 = Get_L4();
         uint32_t SubFormat3 = Get_B4();
