@@ -405,6 +405,7 @@ void avi::AVI__hdrl_strl_strf_auds()
         uint32_t ChannelMask = Get_L4();
         if ((Channels != 1 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000004))
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
+         && (Channels != 4 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000107))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
          && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
         {
