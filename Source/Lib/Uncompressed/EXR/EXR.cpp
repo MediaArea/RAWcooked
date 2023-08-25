@@ -23,6 +23,7 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file smaller than expected",
+    "file header",
     "Version number",
     "Version flags",
     "Expected data size is bigger than real file size",
@@ -31,6 +32,7 @@ static const char* MessageText[] =
 enum code : uint8_t
 {
     BufferOverflow,
+    Header,
     VersionNumber,
     VersionFlags,
     DataSize,
@@ -198,12 +200,20 @@ void exr::ParseBuffer()
 {
     // Test that it is a EXR
     if (Buffer.Size() < 8)
+    {
+        if (IsDetected())
+            Undecodable(undecodable::Header);
         return;
+    }
 
     Buffer_Offset = 0;
     uint32_t MagicNumber = Get_B4();
     if (MagicNumber != 0x762F3101)
+    {
+        if (IsDetected())
+            Undecodable(undecodable::Header);
         return;
+    }
     SetDetected();
 
     uint32_t Version = Get_B4();

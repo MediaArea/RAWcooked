@@ -84,7 +84,7 @@ public:
 
     // Info
     bool                        IsDetected() { return Info[Info_IsDetected]; }
-    bool                        IsSupported() { return Info[Info_IsSupported]; }
+    bool                        IsSupported() { return Info[Info_IsSupported] && !HasErrors(); }
     bool                        HasErrors() { return Info[Info_HasErrors]; }
     input_info*                 InputInfo = nullptr;
 

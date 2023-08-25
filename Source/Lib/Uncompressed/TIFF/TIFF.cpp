@@ -25,6 +25,7 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file smaller than expected",
+    "file header",
     "IFD tag type",
     "IFD tag count",
     "FirstIFDOffset",
@@ -35,6 +36,7 @@ static const char* MessageText[] =
 enum code : uint8_t
 {
     BufferOverflow,
+    Header,
     IfdTagType,
     IfdTagCount,
     FirstIFDOffset,
@@ -384,7 +386,11 @@ void tiff::ParseBuffer()
             Info.Endianness = endianness::BE;
             break;
         default:
-            return;
+    {
+        if (IsDetected())
+            Undecodable(undecodable::Header);
+        return;
+    }
     }
     SetDetected();
     uint32_t FirstIFDOffset = Get_X4();

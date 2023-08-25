@@ -24,6 +24,7 @@ namespace undecodable
 static const char* MessageText[] =
 {
     "file smaller than expected",
+    "file header",
     "version number of header format",
     "offset to data",
     "expected data size is bigger than real file size",
@@ -32,6 +33,7 @@ static const char* MessageText[] =
 enum code : uint8_t
 {
     BufferOverflow,
+    Header,
     VersionNumber,
     OffsetToData,
     DataSize,
@@ -266,7 +268,11 @@ void dpx::ParseBuffer()
 
     // Test that it is a DPX
     if (Buffer.Size() < 4)
+    {
+        if (IsDetected())
+            Undecodable(undecodable::Header);
         return;
+    }
 
     dpx_tested Info;
 
@@ -283,6 +289,8 @@ void dpx::ParseBuffer()
             IsBigEndian = true;
             break;
         default:
+            if (IsDetected())
+                Undecodable(undecodable::Header);
             return;
     }
     SetDetected();
