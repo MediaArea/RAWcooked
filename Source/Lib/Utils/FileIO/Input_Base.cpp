@@ -37,7 +37,6 @@ input_base::~input_base()
 //---------------------------------------------------------------------------
 bool input_base::Parse(filemap* FileMap_Source, const buffer_view& Buffer_Source, size_t FileSize_Source)
 {
-    ClearInfo();
     FileMap = FileMap_Source;
     FileSize = FileSize_Source == (size_t)-1 ? Buffer_Source.Size() : FileSize_Source;
     Buffer = Buffer_Source;
