@@ -1,3 +1,13 @@
+Version 23.09, 2023-09-07
+-------------
+Fail if corrupted image header in the sequence
+Fail on any FFmpeg error
+Support of 4-ch audio
+Show a non misleading message if channel count is not supported
+More details about AVI pre-analysis related issues
+Accept AVI files without audio
+Support of AVI 00db frames
+
 Version 23.03, 2023-03-31
 -------------
 AVI/v210
