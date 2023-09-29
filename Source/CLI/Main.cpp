@@ -185,7 +185,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             }
         }
 
-        if (!Global.Actions[Action_Check])
+        if (!Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
@@ -211,7 +211,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
             break;
         default:;
         }
-        if (ForceCheck && !Global.Actions[Action_Check])
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
@@ -224,7 +224,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     if (SingleFile.ParserCode == Parser_AVI)
     {
         bool ForceCheck = true; // TODO: remove when we are confident enough
-        if (ForceCheck && !Global.Actions[Action_Check])
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
