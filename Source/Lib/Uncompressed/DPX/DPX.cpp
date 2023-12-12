@@ -199,6 +199,7 @@ struct dpx_tested_info DPX_Tested[] =
     { { colorspace::Y       ,  8, endianness::LE, packing::Packed }, { 1,  1, None } },                                         // 1x1x 8-bit in 1x 8-bit
     { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 12, endianness::BE, packing::Packed }, { 8, 12, BlockSpan | VFlip } },                            // 8x1x12-bit in 3x32-bit
     { { colorspace::Y       , 16, endianness::LE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
     { { colorspace::Y       , 16, endianness::BE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
 };
@@ -523,14 +524,14 @@ void dpx::ParseBuffer()
                     In[i - OffsetToData] = Buffer[i] & Mask;
             }
         }
-        if ((flavor)Flavor == flavor::Raw_RGB_12_Packed_BE)
+        if ((flavor)Flavor == flavor::Raw_RGB_12_Packed_BE || (flavor)Flavor == flavor::Raw_Y_12_Packed_BE)
         {
             size_t RemainingPaddingBits = Width % 8;
             if (RemainingPaddingBits)
             {
                 RemainingPaddingBits *= 4;
                 uint32_t Mask = ((uint32_t)-1) << RemainingPaddingBits;
-                size_t BytesPerLineMinus4 = (Width * 36 / 32) * 4;
+                size_t BytesPerLineMinus4 = (Width * 12 * Colorspace2Count(DPX_Tested[(uint8_t)Flavor].Test.ColorSpace) / 32) * 4;
                 size_t i = OffsetToData + BytesPerLineMinus4;
                 size_t Step = BytesPerLineMinus4 + 4;
                 for (; i < OffsetAfterData; i += Step)

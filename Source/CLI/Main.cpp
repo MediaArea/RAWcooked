@@ -207,6 +207,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
         {
         case dpx::flavor::Raw_Y_10_FilledA_BE: // TODO: remove when we are confident enough, old FFmpeg are not fully compatible and future FFmpeg may change their behavior
         case dpx::flavor::Raw_Y_10_FilledB_BE:
+        case dpx::flavor::Raw_Y_12_Packed_BE:
             ForceCheck = true; // TODO: quicker check of FFmpeg support of alternate EOL
             break;
         default:;
