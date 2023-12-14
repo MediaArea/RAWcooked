@@ -88,6 +88,7 @@ private:
 
     // Temp
     buffer                      In;
+    size_t                      In_FirstNonZero;
 };
 
 string DPX_Flavor_String(uint8_t Flavor);

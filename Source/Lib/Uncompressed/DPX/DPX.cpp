@@ -498,107 +498,110 @@ void dpx::ParseBuffer()
     // Testing padding bits
     if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked)
     {
-        bool AsPaddingBitsNotZero = false;
-        if (MayHavePaddingBits((flavor)Flavor))
+        bool HasPaddingBitsNotZero = false;
+        size_t i, EOL_i;
+        size_t Step, EOL_Step;
+        uint32_t Mask, EOL_Mask;
+        if (DPX_Tested[(uint8_t)Flavor].Test.Packing == packing::Packed)
         {
-            uint8_t Step = Info.BitDepth == 10 ? 4 : 2;
-            uint8_t Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
-            size_t i = OffsetToData;
-            bool IsB = DPX_Tested[(uint8_t)Flavor].Test.Packing == packing::FilledB;
-            if (IsBigEndian ^ IsB)
-                i += Step - 1;
-            if (IsB)
-                Mask <<= Info.BitDepth == 10 ? 6 : 4;
-            for (; i < OffsetAfterData; i += Step)
-                if (Buffer[i] & Mask)
-                    break;
-            if (i < OffsetAfterData)
+            auto UsedBits = Width * Info.BitDepth * Colorspace2Count(Info.ColorSpace);
+            size_t RemainingPaddingBits = UsedBits % 32;
+            if (RemainingPaddingBits)
             {
-                // Non-zero padding bit found, storing data
-                AsPaddingBitsNotZero = true;
-                auto Temp_Size = OffsetAfterData - OffsetToData;
-                if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
-                    In.Create(Temp_Size);
-                memset(In.Data(), 0x00, Temp_Size);
-                for (; i < OffsetAfterData; i += Step)
+                // End of line
+                size_t BytesPerLineMinus4 = (UsedBits / 32) * 4;
+                i = EOL_i = OffsetToData + BytesPerLineMinus4;
+                Step = EOL_Step = BytesPerLineMinus4 + 4;
+                EOL_Mask = ((uint32_t)-1) << RemainingPaddingBits;
+            }
+            else
+                i = OffsetAfterData; // No padding
+        }
+        else // Filled
+        {
+            // End of 32-bit packets
+            bool IsFilledB = Info.Packing == packing::FilledB;
+            i = OffsetToData;
+            Step = Info.BitDepth == 10 ? 4 : 2;
+            if (IsBigEndian ^ IsFilledB)
+                i += Step - 1;
+            Mask = Info.BitDepth == 10 ? 0x3 : 0xF;
+            if (IsFilledB)
+                Mask <<= Info.BitDepth == 10 ? 6 : 4;
+
+            // End of line
+            if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE || (flavor)Flavor == flavor::Raw_Y_10_FilledB_BE)
+            {
+                size_t EOL_RemainingPaddingBits;
+                if (IsAltern)
+                    EOL_RemainingPaddingBits = (Width * Height) % 3;
+                else
+                    EOL_RemainingPaddingBits = Width % 3;
+
+                if (EOL_RemainingPaddingBits)
+                {
+                    if (IsAltern)
+                    {
+                        EOL_i = OffsetAfterData - 4;
+                        EOL_Step = 4;
+                    }
+                    else
+                    {
+                        size_t BytesPerLineMinus4 = (Width / 3) * 4;
+                        EOL_i = OffsetToData + BytesPerLineMinus4;
+                        EOL_Step = BytesPerLineMinus4 + 4;
+                    }
+                    EOL_RemainingPaddingBits *= 10;
+                    if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE)
+                        EOL_RemainingPaddingBits += 2;
+                    EOL_Mask = ((uint32_t)-1) << EOL_RemainingPaddingBits;
+                    if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE)
+                        EOL_Mask |= 0x3;
+                }
+                else
+                    EOL_i = OffsetAfterData; // No end of line padding
+            }
+            else
+                EOL_i = OffsetAfterData; // No end of line padding
+        }
+
+        // Test
+        for (; i < OffsetAfterData; i += Step)
+        {
+            if (i >= EOL_i)
+            {
+                if (ntoh(*((const uint32_t*)(Buffer.Data() + EOL_i))) & EOL_Mask)
+                    break;
+                EOL_i += EOL_Step;
+            }
+            else if (Buffer[i] & Mask)
+                break;
+        }
+        if (i < OffsetAfterData)
+        {
+            // Non-zero padding bit found, storing data
+            HasPaddingBitsNotZero = true;
+            auto Temp_Size = OffsetAfterData - OffsetToData;
+            if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
+            {
+                In.Create(Temp_Size);
+                In_FirstNonZero = 0;
+            }
+            auto In_FirstNonZero_New = min(i, EOL_i);
+            memset(In.Data() + In_FirstNonZero, 0x00, Temp_Size - In_FirstNonZero);
+            In_FirstNonZero = In_FirstNonZero_New - OffsetToData;
+            for (; i < OffsetAfterData; i += Step)
+            {
+                if (i >= EOL_i)
+                {
+                    *((uint32_t*)(In.Data() + EOL_i - OffsetToData)) = hton(ntoh(*((const uint32_t*)(Buffer.Data() + EOL_i))) & EOL_Mask);
+                    EOL_i += EOL_Step;
+                }
+                else
                     In[i - OffsetToData] = Buffer[i] & Mask;
             }
         }
-        if ((flavor)Flavor == flavor::Raw_RGB_12_Packed_BE || (flavor)Flavor == flavor::Raw_Y_12_Packed_BE)
-        {
-            size_t RemainingPaddingBits = Width % 8;
-            if (RemainingPaddingBits)
-            {
-                RemainingPaddingBits *= 4;
-                uint32_t Mask = ((uint32_t)-1) << RemainingPaddingBits;
-                size_t BytesPerLineMinus4 = (Width * 12 * Colorspace2Count(DPX_Tested[(uint8_t)Flavor].Test.ColorSpace) / 32) * 4;
-                size_t i = OffsetToData + BytesPerLineMinus4;
-                size_t Step = BytesPerLineMinus4 + 4;
-                for (; i < OffsetAfterData; i += Step)
-                    if (ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask)
-                        break;
-                if (i < OffsetAfterData)
-                {
-                    // Non-zero padding bit found, storing data
-                    AsPaddingBitsNotZero = true;
-                    auto Temp_Size = OffsetAfterData - OffsetToData;
-                    if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
-                    {
-                        In.Create(Temp_Size);
-                        memset(In.Data(), 0x00, Temp_Size);
-                    }
-                    for (; i < OffsetAfterData; i += Step)
-                        *((uint32_t*)(In.Data() + i - OffsetToData)) = hton(ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask);
-                }
-            }
-        }
-        if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE || (flavor)Flavor == flavor::Raw_Y_10_FilledB_BE)
-        {
-            size_t RemainingPaddingBits;
-            if (IsAltern)
-                RemainingPaddingBits = (Width * Height) % 3;
-            else
-                RemainingPaddingBits = Width % 3;
-            if (RemainingPaddingBits)
-            {
-                size_t i;
-                size_t Step;
-                RemainingPaddingBits *= 10;
-                if ((flavor)Flavor == flavor::Raw_Y_10_FilledA_BE)
-                    RemainingPaddingBits += 2;
-                uint32_t Mask = ((uint32_t)-1) << RemainingPaddingBits;
-                if ((flavor)Flavor != flavor::Raw_Y_10_FilledA_BE)
-                    Mask &= ((uint32_t)-1) >> 2;
-                if (IsAltern)
-                {
-                    i = OffsetAfterData - 4;
-                    Step = 4;
-                }
-                else
-                {
-                    size_t BytesPerLineMinus4 = (Width * 10 / 32) * 4;
-                    i = OffsetToData + BytesPerLineMinus4;
-                    Step = BytesPerLineMinus4 + 4;
-                }
-                for (; i < OffsetAfterData; i += Step)
-                    if (ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask)
-                        break;
-                if (i < OffsetAfterData)
-                {
-                    // Non-zero padding bit found, storing data
-                    AsPaddingBitsNotZero = true;
-                    auto Temp_Size = OffsetAfterData - OffsetToData;
-                    if (Temp_Size > In.Size())  // Reuse old buffer if any and big enough
-                    {
-                        In.Create(Temp_Size);
-                        memset(In.Data(), 0x00, Temp_Size);
-                    }
-                    for (; i < OffsetAfterData; i += Step)
-                        *((uint32_t*)(In.Data() + i - OffsetToData)) |= hton(ntoh(*((const uint32_t*)(Buffer.Data() + i))) & Mask);
-                }
-            }
-        }
-        if (!AsPaddingBitsNotZero)
+        if (!HasPaddingBitsNotZero)
             In.Clear();
     }
 
@@ -675,7 +678,7 @@ void dpx::ConformanceCheck()
         uint32_t OffsetToData = Get_X4();
         if (OffsetToData < 1664 || OffsetToData > Buffer.Size())
         {
-            if (i) // if i == 0, already signaled in the common parsing
+            if (i) // if EOL_i == 0, already signaled in the common parsing
                 Undecodable(undecodable::OffsetToData);
         }
         else if (OffsetToData < OffsetToImageData)
