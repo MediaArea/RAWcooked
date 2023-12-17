@@ -63,7 +63,11 @@ while read line ; do
             continue
         fi
 
-        check_files "${file}" "${file}.mkv.RAWcooked/${file}"
+        if [ -d "${file}" ] ; then
+            check_directories "${file}" "${file}.mkv.RAWcooked/"
+        else
+            check_files "${file}" "${file}.mkv.RAWcooked/${file}"
+        fi
         clean
     popd >/dev/null 2>&1
 done < "${script_path}/test1b.txt"
