@@ -1,3 +1,8 @@
+Version 23.12, 2023-12-18
+-------------
+Support of DPX/Y/12-bit/Packed/BE
+Fix potential issue with padding bits in DPX/Y/10-bit/Filled
+
 Version 23.09, 2023-09-07
 -------------
 Fail if corrupted image header in the sequence
