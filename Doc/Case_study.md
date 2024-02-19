@@ -56,7 +56,7 @@ The pixel size and colourspace of the sequence are used to calculate the potenti
 | 1.3TB reduces to 1TB | 1.0TB may only reduce to 1TB  |
   
 
-### <a name="muxing">Muxing the image sequence</a>  
+### <a name="muxing">Encoding the image sequence</a>  
 
 To encode our image sequences we use the ```--all``` flag released in RAWcooked v21. This flag was a sponsorship development by [NYPL](https://www.nypl.org/), and sees several preservation essential flags merged into this one simple flag. Most imporantly it includes the creation of checksum hashes for every image file in the sequence, with this data being saved into the RAWcooked reversibility file embedded into the Matroska wrapper. This ensures that when decoded the retrieved sequence can be varified as bit-identical to the original source sequence.
 
@@ -148,19 +148,19 @@ From 1020 total DPX sequences successfully encoded to FFV1 Matroska:
   
 A small group of sequences had their total RAWcooked encoding time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodes took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
    
-### <a name="tests">Some useful test approaches</a>
+### <a name="tests">Useful test approaches</a>
   
-When any system upgrades occur we like to run reversibility test to ensure RAWcooked is still operating as we would expect. This is usually in response to RAWcooked software updates, FFmpeg updates, but also for updates to our operating system. To perform a reversibility test, a cross-section of image sequences are encoded using our usual ```--all``` command, and then decoded again fully. The image sequences of both the original and decoded version then have whole file MD5 checksums generating and saving to a manifest. These manifests are then ```diff``` checked to ensure that every single image file is identical.
+When any system upgrades occur we like to run reversibility test to ensure RAWcooked is still operating as we would expect. This is usually in response to RAWcooked software updates, FFmpeg updates, but also for updates to our operating system. To perform a reversibility test, a cross-section of image sequences are encoded using our usual ```--all``` command, and then decoded again fully. The image sequences of both the original and decoded version then have whole file MD5 checksums generated for every and saved into one manifest for the source and one for the decoded version. These manifests are then ```diff``` checked to ensure that every single image file is identical.
   
 When we encounter an error there are a few commands I use that make reporting the issue a little easier at the [Media Area RAWcooked GitHub issue tracker](https://github.com/MediaArea/RAWcooked/issues).  
 ```
 rawcooked -d -y -all --accept-gaps <path/sequence_name>  
 ```
-Adding the ```-d``` flag doesn't run the encoding, but returns the command sent to FFmpeg. This flag also leaves the reversibility data available to view as a text file and this is useful for finding errors.  
+Adding the ```-d``` flag doesn't run the encoding but returns the command that would be sent to FFmpeg. This flag also leaves the reversibility data available as a text file and this is useful for sending to Media Area to help with finding errors.  
 ```
 head -c 1048576 sequence_name.mkv > dump_file.mkv  
 ```
-This command uses UNIX ```head``` command to cut the first 1MB of data from a supplied file, copying it to a new file which is easier to forward to Media Area for review.  This contains the file's header data, often requested when a problem has occurred.  
+This command uses Linux ```head``` command to cut the first 1MB of data from a supplied file, copying it to a new file which is easier to forward to Media Area for review.  This contains the file's header data, often requested when a problem has occurred.  
 ```
 echo $?
 ```
@@ -171,7 +171,7 @@ The results of these three enquiries is always a brilliant way to open an Issue 
 
 ## <a name="links">Additional resources</a>  
 
-* [RAWcooked GitHub page](https://github.com/MediaArea/RAWcooked)
+* [RAWcooked GitHub page](https://github.com/Media Area/RAWcooked)
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
 * [RAWcooked cheat sheet for optimization](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
 * [Further conference presentations about BFI National Archive use of RAWcooked](https://github.com/MediaArea/RAWcooked/issues)
