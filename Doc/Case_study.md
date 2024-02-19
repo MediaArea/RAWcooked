@@ -169,7 +169,7 @@ The results of these three enquiries is always a brilliant way to open an Issue 
   
 ## <a name="links">Additional resources</a>  
   
-* [RAWcooked GitHub page](https://github.com/Media Area/RAWcooked)
+* [RAWcooked GitHub page](https://github.com/MediaArea/RAWcooked)
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
 * [RAWcooked cheat sheet for optimization](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
 * [Further conference presentations about BFI National Archive use of RAWcooked](https://github.com/MediaArea/RAWcooked/issues)
