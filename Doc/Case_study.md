@@ -3,7 +3,7 @@
 **BFI National Archive**  
 **By Joanna White, Knowledge & Collections Developer**  
   
-At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been encoding DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions and flavours and changes in our encoding project priorities.  Today we have a fairly hands-off automated workflow which handles 2K, 4K, RGB, Luma, DPX and Tiff image sequences.  This workflow is built on some of the flags developed by the Media Area and written in a mix of BASH shell scripts and Python3 scripts and is available to view from the [BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding). In addition to our RAWcooked use I will also consider how we use other Media Area tools alongside RAWcooked to complete necessary stages of this workflow.  Our encoding processes do not include any alpha channels or audio file processing, but RAWcooked is capable of muxing both into the completed FFV1 Matroska dependent upon your licence.
+At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been muxing DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions and flavours and changes in our muxing project priorities.  Today we have a fairly hands-off automated workflow which handles 2K, 4K, RGB, Luma, DPX and Tiff image sequences.  This workflow is built on some of the flags developed by the Media Area and written in a mix of BASH shell scripts and Python3 scripts and is available to view from the [BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding). In addition to our RAWcooked use I will also consider how we use other Media Area tools alongside RAWcooked to complete necessary stages of this workflow.  Our muxing processes do not include any alpha channels or audio file processing, but RAWcooked is capable of muxing both into the completed FFV1 Matroska dependent upon your licence.
   
 This case study is broken into the following sections:  
 * [Server configuration](#server_config)
@@ -29,9 +29,9 @@ Our current configuration:
 - 40Gbps Network card  
 - NAS storage on 40GB network  
   
-The more CPU threads you have the better your FFmpeg encoding to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpu```.
+The more CPU threads you have the better your FFmpeg mux to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpu```.
   
-Our previous 2K film encoding configuration:  
+Our previous server configuration:  
 - Virtual Machine of a NAS storage device  
 - AMD Opteron 22xx (Gen 2 Class Opteron)  
 - 12GB RAM  
@@ -39,7 +39,7 @@ Our previous 2K film encoding configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
+When muxing 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
 
 ---  
 ### <a name="findings">One year study of throughput</a>
@@ -56,7 +56,7 @@ From 1020 total DPX sequences successfully muxed to FFV1 Matroska:
 * The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
 * Across all 1020 muxed sequences the average size reduction was 71%  
   
-A small group of sequences had their total RAWcooked muxing time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodings took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.
+A small group of sequences had their total RAWcooked muxing time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest muxes took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.
 
 ---  
 # Workflow
@@ -78,7 +78,7 @@ The pixel size and colourspace of the sequence are used to calculate the potenti
 
 To encode our image sequences we use the ```--all``` flag released in RAWcooked v21. This flag was a sponsorship development by [NYPL](https://www.nypl.org/), and sees several preservation essential flags merged into this one simple flag. Most imporantly it includes the creation of checksum hashes for every image file in the sequence, with this data being saved into the RAWcooked reversibility file embedded into the Matroska wrapper. This ensures that when demuxed the retrieved sequence can be varified as bit-identical to the original source sequence.
 
-Our encoding command:
+Our RAWcooked mux command:
 ```
 rawcooked -y --all --no-accept-gaps -s 5281680 path/sequence_name/ -o path/sequence_name.mkv >> path/sequence_name.mkv.txt 2>&1
 ```
@@ -94,19 +94,19 @@ rawcooked -y --all --no-accept-gaps -s 5281680 path/sequence_name/ -o path/seque
 | ```>>```               | Capture console output to text file        |
 | ```2>&1```             | stderr and stdout messages captured in log |
 
-This command is generally launched from within a Bash script, and is passed to [GNU Parallel](https://www.gnu.org/software/parallel/) to run multiple encodings in parallel. This software makes it very simple to run multiple encodings specified by the ```--job``` flag. By listing all the image sequence paths in one text file you can launch a parallel command like this to run 5 parallel encodings:
+This command is generally launched from within a Bash script, and is passed to [GNU Parallel](https://www.gnu.org/software/parallel/) to run multiple muxes in parallel. This software makes it very simple to run multiple muxes specified by the ```--job``` flag. By listing all the image sequence paths in one text file you can launch a parallel command like this to run 5 parallel muxes:
 ```
 cat ${sequence_list.txt} | parallel --jobs 5 "rawcooked -y --all --no-accept-gaps -s 5281680 {} -o {}.mkv >> {}.mkv.txt 2>&1"
 ```
   
-We always capture our console logs for every encoding. The ```2>&1``` ensures any error messages are output alongside the usual standard console messages for the software. These are essential for us to review if a problem is found with an encoding. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and data of our own image sequence files. These logs have been critical in identifying unanticipated edge cases with some DPX encodings, allowing for impact assessment by Media Area. We definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation metadata collection for an image sequence.
+We always capture our console logs for every mux. The ```2>&1``` ensures any error messages are output alongside the usual standard console messages for the software. These are essential for us to review if a problem is found with a mux. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and data of our own image sequence files. These logs have been critical in identifying unanticipated edge cases with some DPX muxes, allowing for impact assessment by Media Area. We definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation metadata collection for an image sequence.
 
 ---  
 ### <a name="log_assessment">Muxing log assessment</a>
 
 The muxing logs are critical for the automated assessment of the muxing process. Each log consists of four blocks of data:
 * The RAWcooked assessment of the sequence
-* The FFmpeg encoding data
+* The FFmpeg muxing data
 * The post-muxing RAWcooked assessment of the FFV1 Matroska
 * Text review of the success of the muxed sequence
 
@@ -116,13 +116,13 @@ The RAWcooked assessments themselves are lines of repeated data, counting from 0
 * Information about the RAWcooked mux (RAWcooked version, if checksum hashes included)
 * Completion success or failure statement
 
-The automation scripts used a the the BFI National Archive largely ignore the warning messages, but look for any messages that have 'Error' in them. If any are found the FFV1 Matroska is deleted and the sequence is queued for a repeated encoding attempt.  Likewise, if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat encoding. A successful completion statement should always read:
+The automation scripts used a the the BFI National Archive largely ignore the warning messages, but look for any messages that have 'Error' in them. If any are found the FFV1 Matroska is deleted and the sequence is queued for a repeated mux attempt.  Likewise, if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat mux. A successful completion statement should always read:
 ```Reversibility was checked, no issues detected.```
   
 There is one error message that triggers a specific type of remux:
 ```Error: the reversibility file is becoming big | Error: undecodable file is becoming too big```
 
-For this error we know that we need to remux our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encoding is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matoskas encoding using this ```--output-version 2``` flag are not backward compatible with RAWcooked version before V21.
+For this error we know that we need to remux our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once mux is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are muxed using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.01.
   
 ---
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
@@ -149,28 +149,33 @@ It demuxes the FFV1 Matroska back to image sequence, checks the logs for ```Reve
 # Conclusion
 ### <a name="conclusion">Conclusion & some helpful test approaches</a>
   
-We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our Unlocking Film Heritage projet. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file muxing. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems.  
+We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our Unlocking Film Heritage projet. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated muxing of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file muxing. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems.  
 
 When any system upgrades occur we like to run reversibility test to ensure RAWcooked is still operating as we would expect. This is usually in response to RAWcooked software updates, FFmpeg updates, but also for updates to our operating system. To perform a reversibility test, a cross-section of image sequences are muxed using our usual ```--all``` command, and then demuxed again fully. The image sequences of both the original and demuxed version then have whole file MD5 checksums generating and saving to a manifest. These manifests are then ```diff``` checked to ensure that every single image file is identical.
   
-When we encounter an error there are a few commands I use that make reporting the issue a little easier at the Media Area RAWcooked GitHub issue tracker.  
+When we encounter an error there are a few commands I use that make reporting the issue a little easier at the [Media Area RAWcooked GitHub issue tracker](https://github.com/MediaArea/RAWcooked/issues).  
 ```
 rawcooked -d -y -all --accept-gaps <path/sequence_name>  
 ```
-The -d flag returns the command sent to FFmpeg instead of launching the command. This flag also leaves the reversibility data available to view as a text file and this is useful for finding errors.  
+Adding the ```-d``` flag doesn't run the muxing, but returns the command sent to FFmpeg. This flag also leaves the reversibility data available to view as a text file and this is useful for finding errors.  
 ```
 head -c 1048576 sequence_name.mkv > dump_file.mkv  
 ```
-This command uses UNIX ```head``` software to cut the first 120KB of data from a supplied file, copying it to a new file which is easier to forward to Media Area for review.  This contains the file's header data, often requested when a problem has occurred.  
+This command uses UNIX ```head``` command to cut the first 1MB of data from a supplied file, copying it to a new file which is easier to forward to Media Area for review.  This contains the file's header data, often requested when a problem has occurred.  
 ```
 echo $?
 ```
-This command should be run directly after a failed RAWcooked encoding, and it will tell you the exit code returned from that terminated run.  
+This command should be run directly after a failed RAWcooked mux, and it will tell you the exit code returned from that terminated run.  
   
 The results of these three enquiries is always a brilliant way to open an Issue enquiry for Media Area and will help ensure swift diagnose for your problem. It may also be necessary to supply a DPX sequence, and your ```head``` command can be used again to extract the header data.
 
 
 ## <a name="links">Additional resources</a>  
 
+* [RAWcooked GitHub page](https://github.com/MediaArea/RAWcooked)
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
 * [RAWcooked cheat sheet](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
+* [Further conference presentations about BFI National Archive use of RAWcooked](https://github.com/MediaArea/RAWcooked/issues)
+* [DPX Preservation Workflows](https://digitensions.home.blog/2019/11/08/dpx-preservation-workflow/)
+* [Introduction to FFV1 and Matroska for film scans by Kieran O’Leary](https://kieranjol.wordpress.com/2016/10/07/introduction-to-ffv1-and-matroska-for-film-scans/)
+* [RAWCooking With Gas: A Film Digitization and QC Workflow-in-progress by Genevieve Havemeyer-King](https://youtu.be/-cJxq7Vr3Nk?si=BjPWzsZ7LRKMVZNF)
