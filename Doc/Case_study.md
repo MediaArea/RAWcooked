@@ -7,13 +7,13 @@ At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we ha
   
 This case study is broken into the following sections:  
 * [Server configuration](#server_config)
-* Image sequence assessment  
-* Encoding the image sequence  
-* Encoding log assessments  
-* FFV1 Matroska validation  
-* FFV1 Matroska demux to image sequence
-* Conclusion & helpful test approaches  
-* Additional resources  
+* [Image sequence assessment](#assessment)  
+* [Encoding the image sequence](#muxing)  
+* [Encoding log assessments](#muxing_log)  
+* [FFV1 Matroska validation](#ffv1_valid)  
+* [FFV1 Matroska demux to image sequence](#ffv1_demux)
+* [Conclusion & helpful test approaches](#conclusion)  
+* [Additional resources](#links)  
   
 ### <a name="server_config">Server configurations</a>
   
@@ -37,26 +37,26 @@ Ubuntu 18.04 LTS
   
 When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding on the lower machine. Now running 4K scans it's generally 1 fps or less. 
   
-## Image sequence assessment  
+## <a name="assessment">Image sequence assessment</a>  
   
 
 
 
 
-## Encoding the image sequence  
+## <a name="muxing">Muxing the image sequence</a>  
 
 This includes the '--all' flag, originally an idea suggested by [NYPL](https://www.nypl.org/), more details in the [Encoding]() section below.  
 ```
 rawcooked -y --all --no-accept-gaps -s 5281680 <path/sequence_name/> -o <path/sequence_name.mkv> &>> <path/sequence_name.mkv.txt>
 ```
 
-## Encoding log assessment
+## <a name="log_assessment">Muxing log assessment</a>
 
-## FFV1 Matroska validation
+## <a name="ffv1_valid">FFV1 Matroska validation</a>
 
-## FFV1 Matroska demux to image sequence
+## <a name="ffv1_demux">FFV1 Matroska demux to image sequence</a>
 
-## Conclusion & some helpful test approaches
+## <a name="conclusion">Conclusion & some helpful test approaches</a>
   
 The workflow covers most of the the areas we think are essential for safe automated encoding of the DPX sequences.  There is a need for manual intervention when repeated errors are encountered and an image sequences never makes it to our Digital Preservation Infrastructure.  Most often this indicates a different image sequence flavour we do not have covered in our licence, but sometimes it can indicate a larger issue with either RAWcooked of FFmpeg encoding. Where errors are found these are reported to an error log named after the image seqeuence, for easier monitoring.  
 
@@ -79,7 +79,7 @@ This command should be run directly after a failed RAWcooked encoding, and it wi
 The results of these three enquiries is always a brilliant way to open an Issue enquiry for Media Area and will help ensure swift diagnose for your problem. It may also be necessary to supply a DPX sequence, and your ```head``` command can be used again to extract the header data.
 
 
-## Additional resources  
+## <a name="links">Additional resources</a>  
 
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
 * [RAWcooked cheat sheet](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
