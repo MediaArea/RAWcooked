@@ -46,9 +46,9 @@ When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps)
 # Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
-For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using Media Area's MediaInfo software and capture the output into script variables.  
+For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using [Media Area's MediaInfo software](https://mediaarea.net/MediaInfo) and capture the output into script variables.  
   
-Next the first file within the image sequence is checked against a Media Area MediaConch policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion, or possible anomalies in the DPX resulting.
+Next the first file within the image sequence is checked against a [Media Area's MediaConch software](https://mediaarea.net/MediaConch) policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion, or possible anomalies in the DPX resulting.
   
 The pixel size and colourspace of the sequence are used to calculate the potential reduction rate of the encode based on previous encoding experience. We make an assumption that 2K RGB will always be atleast one third smaller, so calculate a 1.3TB sequences to make a 1TB FFV1 Matroska.  For 2K Luma and all 4K we must assume that very small size reductions will take place. This step is necessary to control file ingest sizes to our Digital Preservation Infrastructure where we currently have a maximum verifiable ingest file size of 1TB.
   
