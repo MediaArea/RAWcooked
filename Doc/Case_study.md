@@ -8,11 +8,11 @@ At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we ha
 This case study is broken into the following sections:  
 * [Server configuration](#server_config)
 * [One year study of throughput](#findings)
-* [Image sequence assessment](#assessment)  
-* [Muxing the image sequence](#muxing)  
-* [Muxing log assessments](#log_assessment)  
-* [FFV1 Matroska validation](#ffv1_valid)  
-* [FFV1 Matroska demux to image sequence](#ffv1_demux)
+* [Workflow: Image sequence assessment](#assessment)  
+* [Workflow: Muxing the image sequence](#muxing)  
+* [Workflow: Muxing log assessments](#log_assessment)  
+* [Workflow: FFV1 Matroska validation](#ffv1_valid)  
+* [Workflow: FFV1 Matroska demux to image sequence](#ffv1_demux)
 * [Conclusion & helpful test approaches](#conclusion)  
 * [Additional resources](#links)  
   
@@ -36,10 +36,10 @@ AMD Opteron 22xx (Gen 2 Class Opteron)
 8 threads  
 Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding on the lower machine. Now running 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
-
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
   
-# <a name="findings">One year study of throughput</a>
+  
+### <a name="findings">One year study of throughput</a>
   
 Between Febraury 2023 and February 2024 the BFI encoded 1020 DPX sequences to FFV1 Matroska. A Python script was written to capture certain data about these muxed files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
   
@@ -50,31 +50,41 @@ Between Febraury 2023 and February 2024 the BFI encoded 1020 DPX sequences to FF
 * The smallest reduction was just .3%
 * The largest reductions were from sequences both 10/12-bit, with RGB colorspace that had black and white filters applied
 * The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
-* Across all 1020 muxed sequences the average size reduction was 71%
+* Across all 1020 muxed sequences the average size reduction was 71%  
   
-Total time taken for the RAWcooked muxing start to finish was captured for a small group of sequences, and showed an average of 24 hours per sequence. All sequences MKV durations were between 5 and 10 minutes, with some taking just 7 hours to 46 hours. There appears to be no cause for this and so must deduce that network activity and amount of parallel processes (unknown) would have impacted these.  
+A small group of sequences had their total RAWcooked muxing time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodings took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.
   
   
-## <a name="assessment">Image sequence assessment</a>  
+# Workflow
+### <a name="assessment">Image sequence assessment</a>  
+  
+For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence.  
+  
+Next the first file within the image sequence is checked against a MediaConch policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)) and if it passes then we know it can be encoded by RAWcooked and by our current licence.
+  
+The pixel size and colourspace of the sequence are used to calculate the potential reduction rate of the file based on previous encoding experience. We make an assumption that 2K RGB will always be atleast one third smaller, so calculate a 1.3TB sequence to make a 1TB FFV1 Matroska.  For 2K Luma and all 4K we must assume that very small size reductions will take place.  
+  
+| RAWcooked 2K RGB     | RAWcooked Luma & RAWcooked 4K |
+| -------------------- | ----------------------------- |
+| 1.3TB reduces to 1TB | 1.0TB may only reduce to 1TB  |
   
 
 
-
-
-## <a name="muxing">Muxing the image sequence</a>  
+### <a name="muxing">Muxing the image sequence</a>  
 
 This includes the '--all' flag, originally an idea suggested by [NYPL](https://www.nypl.org/), more details in the [Encoding]() section below.  
 ```
 rawcooked -y --all --no-accept-gaps -s 5281680 <path/sequence_name/> -o <path/sequence_name.mkv> &>> <path/sequence_name.mkv.txt>
 ```
 
-## <a name="log_assessment">Muxing log assessment</a>
+### <a name="log_assessment">Muxing log assessment</a>
 
-## <a name="ffv1_valid">FFV1 Matroska validation</a>
+### <a name="ffv1_valid">FFV1 Matroska validation</a>
 
-## <a name="ffv1_demux">FFV1 Matroska demux to image sequence</a>
+### <a name="ffv1_demux">FFV1 Matroska demux to image sequence</a>
 
-## <a name="conclusion">Conclusion & some helpful test approaches</a>
+# Conclusion
+### <a name="conclusion">Conclusion & some helpful test approaches</a>
   
 The workflow covers most of the the areas we think are essential for safe automated encoding of the DPX sequences.  There is a need for manual intervention when repeated errors are encountered and an image sequences never makes it to our Digital Preservation Infrastructure.  Most often this indicates a different image sequence flavour we do not have covered in our licence, but sometimes it can indicate a larger issue with either RAWcooked of FFmpeg encoding. Where errors are found these are reported to an error log named after the image seqeuence, for easier monitoring.  
 
