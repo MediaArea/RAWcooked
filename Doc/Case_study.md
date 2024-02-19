@@ -3,13 +3,13 @@
 **BFI National Archive**  
 **By Joanna White, Knowledge & Collections Developer**  
   
-At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been encoding DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions and flavours and changes in our encoding project priorities.  Today we have a fairly hands-off automated workflow which handles 2K, 4K, RGB, Luma, DPX and Tiff image sequences.  This workflow is built on some of the flags developed by the Media Area and written in a mix of BASH shell scripts and Python3 scripts and is available to view from the [BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding). In addition to our RAWcooked use I will also consider how we use other Media Area tools alongside RAWcooked to complete necessary stages of this workflow.
+At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been encoding DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions and flavours and changes in our encoding project priorities.  Today we have a fairly hands-off automated workflow which handles 2K, 4K, RGB, Luma, DPX and Tiff image sequences.  This workflow is built on some of the flags developed by the Media Area and written in a mix of BASH shell scripts and Python3 scripts and is available to view from the [BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding). In addition to our RAWcooked use I will also consider how we use other Media Area tools alongside RAWcooked to complete necessary stages of this workflow.  Our encoding processes do not include any alpha channels or audio file processing, but RAWcooked is capable of muxing both into the completed FFV1 Matroska dependent upon your licence.
   
 This case study is broken into the following sections:  
-* [Server configuration](#server_config)
+* [Server configuration and throughput](#server_config)
 * [Image sequence assessment](#assessment)  
-* [Encoding the image sequence](#muxing)  
-* [Encoding log assessments](#muxing_log)  
+* [Muxing the image sequence](#muxing)  
+* [Muxing log assessments](#log_assessment)  
 * [FFV1 Matroska validation](#ffv1_valid)  
 * [FFV1 Matroska demux to image sequence](#ffv1_demux)
 * [Conclusion & helpful test approaches](#conclusion)  
@@ -35,7 +35,20 @@ AMD Opteron 22xx (Gen 2 Class Opteron)
 8 threads  
 Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding on the lower machine. Now running 4K scans it's generally 1 fps or less. 
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding on the lower machine. Now running 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
+
+Between Febraury 2023 and February 2024 the BFI encoded 1020 DPX sequences to FFV1 Matroska. A Python script was written to capture certain data about these muxed files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
+* 140 of the 1020 were 2K or smaller / 880 4K or larger
+* 222 were Luma Y / 798 were RGB
+* 143 were 10-bit / 279 12-bit / 598 16-bit
+* The largest reduction in size of any FFV1 from the DPX was 88%
+* The smallest reduction was just .3%
+* The largest reductions were from sequences both 10/12-bit, with RGB colorspace that had black and white filters applied
+* The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
+* Across all 1020 muxed sequences the average size reduction was 71%
+  
+Total time taken for the RAWcooked muxing start to finish was captured for a small group of sequences, and showed an average of 24 hours per sequence. All sequences MKV durations were between 5 and 10 minutes, with some taking just 7 hours to 46 hours. There appears to be no cause for this and so must deduce that network activity and amount of parallel processes (unknown) would have impacted these.  
+  
   
 ## <a name="assessment">Image sequence assessment</a>  
   
