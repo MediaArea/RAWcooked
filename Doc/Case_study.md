@@ -80,7 +80,7 @@ To encode our image sequences we use the ```--all``` flag released in RAWcooked 
 
 Our encoding command:
 ```
-rawcooked -y --all --no-accept-gaps -s 5281680 *path/sequence_name/* -o *path/sequence_name.mkv* >> *path/sequence_name.mkv.txt* 2>&1
+rawcooked -y --all --no-accept-gaps -s 5281680 path/sequence_name/ -o path/sequence_name.mkv >> path/sequence_name.mkv.txt 2>&1
 ```
   
 | Command                | Description                                |
@@ -130,11 +130,22 @@ For this error we know that we need to remux our image sequence with the additio
 When the logs have been assessed and the message ```Reversibility was checked, no issue detected``` was found, then the FFV1 Matroska has metadata validation using the [BFI's MediaConch policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_mkv_policy.xml). This policy ensures that the FFV1 Matroska is whole by looking for duration field entries, checks for reversibility data, and that the correct FFV1 and Matroska formats are being used. It also ensures that all the FFV1 error detection features are present, that slices are included, bit rate is over 300 and pixel aspect ratio is 1.000.
 
 If the policy passes then the FFV1 Matroska is moved onto the final stage, where the RAWcooked flag ```--check``` is used to ensure that the FFV1 Matroska is correctly formed.
-```rawcooked --check 
+```rawcooked --check path/sequence_name.mkv >> path/sequence_name.mkv.txt 2>&1```
 
-
+Again the stderr and strout messages are captured to a log, and this log is checked for the message ```Reversibility was checked, no issues detected.``` When this check completes the FFV1 Matroska is moved to our Digital Preservation Infrastructure and the original image sequence is deleted under automation.
+  
+---
 ### <a name="ffv1_demux">FFV1 Matroska demux to image sequence</a>
 
+We have automation scripts that return an FFV1 Matroska back to the original image sequence. These are essential for our film preseration colleagues who may need to perform grading or enhancement work on preserved films. For this we use the ```--all``` command again which can select demux when an FFV1 Matroska is supplied.  
+
+This simple script runs this command:  
+```
+rawcooked -y --all path/sequence_name.dpx -o path/demux_sequence >> path/sequence_name.txt 2>&1
+```
+It demuxes the FFV1 Matroska back to image sequence, checks the logs for ```Reversibility was checked, no issue detected``` and reports the outcome to a script log.  
+
+---
 # Conclusion
 ### <a name="conclusion">Conclusion & some helpful test approaches</a>
   
