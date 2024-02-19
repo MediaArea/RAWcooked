@@ -124,7 +124,7 @@ The automation scripts used a the the BFI National Archive largely ignore the wa
 There is one error message that triggers a specific type of remux:
 ```Error: the reversibility file is becoming big | Error: undecodable file is becoming too big```
 
-For this error we know that we need to remux our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once mux is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are muxed using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.01.
+For this error we know that we need to remux our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once mux is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are muxed using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.09.
   
 ---
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
