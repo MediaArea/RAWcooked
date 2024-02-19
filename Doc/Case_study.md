@@ -26,7 +26,7 @@ Our current configuration:
 - 32-core with 64 CPU threads  
 - Ubuntu 20.04 LTS  
 - 40Gbps Network card  
-- NAS storage on 10GB network  
+- NAS storage on 40GB network  
   
 The more CPU threads you have the better your FFmpeg encoding to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpbu```.
   
@@ -43,9 +43,10 @@ When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps)
   
 ### <a name="findings">One year study of throughput</a>
   
-Between Febraury 2023 and February 2024 the BFI encoded 1020 DPX sequences to FFV1 Matroska. A Python script was written to capture certain data about these muxed files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
-  
-* 140 of the 1020 were 2K or smaller / 880 4K or larger
+Between Febraury 2023 and February 2024 the BFI encoded **1020 DPX sequences** to FFV1 Matroska. A Python script was written to capture certain data about these muxed files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
+
+From 1020 total DPX sequences successfully muxed to FFV1 Matroska:  
+* 140 were 2K or smaller / 880 were 4K
 * 222 were Luma Y / 798 were RGB
 * 143 were 10-bit / 279 12-bit / 598 16-bit
 * The largest reduction in size of any FFV1 from the DPX was 88%
