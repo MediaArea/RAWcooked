@@ -21,20 +21,22 @@ This case study is broken into the following sections:
 To encode our DPX and TIFF sequences we have a single server that completes this work for all our different NAS storage paths in parallel.  
   
 Our current configuration:  
-Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz  
-252 GB RAM  
-32-core with 64 CPU threads  
-Ubuntu 20.04 LTS  
-40Gbps Network card  
-NAS storage on 10GB network  
+- Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz  
+- 252 GB RAM  
+- 32-core with 64 CPU threads  
+- Ubuntu 20.04 LTS  
+- 40Gbps Network card  
+- NAS storage on 10GB network  
+  
+The more CPU threads you have the better your FFmpeg encoding to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpbu```.
   
 Our previous 2K film encoding configuration:  
-Virtual Machine of a NAS storage device  
-AMD Opteron 22xx (Gen 2 Class Opteron)  
-12GB RAM  
-8-core @ 3 GHz (estimated)  
-8 threads  
-Ubuntu 18.04 LTS  
+- Virtual Machine of a NAS storage device  
+- AMD Opteron 22xx (Gen 2 Class Opteron)  
+- 12GB RAM  
+- 8-core @ 3 GHz (estimated)  
+- 8 threads  
+- Ubuntu 18.04 LTS  
   
 When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
   
