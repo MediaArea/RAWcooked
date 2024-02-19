@@ -94,7 +94,9 @@ rawcooked -y --all --no-accept-gaps -s 5281680 path/sequence_name/ -o path/seque
 | ```>>```               | Capture console output to text file        |
 | ```2>&1```             | stderr and stdout messages captured in log |
 
-This command is generally launched from within a Bash script, and is passed to [GNU Parallel](https://www.gnu.org/software/parallel/) to run multiple muxes in parallel. This software makes it very simple to run multiple muxes specified by the ```--job``` flag. By listing all the image sequence paths in one text file you can launch a parallel command like this to run 5 parallel muxes:
+This command is generally launched from within a Bash script, and is passed to [GNU Parallel](https://www.gnu.org/software/parallel/) to run multiple muxes in parallel. This software makes it very simple to run a number of muxes specified by the ```--job``` flag. Parallelisation is the act of processing jobs in parallel, dividing up the work to save time. If not run in parallel a computer will usually process jobs one after another. As well as parallelisation, FFmpeg usinges multi-threading to create the FFV1 file. The FFV1 codec has slices through each frame (from 64 slices per RAWcooked frame) which allows for granular checksum verification, but also allows FFmpeg multi-threading. Each slice block is split into different processing tasks and run across your CPU threads, so four our server that 64 separate tasks per thread, one slice per frame of the FFV1 file.
+
+By listing all the image sequence paths in one text file you can launch a parallel command like this to run 5 parallel muxes:
 ```
 cat ${sequence_list.txt} | parallel --jobs 5 "rawcooked -y --all --no-accept-gaps -s 5281680 {} -o {}.mkv >> {}.mkv.txt 2>&1"
 ```
@@ -174,7 +176,7 @@ The results of these three enquiries is always a brilliant way to open an Issue 
 
 * [RAWcooked GitHub page](https://github.com/MediaArea/RAWcooked)
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
-* [RAWcooked cheat sheet](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
+* [RAWcooked cheat sheet for optimization](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
 * [Further conference presentations about BFI National Archive use of RAWcooked](https://github.com/MediaArea/RAWcooked/issues)
 * [DPX Preservation Workflows](https://digitensions.home.blog/2019/11/08/dpx-preservation-workflow/)
 * [Introduction to FFV1 and Matroska for film scans by Kieran O’Leary](https://kieranjol.wordpress.com/2016/10/07/introduction-to-ffv1-and-matroska-for-film-scans/)
