@@ -40,7 +40,7 @@ Our previous server configuration:
 When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), but 4K scans are generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
 
 ---  
-# Workflow
+## Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
 For each image sequence processed the metadata of the first DPX is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using [Media Area's MediaInfo software](https://mediaarea.net/MediaInfo) and capture the output into script variables.  
@@ -128,7 +128,7 @@ rawcooked -y --all path/sequence_name.dpx -o path/decode_sequence >> path/sequen
 It decodes the FFV1 Matroska back to image sequence, checks the logs for ```Reversibility was checked, no issue detected``` and reports the outcome to a script log.  
   
 ---
-# Conclusion
+## Conclusion
 
 We began using RAWcooked to convert 3 petabytes of 2K DPX sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space, which is approximately £45,000 saved. Undoubtedly this software offers amazing financial incentives with all the benefits of open standards and open-source tools. It also creates a viewable video file of an otherwise invisible DPX scan, so useful for viewing the unseen technology of film.  We plan to begin testing RAWcooked encoding of TIFF image sequences shortly with the intention of moving DCDM image sequences to FFV1. Today, our workflow runs 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this a new image sequence 'flavour' that we do not have covered by our RAWcooked licence, or sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up of reported errors will indicate repeated problems.  
   
