@@ -130,9 +130,9 @@ It decodes the FFV1 Matroska back to image sequence, checks the logs for ```Reve
 ---
 # Conclusion
 
-We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems. 
+We began using RAWcooked to convert 3PB of 2K DPX sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space, which is estimated to be around £45,000 savings in tape media for this collection. Undoubtedly this software offers amazing financial and preservation incentives, while also making a viewable video file of an otherwise invisible DPX scan.  Today, our workflow runs 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals some permission issues from different scan suppliers, a new image sequence 'flavour' that we do not have covered by our RAWcooked licence, or sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up of reported errors will indicate repeated problems.  
   
-In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths. Between Febraury 2023 and February 2024 the BFI collected data about its business as usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.
+In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths has seen our licence expand. Between Febraury 2023 and February 2024 the BFI collected data about its business as usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.  
   
 From 1020 total DPX sequences successfully encoded to FFV1 Matroska:  
 * 140 were 2K or smaller / 880 were 4K
@@ -144,7 +144,7 @@ From 1020 total DPX sequences successfully encoded to FFV1 Matroska:
 * The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
 * Across all 1020 encoded sequences the average size of the finished FFV1 was 71% of the original image sequence  
   
-A small group of sequences had their total RAWcooked encoding time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodes took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
+A small group of sequences had their RAWcooked encoding times recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations between 5 and 10 minutes and were mostly 16-bit sequebces. The fastest encodes took just 7 hours with some taking upto 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
    
 ### <a name="tests">Useful test approaches</a>
   
@@ -165,10 +165,10 @@ echo $?
 This command should be run directly after a failed RAWcooked encode, and it will tell you the exit code returned from that terminated run.  
   
 The results of these three enquiries is always a brilliant way to open an Issue enquiry for Media Area and will help ensure swift diagnose for your problem. It may also be necessary to supply a DPX sequence, and your ```head``` command can be used again to extract the header data.
-
-
+  
+  
 ## <a name="links">Additional resources</a>  
-
+  
 * [RAWcooked GitHub page](https://github.com/Media Area/RAWcooked)
 * ['No Time To Wait! 5' presentation about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
 * [RAWcooked cheat sheet for optimization](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
