@@ -39,7 +39,7 @@ Our previous server configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg, 4K scans is generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
 
 ---  
 # Workflow
@@ -134,7 +134,7 @@ It decodes the FFV1 Matroska back to image sequence, checks the logs for ```Reve
 
 We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems. 
   
-In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths. Between Febraury 2023 and February 2024 the BFI collected data about it's business as usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.
+In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths. Between Febraury 2023 and February 2024 the BFI collected data about its business as usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.
   
 From 1020 total DPX sequences successfully encoded to FFV1 Matroska:  
 * 140 were 2K or smaller / 880 were 4K
