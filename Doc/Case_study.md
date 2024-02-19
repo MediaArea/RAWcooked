@@ -13,7 +13,8 @@ This case study is broken into the following sections:
 * [Workflow: Encoding log assessments](#log_assessment)  
 * [Workflow: FFV1 Matroska validation](#ffv1_valid)  
 * [Workflow: FFV1 Matroska decode to image sequence](#ffv1_demux)
-* [Conclusion & helpful test approaches](#conclusion)  
+* [Conclusion](#conclusion)
+* [Useful test approaches](#tests)
 * [Additional resources](#links)  
 
 ---  
@@ -42,23 +43,6 @@ Our previous server configuration:
 When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
 
 ---  
-### <a name="findings">One year study of throughput</a>
-  
-Between Febraury 2023 and February 2024 the BFI encoded **1020 DPX sequences** to FFV1 Matroska. A Python script was written to capture certain data about these encoded files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
-
-From 1020 total DPX sequences successfully encoded to FFV1 Matroska:  
-* 140 were 2K or smaller / 880 were 4K
-* 222 were Luma Y / 798 were RGB
-* 143 were 10-bit / 279 12-bit / 598 16-bit
-* The largest reduction in size of any FFV1 from the DPX was 88%
-* The smallest reduction was just .3%
-* The largest reductions were from sequences both 10/12-bit, with RGB colorspace that had black and white filters applied
-* The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
-* Across all 1020 encoded sequences the average size reduction was 71%  
-  
-A small group of sequences had their total RAWcooked encoding time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodes took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.
-
----  
 # Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
@@ -73,7 +57,6 @@ The pixel size and colourspace of the sequence are used to calculate the potenti
 | 1.3TB reduces to 1TB | 1.0TB may only reduce to 1TB  |
   
 
----
 ### <a name="muxing">Muxing the image sequence</a>  
 
 To encode our image sequences we use the ```--all``` flag released in RAWcooked v21. This flag was a sponsorship development by [NYPL](https://www.nypl.org/), and sees several preservation essential flags merged into this one simple flag. Most imporantly it includes the creation of checksum hashes for every image file in the sequence, with this data being saved into the RAWcooked reversibility file embedded into the Matroska wrapper. This ensures that when decoded the retrieved sequence can be varified as bit-identical to the original source sequence.
@@ -103,7 +86,7 @@ cat ${sequence_list.txt} | parallel --jobs 5 "rawcooked -y --all --no-accept-gap
   
 We always capture our console logs for every encode. The ```2>&1``` ensures any error messages are output alongside the usual standard console messages for the software. These are essential for us to review if a problem is found with a encode. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and data of our own image sequence files. These logs have been critical in identifying unanticipated edge cases with some DPX encodes, allowing for impact assessment by Media Area. We definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation metadata collection for an image sequence.
 
----  
+  
 ### <a name="log_assessment">Encoding log assessment</a>
 
 The encoding logs are critical for the automated assessment of the encoding process. Each log consists of four blocks of data:
@@ -126,7 +109,7 @@ There is one error message that triggers a specific type of re-encode:
 
 For this error we know that we need to re-encode our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encode is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are encoded using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.09.
   
----
+  
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
   
 When the logs have been assessed and the message ```Reversibility was checked, no issue detected``` was found, then the FFV1 Matroska has metadata validation using the [BFI's MediaConch policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_mkv_policy.xml). This policy ensures that the FFV1 Matroska is whole by looking for duration field entries, checks for reversibility data, and that the correct FFV1 and Matroska formats are being used. It also ensures that all the FFV1 error detection features are present, that slices are included, bit rate is over 300 and pixel aspect ratio is 1.000.
@@ -136,7 +119,7 @@ If the policy passes then the FFV1 Matroska is moved onto the final stage, where
 
 Again the stderr and strout messages are captured to a log, and this log is checked for the message ```Reversibility was checked, no issues detected.``` When this check completes the FFV1 Matroska is moved to our Digital Preservation Infrastructure and the original image sequence is deleted under automation.
   
----
+  
 ### <a name="ffv1_demux">FFV1 Matroska decode to image sequence</a>
 
 We have automation scripts that return an FFV1 Matroska back to the original image sequence. These are essential for our film preseration colleagues who may need to perform grading or enhancement work on preserved films. For this we use the ```--all``` command again which can select decode when an FFV1 Matroska is supplied.  
@@ -146,13 +129,28 @@ This simple script runs this command:
 rawcooked -y --all path/sequence_name.dpx -o path/decode_sequence >> path/sequence_name.txt 2>&1
 ```
 It decodes the FFV1 Matroska back to image sequence, checks the logs for ```Reversibility was checked, no issue detected``` and reports the outcome to a script log.  
-
+  
 ---
 # Conclusion
-### <a name="conclusion">Conclusion & some helpful test approaches</a>
-  
-We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our Unlocking Film Heritage projet. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems.  
 
+We began using RAWcooked to convert 3PB of 2K image sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space. Our workflows run 24/7 performing automated encoding of business as usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to Digital Preservation Infrastructure.  Most often this signals a different image sequence 'flavour' that we do not have in our licence, but sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up will indicate repeated problems. 
+  
+In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths. Between Febraury 2023 and February 2024 the BFI collected data about it's business as usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.
+  
+From 1020 total DPX sequences successfully encoded to FFV1 Matroska:  
+* 140 were 2K or smaller / 880 were 4K
+* 222 were Luma Y / 798 were RGB
+* 143 were 10-bit / 279 12-bit / 598 16-bit
+* The largest reduction in size of any FFV1 from the DPX was 88%
+* The smallest reduction was just 0.3%
+* The largest reductions were from 10/12-bit sequences, with RGB colorspace that had black and white filters applied
+* The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame
+* Across all 1020 encoded sequences the average size of the finished FFV1 was 71% of the original image sequence  
+  
+A small group of sequences had their total RAWcooked encoding time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodes took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
+   
+### <a name="tests">Some useful test approaches</a>
+  
 When any system upgrades occur we like to run reversibility test to ensure RAWcooked is still operating as we would expect. This is usually in response to RAWcooked software updates, FFmpeg updates, but also for updates to our operating system. To perform a reversibility test, a cross-section of image sequences are encoded using our usual ```--all``` command, and then decoded again fully. The image sequences of both the original and decoded version then have whole file MD5 checksums generating and saving to a manifest. These manifests are then ```diff``` checked to ensure that every single image file is identical.
   
 When we encounter an error there are a few commands I use that make reporting the issue a little easier at the [Media Area RAWcooked GitHub issue tracker](https://github.com/MediaArea/RAWcooked/issues).  
