@@ -15,7 +15,8 @@ This case study is broken into the following sections:
 * [Workflow: FFV1 Matroska demux to image sequence](#ffv1_demux)
 * [Conclusion & helpful test approaches](#conclusion)  
 * [Additional resources](#links)  
-  
+
+---  
 ### <a name="server_config">Server configurations</a>
   
 To encode our DPX and TIFF sequences we have a single server that completes this work for all our different NAS storage paths in parallel.  
@@ -39,8 +40,8 @@ Our previous 2K film encoding configuration:
 - Ubuntu 18.04 LTS  
   
 When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg encoding, 4K scans it's generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
-  
-  
+
+---  
 ### <a name="findings">One year study of throughput</a>
   
 Between Febraury 2023 and February 2024 the BFI encoded **1020 DPX sequences** to FFV1 Matroska. A Python script was written to capture certain data about these muxed files, including sequence pixel size, colourspace, bits, and byte size of the image sequence and completed FFV1 Matroska. We captured the following data:
@@ -56,8 +57,8 @@ From 1020 total DPX sequences successfully muxed to FFV1 Matroska:
 * Across all 1020 muxed sequences the average size reduction was 71%  
   
 A small group of sequences had their total RAWcooked muxing time recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations were between 5 and 10 minutes. The fastest encodings took just 7 hours with some taking 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.
-  
-  
+
+---  
 # Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
@@ -72,7 +73,7 @@ The pixel size and colourspace of the sequence are used to calculate the potenti
 | 1.3TB reduces to 1TB | 1.0TB may only reduce to 1TB  |
   
 
-
+---
 ### <a name="muxing">Muxing the image sequence</a>  
 
 To encode our image sequences we use the ```--all``` flag released in RAWcooked v21. This flag was a sponsorship development by [NYPL](https://www.nypl.org/), and sees several preservation essential flags merged into this one simple flag. Most imporantly it includes the creation of checksum hashes for every image file in the sequence, with this data being saved into the RAWcooked reversibility file embedded into the Matroska wrapper. This ensures that when demuxed the retrieved sequence can be varified as bit-identical to the original source sequence.
