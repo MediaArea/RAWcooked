@@ -7,7 +7,6 @@ At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we ha
   
 This case study is broken into the following sections:  
 * [Server configuration](#server_config)
-* [One year study of throughput](#findings)
 * [Workflow: Image sequence assessment](#assessment)  
 * [Workflow: Encoding the image sequence](#muxing)  
 * [Workflow: Encoding log assessments](#log_assessment)  
