@@ -28,7 +28,7 @@ Our current configuration:
 - 40Gbps Network card  
 - NAS storage on 40GB network  
   
-The more CPU threads you have the better your FFmpeg encoding to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpbu```.
+The more CPU threads you have the better your FFmpeg encoding to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our congiguration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpu```.
   
 Our previous 2K film encoding configuration:  
 - Virtual Machine of a NAS storage device  
@@ -61,11 +61,11 @@ A small group of sequences had their total RAWcooked muxing time recorded, revea
 # Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
-For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence.  
+For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using Media Area's MediaInfo software and capture the output into script variables.  
   
-Next the first file within the image sequence is checked against a MediaConch policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)) and if it passes then we know it can be encoded by RAWcooked and by our current licence.
+Next the first file within the image sequence is checked against a Media Area MediaConch policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion, or possible anomalies in the DPX resulting.
   
-The pixel size and colourspace of the sequence are used to calculate the potential reduction rate of the file based on previous encoding experience. We make an assumption that 2K RGB will always be atleast one third smaller, so calculate a 1.3TB sequence to make a 1TB FFV1 Matroska.  For 2K Luma and all 4K we must assume that very small size reductions will take place.  
+The pixel size and colourspace of the sequence are used to calculate the potential reduction rate of the mux based on previous muxing experience. We make an assumption that 2K RGB will always be atleast one third smaller, so calculate a 1.3TB sequences to make a 1TB FFV1 Matroska.  For 2K Luma and all 4K we must assume that very small size reductions will take place. This step is necessary to control file ingest sizes to our Digital Preservation Infrastructure where we currently have a maximum verifiable ingest file size of 1TB.
   
 | RAWcooked 2K RGB     | RAWcooked Luma & RAWcooked 4K |
 | -------------------- | ----------------------------- |
@@ -75,11 +75,31 @@ The pixel size and colourspace of the sequence are used to calculate the potenti
 
 ### <a name="muxing">Muxing the image sequence</a>  
 
-This includes the '--all' flag, originally an idea suggested by [NYPL](https://www.nypl.org/), more details in the [Encoding]() section below.  
+To encode our image sequences we use the ```--all``` flag released in RAWcooked v21. This flag was a sponsorship development by [NYPL](https://www.nypl.org/), and sees several preservation essential flags merged into this one simple flag. Most imporantly it includes the creation of checksum hashes for every image file in the sequence, with this data being saved into the RAWcooked reversibility file embedded into the Matroska wrapper. This ensures that when demuxed the retrieved sequence can be varified as bit-identical to the original source sequence.
+
+Our encoding command:
 ```
-rawcooked -y --all --no-accept-gaps -s 5281680 <path/sequence_name/> -o <path/sequence_name.mkv> &>> <path/sequence_name.mkv.txt>
+rawcooked -y --all --no-accept-gaps -s 5281680 <path/sequence_name/> -o <path/sequence_name.mkv> >> <path/sequence_name.mkv.txt> 2>&1
+```
+| Command                | Description                          |
+| ---------------------- | ------------------------------------ |
+| ```rawcooked```        | Calls the software                   |
+| ```-y```               | Answers 'yes' to software questions  |
+| ```-all```             | Preservation command with checksums  |
+| ```--no-accept-gaps``` | Exit with warning if sequence gaps   |
+| ```-s 5281680```       | Set max attachment size to 5MB       |
+| ```-o```               | Use output path for FFV1 MKV         |
+| ```>>```               | Capture console output to text file  |
+| ```2>&1```             | stderr and stdout messages captured  |
+
+This command is generally launched from within a Bash script, and is passed to [GNU Parallel](https://www.gnu.org/software/parallel/) to run multiple encodings in parallel. This software makes it very simple to run multiple encodings, just by writing all the image sequence paths to one text file you can launch a parallel command like this:
+```
+cat ${sequence_list.txt} | parallel --jobs 10 "rawcooked -y --all --no-accept-gaps -s 5281680 {} -o {}.mkv >> {}.mkv.txt 2>&1"
 ```
 
+We always capture our console logs for every encoding. The ```2>&1``` ensures any error messages are output alongside the usual standard messages. These are essential for us to review if a problem is found with an encoding. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and data of our own image sequence files. In recent years these logs have been critical in identifying unanticipated edge cases with some DPX encodings, allowing for impact assessment generation. We definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation metadata collection.
+  
+  
 ### <a name="log_assessment">Muxing log assessment</a>
 
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
