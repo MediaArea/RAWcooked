@@ -4,7 +4,7 @@
 At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been encoding DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions and flavours and changes in our encoding project priorities.  Today we have a fairly hands-off automated workflow which handles 2K and 4K image sequences.  This workflow is built on some of the flags developed in RAWcooked by Media Area and written in a mix of Bash shell and Python3 scripts ([BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding)). In addition to RAWcooked we use other Media Area tools to complete necessary stages of this workflow.  Our encoding processes do not include any alpha channel or audio file processing, but RAWcooked is capable of encoding both into the completed FFV1 Matroska.
   
 This case study is broken into the following sections:  
-* [Server configuration](#server_config)
+* [Server configurations](#server_config)
 * [Workflow: Image sequence assessment](#assessment)  
 * [Workflow: Encoding the image sequence](#muxing)  
 * [Workflow: Encoding log assessments](#log_assessment)  
@@ -17,11 +17,11 @@ This case study is broken into the following sections:
 ---  
 ### <a name="server_config">Server configurations</a>
   
-To encode our DPX and TIFF sequences we have a single server that completes this work for all our different NAS storage paths in parallel.  
+To encode our DPX sequences we have a single server that completes this work against 6 different Network Accessed Storage (NAS) in parallel.  
   
-Our current configuration:  
+Our current server configuration:  
 - Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz  
-- 252 GB RAM  
+- 252GB RAM  
 - 32-core with 64 CPU threads  
 - Ubuntu 20.04 LTS  
 - 40Gbps Network card  
@@ -37,13 +37,13 @@ Our previous server configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps) from FFmpeg, 4K scans is generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), but 4K scans are generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
 
 ---  
 # Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
-For each image sequence processed the metadata of the first DPX or TIFF is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using [Media Area's MediaInfo software](https://mediaarea.net/MediaInfo) and capture the output into script variables.  
+For each image sequence processed the metadata of the first DPX is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using [Media Area's MediaInfo software](https://mediaarea.net/MediaInfo) and capture the output into script variables.  
   
 Next the first file within the image sequence is checked against a [Media Area's MediaConch software](https://mediaarea.net/MediaConch) policy for the file ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion, or possible anomalies in the DPX resulting.
   
