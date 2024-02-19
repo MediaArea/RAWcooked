@@ -80,7 +80,7 @@ To encode our image sequences we use the ```--all``` flag released in RAWcooked 
 
 Our encoding command:
 ```
-rawcooked -y --all --no-accept-gaps -s 5281680 <path/sequence_name/> -o <path/sequence_name.mkv> >> <path/sequence_name.mkv.txt> 2>&1
+rawcooked -y --all --no-accept-gaps -s 5281680 *path/sequence_name/* -o *path/sequence_name.mkv* >> *path/sequence_name.mkv.txt* 2>&1
 ```
   
 | Command                | Description                                |
@@ -116,15 +116,22 @@ The RAWcooked assessments themselves are lines of repeated data, counting from 0
 * Information about the RAWcooked mux (RAWcooked version, if checksum hashes included)
 * Completion success or failure statement
 
-The automation scripts used a the the BFI National Archive largely ignore the warning messages, but look for any messages that have 'Error' in them. Once found this FFV1 Matroska is deleted and the sequence is queued for a repeated encoding attempt.  Similarly if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat encoding. 
+The automation scripts used a the the BFI National Archive largely ignore the warning messages, but look for any messages that have 'Error' in them. If any are found the FFV1 Matroska is deleted and the sequence is queued for a repeated encoding attempt.  Likewise, if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat encoding. A successful completion statement should always read:
+```Reversibility was checked, no issues detected.```
   
-There is one error message that triggers a specific type of re-encoding:
+There is one error message that triggers a specific type of remux:
 ```Error: the reversibility file is becoming big | Error: undecodable file is becoming too big```
 
-For this error we know that we need to re-encode our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encoding is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible.
+For this error we know that we need to remux our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encoding is completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matoskas encoding using this ```--output-version 2``` flag are not backward compatible with RAWcooked version before V21.
   
 ---
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
+  
+When the logs have been assessed and the message ```Reversibility was checked, no issue detected``` was found, then the FFV1 Matroska has metadata validation using the [BFI's MediaConch policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_mkv_policy.xml). This policy ensures that the FFV1 Matroska is whole by looking for duration field entries, checks for reversibility data, and that the correct FFV1 and Matroska formats are being used. It also ensures that all the FFV1 error detection features are present, that slices are included, bit rate is over 300 and pixel aspect ratio is 1.000.
+
+If the policy passes then the FFV1 Matroska is moved onto the final stage, where the RAWcooked flag ```--check``` is used to ensure that the FFV1 Matroska is correctly formed.
+```rawcooked --check 
+
 
 ### <a name="ffv1_demux">FFV1 Matroska demux to image sequence</a>
 
