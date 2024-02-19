@@ -1,5 +1,7 @@
-# RAWcookedCase Study
-## BFI National Archive
+# RAWcooked Case Study  
+
+## BFI National Archive  
+
 
 At the BFI National Archive we have been encoding DPX sequences to FFV1 Matroska since late 2019.  
 
