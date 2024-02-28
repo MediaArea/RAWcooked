@@ -82,17 +82,79 @@ By listing all the image sequence paths in one text file you can launch a parall
 cat ${sequence_list.txt} | parallel --jobs 5 "rawcooked -y --all --no-accept-gaps -s 5281680 {} -o {}.mkv >> {}.mkv.txt 2>&1"
 ```
   
-We always capture our console logs for every encode. The ```2>&1``` ensures any error messages are output alongside the usual standard console messages for the software. These are essential for us to review if a problem is found with an encode. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and valuable metadata of our own image sequence files. These logs have been critical in identifying unanticipated edge cases with some DPX encodings, allowing for impact assessment by Media Area. We definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation.
+We always capture our console logs for every encode. The ```2>&1``` ensures any error messages are output alongside the usual standard console messages for the software. These are essential for us to review if a problem is found with an encode. Over time they also provide a very clear record of changes encountered in FFmpeg and RAWcooked software, and valuable metadata of our own image sequence files. These logs have been critical in identifying unanticipated edge cases with some DPX encodings, allowing for impact assessment by Media Area. We would definitely encourage all RAWcooked users to capture and retain this information as part of their long-term preservation of their RAWcooked sequences.
 
   
 ### <a name="log_assessment">Encoding log assessment</a>
 
 The encoding logs are critical for the automated assessment of the encoding process. Each log consists of four blocks of data:
 * The RAWcooked assessment of the sequence
+```
+Analyzing files (0%)    
+Analyzing files (0.01%), 1 files/s    
+Analyzing files (0.02%), 1 files/s    
+Analyzing files (0.03%), 1 files/s    
+Analyzing files (0.04%), 1 files/s    
+Analyzing files (0.05%), 1 files/s    
+Analyzing files (0.06%), 1 files/s    
+Analyzing files (0.07%), 1 files/s
+...
+```
 * The FFmpeg console output with encoding data
-* The post-encoding RAWcooked assessment of the FFV1 Matroska
-* Text review of the success/failures of the encoded sequence
+```
+Track 1:
+  Scan01/2150x1820/%08d.dpx
+ (00000000 --> 00033766)
+  DPX/Raw/Y/16bit/U/BE
 
+Attachments:
+  Scan01/N_9623089_01of04_00000000.dpx_metadata.txt
+  Scan01/N_9623089_01of04_directory_contents.txt
+  Scan01/N_9623089_01of04_directory_total_byte_size.txt
+
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with gcc 11 (Ubuntu 11.4.0-1ubuntu1~22.04)
+  configuration: --prefix=/home/linuxbrew/.linuxbrew/Cellar/ffmpeg/6.0_1 --enable-shared --enable-pthreads --enable-version3 --cc=gcc-11 --host-cflags= --host-ldflags= --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, image2, from 'N_9623089_01of04/Scan01/2150x1820/%08d.dpx':
+  Duration: 00:23:26.96, start: 0.000000, bitrate: N/A
+  Stream #0:0: Video: dpx, gray16be, 2150x1820 [SAR 1:1 DAR 215:182], 24 fps, 24 tbr, 24 tbn
+Stream mapping:
+  Stream #0:0 -> #0:0 (dpx (native) -> ffv1 (native))
+  File N_9623089_01of04/Scan01/N_9623089_01of04_00000000.dpx_metadata.txt -> Stream #0:1
+  File N_9623089_01of04/Scan01/N_9623089_01of04_directory_contents.txt -> Stream #0:2
+  File N_9623089_01of04/Scan01/N_9623089_01of04_directory_total_byte_size.txt -> Stream #0:3
+  File ../encoded/mkv_cooked/N_9623089_01of04.mkv.rawcooked_reversibility_data -> Stream #0:4
+Press [q] to stop, [?] for help
+Output #0, matroska, to '../encoded/mkv_cooked/N_9623089_01of04.mkv':
+```
+* The post-encoding RAWcooked assessment of the FFV1 Matroska
+```
+...
+Time=00:23:22 (99.93%), 3.0 MiB/s, 0.03x realtime    
+Time=00:23:22 (99.94%), 1.0 MiB/s, 0.04x realtime    
+Time=00:23:23 (99.95%), 1.3 MiB/s, 0.05x realtime    
+Time=00:23:24 (99.96%), 1.2 MiB/s, 0.04x realtime    
+Time=00:23:25 (99.97%), 1.1 MiB/s, 0.05x realtime    
+Time=00:23:25 (99.98%), 1.2 MiB/s, 0.04x realtime    
+Time=00:23:26 (99.99%), 1.6 MiB/s, 0.04x realtime    
+3.3 MiB/s, 0.02x realtime 
+```
+* Text review of the success/failures of the encoded sequence
+```
+Info: Reversibility data created by RAWcooked 23.12.
+Info: Uncompressed file hashes (used by reversibility check) present.
+
+Reversibility was checked, no issue detected.
+```
+  
 The RAWcooked assessments themselves are lines of repeated data, counting from 0% to 100%. The FFmpeg encoding data contains sequence and FFV1 metadata, along with choices made by the software for the encoding process and logs of the fps for the encoding of the sequence. All this information is really important when there's an issue with the encoding. The final text review is generated by the RAWcooked assessment of the image sequence and the FFV1 Matroska. In this last section you will see different types of human readable message including:
 * Warnings about the image sequence files
 * Errors experienced during encoding
