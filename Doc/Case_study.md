@@ -227,13 +227,13 @@ From 1020 total DPX sequences successfully encoded to FFV1 Matroska:
 * The smallest reduction saw the FFV1 just 0.3% smaller than the DPX (the smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame)  
 * Across all 1020 encoded sequences the average size of the finished FFV1 was 29% smaller than the source image sequence  
   
-A small group of sequences had their RAWcooked encoding times recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations between 5 and 10 minutes and were mostly 16-bit sequebces. The fastest encodes took just 7 hours with some taking upto 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
+A small group of sequences had their RAWcooked encoding times recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations between 5 and 10 minutes and were mostly 16-bit sequences. The fastest encodes took just 7 hours with some taking upto 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
    
 ### <a name="tests">Useful test approaches</a>
   
 When any system upgrades occur we like to run reversibility test to ensure RAWcooked is still operating as we would expect. This is usually in response to RAWcooked software updates, FFmpeg updates, but also for updates to our operating system. To perform a reversibility test, a cross-section of image sequences are encoded using our usual ```--all``` command, and then decoded again fully. The image sequences of both the original and decoded version then have whole file MD5 checksums generated for every and saved into one manifest for the source and one for the decoded version. These manifests are then ```diff``` checked to ensure that every single image file is identical.  
   
-To have confidence in the --check feature, which confirms for us a DPX sequence can be deleted, we ran several --check command tests that included editing test FFV1 Matroska metadata using hexeditor software, and altering test DPX files in the same way while partially encoded. The encoding/check features always identified these data breakages correctly which helped build our confidence in the --all and --check flags.  
+To have confidence in the --check feature, which confirms for us a DPX sequence can be deleted, we ran several --check command tests that included editing test FFV1 Matroska metadata using hex editor software, and altering test DPX files in the same way while partially encoded. The encoding/check features always identified these data breakages correctly which helped build our confidence in the --all and --check flags.  
   
 When we encounter an error there are a few commands used that make reporting the issue a little easier at the [Media Area RAWcooked GitHub issue tracker](https://github.com/MediaArea/RAWcooked/issues).  
 ```
