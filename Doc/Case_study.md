@@ -154,14 +154,14 @@ Info: Uncompressed file hashes (used by reversibility check) present.
 
 Reversibility was checked, no issue detected.
 ```
-
-    
+  
+  
 If an encoding has completed then in this last section you might see different types of human readable message including:
 * Warnings about the image sequence files
 * Errors experienced during encoding
 * Information about the RAWcooked encode (shown above)
 * Completion success or failure statement (shown above)
-
+  
 Error example:
 ```
 Reversibility was checked, issues detected, see below.
@@ -183,13 +183,13 @@ Error: unsupported DPX (non conforming) alternate end of line non padding
 Please contact info@mediaarea.net if you want support of such content.
 ```
   
-The automation scripts used at the BFI National Archive look for any messages that have 'Error' in them. If any are found the FFV1 Matroska is deleted and the sequence is queued for a repeated encode attempt.  Likewise, if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat encode. A successful completion statement should always read:
-```Reversibility was checked, no issues detected.```
+The automation scripts used at the BFI National Archive look for any messages that have 'Error' in them. If any are found the FFV1 Matroska is deleted and the sequence is queued for a repeated encode attempt.  Likewise, if the completion statement suggests a failure then the FFV1 is deleted and the sequence is queued for a repeat encode. A successful completion statement should always read:  
+```Reversibility was checked, no issues detected.```  
   
-There is one error message that triggers a specific type of re-encode:
-```Error: the reversibility file is becoming big | Error: undecodable file is becoming too big```
-
-For this error we know that we need to re-encode our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encoding has completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are encoded using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.09.
+There is one error message that triggers a specific type of re-encode:  
+```Error: the reversibility file is becoming big | Error: undecodable file is becoming too big```  
+  
+For this error we know that we need to re-encode our image sequence with the additional flag ```--output-version 2``` which writes the large reversibility data to the FFV1 Matroska once encoding has completed. FFmpeg has an upper size limit of 1GB for attachments. If there is lots of additional data stored in your DPX file headers then this flag will ensure that your FFV1 Matroska completes fine and the data remains verifiably reversible. FFV1 Matroskas that are encoded using the ```--output-version 2``` flag are not backward compatible with RAWcooked version before V 21.09.  
   
   
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
