@@ -223,10 +223,8 @@ From 1020 total DPX sequences successfully encoded to FFV1 Matroska:
 * 140 were 2K or smaller / 880 were 4K
 * 222 were Luma Y / 798 were RGB
 * 143 were 10-bit / 279 12-bit / 598 16-bit
-* The largest reduction in size of any FFV1 was 88% smaller than the source DPX
-  The largest reductions were from 10/12-bit sequences, with RGB colorspace that had black and white filters applied  
-* The smallest reduction saw the FFV1 just 0.3% smaller than the DPX
-  The smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame  
+* The largest reduction in size of any FFV1 was 88% smaller than the source DPX (the largest reductions were from 10/12-bit sequences, with RGB colorspace that had black and white filters applied)  
+* The smallest reduction saw the FFV1 just 0.3% smaller than the DPX (the smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame)  
 * Across all 1020 encoded sequences the average size of the finished FFV1 was 71% of the original image sequence  
   
 A small group of sequences had their RAWcooked encoding times recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations between 5 and 10 minutes and were mostly 16-bit sequebces. The fastest encodes took just 7 hours with some taking upto 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
