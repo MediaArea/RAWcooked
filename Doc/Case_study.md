@@ -256,7 +256,7 @@ The results of these three enquiries is always a brilliant way to open an Issue 
   
 * [BFI National Archive DPX Preservation Workflows](https://digitensions.home.blog/2019/11/08/dpx-preservation-workflow/)
 * [Media Area's RAWcooked GitHub page](https://github.com/MediaArea/RAWcooked)
-* ['No Time To Wait! 5' presentation by Joanna White about the BFI's evolving RAWcooked use](https://www.youtube.com/@MediaAreaNet/streams). Link to follow.  
+* ['No Time To Wait! 5' presentation by Joanna White about the BFI's evolving RAWcooked use](https://www.youtube.com/watch?v=Mgo_DKHJEfI) 
 * [BFI National Archive RAWcooked cheat sheet for optimization](https://github.com/bfidatadigipres/dpx_encoding/blob/main/RAWcooked_Cheat_Sheet.pdf)  
 * [Further conference presentations about BFI National Archive use of RAWcooked, by Joanna White](https://youtu.be/4cG5RL_CZqg?si=w-iEICSfXqBco5NB)
 * [RAWCooking With Gas: A Film Digitization and QC Workflow-in-progress by Genevieve Havemeyer-King](https://youtu.be/-cJxq7Vr3Nk?si=BjPWzsZ7LRKMVZNF)
