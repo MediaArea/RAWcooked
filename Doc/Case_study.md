@@ -17,7 +17,7 @@ This case study is broken into the following sections:
 ---  
 ### <a name="server_config">Server configurations</a>
   
-To encode our DPX sequences we have a single server that completes this work against 6 different Network Accessed Storage (NAS) in parallel.  
+To encode our DPX sequences we have a single server that completes this work against 6 different Network Attached Storage (NAS) devices in parallel.  
   
 Our current server configuration:  
 - Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz  
