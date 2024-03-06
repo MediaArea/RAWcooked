@@ -25,7 +25,7 @@ Our current server configuration:
 - 32-core with 64 CPU threads  
 - Ubuntu 20.04 LTS  
 - 40Gbps Network card  
-- NAS storage on 40GB network  
+- NAS storage with 40Gbps network card  
   
 The more CPU threads you have the better your FFmpeg encode to FFV1 will perform. To calculate the CPU threads for your server you can multiply the Threads x Cores x Sockets. So for our configuration this would be 2 (threads) x 16 (sockets) x 2 (cores) = 64. To retrieve these figures we would use Linux's ```lscpu```.
   
