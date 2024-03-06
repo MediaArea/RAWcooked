@@ -37,7 +37,7 @@ Our previous server configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), but 4K scans are generally 1 fps or less. These figures can be impacted by the quantity of parellel processes running at any one time.
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), but 4K scans are generally 1 fps or less. These figures can be impacted by the quantity of parallel processes running at any one time.
 
 ---  
 ## Workflow
