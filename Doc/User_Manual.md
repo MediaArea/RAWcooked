@@ -83,7 +83,7 @@ The file supplied must be a Matroska container (.mkv) created by the `RAWcooked`
 For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures that the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
   
   
-## Capturing encoding and decoding logs
+## Capturing logs
   
 It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messagess, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands.
 
