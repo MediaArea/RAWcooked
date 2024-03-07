@@ -1,7 +1,8 @@
 # RAWcooked User Manual
 
 ## Encoding
-
+  
+  
 ```
 rawcooked --all <folder> / <file>
 ```
@@ -12,8 +13,9 @@ Using the `RAWcooked` tool:
 - encodes with the FLAC audio codec all audio files in the folder  
 - muxes these into a Matroska container (.mkv)
 - uses FFmpeg for this encoding process
-
+  
 To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
+
   
 | Flags                     | Description                                |
 | ------------------------- | ------------------------------------------ |
@@ -27,43 +29,47 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--check_padding```     | Runs padding checks for DPX files that do not have zero padding. Ensures additional padding data is stored in reversibility |
 |                           | file for perfect restoration of the DPX. Can be time consuming  |
 | ```--accept-gaps```       | Where gaps in a sequence are found this flag ensures the encoding completes successfully. If you require that gaps are not encoded then follow the ```--all``` command with ```--no-accept-gaps``` |
+
   
 If you do not require all of these flags you can build your own command with just the flags you prefer, for exmaple:
 ```
 rawcooked --info --conch --encode --hash --check --no-accept-gap <folder> / <file>
 ```
-
+  
 For more information about all the available flags in RAWcooked please visit the help page:
 ```
 rawcooked --help / -h
 ```
 
+  
 ### For successful encoding
 
-The filenames of the single-image files must end with a numbered sequence. `RAWcooked` will generate the regular expression (regex) to parse in the correct order all the frames in the folder. 
+The filenames of the single-image files must end with a numbered sequence. `RAWcooked` will generate the regular expression (regex) to parse in the correct order of all of the frames in the folder. 
 
 The number sequence within the filename can be formed with leading zero padding - e.g. 000001.dpx, 000002.dpx... 500000.dpx - or no leading zero padding - e.g. 1.dpx, 2.dpx... 500000.dpx.
 
-`RAWcooked` has no strict expectations of a complete, continuous number sequence, so breaks in the sequence  - e.g. 47.dpx, 48.dpx, 65.dpx, 66.dpx - will cause no error or failure in `RAWcooked`.
+`RAWcooked` has no strict expectations of a complete, continuous number sequence, so breaks in the sequence  - e.g. 47.dpx, 48.dpx, 65.dpx, 66.dpx - will cause no error or failure in `RAWcooked`, unless you specify that you want this with the ```--no-accept-gaps``` flag.
 
 `RAWcooked` has expectations about the folder and subfolder structures containing the image files, and the Matroska that is created will manage subfolders in this way: 
-
+  
 - a single folder of image files, or a folder with a single subfolder of image files, will result in a Matroska with one video track
 - a folder with multiple subfolders of image files, will result in a Matroska with multiple video tracks, one track per subfolder
-
+  
 This behaviour could help to manage different use cases, according to local preference. For example: 
+  
 - multiple reels in a single Matroska, one track per reel
 - multiple film scan attempts (rescanning to address a technical issue in the first scan) in a single Matroska, one track per scan attempt
 - multiple overscan approaches (e.g. no perfs, full perfs) in a single Matroska, one track per overscan approach
-
-Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, so users may have to request extended track allowance as required.
-
+  
+Note that maximum permitted video tracks is encoded in the `RAWcooked` licence (see licence section below), so users may have to request extended track allowance as required.  
+  
 If your encodings do not succeed and you receive these messages, then you will need to encode your image sequence with the additional flag ```--output-version 2```:
 ```
 Error: the reversibility file is becoming big | Error: undecodable file is becoming too big
 ```
 This is caused by padding data that is not zeros and which must be written into your reversibility data file attachment for restoration to the DPX images when decoded. As this data can exceed FFmpeg's maximum attachment size limit of 1GB, this flag appends the attachment to the FFV1 Matroska file after encoding has completed. This feature is not backward compatible with `RAWcooked` software before version 21.09.
 
+  
 ## Decode
 
 ```
@@ -76,4 +82,28 @@ The file supplied must be a Matroska container (.mkv) created by the `RAWcooked`
 
 For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures the the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
 
+  
+## Default licence and expansion
 
+The default `RAWcooked` license allows you to encode and decode without any additional purchases for these few limited flavours:
+  
+| From                 | To                    |
+| -------------------- | --------------------- |
+| DPX 8-bit            | FFV1 / Matroska |
+| DPX 10-bit LE Filled A | FFV1 / Matroska |
+| DPX 10-bit BE Filled A | FFV1 / Matroska |
+| PCM 48kHz 16-bit 2 channel in WAV, BWF, RF64, AIFF, AVI | FLAC / Matroska |
+  
+`RAWcooked` is an open-source project and so the software can be built from binary, but to ensure long-term support for this project we ask you install this software using our guide and support the project with development sponsorship and by purchasing licence additions that support your file formats.
+  
+When you purchase and additional licence you will need to update your software installation with the licence number supplied by Media Area.
+```
+rawcooked --store-license <value>
+```
+  
+To review your licence details you can use this command:
+```
+rawcooked --show-license
+```
+
+You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To find out more please contact Media Area by email on [info@mediaarea.net](mailto:info@mediaarea.net)
