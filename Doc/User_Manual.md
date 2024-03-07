@@ -84,15 +84,15 @@ For the best decoding experience you should always ensure you encode with the ``
   
 ## Capturing logs
   
-It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messagess, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands.
+It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messagess, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands. You may want to add ```-y``` or ```-n``` which answers yes or no to any questions asked by `RAWcooked` software, unless you're happy monitoring the logs as they are created to intercept any questions.
 
 MacOS/Linux: 
 ```
-rawcooked --all <folder path> >> <log path> 2>&1 
+rawcooked --all -y <folder path> >> <log path> 2>&1 
 ```
 Windows: 
 ```
-rawcooked --all <folder path> 1> <log path> 2>&1 
+rawcooked --all -y <folder path> 1> <log path> 2>&1 
 ```
   
 ## Default licence and expansion
