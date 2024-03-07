@@ -98,7 +98,7 @@ rawcooked --all <folder path> 1> <log path> 2>&1
   
 ## Default licence and expansion
 
-The default `RAWcooked` license allows you to encode and decode without any additional purchases for these few limited flavours:
+The default `RAWcooked` license allows you to encode and decode without any additional purchases for these flavours:
   
 | From                 | To                    |
 | -------------------- | --------------------- |
