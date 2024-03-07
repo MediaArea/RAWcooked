@@ -1,8 +1,43 @@
 # RAWcooked User Manual
 
+## Preservation standard encoding
+
+```
+rawcooked --all <folder> / <file>
+```
+  
+To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
+  
+| Commands with --all       | Description                                |
+| ------------------------- | ------------------------------------------ |
+| ```--info```              | Supplies useful file information           |
+| ```--conch```             | Conformance checks file format where       |
+|                           | supported (partially implemented for DPX)  |
+| ```--encode / --decode``` | Selected based on supplied file type       |
+| ```--hash```              | Important flag which computes hashes and   |
+|                           | embeds them in reversibility data stored   |
+|                           | in MKV wrapper allowing reversibility test |
+|                           | assurance when original sequences absent.  |
+| ```--coherency```         | Ensures package and content are coherent   |
+|                           | eg, sequence gap checks and audio duration |
+|                           | matches image sequence duration            |
+| ```--check```             | Checks that an encoded file can be decoded |
+|                           | correctly. Requires hashes to be present   |
+|                           | for checking compressed content.           |
+| ```--check_padding```     | Runs padding checks for DPX files that do  |
+|                           | not have zero padding. Ensures additional  |
+|                           | padding data is stored in reversibility    |
+|                           | file for perfect restoration of the DPX    |
+| ```--accept-gaps```       | Where gaps in a sequence are found this    |
+|                           | flag ensures the encoding completes        |
+|                           | successfully. If you require that gaps     |
+|                           | are not encoded then follow the ```--all```|
+|                           | command with ```--no-accept-gaps```        |
+  
+  
 ## Encode
 
-### Folder
+### Simple folder encoding
 
 ```
 rawcooked <folder>
@@ -32,7 +67,7 @@ This behaviour could help to manage different use cases, according to local pref
 
 Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, so users may have to request extended track allowance as required.
 
-### File
+### Simple file encoding
 
 ```
 rawcooked <file>
@@ -45,6 +80,7 @@ The file contains RAW data (e.g. it is a .dpx or .wav file). The `RAWcooked` too
 - muxes these into a Matroska container (.mkv).
 
 The filenames usually end with a numbered sequence. Enter one frame and the tool will generate the regex to parse all the frames in the folder.
+
 
 ## Decode
 
