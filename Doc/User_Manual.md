@@ -17,13 +17,9 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | Commands with --all       | Description                                |
 | ------------------------- | ------------------------------------------ |
 | ```--info```              | Supplies useful file information           |
-| ```--conch```             | Conformance checks file format where       |
-|                           | supported (partially implemented for DPX)  |
+| ```--conch```             | Conformance checks file format where supported (partially implemented for DPX)  |
 | ```--encode / --decode``` | Selected based on supplied file type       |
-| ```--hash```              | Important flag which computes hashes and   |
-|                           | embeds them in reversibility data stored   |
-|                           | in MKV wrapper allowing reversibility test |
-|                           | assurance when original sequences absent.  |
+| ```--hash```              | Important flag which computes hashes and embeds them in reversibility data stored in MKV wrapper allowing reversibility test assurance when original sequences absent.  |
 | ```--coherency```         | Ensures package and content are coherent   |
 |                           | eg, sequence gap checks and audio duration |
 |                           | matches image sequence duration            |
