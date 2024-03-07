@@ -119,4 +119,4 @@ To review your licence details you can use this command:
 rawcooked --show-license
 ```
 
-You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To find out more please contact Media Area by email on [info@mediaarea.net](mailto:info@mediaarea.net)
+You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To find out about more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
