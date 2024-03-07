@@ -1,11 +1,17 @@
 # RAWcooked User Manual
 
-## Preservation standard encoding
+## Encoding
 
 ```
 rawcooked --all <folder> / <file>
 ```
   
+When using the `RAWcooked` tool:  
+- encodes an image sequence by supplying the folder path to the sequence, or by supplying the path to a media file within your sequence folder
+- encodes with the FFV1 video codec all single-image files or video files in the folder path/folder containing the file
+- encodes with the FLAC audio codec all audio files in the folder  
+- muxes these into a Matroska container (.mkv)
+
 To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
   
 | Commands with --all       | Description                                |
@@ -27,27 +33,24 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--check_padding```     | Runs padding checks for DPX files that do  |
 |                           | not have zero padding. Ensures additional  |
 |                           | padding data is stored in reversibility    |
-|                           | file for perfect restoration of the DPX    |
+|                           | file for perfect restoration of the DPX.   |
+|                           | Can be time consuming.                     |
 | ```--accept-gaps```       | Where gaps in a sequence are found this    |
 |                           | flag ensures the encoding completes        |
 |                           | successfully. If you require that gaps     |
 |                           | are not encoded then follow the ```--all```|
 |                           | command with ```--no-accept-gaps```        |
   
-  
-## Encode
-
-### Simple folder encoding
-
+If you do not require all of these flags you can build your own command with just the flags you prefer, for exmaple:
 ```
-rawcooked <folder>
+rawcooked --info --conch --encode --hash --check --no-accept-gap <folder> / <file>
 ```
 
-The `RAWcooked` tool
+For more information about all the available flags in RAWcooked please visit the help page:
+```
+rawcooked --help / -h
+```
 
-- encodes with the FFV1 video codec all single-image files in the folder
-- encodes with the FLAC audio codec all audio files in the folder
-- muxes these into a Matroska container (.mkv)
 
 The filenames of the single-image files must end with a numbered sequence. `RAWcooked` will generate the regular expression (regex) to parse in the correct order all the frames in the folder. 
 
@@ -67,19 +70,7 @@ This behaviour could help to manage different use cases, according to local pref
 
 Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, so users may have to request extended track allowance as required.
 
-### Simple file encoding
 
-```
-rawcooked <file>
-```
-
-The file contains RAW data (e.g. it is a .dpx or .wav file). The `RAWcooked` tool
-
-- encodes with the FFV1 video codec all single-image video files in the folder containing the given file
-- encodes with the FLAC audio codec all audio files in the folder containing the given file
-- muxes these into a Matroska container (.mkv).
-
-The filenames usually end with a numbered sequence. Enter one frame and the tool will generate the regex to parse all the frames in the folder.
 
 
 ## Decode
