@@ -107,9 +107,9 @@ The default `RAWcooked` license allows you to encode and decode without any addi
 | DPX 10-bit BE Filled A | FFV1 / Matroska |
 | PCM 48kHz 16-bit 2 channel in WAV, BWF, RF64, AIFF, AVI | FLAC / Matroska |
   
-`RAWcooked` is an open-source project and so the software can be built from binary, but to ensure long-term support for this project we ask you install this software using our guide and support the project with development sponsorship and by purchasing licence additions that support your file formats.
+`RAWcooked` is an open-source project and so the software can be built from binary, but to ensure long-term support and development for this project we ask you install this software using our simple [installation guidelines](https://mediaarea.net/RAWcooked/Download) and support the project with by purchasing licence additions to support your file formats, or by sponsorship of new feature development.
   
-When you purchase and additional licence you will need to update your software installation with the licence number supplied by Media Area.
+When you purchase an additional licence you will need to update your software installation with the new licence number, supplied by Media Area.
 ```
 rawcooked --store-license <value>
 ```
