@@ -14,8 +14,8 @@ Using the `RAWcooked` tool:
 - muxes these into a Matroska container (.mkv)
 - uses FFmpeg for this encoding process
   
-To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
-
+To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag. This flag concatenates several important flags into one ensuring lossless compression and assured reversibilty:  
+  
   
 | Flags                     | Description                                |
 | ------------------------- | ------------------------------------------ |
