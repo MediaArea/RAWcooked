@@ -70,7 +70,7 @@ Error: the reversibility file is becoming big | Error: undecodable file is becom
 This is caused by padding data that is not zeros and which must be written into your reversibility data file attachment for restoration to the DPX images when decoded. As this data can exceed FFmpeg's maximum attachment size limit of 1GB, this flag appends the attachment to the FFV1 Matroska file after encoding has completed. This feature is not backward compatible with `RAWcooked` software before version 21.09.
 
   
-## Decode
+## Decoding
 
 ```
 rawcooked --all <file>
@@ -80,8 +80,21 @@ The file supplied must be a Matroska container (.mkv) created by the `RAWcooked`
 
 ### For successful decoding
 
-For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures the the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
+For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures that the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
+  
+  
+## Capturing encoding and decoding logs
+  
+It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messagess, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands.
 
+MacOS/Linux: 
+```
+rawcooked --all <folder path> >> <log path> 2>&1 
+```
+Windows: 
+```
+rawcooked --all <folder path> 1> <log path> 2>&1 
+```
   
 ## Default licence and expansion
 
