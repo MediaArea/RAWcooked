@@ -25,7 +25,7 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--decode```            | Select decode when an FFV1 Matroska file is supplied |
 | ```--hash```              | Important flag which computes hashes and embeds them in reversibility data stored in MKV wrapper allowing reversibility test assurance when original sequences absent |
 | ```--coherency```         | Ensures package and content are coherent. Eg, sequence gap checks and audio duration matches image sequence duration |
-| ```--check```             | Checks that an encoded file can be decoded correctly. If input is raw content, after encoding it checks that output would be same as the input content. Whereas if input is compressed content, it checksthat output would be same as the original content where hashes are present |
+| ```--check```             | Checks that an encoded file can be decoded correctly. If input is raw content, after encoding it checks that output would be same as the input content. Whereas if input is compressed content, it checks that output would be same as the original content where hashes are present |
 | ```--check_padding```     | Runs padding checks for DPX files that do not have zero padding. Ensures additional padding data is stored in reversibility file for perfect restoration of the DPX. Can be time consuming  |
 | ```--accept-gaps```       | Where gaps in a sequence are found this flag ensures the encoding completes successfully. If you require that gaps are not encoded then follow the ```--all``` command with ```--no-accept-gaps``` |
 
