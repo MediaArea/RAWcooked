@@ -11,6 +11,7 @@ Using the `RAWcooked` tool:
 - encodes with the FFV1 video codec all single-image files or video files in the folder path/folder containing the file
 - encodes with the FLAC audio codec all audio files in the folder  
 - muxes these into a Matroska container (.mkv)
+- uses FFmpeg for this encoding process
 
 To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
   
@@ -57,6 +58,11 @@ This behaviour could help to manage different use cases, according to local pref
 
 Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, so users may have to request extended track allowance as required.
 
+If your encodings do not succeed and you receive these messages, then you will need to encode your image sequence with the additional flag ```--output-version 2```:
+```
+Error: the reversibility file is becoming big | Error: undecodable file is becoming too big
+```
+This is caused by padding data that is not zeros and which must be written into your reversibility data file attachment for restoration to the DPX images when decoded. As this data can exceed FFmpeg's maximum attachment size limit of 1GB, this flag appends the attachment to the FFV1 Matroska file after encoding has completed. This feature is not backward compatible with `RAWcooked` software before version 21.09.
 
 ## Decode
 
@@ -64,6 +70,10 @@ Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, 
 rawcooked --all <file>
 ```
 
-The file is a Matroska container (.mkv). The `RAWcooked` tool decodes back the video and the audio of file to its original formats.  All metadata accompanying the original data are preserved **bit-by-bit**.
+The file supplied must be a Matroska container (.mkv) created by the `RAWcooked` software. The `RAWcooked` tool decodes the video, audio and any attachments within the file to its original format.  All metadata accompanying the original data are preserved **bit-by-bit**.
+
+### For successful decoding
 
 For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures the the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
+
+
