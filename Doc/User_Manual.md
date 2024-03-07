@@ -6,7 +6,7 @@
 rawcooked --all <folder> / <file>
 ```
   
-When using the `RAWcooked` tool:  
+Using the `RAWcooked` tool:  
 - encodes an image sequence by supplying the folder path to the sequence, or by supplying the path to a media file within your sequence folder
 - encodes with the FFV1 video codec all single-image files or video files in the folder path/folder containing the file
 - encodes with the FLAC audio codec all audio files in the folder  
@@ -14,7 +14,7 @@ When using the `RAWcooked` tool:
 
 To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag which concatenates several important flags into one:  
   
-| Commands with --all       | Description                                |
+| Flags                     | Description                                |
 | ------------------------- | ------------------------------------------ |
 | ```--info```              | Supplies useful file information           |
 | ```--conch```             | Conformance checks file format where supported (partially implemented for DPX) |
@@ -22,7 +22,7 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--decode```            | Select decode when an FFV1 Matroska file is supplied |
 | ```--hash```              | Important flag which computes hashes and embeds them in reversibility data stored in MKV wrapper allowing reversibility test assurance when original sequences absent |
 | ```--coherency```         | Ensures package and content are coherent. Eg, sequence gap checks and audio duration matches image sequence duration |
-| ```--check```             | Checks that an encoded file can be decoded correctly. Requires hashes to be present for checking compressed content |
+| ```--check```             | Checks that an encoded file can be decoded correctly. If input is raw content, after encoding it checks that output would be same as the input content. Whereas if input is compressed content, it checksthat output would be same as the original content where hashes are present |
 | ```--check_padding```     | Runs padding checks for DPX files that do not have zero padding. Ensures additional padding data is stored in reversibility |
 |                           | file for perfect restoration of the DPX. Can be time consuming  |
 | ```--accept-gaps```       | Where gaps in a sequence are found this flag ensures the encoding completes successfully. If you require that gaps are not encoded then follow the ```--all``` command with ```--no-accept-gaps``` |
@@ -37,6 +37,7 @@ For more information about all the available flags in RAWcooked please visit the
 rawcooked --help / -h
 ```
 
+### For successful encoding
 
 The filenames of the single-image files must end with a numbered sequence. `RAWcooked` will generate the regular expression (regex) to parse in the correct order all the frames in the folder. 
 
@@ -57,12 +58,12 @@ This behaviour could help to manage different use cases, according to local pref
 Note that maximum permitted video tracks is encoded in the `RAWcooked` licence, so users may have to request extended track allowance as required.
 
 
-
-
 ## Decode
 
 ```
-rawcooked <file>
+rawcooked --all <file>
 ```
 
 The file is a Matroska container (.mkv). The `RAWcooked` tool decodes back the video and the audio of file to its original formats.  All metadata accompanying the original data are preserved **bit-by-bit**.
+
+For the best decoding experience you should always ensure you encode with the ```--all``` command which includes hashes within the reversibility data of the encoded Matroska file. This ensures the the decoded files can be compared to the original source file hashes, ensuring bit perfect reversibility.
