@@ -106,7 +106,7 @@ The default `RAWcooked` license allows you to encode and decode without any addi
 | DPX 10-bit BE Filled A | FFV1 / Matroska |
 | PCM 48kHz 16-bit 2 channel in WAV, BWF, RF64, AIFF, AVI | FLAC / Matroska |
   
-`RAWcooked` is an open-source project and so the software can be built from binary, but to ensure long-term support and development for this project we ask you install this software using our simple [installation guidelines](https://mediaarea.net/RAWcooked/Download) and support the project with by purchasing licence additions to support your file formats, or by sponsorship of new feature development.
+`RAWcooked` is an open-source project and so the software can be built from binary, but to ensure long-term support and development for this project we ask you install this software using our simple [installation guidelines](https://mediaarea.net/RAWcooked/Download) and support the project by purchasing licence additions to support your file formats, or by sponsorship of new feature development.
   
 When you purchase an additional licence you will need to update your software installation with the new licence number, supplied by Media Area.
 ```
@@ -117,15 +117,15 @@ To review your licence details you can use this command:
 ```
 rawcooked --show-license
 ```
-
-You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To issue a sublicence to be loaned to a third party company supplying RAWcooked files to you:  
+  
+You may purchase a sublicence from Media Area which can be loaned to third party suppliers for the creation of assets for the purchaser's use. To issue a sublicence that can be loaned to a third party company supplying RAWcooked files to you:  
 ```
 --sublicense <value>
 ```
-The value entry would be your own unique number.  To set an expiry date, if you were to create this licence the beginning of May for example:
+The value entry would be your own unique number, and to set a unique expiry date:
 ```
 --sublicense-dur 0
 ```
-This would create a licence that would last until the end of May. The default value is 1, which would provide an active licence until the end of the following month of issue.  
+This would create a licence that would last until the end of May if created at the beginning of that month. The default value is 1, which would provide an active licence until the end of the following month of issue.  
   
-To find out about more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
+To find out more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
