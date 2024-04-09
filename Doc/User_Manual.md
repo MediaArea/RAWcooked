@@ -118,9 +118,7 @@ To review your licence details you can use this command:
 rawcooked --show-license
 ```
 
-You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use.  
-  
-To issue a sublicence to be loan to a third party company for one month:
+You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To issue a sublicence to be loaned to a third party company supplying RAWcooked files to you:  
 ```
 --sublicense <value>
 ```
