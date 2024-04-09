@@ -126,6 +126,6 @@ The value entry would be your own unique number, and to set a unique expiry date
 ```
 --sublicense-dur 0
 ```
-This would create a licence that would last until the end of May if created at the beginning of that month. The default value is 1, which would provide an active licence until the end of the following month of issue.  
+This would create a licence that would last until the of the current month. The default value is 1, which would provide an active licence until the end of the following month of issue.  
   
 To find out more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
