@@ -118,4 +118,16 @@ To review your licence details you can use this command:
 rawcooked --show-license
 ```
 
-You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use. To find out about more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
+You may purchase a sublicence from Media Area which can be loaned to third party suppliers in the creation of assets for the purchaser's use.  
+  
+To issue a sublicence to be loan to a third party company for one month:
+```
+--sublicense <value>
+```
+The value entry would be your own unique number.  To set an expiry date, if you were to create this licence the beginning of May for example:
+```
+--sublicense-dur 0
+```
+This would create a licence that would last until the end of May. The default value is 1, which would provide an active licence until the end of the following month of issue.  
+  
+To find out about more about licences or any other feature development please contact Media Area - [info@mediaarea.net](mailto:info@mediaarea.net).
