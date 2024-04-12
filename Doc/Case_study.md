@@ -221,13 +221,13 @@ In recent years we have been encoding a mix of 2K and 4K of various bit depths, 
   
 Since running an increasing number of 4K sequences we find we have better '--all' encoding and parallel '--check' efficiency running just two parallel encodings at any given time. We recently ran a review of our 4K and 2K encoding timings. Below are some recent 4K DPX encoding times using RAWcooked's '--all' command with a maximum of two parallel encodings, and where we can assume another single '--check' run is underway from the server:  
   
-* Parallel 4K RGB 16-bit DPX (699.4 GB) - MKV duration 5:10 (639.8 GB) - encoding time 5:17:00 - MKV 8.5% smaller than DPX
-* Parallel 4K RGB 16-bit DPX (723.1 GB) - MKV duration 5:20 (648.9 GB) - encoding time 5:40:07 - MKV 10.25% smaller than DPX
-* Parallel 4K RGB 16-bit DPX (1078.7 GB) - MKV duration 9:56 (954.9 GB) - encoding time 7:49:20 - MKV 11.5% smaller than DPX
-* Parallel 4K RGB 12-bit DPX (796.3 GB) - MKV duration 9:47 (194.1 GB) - encoding time 5:13:22 - MKV 75.6% smaller than DPX **
-* Parallel 4K RGB 12-bit DPX (118.1 GB) - MKV duration 1:27 (87.1 GB) - encoding time 1:06:02 - MKV 26.3% smaller than DPX
-* Parallel 4K RGB 12-bit DPX (121.6 GB) - MKV duration 1:29 (87.3 GB) - encoding time 0:54:00 - MKV 28.2% smaller than DPX
-* Parallel 4K RGB 12-bit DPX (887.3 GB) - MKV duration 10:54 (208.7 GB) - encoding time 5:02:00 - MKV 76.5% smaller than DPX **
+* Parallel 4K RGB 16-bit DPX (699.4 GB) - MKV duration 5:10 (639.8 GB) - encoding time 5:17:00 - MKV 8.5% smaller than DPX  
+* Parallel 4K RGB 16-bit DPX (723.1 GB) - MKV duration 5:20 (648.9 GB) - encoding time 5:40:07 - MKV 10.25% smaller than DPX  
+* Parallel 4K RGB 16-bit DPX (1078.7 GB) - MKV duration 9:56 (954.9 GB) - encoding time 7:49:20 - MKV 11.5% smaller than DPX  
+* Parallel 4K RGB 12-bit DPX (796.3 GB) - MKV duration 9:47 (194.1 GB) - encoding time 5:13:22 - MKV 75.6% smaller than DPX **  
+* Parallel 4K RGB 12-bit DPX (118.1 GB) - MKV duration 1:27 (87.1 GB) - encoding time 1:06:02 - MKV 26.3% smaller than DPX  
+* Parallel 4K RGB 12-bit DPX (121.6 GB) - MKV duration 1:29 (87.3 GB) - encoding time 0:54:00 - MKV 28.2% smaller than DPX  
+* Parallel 4K RGB 12-bit DPX (887.3 GB) - MKV duration 10:54 (208.7 GB) - encoding time 5:02:00 - MKV 76.5% smaller than DPX **  
 ** Where the MKV is significantly smaller than the DPX then a black and while filter will have been applied to an RGB scan, as in these cases.  
   
 A separate 2K solo and parallel encoding test revealed much quicker encoding times for >10 minute sequences, again using the '--all' command and where we can assume another single '--check' run is underway:  
