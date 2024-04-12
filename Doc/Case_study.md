@@ -215,24 +215,28 @@ It decodes the FFV1 Matroska back to image sequence, checks the logs for ```Reve
 ---
 ## Conclusion
 
-We began using RAWcooked to convert 3 petabytes of 2K DPX sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space, which has saved thousands of pounds of additional magnetic storage tape purchases. Undoubtedly this software offers amazing financial incentives with all the benefits of open standards and open-source tools. It also creates a viewable video file of an otherwise invisible DPX scan, so useful for viewing the unseen technology of film.  We plan to begin testing RAWcooked encoding of TIFF image sequences shortly with the intention of moving DCDM image sequences to FFV1. Today, our workflow runs 24/7 performing automated encoding of business-as-usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered, usually indicated when an image sequences doesn't make it to our Digital Preservation Infrastructure.  Most often this is caused by a new image sequence 'flavour' that we do not have covered by our RAWcooked licence, or sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding a specific DPX scan - there can be many differences found in DPX metadata depending on the scanning technology. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up of reported errors will indicate repeated problems.  
+We began using RAWcooked to convert 3 petabytes of 2K DPX sequence data to FFV1 Matroska for our *Unlocking Film Heritage* project. This lossless compression to FFV1 has saved us an estimated 1600TB of storage space, which has saved thousands of pounds of additional magnetic storage tape purchases. Undoubtedly this software offers amazing financial incentives with all the benefits of open standards and open-source tools. It also creates a viewable video file of an otherwise invisible DPX scan, so useful for viewing the unseen technology of film.  We plan to begin testing RAWcooked encoding of TIFF image sequences shortly with the intention of moving DCDM image sequences to FFV1. Today, our workflow runs 24/7 performing automated encoding of business-as-usual DPX sequences with relatively little overview.  There is a need for manual intervention when repeated errors are encountered. This is usually indicated when an image sequences doesn't make it to our Digital Preservation Infrastructure.  Most often this is caused by a new image sequence 'flavour' that we do not have covered by our RAWcooked licence, or sometimes it can indicate a problem with either RAWcooked or FFmpeg file encoding a specific DPX scan - there can be many differences found in DPX metadata depending on the scanning technology. Where errors are found by our automations these are reported to an error log named after the image seqeuence, a build up of reported errors will indicate repeated problems.  
   
-In recent years we have been encoding a larger variety of DPX sequences, a mix of 2K and 4K of various bit depths has seen our licence expand. Between February 2023 and February 2024 the BFI collected data about its business-as-usual encoding capturing details of 1020 DPX encodings to CSV. A Python script was written to capture data about these encoded files, including sequence pixel size, colourspace, bits, total byte size of the image sequence and completed FFV1 Matroska.  
+In recent years we have been encoding a mix of 2K and 4K of various bit depths, seeing our licence expand. When we solely encoded 2K sequences we found we could run multiple parallel processes with good efficiency, seeing 32 concurrent encodings running at once. This was before we implemented the '--all' command which calculates checksums adding them to the reversibility data and runs a checksum comparison of the Matroska after encoding has completed which expands the encoding process. We saw our concurrency drop to accomodate the more detailed encoding process, particularly as our workflow introduced a final '--check' pass against the Matroska file that automated the deletion of the DPX sequence when successful.  
   
-From 1020 total DPX sequences successfully encoded to FFV1 Matroska:  
-* 140 were 2K or smaller / 880 were 4K
-* 222 were Luma Y / 798 were RGB
-* 143 were 10-bit / 279 12-bit / 598 16-bit
-* The largest reduction in size of any FFV1 was 88% smaller than the source DPX (the largest reductions were from 10/12-bit sequences, with RGB colorspace that had black and white filters applied)  
-* The smallest reduction saw the FFV1 just 0.3% smaller than the DPX (the smallest reductions were from RGB and Y-Luma 16-bit image sequences scanned full frame)  
-* Across all 1020 encoded sequences the average size of the finished FFV1 was 29% smaller than the source image sequence  
+Since running an increasing number of 4K sequences we find we have better '--all' encoding and parallel '--check' efficiency running just two parallel encodings at any given time. We recently ran a review of our 4K and 2K encoding timings. Below are some recent 4K DPX encoding times using RAWcooked's '--all' command with a maximum of two parallel encodings, and where we can assume another single '--check' run is underway from the server:  
   
-A small group of sequences had their RAWcooked encoding times recorded, revealing an average of 24 hours per sequence. The sequences all had finished MKV durations between 5 and 10 minutes and were mostly 4K 16-bit sequences. The fastest encodes took just 7 hours with some taking upto 46 hours. There appears to be no cause for these variations in the files themselves and so we must assume that general network activity and/or amount of parallel processes running have influenced these variations.  
+* Parallel 4K RGB 16-bit DPX (699.4 GB) - MKV duration 5:10 (639.8 GB) - encoding time 5:17:00 - MKV 8.5% smaller than DPX
+* Parallel 4K RGB 16-bit DPX (723.1 GB) - MKV duration 5:20 (648.9 GB) - encoding time 5:40:07 - MKV 10.25% smaller than DPX
+* Parallel 4K RGB 16-bit DPX (1078.7 GB) - MKV duration 9:56 (954.9 GB) - encoding time 7:49:20 - MKV 11.5% smaller than DPX
+* Parallel 4K RGB 12-bit DPX (796.3 GB) - MKV duration 9:47 (194.1 GB) - encoding time 5:13:22 - MKV 75.6% smaller than DPX *
+* Parallel 4K RGB 12-bit DPX (118.1 GB) - MKV duration 1:27 (87.1 GB) - encoding time 1:06:02 - MKV 26.3% smaller than DPX
+* Parallel 4K RGB 12-bit DPX (121.6 GB) - MKV duration 1:29 (87.3 GB) - encoding time 0:54:00 - MKV 28.2% smaller than DPX
+* Parallel 4K RGB 12-bit DPX (887.3 GB) - MKV duration 10:54 (208.7 GB) - encoding time 5:02:00 - MKV 76.5% smaller than DPX *
   
-A separate 2K solo and parallel encoding test revealed much quicker encoding times from our servers:  
-* Solo 341GB 2K RGB 12-bit sequence took 80 minutes to complete RAWcooked encoding.  MKV was 22.5% smaller than DPX. The MKV was 16 minutes and 16 seconds.  
-* Solo 126GB 2K RGB 16-bit sequence tool 62 minutes to complete.  MKV was 30.6% smaller than the DPX. The duration of the MKV was 11 mins 42 secs.  
-* Parallel 367GB/325GB 2K RGB 16-bit sequences took 160 minutes/140 minutes to complete.  MKVs were 27.6% and 24.4% smaller than their DPX respectively. The durations were 11 mins 34 secs, and 10 mins 15 secs.  
+Note *: Where the MKV is significantly smaller than the DPX we can assume there is either lots of spare padding data in the file, or a b/w filter has been applied to an RGB scan.  
+  
+A separate 2K solo and parallel encoding test revealed much quicker encoding times for >10 minute sequences, again using the '--all' command and where we can assume another single '--check' run is underway:  
+  
+* Solo 2K RGB 12-bit DPX (341 GB) - MKV duration 16:16 - encoding time 1:20:00 - MKV 22.5% smaller than DPX
+* Solo 2K RGB 16-bit DPX (126 GB) - MKV duration 11:42 - encoding time 1:02:00 - MKV was 30.6% smaller than the DPX  
+* Parallel 2K RGB 16-bit DPX (367 GB) - MKV duration 11:34 - encoding time 2:40:00 - MKV was 27.6% smaller than the DPX
+* Parallel 2K RGB 16-bit DPX (325 GB) - MKV duration 10:15 - encoding time 2:21:00 - MKV was 24.4% smaller than the DPX
    
 ### <a name="tests">Useful test approaches</a>
   
