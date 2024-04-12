@@ -433,8 +433,8 @@ void dpx::ParseBuffer()
 
     // Computing which slice count is suitable
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
-    auto slice_x_Sav = slice_x;
-    if (Slice_Multiplier > 1)
+
+    if (Slice_Multiplier > 1 && !(DPX_Tested[Flavor].Info.Flags & BlockSpan))
     {
         // Temporary limitation because the decoder does not support yet the merge of data from 2 slices in one DPX block
         for (; slice_x; slice_x--)
@@ -444,13 +444,7 @@ void dpx::ParseBuffer()
         }
         if (slice_x == 0)
         {
-            if ((DPX_Tested[Flavor].Info.Flags & BlockSpan))
-            {
-                Flavor |= (uint64_t)1 << (int)feature::BlockSpan;
-                slice_x = slice_x_Sav;
-            }
-            else
-                Unsupported(unsupported::PixelBoundaries);
+            Unsupported(unsupported::PixelBoundaries);
         }
     }
     slice_y = slice_x;
