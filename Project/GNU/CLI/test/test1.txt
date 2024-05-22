@@ -252,6 +252,7 @@ Formats/TIFF/Flavors/Raw_Y_2_U/flower-minisblack-02.tif fail
 Formats/TIFF/Flavors/Raw_Y_4_U/flower-minisblack-04.tif fail
 Formats/TIFF/Flavors/Raw_Y_6_U/flower-minisblack-06.tif fail
 Formats/TIFF/Flavors/Raw_Y_8_U/flower-minisblack-08.tif pass
+Formats/TIFF/Flavors/Raw_Y_8_U/Raw_Y_8_U_LE.tif pass
 Formats/TIFF/Flavors/Raw_Y_10_U/flower-minisblack-10.tif fail
 Formats/TIFF/Flavors/Raw_Y_12_U/flower-minisblack-12.tif fail
 Formats/TIFF/Flavors/Raw_Y_14_U/flower-minisblack-14.tif fail
