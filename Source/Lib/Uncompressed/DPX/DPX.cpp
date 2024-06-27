@@ -300,6 +300,7 @@ void dpx::ParseBuffer()
     uint64_t VersionNumberBig = Get_B4();
     switch (VersionNumberBig)
     {
+    case 0x00000000LL: // Not conform to spec but it exists and it does not hurt
     case 0x56312E30LL:
     case 0x56322E30LL:
     case 0x76312E30LL:
@@ -638,10 +639,12 @@ void dpx::ConformanceCheck()
     uint32_t OffsetToImageData = Get_X4();
     if (OffsetToImageData < 1664 || OffsetToImageData > Buffer.Size())
         Invalid(invalid::OffsetToImageData);
-    uint64_t VersionNumber = Get_B8() >> 24;
-    switch (VersionNumber)
+    uint64_t VersionNumberBig = Get_B4();
+    switch (VersionNumberBig)
     {
-    case 0x76312E3000LL:
+    case 0x00000000LL:
+    case 0x76312E30LL:
+    case 0x76322E30LL:
         Invalid(invalid::VersionNumber);
     default:;
     }
