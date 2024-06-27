@@ -212,6 +212,7 @@ Formats/DPX/Flavors/Y_16_FilledA_BE/0000001.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_BE/FFmpeg_gray16be.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_LE/FFmpeg_gray16le.dpx pass
 Formats/DPX/Conformance/0004_OffsetToImageData/0004_OffsetToImageData_000000.dpx fail
+Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_null.dpx pass
 Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_v.dpx pass
 Formats/EXR/Features/Compressed/PXR24/AllHalfValues.exr fail
 Formats/EXR/Flavors/RGB_16F/Color_Test_Chart_LogC_400ASA_3200k.cpu.00.exr pass
