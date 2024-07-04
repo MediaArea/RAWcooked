@@ -358,6 +358,7 @@ void dpx::ParseBuffer()
     bool IsAltern = Info.BitDepth == 10
                  && Info.ColorSpace != colorspace::RGB
                  && (!memcmp(Buffer.Data() +  160, "Lasergraphics Inc.", 18) // Creator
+                  || !memcmp(Buffer.Data() +  160, "DIAMANT-Film", 12) // Creator
                   || !memcmp(Buffer.Data() + 1556, "Scanity", 7)); // Input device name
 
     if (IndustryHeaderSize && InputInfo)
