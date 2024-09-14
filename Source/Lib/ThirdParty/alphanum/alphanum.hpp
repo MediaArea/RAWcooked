@@ -24,7 +24,7 @@
 */
 
 /* $Header: /code/doj/alphanum.hpp,v 1.3 2008/01/28 23:06:47 doj Exp $ */
-/* Modifiedz with inline keyword by Jerome Martine */
+/* Modified with inline keyword by Jerome Martinez */
 
 #include <cassert>
 #include <functional>
