@@ -359,13 +359,16 @@ void matroska::ParseBuffer()
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
         if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024 && Buffer_Offset < Buffer.Size()) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
         {
-            FileMap->Remap();
+            FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
+            if (OpenStyle == filemap::method::mmap)
+            {
             if (ReversibilityData)
                 ReversibilityData->SetBaseData(Buffer.Data());
             for (const auto& TrackInfo_Current : TrackInfo)
                 if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
                     TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
+            }
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
 
@@ -376,7 +379,7 @@ void matroska::ParseBuffer()
             Buffer_Offset = Cluster_Offset;
             Cluster_Level = (size_t)-1;
 
-            FileMap->Remap();
+            FileMap->Remap(Buffer_Offset, 256 * 1024 * 1024);
             Buffer = *FileMap;
             if (ReversibilityData)
                 ReversibilityData->SetBaseData(Buffer.Data());
@@ -850,6 +853,19 @@ void matroska::Segment_Cluster()
             Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
     if (ReversibilityData && !FrameWriter_Template->Compound)
         InitOutput_Find();
+
+    Actions[Action_Hash] = false;
+
+    if (!FileMap2)
+    {
+        FileMap2 = FileMap;
+        if (OpenStyle != filemap::method::mmap && OpenName)
+        {
+            FileMap = new filemap;
+            FileMap->Open_ReadMode(*OpenName, OpenStyle, 0, 256 * 1024 * 1024);
+            Buffer = *FileMap;
+        }
+    }
 }
 
 //---------------------------------------------------------------------------

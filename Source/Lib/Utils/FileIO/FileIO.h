@@ -23,19 +23,30 @@ public:
                                 ~filemap() { Close(); }
 
     // Actions
-    int                         Open_ReadMode(const char* FileName);
-    int                         Open_ReadMode(const string& FileName) { return Open_ReadMode(FileName.c_str()); }
+    enum class method
+    {
+        mmap,
+        fstream,
+        fopen,
+        open,
+        #if defined(_WIN32) || defined(_WINDOWS)
+        createfile,
+        #endif //defined(_WIN32) || defined(_WINDOWS)
+    };
+    int                         Open_ReadMode(const char* FileName, method NewMethod = {}, size_t Begin = {}, size_t End = {});
+    int                         Open_ReadMode(const string& FileName, method NewMethod = {}, size_t Begin = {}, size_t End = {}) { return Open_ReadMode(FileName.c_str(), NewMethod, Begin, End); }
     bool                        IsOpen() { return Private == (decltype(Private))-1 ? false : true; }
-    int                         Remap();
+    int                         Remap(size_t Begin = 0, size_t End = 0);
     int                         Close();
 
 private:
     #if defined(_WIN32) || defined(_WINDOWS)
     void*                       Private = (void*)-1;
-    void*                       Private2 = (void*)-1;
     #else //defined(_WIN32) || defined(_WINDOWS)
     int                         Private = (int)-1;
     #endif //defined(_WIN32) || defined(_WINDOWS)
+    void*                       Private2 = (void*)-1;
+    method                      Method = {};
 };
 
 class file

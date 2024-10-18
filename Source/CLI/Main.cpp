@@ -481,7 +481,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 }
 
 //---------------------------------------------------------------------------
-int ParseFile_Compressed(parse_info& ParseInfo)
+int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
 {
     // Init
     string OutputDirectoryName;
@@ -522,6 +522,8 @@ int ParseFile_Compressed(parse_info& ParseInfo)
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
         M->NoOutputCheck = NoOutputCheck;
+        M->OpenName = FileOpenName;
+        M->OpenStyle = Global.FileOpenMethod;
         if (ParseInfo.ParseFile_Input(*M))
         {
             ReturnValue = 1;
@@ -591,7 +593,7 @@ int ParseFile(size_t Files_Pos)
         return 1;
 
     // Compressed content
-    if (int Value = ParseFile_Compressed(ParseInfo))
+    if (int Value = ParseFile_Compressed(ParseInfo, ParseInfo.Name))
         return Value;
     if (ParseInfo.IsDetected)
         return 0;
@@ -755,6 +757,7 @@ int main(int argc, const char* argv[])
         if (!Value)
         {
             // Configure for a 2nd pass
+            auto FileOpenName = Global.OutputFileName;
             ParseInfo.Name = NULL;
             Global.OutputFileName = Global.Inputs[0];
             if (!Global.Actions[Action_Hash]) // If hashes are present in the file, output is checked by using hashes
@@ -772,7 +775,7 @@ int main(int argc, const char* argv[])
             // Parse (check mode)
             Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
             Global.Actions.set(Action_Decode, false); // Override config
-            Value = ParseFile_Compressed(ParseInfo);
+            Value = ParseFile_Compressed(ParseInfo, &FileOpenName);
             if (!Value && !ParseInfo.IsDetected)
             {
                 cout << '\n' << "Error: " << Global.OutputFileName << endl;

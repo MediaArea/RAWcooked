@@ -76,7 +76,9 @@ public:
     // Config
     bitset<Action_Max>          Actions;
     hashes*                     Hashes = nullptr;
-    string*                     FileName = nullptr;
+    const string*               FileName = nullptr;
+    const string*               OpenName = nullptr; // TODO: merge with FileName
+    filemap::method             OpenStyle = {};
 
     // Parse
     bool                        Parse(const buffer_view& Buffer, size_t FileSize = (size_t)-1) { return Parse(nullptr, Buffer, FileSize); }
@@ -95,6 +97,7 @@ protected:
     virtual void                ParseBuffer() = 0;
     virtual void                BufferOverflow() = 0;
     filemap*                    FileMap;
+    filemap*                    FileMap2;
     size_t                      FileSize;
     buffer_view                 Buffer;
     size_t                      Buffer_Offset;

@@ -243,6 +243,40 @@ int global::SetHash(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetFileOpenMethod(const char* Value)
+{
+    if (strcmp(Value, "mmap") == 0)
+    {
+        FileOpenMethod = filemap::method::mmap;
+        return 0;
+    }
+    if (strcmp(Value, "fstream") == 0)
+    {
+        FileOpenMethod = filemap::method::fstream;
+        return 0;
+    }
+    if (strcmp(Value, "fopen") == 0)
+    {
+        FileOpenMethod = filemap::method::fopen;
+        return 0;
+    }
+    if (strcmp(Value, "open") == 0)
+    {
+        FileOpenMethod = filemap::method::open;
+        return 0;
+    }
+    #if defined(_WIN32) || defined(_WINDOWS)
+    if (strcmp(Value, "createfile") == 0)
+    {
+        FileOpenMethod = filemap::method::createfile;
+        return 0;
+    }
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    cerr << "Error: unknown io value '" << Value << "'." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
     if (int ReturnValue = SetInfo(Value))
@@ -432,6 +466,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     IgnoreLicenseKey = !License.IsSupported_License();
     SubLicenseId = 0;
     SubLicenseDur = 1;
+    FileOpenMethod = filemap::method::mmap;
     ShowLicenseKey = false;
     StoreLicenseKey = false;
     DisplayCommand = false;
@@ -746,6 +781,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
             Inputs.push_back(argv[i]);
             NextFileNameIsOutput = true;
             if (auto Value = SetAcceptFiles())
+                return Value;
+        }
+        else if (strcmp(argv[i], "--io") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetFileOpenMethod(argv[++i]);
+            if (Value)
                 return Value;
         }
         else if (!strcmp(argv[i], "-framerate"))
