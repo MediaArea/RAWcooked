@@ -11,8 +11,11 @@
 #include "Lib/Utils/FileIO/FileIO.h"
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
+    #include <stdio.h>
+    #include <fcntl.h>
     #include <io.h> // File existence
     #include <direct.h> // Directory creation
     #define access _access_s
@@ -29,9 +32,105 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName)
+struct private_buffered
+{
+    union f
+    {
+        FILE*           File;
+        ifstream*       Ifstream;
+        int             Int;
+        #if defined(_WIN32) || defined(_WINDOWS)
+        HANDLE          Handle;
+        #endif
+    };
+    f                   F;
+    size_t              Data_Shift = 0;
+    size_t              MaxSize = 0;
+};
+
+//---------------------------------------------------------------------------
+int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, size_t End)
 {
     Close();
+
+    if (NewStyle != method::mmap)
+    {
+        Method = NewStyle;
+        private_buffered* P = new private_buffered;
+        P->MaxSize = End - Begin;
+        size_t FileSize;
+
+        switch (Method)
+        {
+        default: // case style::fstream:
+        {
+            auto F = new ifstream(FileName, ios::binary);
+            F->seekg(0, F->end);
+            FileSize = F->tellg();
+            F->seekg(Begin, F->beg);
+            P->F.Ifstream = F;
+            break;
+        }
+        case method::fopen:
+        {
+            struct stat Fstat;
+            if (stat(FileName, &Fstat))
+                return 1;
+            FileSize = Fstat.st_size;
+            auto F = fopen(FileName, "rb");
+            P->F.File = F;
+            break;
+        }
+        case method::open:
+        {
+            struct stat Fstat;
+            if (stat(FileName, &Fstat))
+                return 1;
+            FileSize = Fstat.st_size;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            auto F = _open(FileName, _O_BINARY | _O_RDONLY | _O_SEQUENTIAL, _S_IREAD);
+            #else //defined(_WIN32) || defined(_WINDOWS)
+            auto F = open(FileName, O_RDONLY);
+            #endif //defined(_WIN32) || defined(_WINDOWS)
+            if (F == -1)
+                return 1;
+            P->F.Int = F;
+            break;
+        }
+        #if defined(_WIN32) || defined(_WINDOWS)
+        case method::createfile:
+        {
+            DWORD FileSizeHigh;
+            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+            auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
+            if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
+                && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
+            {
+                FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
+            }
+            else
+                return 1;
+            if (Begin)
+            {
+                LARGE_INTEGER GoTo;
+                GoTo.QuadPart = Begin;
+                if (!SetFilePointerEx(NewFile, GoTo, nullptr, 0))
+                    return 1;
+                P->Data_Shift = Begin;
+            }
+            P->F.Handle = NewFile;
+            break;
+        }
+        #endif //defined(_WIN32) || defined(_WINDOWS)
+        }
+
+        auto Buffer = new uint8_t[P->MaxSize];
+        P->Data_Shift -= P->MaxSize;
+        AssignBase(Buffer - P->Data_Shift, FileSize);
+        Private2 = (decltype(Private2))P;
+
+        return Remap(Begin, End);
+    }
 
     size_t NewSize;
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -99,11 +198,62 @@ inline int munmap_const(const void* addr, size_t length)
 #pragma GCC diagnostic pop
 #endif
 #endif
-int filemap::Remap()
+int filemap::Remap(size_t Begin, size_t End)
 {
     // Special case for 0-byte files
     if (Empty())
         return 0;
+
+    if (Method != method::mmap)
+    {
+        auto P = (private_buffered*)Private2;
+        auto Buffer = Data() + P->Data_Shift;
+        auto Buffer_MaxSize = P->MaxSize;
+        Begin -= P->Data_Shift;
+        if (!End)
+            End = Size();
+        End -= P->Data_Shift;
+        auto Buffer_Middle = Buffer + Begin;
+        auto Buffer_Middle_Size = Buffer_MaxSize - Begin;
+        memmove((void*)Buffer, (void*)Buffer_Middle, Buffer_Middle_Size);
+        P->Data_Shift += Begin;
+        AssignKeepSizeBase(Buffer - P->Data_Shift);
+        Buffer += Buffer_Middle_Size;
+        Buffer_MaxSize -= Buffer_Middle_Size;
+
+        switch (Method)
+        {
+        default: // case style::fstream:
+        {
+            auto F = P->F.Ifstream;
+            F->read((char*)Buffer, Buffer_MaxSize);
+            break;
+        }
+        case method::fopen:
+        {
+            auto F = P->F.File;
+            if (fread((char*)Buffer, Buffer_MaxSize, 1, F) != 1)
+                return 1;
+            break;
+        }
+        case method::open:
+        {
+            auto F = P->F.Int;
+            read(F, (void*)Buffer, Buffer_MaxSize);
+            break;
+        }
+        #if defined(_WIN32) || defined(_WINDOWS)
+        case method::createfile:
+        {
+            auto F = P->F.Handle;
+            ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0);
+            break;
+        }
+        #endif //defined(_WIN32) || defined(_WINDOWS)
+        }
+
+        return 0;
+    }
 
     // Close previous map
     if (Data())
