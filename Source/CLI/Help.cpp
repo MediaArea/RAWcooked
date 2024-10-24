@@ -138,6 +138,10 @@ ReturnValue Help(const char* Name)
         "       -n     Automatic no to prompts.\n"
         "              Assume no as answer to all prompts, and run non-interactively.\n"
         "\n"
+        "       --log-name value\n"
+        "              Set the name of the RAWcooked log file written after\n"
+        "              successful processing.\n"
+        "\n"
         "   ACTIONS\n"
         "       --all  Same as --info --conch --decode --encode --hash --coherency\n"
         "              --check-padding --check --accept-gaps (see below)\n"
@@ -384,4 +388,16 @@ ReturnValue Version()
   printf("%s %s\n", LibraryName, LibraryVersion);
 
   return ReturnValue_OK;
+}
+
+//---------------------------------------------------------------------------
+const char* GetLibraryName()
+{
+    return LibraryName;
+}
+
+//---------------------------------------------------------------------------
+const char* GetLibraryVersion()
+{
+    return LibraryVersion;
 }
