@@ -79,10 +79,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         Global.VideoInputOptions["r"] = FrameRate->second;
 
     string Command;
-    if (Global.BinName.empty())
-        Command += "ffmpeg";
-    else
-        Command += Global.BinName;
+    Command += Global.BinName;
     Command += " -xerror";
 
     // Disable stdin for ffmpeg
@@ -281,14 +278,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     }
     for (size_t i = 0; i < Attachments.size(); i++)
     {
-        // Info
-        if (!Global.Quiet)
-        {
-            if (!i)
-                cerr << "Attachments:" << endl;
-            cerr << "  " << Attachments[i].FileName_Out.substr(Attachments[i].FileName_Out.find_first_of("/\\")+1) << endl;
-        }
-
         if (!Global.Actions[Action_Version2])
         {
             stringstream t;
