@@ -96,6 +96,7 @@ static const char* MessageText[] =
     "ditto key",
     "ditto key is set to \"same as the previous frame\" but header data differs",
     "number of image elements",
+    "packing field value",
 };
 
 enum code : uint8_t
@@ -106,6 +107,7 @@ enum code : uint8_t
     DittoKey,
     DittoKey_NotSame,
     NumberOfElements,
+    Packing,
     Max
 };
 
@@ -134,6 +136,7 @@ enum class packing : uint8_t
     Packed,
     FilledA,
     FilledB,
+    Pack3,
 };
 enum flags : uint8_t
 {
@@ -223,6 +226,8 @@ struct dpx_also DPX_Also[] =
     { { colorspace::Y        ,  8, endianness::BE, packing::FilledA }, dpx::flavor::Raw_Y_8                   },
     { { colorspace::Y        , 16, endianness::LE, packing::FilledA }, dpx::flavor::Raw_Y_16_LE               },
     { { colorspace::Y        , 16, endianness::BE, packing::FilledA }, dpx::flavor::Raw_Y_16_BE               },
+    { { colorspace::Y        , 16, endianness::LE, packing::Pack3   }, dpx::flavor::Raw_Y_16_LE               },
+    { { colorspace::Y        , 16, endianness::BE, packing::Pack3   }, dpx::flavor::Raw_Y_16_BE               },
 };
 
 //***************************************************************************
@@ -670,7 +675,10 @@ void dpx::ConformanceCheck()
     bool HasEncoding = false;
     for (uint16_t i = 0; i < NumberOfElements; i++)
     {
-        uint32_t Encoding = Get_X4();
+        uint16_t Packing = Get_X2();
+        if (Packing > (uint16_t)packing::FilledB)
+            Invalid(invalid::Packing);
+        uint16_t Encoding = Get_X2();
         if (!HasEncoding && Encoding)
             HasEncoding = true;
         uint32_t OffsetToData = Get_X4();
