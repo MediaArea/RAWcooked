@@ -321,6 +321,18 @@ int global::SetOption(const char* argv[], int& i, int argc)
             License.Encoder(encoder::FFV1);
             return 0;
         }
+        if (!strncmp(argv[i], "ffv1_vulkan", 11) && (!argv[i][11] || (argv[i][11] == ':' && argv[i][12] >= '0' && argv[i][12] <= '9' && !argv[i][13])))
+        {
+            OutputOptions["c:v"] = "ffv1_vulkan";
+            if (argv[i][11])
+                OutputOptions["init_hw_device"] = "\"vulkan=vk" + string(argv[i] + 11) + '\"';
+            else
+                OutputOptions["init_hw_device"] = "\"vulkan=vk:0\"";
+            OutputOptions["vf"] = "hwupload";
+            License.Encoder(encoder::FFV1);
+            License.Feature(feature::HwAccel);
+            return 0;
+        }
         return Error_NotTested(argv[i - 1], argv[i]);
     }
     if (!strcmp(argv[i], "-coder"))
