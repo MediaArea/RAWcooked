@@ -24,6 +24,7 @@ ENUM_BEGIN(feature)
     EncodingOptions,
     MultipleTracks,
     SubLicense,
+    HwAccel,
 ENUM_END(feature)
 
 //---------------------------------------------------------------------------
