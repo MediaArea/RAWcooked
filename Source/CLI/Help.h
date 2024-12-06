@@ -17,5 +17,7 @@
 ReturnValue Help(const char* Name);
 ReturnValue Usage(const char* Name);
 ReturnValue Version();
+const char* GetLibraryVersion();
+const char* GetLibraryName();
 
 #endif

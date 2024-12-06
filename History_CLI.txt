@@ -1,3 +1,12 @@
+Version 24.11, 2024-11-11
+-------------
+Cleanup of the output
+Add --log-name option for summary in a file at the end of the processing
+Support of DPX Y 10-bit from DIAMANT-Film
+Accept null bytes in DPX version
+Add TIFF 8-bit LE
+Fix wrong compute of max slice count with DPX having group of pixels
+
 Version 23.12, 2023-12-18
 -------------
 Support of DPX/Y/12-bit/Packed/BE

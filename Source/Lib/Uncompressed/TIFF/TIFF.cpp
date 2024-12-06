@@ -147,6 +147,12 @@ struct tiff_tested
             ;
     }
 };
+struct dpx_also
+{
+    tiff_tested                 Test;
+    tiff::flavor                Flavor;
+};
+
 
 struct tiff_tested TIFF_Tested[] =
 {
@@ -155,11 +161,16 @@ struct tiff_tested TIFF_Tested[] =
     { colorspace::RGB     , 16, endianness::BE, 6 }, // 1x3x16-bit in 3x16-bit
     { colorspace::RGBA    ,  8, endianness::LE, 4 }, // 1x4x 8-bit in 4x 8-bit
     { colorspace::RGBA    , 16, endianness::LE, 8 }, // 1x4x16-bit in 4x16-bit
-    { colorspace::Y       ,  8, endianness::BE, 1 }, // 1x4x 8-bit in 1x 8-bit
+    { colorspace::Y       ,  8, endianness::LE, 1 }, // 1x4x 8-bit in 1x 8-bit
     { colorspace::Y       , 16, endianness::LE, 2 }, // 1x1x16-bit in 1x16-bit
     { colorspace::Y       , 16, endianness::BE, 2 }, // 1x1x16-bit in 1x16-bit
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), IncoherencyMessage);
+
+struct dpx_also TIFF_Also[] =
+{
+    { { colorspace::Y        ,  8, endianness::BE }, tiff::flavor::Raw_Y_8_U                 },
+};
 
 //***************************************************************************
 // TIFF
@@ -605,6 +616,17 @@ void tiff::ParseBuffer()
         {
             Flavor = (decltype(Flavor))(&TIFF_Tested_Item - TIFF_Tested);
             break;
+        }
+    }
+    if (Flavor == (decltype(Flavor))-1)
+    {
+        for (const auto& TIFF_Also_Item : TIFF_Also)
+        {
+            if (TIFF_Also_Item.Test == Info)
+            {
+                Flavor = (decltype(Flavor))TIFF_Also_Item.Flavor;
+                break;
+            }
         }
     }
     if (Flavor == (decltype(Flavor))-1)

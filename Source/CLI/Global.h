@@ -15,6 +15,7 @@
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"
 #include <map>
+#include <set>
 #include <vector>
 #include <string>
 #include <thread>
@@ -34,6 +35,7 @@ public:
     string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
     string                      FrameMd5FileName;
+    string                      LogFileName;
     string                      BinName;
     string                      LicenseKey;
     uint64_t                    SubLicenseId;
@@ -52,11 +54,13 @@ public:
     // Intermediate info
     size_t                      Path_Pos_Global;
     vector<string>              Inputs;
+    set<int>                    LogFile_IgnorePos;
     license                     License;
     user_mode                   Mode = Ask;
     hashes                      Hashes;
     errors                      Errors;
     ask_callback                Ask_Callback = nullptr;
+    string*                     Log = nullptr;
 
     // Conformance check intermediary info
     vector<double>              Durations;
@@ -100,6 +104,7 @@ public:
     int SetFrameMd5An(bool Value);
     int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
+    int SetLogFileName(const char* FileName);
     int SetAll(bool Value);
 
 private:

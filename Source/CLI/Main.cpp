@@ -8,6 +8,7 @@
 #include "CLI/Global.h"
 #include "CLI/Input.h"
 #include "CLI/Output.h"
+#include "CLI/Help.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
@@ -27,6 +28,11 @@
 #include <iostream>
 #include <algorithm>
 #include <thread>
+#if defined(_WIN32) || defined(_WINDOWS)
+#define popen _popen
+#define pclose _pclose
+#else
+#endif
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -531,31 +537,46 @@ int ParseFile_Compressed(parse_info& ParseInfo)
             if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
                 HasCheckedReversibility = true;
 
-            if (Global.Actions[Action_Info])
+            if (Global.Actions[Action_Info] || Global.Log)
             {
+                string Info;
                 if (!M->RAWcooked_LibraryNameVersion_Get().empty())
                 {
-                    cout << "\nInfo: Reversibility data created by " << M->RAWcooked_LibraryNameVersion_Get() << '.';
+                    Info += "\nInfo: Reversibility data created by ";
+                    Info += M->RAWcooked_LibraryNameVersion_Get();
+                    Info += '.';
                 }
-                else if (!Global.Actions[Action_Decode])
+                else if (Global.Actions[Action_Decode])
                 {
-                    cout << "\nInfo: No reversibility data found.";
+                    Info += "\nInfo: No reversibility data found.";
                 }
                 if (M->Hashes_FromRAWcooked)
                 {
-                    cout << "\nInfo: Uncompressed file hashes (used by reversibility check) present.";
+                    Info += "\nInfo: Uncompressed file hashes (used by reversibility check) present.";
                 }
                 if (M->Hashes_FromAttachments && M->Hashes_FromAttachments->HashFiles_Count())
                 {
-                    cout << "\nInfo: " << M->Hashes_FromAttachments->HashFiles_Count() << " hash file (used by conformance check) found.";
+                    Info += "\nInfo: ";
+                    Info += to_string(M->Hashes_FromAttachments->HashFiles_Count());
+                    Info += " hash file";
+                    if (M->Hashes_FromAttachments->HashFiles_Count() > 1)
+                        Info += 's';
+                    Info += " (used by conformance check) found.";
                 }
                 cout << endl;
+                if (Global.Actions[Action_Info])
+                    cout << Info;
+                if (Global.Log)
+                    *Global.Log += Info;
             }
             if (Global.Actions[Action_Decode] || Global.Actions[Action_Check])
             {
                 if (M->RAWcooked_LibraryNameVersion_Get().empty())
                 {
-                    cerr << "\nError: No reversibility data found.";
+                    auto Info = "\nError: No reversibility data found.";
+                    cerr << Info;
+                    if (Global.Log)
+                        *Global.Log += Info;
                     ReturnValue = 1;
                     DoesNotHaveReversibility = true;
                 }
@@ -566,15 +587,33 @@ int ParseFile_Compressed(parse_info& ParseInfo)
     }
 
     // End
+    string Info;
     if (ParseInfo.IsDetected && !Global.Quiet && !DoesNotHaveReversibility)
     {
         if (Global.Actions[Action_Decode])
-            cout << "\nFiles are in " << OutputDirectoryName << '.' << endl;
+        {
+            cout << "\nInfo: Files are in ";
+            cout << OutputDirectoryName;
+            cout << ".";
+        }
         if (Global.Actions[Action_Check] && !Global.Errors.HasErrors())
-            cout << '\n' << (HasCheckedReversibility ? "Reversibility" : "Decoding") << " was checked, no issue detected." << endl;
+        {
+            Info += "\nInfo: ";
+            Info += (HasCheckedReversibility ? "Reversibility" : "Decoding");
+            Info += " was checked, no issue detected.";
+        }
     }
     if (Global.Actions[Action_Check] && Global.Errors.HasErrors())
-        cout << '\n' << (HasCheckedReversibility ? "Reversibility" : "Decoding") << " was checked, issues detected, see below." << endl;
+    {
+        Info += "\nInfo: ";
+        Info += (HasCheckedReversibility ? "Reversibility" : "Decoding");
+        Info += " was checked, issues detected, see below.";
+    }
+    if (!Info.empty() && Info.back() != '\n')
+        Info += '\n';
+    cout << Info;
+    if (Global.Log)
+        *Global.Log += Info;
 
     return ReturnValue;
 }
@@ -671,24 +710,167 @@ int main(int argc, const char* argv[])
     // Info
     if (!Global.Quiet)
     {
+        string PrefixContent;
+        auto ComputePrefix = [&](const string& FileName)
+        {
+            if (PrefixContent.size() > FileName.size())
+                PrefixContent.resize(FileName.size());
+            for (size_t j = 0; j < PrefixContent.size(); j++)
+                if (PrefixContent[j] != FileName[j])
+                {
+                    PrefixContent.resize(j);
+                    break;
+                }
+        };
         for (size_t i = 0; i < Output.Streams.size(); i++)
         {
-            cerr << "Track " << i + 1 << ':' << endl;
-            if (Output.Streams[i].FileName_Template.empty())
+            auto IsTemplate = !Output.Streams[i].FileName_Template.empty();
+            const string& FileName = IsTemplate ? Output.Streams[i].FileName_Template : Output.Streams[i].FileName;
+            if (!i)
             {
-                cerr << "  " << Output.Streams[i].FileName.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
+                PrefixContent = FileName;
+                continue;
             }
-            else
+            ComputePrefix(FileName);
+        }
+        for (const auto& Attachment : Output.Attachments)
+        {
+            ComputePrefix(Attachment.FileName_In);
+        }
+        auto PrefixSize = PrefixContent.size();
+
+        if (Global.Log)
+        {
+            *Global.Log += GetLibraryName();
+            *Global.Log += ' ';
+            *Global.Log += GetLibraryVersion();
+            if (Global.Actions[Action_Encode])
             {
-                cerr << "  " << Output.Streams[i].FileName_Template.substr(((Global.Inputs.size() == 1 && Global.Inputs[0].size() < Output.Streams[i].FileName.size()) ? Global.Inputs[0].size() : Output.Streams[i].FileName.find_last_of("/\\")) + 1) << endl;
-                cerr << " (" << Output.Streams[i].FileName_StartNumber << " --> " << Output.Streams[i].FileName_EndNumber;
+                FILE* FFmpeg_Version_F = popen((Global.BinName + " -version").c_str(), "r");
+                if (FFmpeg_Version_F)
+                {
+                    char Result[256] = { };
+                    if (fgets(Result, sizeof(Result), FFmpeg_Version_F))
+                    {
+                        auto Result2 = strchr(Result, ' ');
+                        if (Result2)
+                        {
+                            Result2++;
+                            if (!strncmp(Result2, "version ", 8))
+                                Result2 += 8;
+                            auto Result3 = strchr(Result2, ' ');
+                            if (!Result3)
+                                auto Result3 = strchr(Result2, '\0');
+                            if (Result3)
+                            {
+                                *Global.Log += ", FFmpeg ";
+                                Global.Log->append(Result2, Result3 - Result2);
+                            }
+
+                        }
+                    }
+                    pclose(FFmpeg_Version_F);
+                }
+            }
+            *Global.Log += "\nParameters used:";
+            for (int i = 1; i < argc; i++)
+            {
+                if (Global.LogFile_IgnorePos.find(i) != Global.LogFile_IgnorePos.end())
+                    continue;
+                if (!strcmp(argv[i], "-b") || !strcmp(argv[i], "--bin-name"))
+                {
+                    i++;
+                    continue;
+                }
+                *Global.Log += ' ';
+                *Global.Log += argv[i];
+            }
+            *Global.Log += '\n';
+
+            string PackageName;
+            if (PrefixSize)
+            {
+                if (PrefixContent.find_first_of("\\/", PrefixContent.size() - 1) != string::npos)
+                    PrefixContent.pop_back();
+                PackageName = PrefixContent;
+                if (!PackageName.empty())
+                {
+                    auto Pos = PackageName.find_last_of("\\/");
+                    if (Pos != string::npos)
+                        PackageName.erase(0, Pos + 1);
+                }
+            }
+            *Global.Log += '\n';
+            if (!PackageName.empty())
+            {
+                *Global.Log += "Package name: ";
+                *Global.Log += PackageName;
+                *Global.Log += '\n';
+            }
+        }
+
+        string Message;
+        const char* FlavorNotSupported = "\n *** This input format flavor is not supported by the current license key. ***";
+        for (size_t i = 0; i < Output.Streams.size(); i++)
+        {
+            if (i)
+                Message += '\n';
+            Message += "Track ";
+            Message += to_string(i + 1);
+            Message += ":\n ";
+            auto IsTemplate = !Output.Streams[i].FileName_Template.empty();
+            const string& FileName = IsTemplate ? Output.Streams[i].FileName_Template : Output.Streams[i].FileName;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            auto FileName2 = FileName.substr(PrefixSize);
+            auto Pos = 0;
+            for (;;)
+            {
+                Pos = FileName2.find('\\');
+                if (Pos == string::npos)
+                    break;
+                FileName2[Pos] = '/';
+                Pos++;
+            }
+            Message += FileName2;
+            #else
+            Message += FileName.substr(PrefixSize);
+            #endif
+            if (IsTemplate)
+            {
+                Message += "\n (";
+                Message += Output.Streams[i].FileName_StartNumber;
+                Message += " --> ";
+                Message += Output.Streams[i].FileName_EndNumber;
                 if (!Output.Streams[i].FileList.empty())
-                    cerr << ", with gaps";
-                cerr << ')' << endl;
+                    Message += ", with gaps";
+                Message += ')';
             }
-            cerr << "  " << Output.Streams[i].Flavor << endl;
+            Message += "\n ";
+            Message += Output.Streams[i].Flavor;
             if (Output.Streams[i].Problem)
-                cerr << "  *** This input format flavor is not supported by the current license key. ***" << endl;
+                Message += FlavorNotSupported;
+        }
+        if (!Output.Attachments.empty())
+        {
+            Message += "\nAttachments:";
+            for (const auto& Attachment : Output.Attachments)
+            {
+                Message += "\n ";
+                Message += Attachment.FileName_In.substr(PrefixSize);
+            }
+        }
+        cerr << Message << endl;
+        if (Global.Log)
+        {
+            for (;;)
+            {
+                auto Pos = Message.find(FlavorNotSupported);
+                if (Pos == string::npos)
+                    break;
+                Message.erase(Pos, strlen(FlavorNotSupported));
+            }
+            *Global.Log += Message;
+            *Global.Log += '\n';
         }
     }
 
@@ -711,6 +893,7 @@ int main(int argc, const char* argv[])
             }
         }
     }
+
 
     // FFmpeg
     if (!Value && Global.Actions[Action_Encode])
@@ -788,6 +971,39 @@ int main(int argc, const char* argv[])
         cerr << Global.Errors.ErrorMessage() << endl;
         if (!Value)
             Value = 1;
+    }
+
+    // Log
+    if (Global.Log)
+    {
+        file LogFile;
+        if (LogFile.Open_WriteMode(Global.LogFileName, string(), true))
+        {
+            if (Global.Mode == AlwaysNo)
+            {
+                cerr << "Error: File '" << Global.LogFileName << "' already exists.\n";
+                Value = 1;
+            }
+            else
+            {
+                bool WriteLog = false;
+                if (Global.Mode != AlwaysYes)
+                {
+                    cerr << "File '" << Global.LogFileName << "' already exists. Overwrite? [y/N] ";
+                    string Result;
+                    getline(cin, Result);
+                    if (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y'))
+                        WriteLog = true;
+                    else
+                        Value = 1;
+                }
+                else
+                    WriteLog = true;
+                if (WriteLog)
+                    LogFile.Open_WriteMode(Global.LogFileName, string(), false, true);
+            }
+        }
+        LogFile.Write((const uint8_t*)Global.Log->c_str(), Global.Log->size());
     }
 
     return Value;

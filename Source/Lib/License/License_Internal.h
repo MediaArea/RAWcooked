@@ -51,6 +51,7 @@ const feature_info FeatureInfos[] =
     { "Encoding options"        },
     { "More than 2 tracks"      },
     { "Sub-licensing"           },
+    { "Hardware acceleration"   },
 };
 static_assert(sizeof(FeatureInfos) / sizeof(feature_info) == feature_Max, "feature_info issue");
 

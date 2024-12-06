@@ -243,6 +243,13 @@ int global::SetHash(bool Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetLogFileName(const char* FileName)
+{
+    LogFileName = FileName;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetAll(bool Value)
 {
     if (int ReturnValue = SetInfo(Value))
@@ -312,6 +319,18 @@ int global::SetOption(const char* argv[], int& i, int argc)
         {
             OutputOptions["c:v"] = argv[i];
             License.Encoder(encoder::FFV1);
+            return 0;
+        }
+        if (!strncmp(argv[i], "ffv1_vulkan", 11) && (!argv[i][11] || (argv[i][11] == ':' && argv[i][12] >= '0' && argv[i][12] <= '9' && !argv[i][13])))
+        {
+            OutputOptions["c:v"] = "ffv1_vulkan";
+            if (argv[i][11])
+                OutputOptions["init_hw_device"] = "\"vulkan=vk" + string(argv[i] + 11) + '\"';
+            else
+                OutputOptions["init_hw_device"] = "\"vulkan=vk:0\"";
+            OutputOptions["vf"] = "hwupload";
+            License.Encoder(encoder::FFV1);
+            License.Feature(feature::HwAccel);
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -582,6 +601,16 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--log-name") == 0)
+        {
+            LogFile_IgnorePos.insert(i);
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetLogFileName(argv[++i]);
+            LogFile_IgnorePos.insert(i);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
         {
             int Value = Help(argv[0]);
@@ -780,6 +809,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             OutputOptions["n"] = string();
             OutputOptions.erase("y");
             Mode = AlwaysNo; // Also RAWcooked itself
+            LogFile_IgnorePos.insert(i);
         }
         else if (!strcmp(argv[i], "-threads"))
         {
@@ -793,6 +823,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             OutputOptions["y"] = string();
             OutputOptions.erase("n");
             Mode = AlwaysYes; // Also RAWcooked itself
+            LogFile_IgnorePos.insert(i);
         }
         else if (OptionsForOtherFiles)
         {
@@ -815,8 +846,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Value;
         }
         else
+        {
             Inputs.push_back(argv[i]);
+            LogFile_IgnorePos.insert(i);
+        }
     }
+
+    if (BinName.empty())
+        BinName = "ffmpeg";
 
     // License
     if (License.LoadLicense(LicenseKey, StoreLicenseKey))
@@ -834,6 +871,8 @@ int global::ManageCommandLine(const char* argv[], int argc)
     if (Inputs.empty() && (ShowLicenseKey || SubLicenseId))
         return 0;
 
+    if (!LogFileName.empty())
+        Log = new string;
     return 0;
 }
 

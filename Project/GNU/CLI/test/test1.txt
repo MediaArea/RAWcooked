@@ -210,8 +210,10 @@ Formats/DPX/Flavors/Y_10_FilledB_BE/Y_10_FilledB_BE_Modified_9x4_Scanity.dpx
 Formats/DPX/Flavors/Y_12_Packed_BE/086400.dpx pass
 Formats/DPX/Flavors/Y_16_FilledA_BE/0000001.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_BE/FFmpeg_gray16be.dpx pass
+Formats/DPX/Flavors/Y_16_Packed_BE/pack3.dpx pass
 Formats/DPX/Flavors/Y_16_Packed_LE/FFmpeg_gray16le.dpx pass
 Formats/DPX/Conformance/0004_OffsetToImageData/0004_OffsetToImageData_000000.dpx fail
+Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_null.dpx pass
 Formats/DPX/Conformance/0008_VersionNumber/0008_VersionNumber_v.dpx pass
 Formats/EXR/Features/Compressed/PXR24/AllHalfValues.exr fail
 Formats/EXR/Flavors/RGB_16F/Color_Test_Chart_LogC_400ASA_3200k.cpu.00.exr pass
@@ -252,6 +254,7 @@ Formats/TIFF/Flavors/Raw_Y_2_U/flower-minisblack-02.tif fail
 Formats/TIFF/Flavors/Raw_Y_4_U/flower-minisblack-04.tif fail
 Formats/TIFF/Flavors/Raw_Y_6_U/flower-minisblack-06.tif fail
 Formats/TIFF/Flavors/Raw_Y_8_U/flower-minisblack-08.tif pass
+Formats/TIFF/Flavors/Raw_Y_8_U/Raw_Y_8_U_LE.tif pass
 Formats/TIFF/Flavors/Raw_Y_10_U/flower-minisblack-10.tif fail
 Formats/TIFF/Flavors/Raw_Y_12_U/flower-minisblack-12.tif fail
 Formats/TIFF/Flavors/Raw_Y_14_U/flower-minisblack-14.tif fail
