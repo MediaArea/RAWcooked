@@ -1,5 +1,5 @@
 # BFI National Archive RAWcooked Case Study  
-**by Joanna White, Knowledge & Collections Developer**  
+**by Joanna White, Knowledge Learning & Collections Developer**  
   
 At the [BFI National Archive](https://www.bfi.org.uk/bfi-national-archive) we have been encoding DPX sequences to FFV1 Matroska since late 2019. In that time our RAWcooked workflow has evolved with the development of RAWcooked, DPX resolutions, flavours and changes in our encoding project priorities.  Today we have a fairly hands-off automated workflow which handles 2K and 4K image sequences.  This workflow is built on some of the flags developed in RAWcooked by Media Area and written in a mix of Bash shell and Python3 scripts ([BFI Data & Digital Preservation GitHub](https://github.com/bfidatadigipres/dpx_encoding)). In addition to RAWcooked we use other Media Area tools to complete necessary stages of this workflow.  Our encoding processes do not include any alpha channel or audio file processing, but RAWcooked is capable of encoding both into the completed FFV1 Matroska.
 
@@ -137,7 +137,7 @@ Stream mapping:
 Press [q] to stop, [?] for help
 Output #0, matroska, to '../encoded/mkv_cooked/N_9623089_01of04.mkv':
 ```
-* The encoding outputs which give frame fps, size processed, timecode locations in FFV1, bitrate and speed data
+* The encoding outputs which give current frame, frames per second, size of data processed, timecode for FFV1, bitrate and speed data
 ```
 frame=  0 fps=0.0 q=-0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=N/A  
 frame=  1 fps=0.7 q=-0.0 size=    4864kB time=00:00:00.04 bitrate=948711.6kbits/s speed=0.028x
