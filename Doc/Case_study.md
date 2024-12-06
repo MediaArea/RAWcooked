@@ -39,7 +39,7 @@ Our previous server configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), but 4K scans are generally 1 fps or less. These figures can be impacted by the quantity of parallel processes running at any one time.
+When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), and 4K scans can be up to 5.5 fps. These figures can be impacted by the quantity of parallel processes running at any one time.
 
 ---  
 ## Workflow
@@ -137,6 +137,14 @@ Stream mapping:
 Press [q] to stop, [?] for help
 Output #0, matroska, to '../encoded/mkv_cooked/N_9623089_01of04.mkv':
 ```
+* The encoding outputs which give frame fps, size processed, timecode locations in FFV1, bitrate and speed data
+```
+frame=  0 fps=0.0 q=-0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=N/A  
+frame=  1 fps=0.7 q=-0.0 size=    4864kB time=00:00:00.04 bitrate=948711.6kbits/s speed=0.028x
+frame=  3 fps=1.3 q=-0.0 size=   52736kB time=00:00:00.12 bitrate=3456106.5kbits/s speed=0.0531x
+frame=  5 fps=1.6 q=-0.0 size=  153344kB time=00:00:00.20 bitrate=6039394.5kbits/s speed=0.0665x
+frame=  7 fps=1.8 q=-0.0 size=  254464kB time=00:00:00.29 bitrate=7138935.2kbits/s speed=0.0749x
+```
 * The post-encoding RAWcooked assessment of the FFV1 Matroska
 ```
 ...
@@ -149,12 +157,11 @@ Time=00:23:25 (99.98%), 1.2 MiB/s, 0.04x realtime
 Time=00:23:26 (99.99%), 1.6 MiB/s, 0.04x realtime    
 3.3 MiB/s, 0.02x realtime 
 ```
-* Text review of the success/failures of the encoded sequence
+* Text review of the success/failures of the encoded sequence provided by the -info flag
 ```
-Info: Reversibility data created by RAWcooked 23.12.
+Info: Reversibility data created by RAWcooked 24.11.
 Info: Uncompressed file hashes (used by reversibility check) present.
-
-Reversibility was checked, no issue detected.
+Info: Reversibility was checked, no issue detected.
 ```
   
   
