@@ -39,7 +39,9 @@ Our previous server configuration:
 - 8 threads  
 - Ubuntu 18.04 LTS  
   
-Following recent benchmark tests using FFmpeg version 6.0 against internal server HDD storage using 200 frame sequence of 4K 10-bit DPX we received a maximum of 11 fps performance. We are aware this is much slower than anticipated FFmpeg performace speeds and will investigate these speeds in due course. This does impact all supplied durations for encoding processes following. When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), and 4K scans can be up to 5.5 fps. These figures can be impacted by the quantity of parallel processes running at any one time.  
+Following recent benchmark tests using FFmpeg version 6.0 against internal server HDD storage using 200 frame sequence of 4K 10-bit DPX we received a maximum of 11 fps performance. We are aware this is much slower than anticipated FFmpeg performace speeds and will investigate potential causes in time. This does imply all supplied durations for encoding processes following can be improved with higher fps results. When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), and 4K scans can be up to 5.5 fps. These figures can be impacted by the quantity of parallel processes running at any one time.  
+
+[ Jérôme values here ]
 
 ---  
 ## Workflow
