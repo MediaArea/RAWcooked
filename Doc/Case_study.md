@@ -284,7 +284,7 @@ We use our RAWcook license internally for encoding BFI scans, but we also supply
 rawcooked --sublicense <your_chosen_name>  
 rawcooked --sublicense-dur <integer for months allowed usage>  
 ```  
-So to create a sublicense I would use the ```--sublicense``` flag with a license name of choice, and follow that command with an integer. The integer would represent the month starting from '0' which would represent the remainder of this calendar month.  
+So to create a sublicense I would use the ```--sublicense``` flag with a license name of choice, then use ```--sublicense-dur``` flag and supply an integer. The integer would represent the month starting from '0', which represents the remainder of this calendar month. To create a six month license including this month (assuming it's the first), you would supply '5'.  
   
 ```  
 rawcooked --sublicense sept_23456  
