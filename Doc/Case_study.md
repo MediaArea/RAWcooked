@@ -281,16 +281,15 @@ The results of these three enquiries is always a great help when opening an Issu
 We use our RAWcook license internally for encoding BFI scans, but we also supply sublicenses to partner companies using RAWcooked's sublicensing option. To do this we can create sublicenses via the CLI:  
   
 ```  
-rawcooked --sublicense <your_chosen_name>  
-rawcooked --sublicense-dur <integer for months allowed usage>  
+rawcooked --sublicense <license number 1-126> 
+rawcooked --sublicense-dur <integer for duration>  
 ```  
-So to create a sublicense I would use the ```--sublicense``` flag with a license name of choice, then use ```--sublicense-dur``` flag and supply an integer. The integer would represent the month starting from '0', which represents the remainder of this calendar month. To create a six month license including this month (assuming it's the first), you would supply '5'.  
+So to create a sublicense I would use the ```--sublicense``` flag with a license number between 1 and 126, then use ```--sublicense-dur``` flag and supply an integer. The integer would represent the month starting from '0', which represents the remainder of this calendar month. To create a six month license including this month (assuming it's the first), you would supply '5'.  
   
 ```  
-rawcooked --sublicense sept_23456  
-rawcooked --sublicense-dur 0
+rawcooked --sublicense 1 --sublicense-dur 0
 ```  
-We would then forward license number sept_23456 which would allow the partner company use of our purchased licenses for the remainder of the month, or longer if needed.  
+The first command would then create a long 'Sub-licensee license key', which we would supply to our partner company who could use our version of RAWcooked for the rest of this calendar month.  
   
   
 ## <a name="links">Additional resources</a>  
