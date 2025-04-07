@@ -13,7 +13,8 @@ This case study is broken into the following sections:
 * [Workflow: FFV1 Matroska validation](#ffv1_valid)  
 * [Workflow: FFV1 Matroska decode to image sequence](#ffv1_demux)
 * [Conclusion](#conclusion)
-* [Useful test approaches](#tests)
+* [Useful test approaches](#tests)  
+* [Sublicensing to suppliers](#sublicense)  
 * [Additional resources](#links)  
 
 ---  
@@ -273,6 +274,23 @@ echo $?
 This command should be run directly after a failed RAWcooked encode, and it will tell you the exit code returned from that terminated run.  
   
 The results of these three enquiries is always a great help when opening an Issue enquiry for Media Area aiding diagnosis of your problem. It may also be necessary to supply a DPX image, and your ```head``` command can be used again to extract the header data.
+  
+
+### <a name="sublicense">Sublicensing to suppliers</a>
+
+We use our RAWcook license internally for encoding BFI scans, but we also supply sublicenses to partner companies using RAWcooked's sublicensing option. To do this we can create sublicenses via the CLI:  
+  
+```  
+rawcooked --sublicense <your_chosen_name>  
+rawcooked --sublicense-dur <integer for months allowed usage>  
+```  
+So to create a sublicense I would use the ```--sublicense``` flag with a license name of choice, and follow that command with an integer. The integer would represent the month starting from '0' which would represent the remainder of this calendar month.  
+  
+```  
+rawcooked --sublicense sept_23456  
+rawcooked --sublicense-dur 0
+```  
+We would then forward license number sept_23456 which would allow the partner company use of our purchased licenses for the remainder of the month, or longer if needed.  
   
   
 ## <a name="links">Additional resources</a>  
