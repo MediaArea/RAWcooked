@@ -83,7 +83,7 @@ pushd "${files_path}" >/dev/null 2>&1
 
     # generate SD frame
     ffmpeg -nostdin -f lavfi -i color=c=black:size=360x4 -vframes 1 -start_number 0 "${directory}/sd.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
-    
+
     run_rawcooked -y -level 0 "${directory}"
     check_failure "options rejected" "options accepted"
     run_rawcooked -y -level 0 -slices 1 "${directory}"
