@@ -1,6 +1,6 @@
-#libtoolize 
+#libtoolize
 if test "$(uname)" = "Darwin" ; then
-  #Darwin based Systems like Mac OS X: libtoolize is called glibtoolize.
+  #Darwin based Systems like macOS: libtoolize is called glibtoolize.
   glibtoolize --automake
 else
   libtoolize --automake
