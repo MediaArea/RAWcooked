@@ -822,7 +822,7 @@ int main(int argc, const char* argv[])
             const string& FileName = IsTemplate ? Output.Streams[i].FileName_Template : Output.Streams[i].FileName;
             #if defined(_WIN32) || defined(_WINDOWS)
             auto FileName2 = FileName.substr(PrefixSize);
-            auto Pos = 0;
+            size_t Pos = 0;
             for (;;)
             {
                 Pos = FileName2.find('\\');
