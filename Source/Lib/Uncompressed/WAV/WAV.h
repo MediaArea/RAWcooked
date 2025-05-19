@@ -131,7 +131,11 @@ private:
     bool                        IsList;
 
     // Temp
+    uint64_t                    ds64_riffOffset = 0;
+    uint64_t                    ds64_dataSize = 0;
     uint32_t                    BlockAlign = 0;
+    bool                        IsRF64 = false;
+    bool                        DataIsParsed = false;
 
 #define WAV_ELEMENT(_NAME) \
         void _NAME(); \
@@ -140,6 +144,7 @@ private:
     WAV_ELEMENT(_);
     WAV_ELEMENT(WAVE);
     WAV_ELEMENT(WAVE_data);
+    WAV_ELEMENT(WAVE_ds64);
     WAV_ELEMENT(WAVE_fmt_);
     WAV_ELEMENT(Void);
 };

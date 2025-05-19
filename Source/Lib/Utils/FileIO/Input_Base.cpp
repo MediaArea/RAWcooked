@@ -143,7 +143,7 @@ uint64_t input_base::Get_L8()
 {
     TEST_BUFFEROVERFLOW(8);
 
-    uint64_t ToReturn = Buffer[Buffer_Offset + 0] | (Buffer[Buffer_Offset + 1] << 8) | (Buffer[Buffer_Offset + 2] << 16) | (Buffer[Buffer_Offset + 3] << 24) | ((uint64_t)Buffer[Buffer_Offset + 4] << 32) | ((uint64_t)Buffer[Buffer_Offset + 5] << 40) | ((uint64_t)Buffer[Buffer_Offset + 6] << 48) | ((uint64_t)Buffer[Buffer_Offset + 7] << 56);
+    uint64_t ToReturn = ((uint64_t)Buffer[Buffer_Offset + 0]) | (((uint64_t)Buffer[Buffer_Offset + 1]) << 8) | (((uint64_t)Buffer[Buffer_Offset + 2]) << 16) | (((uint64_t)Buffer[Buffer_Offset + 3]) << 24) | (((uint64_t)Buffer[Buffer_Offset + 4]) << 32) | (((uint64_t)Buffer[Buffer_Offset + 5]) << 40) | (((uint64_t)Buffer[Buffer_Offset + 6]) << 48) | (((uint64_t)Buffer[Buffer_Offset + 7]) << 56);
     Buffer_Offset += 8;
     return ToReturn;
 }
@@ -153,7 +153,7 @@ uint64_t input_base::Get_B8()
 {
     TEST_BUFFEROVERFLOW(8);
 
-    uint64_t ToReturn = ((uint64_t)Buffer[Buffer_Offset + 0] << 56) | ((uint64_t)Buffer[Buffer_Offset + 1] << 48) | ((uint64_t)Buffer[Buffer_Offset + 2] << 40) | ((uint64_t)Buffer[Buffer_Offset + 3] << 32) | (Buffer[Buffer_Offset + 4] << 24) | (Buffer[Buffer_Offset + 5] << 16) | (Buffer[Buffer_Offset + 6] << 8) | Buffer[Buffer_Offset + 7];
+    uint64_t ToReturn = ((uint64_t)Buffer[Buffer_Offset + 0] << 56) | ((uint64_t)Buffer[Buffer_Offset + 1] << 48) | ((uint64_t)Buffer[Buffer_Offset + 2] << 40) | ((uint64_t)Buffer[Buffer_Offset + 3] << 32) | (((uint64_t)Buffer[Buffer_Offset + 4]) << 24) | (((uint64_t)Buffer[Buffer_Offset + 5]) << 16) | (((uint64_t)Buffer[Buffer_Offset + 6]) << 8) | ((uint64_t)Buffer[Buffer_Offset + 7]);
     Buffer_Offset += 8;
     return ToReturn;
 }

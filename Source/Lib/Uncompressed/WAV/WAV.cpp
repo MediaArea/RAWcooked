@@ -22,6 +22,9 @@ static const char* MessageText[] =
     "file smaller than expected",
     "RIFF chunk size",
     "fmt  chunk size",
+    "data chunk not found",
+    "ds64 size",
+    "ds64 dataSize not same as data size",
     "truncated chunk",
 };
 
@@ -30,6 +33,9 @@ enum code : uint8_t
     BufferOverflow,
     RIFF_ChunkSize,
     fmt__ChunkSize,
+    data_Presence,
+    ds64_size,
+    ds64_dataSize,
     TruncatedChunk,
     Max
 };
@@ -44,7 +50,7 @@ namespace unsupported
 static const char* MessageText[] =
 {
     // Unsupported
-    "RF64 (4GB+ WAV)",
+    "RF64 tableLength",
     "fmt FormatTag not WAVE_FORMAT_PCM 1 or 3",
     "fmt AvgBytesPerSec",
     "fmt BlockAlign",
@@ -54,13 +60,15 @@ static const char* MessageText[] =
     "fmt ChannelMask",
     "fmt SubFormat not KSDATAFORMAT_SUBTYPE_PCM 00000001-0000-0010-8000-00AA00389B71",
     "fmt chunk not before data chunk",
+    "ds64 chunk not before data chunk",
     "Flavor (SamplesPerSec / BitDepth / Channels / Endianness combination)",
     "data chunk size is not a multiple of BlockAlign",
+    "extra data is big",
 };
 
 enum code : uint8_t
 {
-    RF64,
+    ds64_tableLength,
     fmt__FormatTag,
     fmt__AvgBytesPerSec,
     fmt__BlockAlign,
@@ -70,8 +78,10 @@ enum code : uint8_t
     fmt__ChannelMask,
     fmt__SubFormat,
     fmt__Location,
+    ds64__Location,
     Flavor,
     data_Size,
+    extra_big,
     Max
 };
 
@@ -236,6 +246,7 @@ ELEMENT_END()
 
 ELEMENT_BEGIN(WAVE)
 ELEMENT_VOID(64617461, WAVE_data)
+ELEMENT_VOID(64733634, WAVE_ds64)
 ELEMENT_VOID(666D7420, WAVE_fmt_)
 ELEMENT_END()
 
@@ -261,14 +272,13 @@ void wav::ParseBuffer()
 {
     if (Buffer.Size() < 12)
         return;
-    if (Buffer[8] != 'W' || Buffer[9] != 'A' || Buffer[10] != 'V' || Buffer[11] != 'E')
-        return;
-    if (Buffer[0] == 'R' && Buffer[1] == 'F' && Buffer[2] == '6' && Buffer[3] == '4')
-    {
-        Unsupported(unsupported::RF64);
-        return;
-    }
-    if (Buffer[0] != 'R' || Buffer[1] != 'I' || Buffer[2] != 'F' || Buffer[3] != 'F')
+
+    Buffer_Offset = 0;
+    auto FirstName = Get_B4();
+    Buffer_Offset += 4;
+    auto FirstRealName = Get_B4();
+    IsRF64 = FirstName == 0x52463634;
+    if ((FirstName != 0x52494646 && !IsRF64) || FirstRealName != 0x57415645) // "RIFF", "RF64", "WAVE"
         return;
     SetDetected();
 
@@ -276,7 +286,7 @@ void wav::ParseBuffer()
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer.Size();
     Levels[0].SubElements = &wav::SubElements__;
-    Level=1;
+    Level = 1;
 
     while (Buffer_Offset < Buffer.Size())
     {
@@ -291,32 +301,52 @@ void wav::ParseBuffer()
         // Parse the chunk header
         uint64_t Name;
         uint64_t Size;
-        if (Buffer_Offset + 8 > End)
+        if (End - Buffer_Offset < 8)
         {
             Undecodable(undecodable::TruncatedChunk);
             return;
         }
         Name = Get_B4();
         Size = Get_L4();
-        if (Name == 0x52494646) // "RIFF"
+        if (Level == 1)
         {
-            if (Size < 4 || Buffer_Offset + 4 > End)
+            if (Name == 0x52463634) // "RF64"
+                Name = 0x52494646;
+            if (Name == 0x52494646) // "RIFF"
             {
-                Undecodable(undecodable::RIFF_ChunkSize);
-                return;
+                if (Size < 4 || Buffer_Offset + 4 > End)
+                {
+                    Undecodable(undecodable::RIFF_ChunkSize);
+                    return;
+                }
+                Name <<= 32;
+                Name |= Get_B4();
+                Size -= 4;
+                ds64_riffOffset = Buffer_Offset - 4;
             }
-            Name <<= 32;
-            Name |= Get_B4();
-            Size -= 4;
+            if (DataIsParsed)
+            {
+                // Data after the WAVE chunk, we ignore everything
+                Size = Levels[0].Offset_End - Buffer_Offset;
+            }
         }
-        if (Buffer_Offset + Size > End)
+        if (Level == 2)
+        {
+            if (IsRF64 && Levels[1].SubElements == &wav::SubElements_WAVE && Name == 0x64617461) // "data"
+            {
+                if (Size != 0xFFFFFFFF && Size != ds64_dataSize)
+                    Undecodable(undecodable::ds64_dataSize);
+                Size = ds64_dataSize;
+            }
+        }
+        if (Size > End - Buffer_Offset)
         {
             if (!Actions[Action_AcceptTruncated])
             {
                 Undecodable(undecodable::TruncatedChunk);
                 return;
             }
-            Size = Levels[Level - 1].Offset_End - Buffer_Offset;
+            Size = End - Buffer_Offset;
         }
 
         // Parse the chunk content
@@ -340,6 +370,9 @@ void wav::ParseBuffer()
         if (Buffer_Offset < Levels[Level].Offset_End)
             Level++;
     }
+
+    if (!DataIsParsed)
+        Undecodable(undecodable::data_Presence);
 }
 
 //---------------------------------------------------------------------------
@@ -356,6 +389,8 @@ void wav::WAVE()
 //---------------------------------------------------------------------------
 void wav::WAVE_data()
 {
+    DataIsParsed = true;
+
     // Test if fmt chunk was parsed
     if (!HasErrors() && Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::fmt__Location);
@@ -370,6 +405,8 @@ void wav::WAVE_data()
         if (InputInfo && !InputInfo->SampleCount)
             InputInfo->SampleCount = Size / BlockAlign;
     }
+    if (!Actions[Action_AcceptTruncated] && Levels[0].Offset_End - Levels[Level].Offset_End > 0x04000000)
+        Unsupported(unsupported::extra_big);
 
     // Can we compress?
     if (!HasErrors())
@@ -395,6 +432,28 @@ void wav::WAVE_data()
             RAWcooked->HashValue = nullptr;
         RAWcooked->IsAttachment = false;
         RAWcooked->Parse();
+    }
+}
+
+//---------------------------------------------------------------------------
+void wav::WAVE_ds64()
+{
+    // Coherency test
+    if (Buffer.Size() < 28)
+    {
+        Undecodable(undecodable::ds64_size);
+        return;
+    }
+
+    auto ds64_riffSize = Get_L8();
+    Levels[Level - 1].Offset_End = ds64_riffOffset + ds64_riffSize;
+    ds64_dataSize = Get_L8();
+    Buffer_Offset += 8;
+    auto tableLength = Get_L4();
+    if (tableLength)
+    {
+        Unsupported(unsupported::ds64_tableLength);
+        return;
     }
 }
 

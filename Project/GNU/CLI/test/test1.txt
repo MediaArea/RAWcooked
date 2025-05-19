@@ -267,6 +267,10 @@ Formats/WAV/Features/4ExtraNullBytesInFmtChunk/4ExtraNullBytesInFmtChunk.wav pas
 Formats/WAV/Features/ChannelMask/48000_24_1_LE_0x00000000.wav pass
 Formats/WAV/Features/ChannelMask/48000_24_2_LE_0x00000000.wav pass
 Formats/WAV/Features/ChannelMask/48000_24_6_LE_0x00000000.wav pass
+Formats/WAV/Features/RF64/rf64_data_size.wav pass
+Formats/WAV/Features/RF64/rf64_extra_after_RIFF.wav pass
+Formats/WAV/Features/RF64/rf64_normal.wav pass
+Formats/WAV/Features/RF64/rf64_tablelength.wav fail
 Formats/WAV/Flavors/44100_8_1_U/44100_8_1_U.wav pass
 Formats/WAV/Flavors/44100_8_2_U/44100_8_2_U.wav pass
 Formats/WAV/Flavors/44100_8_4_U/44100_8_4_U.wav pass
