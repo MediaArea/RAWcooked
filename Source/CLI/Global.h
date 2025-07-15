@@ -40,6 +40,7 @@ public:
     string                      LicenseKey;
     uint64_t                    SubLicenseId;
     uint64_t                    SubLicenseDur;
+    filemap::method             FileOpenMethod;
     bool                        IgnoreLicenseKey;
     bool                        ShowLicenseKey;
     bool                        StoreLicenseKey;
@@ -104,6 +105,7 @@ public:
     int SetFrameMd5An(bool Value);
     int SetFrameMd5FileName(const char* FileName);
     int SetHash(bool Value);
+    int SetFileOpenMethod(const char* Value);
     int SetLogFileName(const char* FileName);
     int SetAll(bool Value);
 
