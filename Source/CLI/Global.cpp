@@ -35,6 +35,13 @@ int global::SetOutputFileName(const char* FileName)
 }
 
 //---------------------------------------------------------------------------
+int global::SetComputeOutputHash()
+{
+    Actions.set(Action_ComputeOutputHash, true);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int global::SetBinName(const char* FileName)
 {
     BinName = FileName;
@@ -303,6 +310,8 @@ int global::SetAll(bool Value)
     if (int ReturnValue = SetEncode(Value))
         return ReturnValue;
     if (int ReturnValue = SetHash(Value))
+        return ReturnValue;
+    if (int ReturnValue = SetComputeOutputHash())
         return ReturnValue;
     return 0;
 }
@@ -723,6 +732,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--none") == 0)
         {
             int Value = SetAll(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--compute-output-hash") == 0)
+        {
+            int Value = SetComputeOutputHash();
             if (Value)
                 return Value;
         }

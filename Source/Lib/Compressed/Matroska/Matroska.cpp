@@ -26,6 +26,10 @@
 #include <iomanip>
 #include <iostream>
 #include <thread>
+extern "C"
+{
+#include "md5.h"
+}
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -70,6 +74,35 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 } // matroska_issue
 
 using namespace matroska_issue;
+
+//---------------------------------------------------------------------------
+// Hash
+
+struct output_hash {
+    const uint8_t* Buffer;
+    MD5_CTX MD5;
+    uint64_t Offset = 0;
+    bool Disabled = false;
+
+    output_hash(const uint8_t* Buffer_)
+        : Buffer (Buffer_)
+    {
+        MD5_Init(&MD5);
+    }
+
+    void Update(size_t Size)
+    {
+        MD5_Update(&MD5, Buffer + Offset, Size);
+        Offset += Size;
+    }
+
+    md5 MD5_Final()
+    {
+        md5 MD5_Result;
+        ::MD5_Final(MD5_Result.data(), &MD5);
+        return MD5_Result;
+    }
+};
 
 //---------------------------------------------------------------------------
 // Matroska parser
@@ -307,6 +340,8 @@ void matroska::ParseBuffer()
                                                                                                     
     Buffer_Offset = 0;
     Level = 0;
+    if ((Actions[Action_Decode] || Actions[Action_Check]) && Actions[Action_ComputeOutputHash])
+        OutputHash = new output_hash(Buffer.Data());
 
     // Progress indicator
     Cluster_Timestamp = 0;
@@ -356,8 +391,18 @@ void matroska::ParseBuffer()
             }
         }
 
+        auto NeedRemap = Buffer_Offset - Buffer_Offset_LowerLimit >= 0x100000; // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
+        
+        // Compute MD5 of the whole file
+        if (OutputHash && !OutputHash->Disabled)
+        {
+            auto Hash_Size = Buffer_Offset - OutputHash->Offset;
+            if (NeedRemap || Hash_Size >= 0x100000)
+                OutputHash->Update(Hash_Size);
+        }
+
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
-        if (Buffer_Offset > Buffer_Offset_LowerLimit + 1024 * 1024 && Buffer_Offset < Buffer.Size()) // TODO: when multi-threaded frame decoding is implemented, we need to check that all thread don't need anymore memory below this value 
+        if (NeedRemap)
         {
             FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
@@ -378,6 +423,8 @@ void matroska::ParseBuffer()
             Level = Cluster_Level;
             Buffer_Offset = Cluster_Offset;
             Cluster_Level = (size_t)-1;
+            if (OutputHash)
+                OutputHash->Disabled = false;
 
             FileMap->Remap(Buffer_Offset, 256 * 1024 * 1024);
             Buffer = *FileMap;
@@ -412,6 +459,17 @@ void matroska::ParseBuffer()
         ProgressIndicator_IsEnd.notify_one();
         ProgressIndicator_Thread->join();
         delete ProgressIndicator_Thread;
+    }
+
+    // Show MD5
+    if (OutputHash && !OutputHash->Disabled)
+    {
+        OutputHash->Update(Buffer_Offset - OutputHash->Offset);
+        auto MD5_Result = OutputHash->MD5_Final();
+        std::cout << "\nInfo: Output file MD5 is ";
+        for (size_t i = 0; i < MD5_Result.size(); i++)
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)MD5_Result[i];
+        std::cout << '.' << std::endl;
     }
 }
 
@@ -799,7 +857,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryV
     RejectIncompatibleVersions();
 }
 
-//---------------------------------------------------------------------------
+//--------------------------------- ------------------------------------------
 void matroska::Segment_Cluster()
 {
     if (RAWcooked_LibraryName.empty())
@@ -808,6 +866,10 @@ void matroska::Segment_Cluster()
         Cluster_Offset = Element_Begin_Offset;
         Cluster_Level = Level;
         Level--;
+        if (OutputHash) {
+            OutputHash->Update(Buffer_Offset - OutputHash->Offset);
+            OutputHash->Disabled = true;
+        }
         return;
     }
 

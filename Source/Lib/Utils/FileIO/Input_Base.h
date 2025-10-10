@@ -40,6 +40,7 @@ enum action : uint8_t
     Action_Info,
     Action_FrameMd5,
     Action_FrameMd5An,
+    Action_ComputeOutputHash,
     Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
     Action_Max
 };
