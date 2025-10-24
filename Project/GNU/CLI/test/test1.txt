@@ -267,6 +267,7 @@ Formats/WAV/Features/4ExtraNullBytesInFmtChunk/4ExtraNullBytesInFmtChunk.wav pas
 Formats/WAV/Features/ChannelMask/48000_24_1_LE_0x00000000.wav pass
 Formats/WAV/Features/ChannelMask/48000_24_2_LE_0x00000000.wav pass
 Formats/WAV/Features/ChannelMask/48000_24_6_LE_0x00000000.wav pass
+Formats/WAV/Features/ChannelMask/48000_24_8_LE_0x000000FF.wav pass
 Formats/WAV/Features/RF64/rf64_data_size.wav pass
 Formats/WAV/Features/RF64/rf64_extra_after_RIFF.wav pass
 Formats/WAV/Features/RF64/rf64_normal.wav pass
