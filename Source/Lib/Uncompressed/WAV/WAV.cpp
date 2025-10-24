@@ -517,7 +517,7 @@ void wav::WAVE_fmt_()
          && (Channels != 2 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000003))
          && (Channels != 4 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000107))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
-         && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
+         && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F && ChannelMask != 0x000000FF)))
             Unsupported(unsupported::fmt__ChannelMask);
         FormatTag = Get_L4();
         uint32_t SubFormat2 = Get_L4();
