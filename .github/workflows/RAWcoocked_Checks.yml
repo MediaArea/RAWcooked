@@ -16,19 +16,19 @@ jobs:
         with:
           fetch-depth: 1
       - name: OS packets
-        run: | 
+        run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             echo "deb https://mediaarea.net/repo/deb/ubuntu $(lsb_release --codename --short)-snapshots main" | sudo tee /etc/apt/sources.list.d/mediaarea-snapshots.list
             sudo curl https://repo.mediaarea.net/deb/ubuntu/keyring.gpg -o /etc/apt/trusted.gpg.d/mediaarea-snapshots.gpg
             sudo apt-get update
-            sudo apt-get install -y valgrind ffmpeg-ma
+            sudo apt-get install -y nasm valgrind ffmpeg-ma mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew update
             brew install coreutils automake
           fi
       - name: FFmpeg
-        run: | 
+        run: |
           cd Project/GNU/CLI
           if [ "$RUNNER_OS" == "Linux" ]; then
             cp /usr/bin/ffmpeg-ma ffmpeg
@@ -38,19 +38,19 @@ jobs:
             7za e FFmpeg_Bin_Latest_Mac_Static_x64.zip bin/ffmpeg
           fi
       - name: Configure
-        run: | 
+        run: |
           cd Project/GNU/CLI
           sh autogen.sh
           ./configure
       - name: Compile
-        run: | 
+        run: |
           cd Project/GNU/CLI
           make
       - name: Check files
-        run: | 
+        run: |
           cd Project/GNU/CLI
           make clone_testing_files
       - name: Check
-        run: | 
+        run: |
           cd Project/GNU/CLI
           make check
