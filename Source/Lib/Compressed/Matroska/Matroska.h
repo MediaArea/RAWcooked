@@ -37,6 +37,7 @@ class ThreadPool;
 class hashes;
 class track_info;
 class frame_writer;
+struct output_hash;
 
 class matroska : public input_base
 {
@@ -50,6 +51,7 @@ public:
     bool                        NoOutputCheck = false;
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
+    output_hash*                OutputHash = nullptr;
 
     // Theading relating functions
     void                        ProgressIndicator_Show();

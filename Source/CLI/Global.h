@@ -85,6 +85,7 @@ public:
     int SetVersion(const char* Value);
     int SetOption(const char* argv[], int& i, int argc);
     int SetOutputFileName(const char* FileName);
+    int SetComputeOutputHash();
     int SetBinName(const char* FileName);
     int SetLicenseKey(const char* Key, bool Add);
     int SetSubLicenseId(uint64_t Id);

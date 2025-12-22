@@ -1,0 +1,6 @@
+Features/AV_Package/818_DCDM_P3_IA_FIC_000918/818_OV
+Formats/TIFF/Flavors/Raw_RGBA_16_U_LE/testsrc_Raw_RGBA_16_LE.tiff
+Formats/AVI/Flavors/v210_44100_16_1_S_LE/v210_44100_16_1_S_LE.avi
+Formats/AIFF/Flavors/44100_8_1_S/44100_8_1_S.aiff
+Formats/AIFF/Flavors/44100_8_1_U/44100_8_1_U.aiff
+Formats/WAV/Flavors/44100_16_1_S_LE/44100_16_1_S_LE.wav
