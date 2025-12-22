@@ -360,7 +360,7 @@ ReturnValue Help(const char* Name)
         "       after the --all and the conch command will be skipped.\n"
         "\n"
         "COPYRIGHT\n"
-        "       Copyright (c) 2018-2025 MediaArea.net SARL & Reto Kromer\n"
+        "       Copyright (c) 2018-2026 MediaArea.net SARL & Reto Kromer\n"
         "\n"
         "LICENSE\n"
         "       RAWcooked is released under a BSD License.\n"
