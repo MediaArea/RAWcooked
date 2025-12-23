@@ -42,15 +42,13 @@ Our previous server configuration:
   
 Following recent benchmark tests using FFmpeg version 6.0 against internal server HDD storage using 200 frame sequence of 4K 10-bit DPX we received a maximum of 11 fps performance. We are aware this is much slower than anticipated FFmpeg performace speeds and will investigate potential causes in time. This does imply all supplied durations for encoding processes following can be improved with higher fps results. When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), and 4K scans can be up to 5.5 fps. These figures can be impacted by the quantity of parallel processes running at any one time.  
 
-[ Jérôme values here ]
-
 ---  
 ## Workflow
 ### <a name="assessment">Image sequence assessment</a>  
   
 For each image sequence processed the metadata of the first DPX is collected and saved into the sequence folder, along with total folder size in bytes and a list of all contents of the sequence. We collect this information using [Media Area's MediaInfo software](https://mediaarea.net/MediaInfo) and capture the output into script variables.  
   
-Next the first file within the image sequence is checked against a DPX policy created using [Media Area's MediaConch software](https://mediaarea.net/MediaConch) - ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion or possible anomalies in the DPX.
+Next the first file within the image sequence is checked against a DPX policy created using [Media Area's MediaConch software](https://mediaarea.net/MediaConch) - ([BFI's DPX policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/policies/rawcooked_dpx_policy.xml)). If it passes then we know it can be encoded by RAWcooked and by our current licence. Any that fail are assessed for possible RAWcooked licence expansion or possible anomalies in the DPX.
   
 The frame pixel size and colourspace of the sequence are used to calculate the potential reduction rate of the RAWcooked encode based on previous reduction experience. We make an assumption that 2K RGB will always be at least one third smaller, so calculate a 1.3TB sequence will make a 1TB FFV1 Matroska.  For 2K Luma and all 4K we must assume that very small size reductions could occur so map 1TB to 1TB. This step is necessary to control file ingest sizes to our Digital Preservation Infrastructure where we currently have a maximum verifiable ingest file size of 1TB. Where a sequence is over 1TB we have Python scripts to split that DPX sequence across additional folders depending on total size.
   
@@ -206,7 +204,7 @@ For this error we know that we need to re-encode our image sequence with the add
   
 ### <a name="ffv1_valid">FFV1 Matroska validation</a>
   
-When the logs have been assessed and the message ```Reversibility was checked, no issue detected``` is found, then the FFV1 Matroska is compared against the [BFI's MediaConch policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/rawcooked_mkv_policy.xml). This policy ensures that the FFV1 Matroska is whole by looking for duration field entries, checks for reversibility data, and that the correct FFV1 and Matroska formats are being used. It also ensures that all the FFV1 error detection features are present, that slices are included, bit rate is over 300 and pixel aspect ratio is 1.000.
+When the logs have been assessed and the message ```Reversibility was checked, no issue detected``` is found, then the FFV1 Matroska is compared against the [BFI's MediaConch policy](https://github.com/bfidatadigipres/dpx_encoding/blob/main/policies/rawcooked_mkv_policy.xml). This policy ensures that the FFV1 Matroska is whole by looking for duration field entries, checks for reversibility data, and that the correct FFV1 and Matroska formats are being used. It also ensures that all the FFV1 error detection features are present, that slices are included, bit rate is over 300 and pixel aspect ratio is 1.000.
 
 If the policy passes then the FFV1 Matroska is moved onto the final stage, where the RAWcooked flag ```--check``` is used to ensure that the FFV1 Matroska is correctly formed.
 ```rawcooked --check path/sequence_name.mkv >> path/sequence_name.mkv.txt 2>&1```
@@ -242,7 +240,7 @@ In recent years we have seen a shift from majority 2K DPX to majority 4K DPX wit
 * Parallel 4K RGB 12-bit DPX (118.1 GB) - MKV duration 1:27 (87.1 GB) - encoding time 1:06:02 - MKV 26.3% smaller than DPX  
 * Parallel 4K RGB 12-bit DPX (121.6 GB) - MKV duration 1:29 (87.3 GB) - encoding time 0:54:00 - MKV 28.2% smaller than DPX  
 * Parallel 4K RGB 12-bit DPX (887.3 GB) - MKV duration 10:54 (208.7 GB) - encoding time 5:02:00 - MKV 76.5% smaller than DPX **  
-** Where the MKV is significantly smaller than the DPX then a black and while filter will have been applied to an RGB scan, as in these cases.  
+** Where the MKV is significantly smaller than the DPX then usually a black and white film will have been scanned RGB, as in these cases.  
   
 A separate 2K solo and parallel encoding test revealed much quicker encoding times for >10 minute sequences, again using the ```--all``` command against a single QNAP storage, and where we can assume another single ```--check``` run is also working in parallel:  
   
