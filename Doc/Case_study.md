@@ -42,8 +42,6 @@ Our previous server configuration:
   
 Following recent benchmark tests using FFmpeg version 6.0 against internal server HDD storage using 200 frame sequence of 4K 10-bit DPX we received a maximum of 11 fps performance. We are aware this is much slower than anticipated FFmpeg performace speeds and will investigate potential causes in time. This does imply all supplied durations for encoding processes following can be improved with higher fps results. When encoding 2K RGB we generally reach between 3 and 10 frames per second (fps), and 4K scans can be up to 5.5 fps. These figures can be impacted by the quantity of parallel processes running at any one time.  
 
-[ Jérôme values here ]
-
 ---  
 ## Workflow
 ### <a name="assessment">Image sequence assessment</a>  
@@ -242,7 +240,7 @@ In recent years we have seen a shift from majority 2K DPX to majority 4K DPX wit
 * Parallel 4K RGB 12-bit DPX (118.1 GB) - MKV duration 1:27 (87.1 GB) - encoding time 1:06:02 - MKV 26.3% smaller than DPX  
 * Parallel 4K RGB 12-bit DPX (121.6 GB) - MKV duration 1:29 (87.3 GB) - encoding time 0:54:00 - MKV 28.2% smaller than DPX  
 * Parallel 4K RGB 12-bit DPX (887.3 GB) - MKV duration 10:54 (208.7 GB) - encoding time 5:02:00 - MKV 76.5% smaller than DPX **  
-** Where the MKV is significantly smaller than the DPX then a black and while filter will have been applied to an RGB scan, as in these cases.  
+** Where the MKV is significantly smaller than the DPX then usually a black and white film will have been scanned RGB, as in these cases.  
   
 A separate 2K solo and parallel encoding test revealed much quicker encoding times for >10 minute sequences, again using the ```--all``` command against a single QNAP storage, and where we can assume another single ```--check``` run is also working in parallel:  
   
