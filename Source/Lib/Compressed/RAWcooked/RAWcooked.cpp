@@ -15,7 +15,7 @@ using namespace std;
 
 // Library name and version
 const char* LibraryName = "RAWcooked";
-const char* LibraryVersion = "24.11";
+const char* LibraryVersion = "25.12";
 
 // EBML
 static const uint32_t Name_EBML = 0x0A45DFA3;
