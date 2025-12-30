@@ -1,3 +1,12 @@
+Version 25.12, 2025-12-30
+-------------
+Add a case study (thanks to @digitensions)
+Add an option for computing the hash of the output file while checking it
+Support of 7.1wide WAV ChannelMask
+Add alternative methods for reading files (avoid slowness on macOS and NAS)
+RF64 support
+Support of DPX non conforming packing value 3
+
 Version 24.11, 2024-11-11
 -------------
 Cleanup of the output
