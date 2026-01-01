@@ -9,5 +9,6 @@ When needed, the uncompressed source is retrieved **bit-by-bit**, in a manner fa
 ## Table of Contents
 
 - [RAWcooked User Manual](User_Manual.md)
+- [BFI National Archive RAWcooked Case Study](Case_study.md)
 - [Structure of RAWcooked reversibility data](File_Structure.md)
 - [RAWcooked Compilation Instructions](Compilation.md)
