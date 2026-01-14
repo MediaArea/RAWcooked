@@ -33,8 +33,8 @@ public:
     virtual ~base_wrapper() {}
 
     // Actions
-    virtual void                Process(const uint8_t* Data, size_t Size) = 0;
-    inline virtual void         OutOfBand(const uint8_t* /*Data*/, size_t /*Size*/) {};
+    virtual bool                Process(const uint8_t* Data, size_t Size) = 0;
+    inline virtual bool         OutOfBand(const uint8_t* /*Data*/, size_t /*Size*/) { return true; };
 
 public:
     raw_frame*                  RawFrame = nullptr;

@@ -29,6 +29,7 @@ namespace filechecker_issue
             Attachment_Source_Extra,
             Frame_Compressed_Missing,
             Frame_Compressed_Extra,
+            Frame_Compressed_Issue,
             Frame_Source_Missing,
             Frame_Source_Extra,
             Format_Undetected,

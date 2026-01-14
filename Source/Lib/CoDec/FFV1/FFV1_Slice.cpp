@@ -246,7 +246,7 @@ bool slice::Parse()
 
     // CRC check
     if (P->ec == 1 && ZenCRC32(Buffer, Buffer_Size))
-        return P->Error("FFV1-SLICE-slice_crc_parity:1");
+        P->Error("FFV1-SLICE-slice_crc_parity:1"); // We do not stop here, to try to decode the slice anyway
 
     // RangeCoder reset
     Buffer_Size -= P->TailSize;

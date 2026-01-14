@@ -24,6 +24,7 @@ namespace filechecker_issue {
             "extra attachments in source (missing attachments in compressed file)",
             "missing frame in compressed file",
             "extra frame in compressed file",
+            "frame (encoder can not decode it)",
             "missing frame in source (extra frames in compressed file)",
             "extra frame in source (missing frames in compressed file)",
             "track format (unsupported)",

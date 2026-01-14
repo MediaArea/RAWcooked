@@ -166,7 +166,7 @@ size_t raw_frame::TotalSize() const
 }
 
 //---------------------------------------------------------------------------
-void raw_frame::Process()
+bool raw_frame::Process()
 {
     MergeIn();
     In_.Clear();
@@ -176,6 +176,8 @@ void raw_frame::Process()
 
     Pre_.Clear();
     Post_.Clear();
+
+    return false;
 }
 
 //---------------------------------------------------------------------------

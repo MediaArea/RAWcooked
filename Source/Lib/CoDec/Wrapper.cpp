@@ -80,8 +80,8 @@ public:
     void                        SetHeight(uint32_t Height);
 
     // Actions
-    void                        Process(const uint8_t* Data, size_t Size);
-    void                        OutOfBand(const uint8_t* Data, size_t Size);
+    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        OutOfBand(const uint8_t* Data, size_t Size);
 
 private:
     ffv1_frame*                 Ffv1Frame;
@@ -112,18 +112,19 @@ void ffv1_wrapper::SetHeight(uint32_t Height)
 }
 
 //---------------------------------------------------------------------------
-void ffv1_wrapper::Process(const uint8_t* Data, size_t Size)
+bool ffv1_wrapper::Process(const uint8_t* Data, size_t Size)
 {
     Ffv1Frame->RawFrame = RawFrame;
-    Ffv1Frame->Process(Data, Size);
+    auto Value = Ffv1Frame->Process(Data, Size);
     RawFrame->Process();
+    return Value;
 }
 
 //---------------------------------------------------------------------------
-void ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
+bool ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
 {
     Ffv1Frame->RawFrame = RawFrame;
-    Ffv1Frame->OutOfBand(Data, Size);
+    return Ffv1Frame->OutOfBand(Data, Size);
 }
 
 //---------------------------------------------------------------------------
@@ -134,8 +135,8 @@ public:
     ~flac_wrapper();
 
     // Actions
-    void                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size); }
-    void                        Process(const uint8_t* Data, size_t Size);
+    bool                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size); }
+    bool                        Process(const uint8_t* Data, size_t Size);
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -200,7 +201,7 @@ flac_wrapper::~flac_wrapper()
     FLAC__stream_decoder_delete(Decoder_);
 }
 
-void flac_wrapper::Process(const uint8_t* Data, size_t Size)
+bool flac_wrapper::Process(const uint8_t* Data, size_t Size)
 {
     Data_ = Data;
     Size_ = Size;
@@ -208,12 +209,12 @@ void flac_wrapper::Process(const uint8_t* Data, size_t Size)
     for (;;)
     {
         if (!FLAC__stream_decoder_process_single(Decoder_))
-            break;
+            return true;
         FLAC__uint64 Pos;
         if (!FLAC__stream_decoder_get_decode_position(Decoder_, &Pos))
-            break;
+            return true;
         if (Pos == absolute_byte_offset_)
-            break;
+            return false;
     }
 }
 
@@ -376,14 +377,14 @@ class pcm_wrapper : public audio_wrapper
 {
 public:
     // Actions
-    void                        Process(const uint8_t* Data, size_t Size);
+    bool                        Process(const uint8_t* Data, size_t Size);
 };
 
 //---------------------------------------------------------------------------
-void pcm_wrapper::Process(const uint8_t* Data, size_t Size)
+bool pcm_wrapper::Process(const uint8_t* Data, size_t Size)
 {
     RawFrame->AssignBufferView(Data, Size);
-    RawFrame->Process();
+    return RawFrame->Process();
 }
 
 //---------------------------------------------------------------------------

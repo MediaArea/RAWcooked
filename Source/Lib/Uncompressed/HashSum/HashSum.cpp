@@ -66,7 +66,7 @@ const char** ErrorTexts[] =
 
 static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), IncoherencyMessage);
 
-} // filechecker_issue
+} // hashes_issue
 
 //***************************************************************************
 // Hashes
