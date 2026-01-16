@@ -224,7 +224,7 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
 
     RawFrame->Finalize(P.num_h_slices, P.num_v_slices);
 
-    return false;
+    return P.Error() ? true : false;
 }
 
 //***************************************************************************
@@ -232,9 +232,9 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-const char* ffv1_frame::ErrorMessage()
+const char* ffv1_frame::ErrorMessage() const
 {
-    return P.error_message;
+    return P.Error();
 }
 
 //***************************************************************************

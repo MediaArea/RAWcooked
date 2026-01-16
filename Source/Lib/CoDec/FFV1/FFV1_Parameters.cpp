@@ -183,6 +183,26 @@ bool parameters::Parse(rangecoder& E, bool ConfigurationRecord_IsPresent)
 }
 
 //---------------------------------------------------------------------------
+bool parameters::Error(const char* Error)
+{
+    const char* expected = nullptr;
+    error_message.compare_exchange_strong(
+        expected,
+        Error,
+        std::memory_order_release,
+        std::memory_order_relaxed
+    );
+
+    return true;
+}
+
+//---------------------------------------------------------------------------
+const char* parameters::Error() const
+{
+    return error_message.load(std::memory_order_acquire);
+}
+
+//---------------------------------------------------------------------------
 bool parameters::QuantizationTableSet(rangecoder& E, size_t i)
 {
     pixel_t scale = 1;

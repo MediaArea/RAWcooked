@@ -13,6 +13,7 @@
 #include "Lib/CoDec/FFV1/FFV1_RangeCoder.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder.h"
+#include <atomic>
 #include <cstring>
 using namespace std;
 //---------------------------------------------------------------------------
@@ -32,7 +33,8 @@ struct parameters
 
     // Run
     bool                        Parse(rangecoder& E, bool ConfigurationRecord_IsPresent);
-    bool                        Error(const char* Error) { error_message = Error; return true; }
+    bool                        Error(const char* Error);
+    const char*                 Error() const;
 
     // Common content
     uint32_t                    version;
@@ -67,7 +69,7 @@ struct parameters
     bool                        IsOverflow16bit;
 
     // Error message
-    const char*                 error_message = nullptr;
+    std::atomic<const char*>    error_message = { nullptr };
 
 private:
     bool                        QuantizationTableSet(rangecoder& E, size_t i);

@@ -39,7 +39,7 @@ public:
     raw_frame*                  RawFrame;
 
     // Error message
-    const char* ErrorMessage();
+    const char* ErrorMessage() const;
 
 private:
     // Parameters
