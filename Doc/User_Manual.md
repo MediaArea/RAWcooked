@@ -14,7 +14,7 @@ Using the `RAWcooked` tool:
 - muxes these into a Matroska container (.mkv)
 - uses FFmpeg for this encoding process
   
-To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag. This flag concatenates several important flags into one ensuring lossless compression and assured reversibilty:  
+To encode your sequences using the best preservation flags within RAWcooked then you can use the ```--all``` flag. This flag concatenates several important flags into one ensuring lossless compression and assured reversibility:  
   
   
 | Flags                     | Description                                |
@@ -30,7 +30,7 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--accept-gaps```       | Where gaps in a sequence are found this flag ensures the encoding completes successfully. If you require that gaps are not encoded then follow the ```--all``` command with ```--no-accept-gaps``` |
 
   
-If you do not require all of these flags you can build your own command with just the flags you prefer, for exmaple:
+If you do not require all of these flags you can build your own command with just the flags you prefer, for example:
 ```
 rawcooked --info --conch --encode --hash --check --no-accept-gap <folder> / <file>
 ```
@@ -84,7 +84,7 @@ For the best decoding experience you should always ensure you encode with the ``
   
 ## Capturing logs
   
-It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messagess, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands. You may want to add ```-y``` or ```-n``` which answers yes or no to any questions asked by `RAWcooked` software, unless you're happy monitoring the logs as they are created to intercept any questions.
+It is advisable to always capture the console output of your `RAWcooked` encoding and decoding for review over time. The console output will include `RAWcooked` software information, warning or error messages, plus confirmation of a successful encode or decode. The console also outputs important encoding information from the FFmpeg encoding software including FFmpeg version, file metadata and stream encoding configurations. Over time this information can be valuable for understanding your compressed files. To capture console log outputs for standard output and standard errors you can use the following commands. You may want to add ```-y``` or ```-n``` which answers yes or no to any questions asked by `RAWcooked` software, unless you're happy monitoring the logs as they are created to intercept any questions.
 
 MacOS/Linux: 
 ```
@@ -118,7 +118,7 @@ To review your licence details you can use this command:
 rawcooked --show-license
 ```
   
-You may purchase a sublicence from Media Area which can be loaned to third party suppliers for the creation of assets for the purchaser's use. To issue a sublicence that can be loaned to a third party company supplying RAWcooked files to you:  
+You may purchase a sublicense from Media Area which can be loaned to third party suppliers for the creation of assets for the purchaser's use. To issue a sublicense that can be loaned to a third party company supplying RAWcooked files to you:  
 ```
 --sublicense <value>
 ```
