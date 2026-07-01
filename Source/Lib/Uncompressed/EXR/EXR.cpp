@@ -489,6 +489,7 @@ void exr::ParseBuffer()
         CASE_S_STARTWITH("interim.")
         CASE_S("isoSpeed", item_type::Float)
         CASE_S("lensMake", item_type::String)
+        CASE_S("lensModel", item_type::String)
         CASE_S("lensSerialNumber", item_type::String)
         CASE_F("lineOrder", item_type::lineOrder)
         {
@@ -537,6 +538,8 @@ void exr::ParseBuffer()
                     Unsupported(unsupported::screenWindowWidth);
             }
         }
+        CASE_S("shoot_scene_clip_number", item_type::String)
+        CASE_F("shutterAngle", item_type::Float) {}
         CASE_S("storageMediaSerialNumber", item_type::String)
         CASE_S("timeCode", item_type::timecode)
         CASE_S("timecodeRate", item_type::Int)
