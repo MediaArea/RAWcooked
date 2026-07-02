@@ -197,8 +197,13 @@ ELEMENT_VOID(       6, Segment_Attachments_AttachedFile_FileData_RawCookedTrack_
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Cluster)
+ELEMENT_CASE(      20, Segment_Cluster_BlockGroup)
 ELEMENT_VOID(      23, Segment_Cluster_SimpleBlock)
 ELEMENT_VOID(      67, Segment_Cluster_Timestamp)
+ELEMENT_END()
+
+ELEMENT_BEGIN(Segment_Cluster_BlockGroup)
+ELEMENT_VOID(      21, Segment_Cluster_BlockGroup_Block)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Tracks)
@@ -931,7 +936,25 @@ void matroska::Segment_Cluster()
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_Cluster_BlockGroup()
+{
+    IsList = true;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Cluster_BlockGroup_Block()
+{
+    ProcessBlock();
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Cluster_SimpleBlock()
+{
+    ProcessBlock();
+}
+
+//---------------------------------------------------------------------------
+void matroska::ProcessBlock()
 {
     if (Levels[Level].Offset_End - Buffer_Offset > 4)
     {

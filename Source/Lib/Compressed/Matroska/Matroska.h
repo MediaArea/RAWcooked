@@ -146,6 +146,8 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion);
     MATROSKA_ELEMENT(Segment_Cluster);
+    MATROSKA_ELEMENT(Segment_Cluster_BlockGroup);
+    MATROSKA_ELEMENT(Segment_Cluster_BlockGroup_Block);
     MATROSKA_ELEMENT(Segment_Cluster_SimpleBlock);
     MATROSKA_ELEMENT(Segment_Cluster_Timestamp);
     MATROSKA_ELEMENT(Segment_Tracks);
@@ -192,6 +194,7 @@ private:
     int16_t                     Block_Timestamp;
 
     //Utils
+    void                        ProcessBlock();
     void                        Uncompress(buffer& Buffer);
     void                        Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type);
     void                        StoreFromCurrentToEndOfElement(buffer& Output);
