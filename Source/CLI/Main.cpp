@@ -465,6 +465,15 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 
         Output.Streams.push_back(Stream);
 
+        // Pre-set frame_size so ffmpeg's enc_open() does not set it to nb_samples,
+        // which the FLAC encoder would reject as an invalid block size
+        // if the audio stream has fewer samples than FLAC's minimum block size (16).
+        if (ParseInfo.InputInfo.SampleCount > 0 && ParseInfo.InputInfo.SampleCount < 16)
+        {
+            if (Global.OutputOptions.find("frame_size") == Global.OutputOptions.end())
+                Global.OutputOptions["frame_size"] = "16";
+        }
+
         if (Global.Actions[Action_Coherency])
         {
             // Duration
