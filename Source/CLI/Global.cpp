@@ -297,9 +297,9 @@ int global::SetAll(bool Value)
         return ReturnValue;
     if (int ReturnValue = SetConch(Value))
         return ReturnValue;
-    if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitely set no check
+    if (int ReturnValue = (Value?SetCheck(true):SetQuickCheck())) // Never implicitly set no check
         return ReturnValue;
-    if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitely set no check padding
+    if (int ReturnValue = (Value && SetCheckPadding(Value))) // Never implicitly set no check padding
         return ReturnValue;
     if (int ReturnValue = SetAcceptGaps(Value))
         return ReturnValue;
@@ -1072,7 +1072,7 @@ void global::ProgressIndicator_Show()
                 cerr << setprecision(0) << FileRate;
                 cerr << " files/s";
             }
-            cerr << "    "; // Clean up in case there is less content outputed than the previous time
+            cerr << "    "; // Clean up in case there is less content outputted than the previous time
 
             ProgressIndicator_Value = ProgressIndicator_New;
         }
@@ -1080,5 +1080,5 @@ void global::ProgressIndicator_Show()
 
     // Show summary
     cerr << '\r';
-    cerr << "                                                            \r"; // Clean up in case there is less content outputed than the previous time
+    cerr << "                                                            \r"; // Clean up in case there is less content outputted than the previous time
 }
