@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Project Path="CLI/RAWcooked_CLI.vcxproj" Id="5f56e9d9-9268-49c9-8658-901271e3a23e" />
+  <Project Path="Lib/RAWcooked_Lib.vcxproj" Id="9e97ce8a-1583-40f8-a7f3-a1c2b318aef5" />
+  <Project Path="md5/md5.vcxproj" Id="a0831fc5-4718-4fdf-92ce-6f17ccd4d153" />
+</Solution>
