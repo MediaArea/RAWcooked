@@ -5,11 +5,11 @@
  */
 
 //---------------------------------------------------------------------------
+#include <algorithm>
 #include "Lib/CoDec/FFV1/FFV1_Slice.h"
 #include "Lib/Transform/Transform.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/CRC32/ZenCRC32.h"
-#include <algorithm>
 using namespace std;
 //---------------------------------------------------------------------------
 

@@ -10,18 +10,17 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "Lib/CoDec/FFV1/FFV1_Frame.h"
-#include "Lib/Utils/FileIO/Input_Base.h"
-#include "Lib/Utils/FileIO/FileIO.h"
 #include <bitset>
 #include <cstdint>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
+#include "Lib/CoDec/FFV1/FFV1_Frame.h"
+#include "Lib/Utils/FileIO/Input_Base.h"
+#include "Lib/Utils/FileIO/FileIO.h"
 class base_wrapper;
 class frame_writer;
-using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------

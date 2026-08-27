@@ -5,6 +5,16 @@
  */
 
 //---------------------------------------------------------------------------
+#include <chrono>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <thread>
+extern "C"
+{
+#include "md5.h"
+}
+#include "zlib.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Utils/FileIO/FileWriter.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
@@ -20,16 +30,6 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-#include "zlib.h"
-#include <chrono>
-#include <cstring>
-#include <iomanip>
-#include <iostream>
-#include <thread>
-extern "C"
-{
-#include "md5.h"
-}
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------

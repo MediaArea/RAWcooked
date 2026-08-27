@@ -5,6 +5,13 @@
  */
 
 //---------------------------------------------------------------------------
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <thread>
 #include "CLI/Global.h"
 #include "CLI/Input.h"
 #include "CLI/Output.h"
@@ -21,17 +28,9 @@
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
-#include <map>
-#include <sstream>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <algorithm>
-#include <thread>
 #if defined(_WIN32) || defined(_WINDOWS)
-#define popen _popen
-#define pclose _pclose
-#else
+    #define popen _popen
+    #define pclose _pclose
 #endif
 using namespace std;
 //---------------------------------------------------------------------------

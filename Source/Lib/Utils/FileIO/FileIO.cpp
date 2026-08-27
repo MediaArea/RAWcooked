@@ -8,7 +8,6 @@
 #ifndef _GNU_SOURCE
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
-#include "Lib/Utils/FileIO/FileIO.h"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -29,6 +28,7 @@
     #include <sys/stat.h>
     #include <sys/mman.h>
 #endif
+#include "Lib/Utils/FileIO/FileIO.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------

@@ -5,6 +5,7 @@
  */
 
 //---------------------------------------------------------------------------
+#include "ThreadPool.h"
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/CRC32/ZenCRC32.h"
@@ -12,7 +13,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreorder"
 #endif
-#include "ThreadPool.h"
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

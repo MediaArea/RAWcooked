@@ -5,12 +5,8 @@
  */
 
 //---------------------------------------------------------------------------
-#include "CLI/Input.h"
-#include "Lib/Common/Common.h"
-#include "Lib/Utils/FileIO/Input_Base.h"
-#include "Lib/ThirdParty/alphanum/alphanum.hpp"
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
     #include <io.h> // File existence
@@ -25,6 +21,10 @@
     #include <sys/stat.h>
     #include <sys/mman.h>
 #endif
+#include "CLI/Input.h"
+#include "Lib/Common/Common.h"
+#include "Lib/Utils/FileIO/Input_Base.h"
+#include "Lib/ThirdParty/alphanum/alphanum.hpp"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
