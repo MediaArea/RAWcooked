@@ -56,6 +56,10 @@
 /* Alias the first (in share/alloc.h) to the second (in src/libFLAC/memory.c). */
 #define safe_malloc_mul_2op_ safe_malloc_mul_2op_p
 
+#if defined(_WIN32) || defined(_WINDOWS)
+	#define strdup _strdup
+#endif
+
 /****************************************************************************
  *
  * Local function declarations

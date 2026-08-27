@@ -29,6 +29,11 @@
     #include <sys/mman.h>
 #endif
 #include "Lib/Utils/FileIO/FileIO.h"
+#if defined(_WIN32) || defined(_WINDOWS)
+    #define pclose _pclose
+#else
+    #define _read read
+#endif
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -239,7 +244,7 @@ int filemap::Remap(size_t Begin, size_t End)
         case method::open:
         {
             auto F = P->F.Int;
-            read(F, (void*)Buffer, Buffer_MaxSize);
+            _read(F, (void*)Buffer, Buffer_MaxSize);
             break;
         }
         #if defined(_WIN32) || defined(_WINDOWS)
