@@ -244,14 +244,18 @@ int filemap::Remap(size_t Begin, size_t End)
         case method::open:
         {
             auto F = P->F.Int;
-            _read(F, (void*)Buffer, Buffer_MaxSize);
+            if (Buffer_MaxSize >= (unsigned int)-1)
+                return 1;
+            if (_read(F, (void*)Buffer, (unsigned int)Buffer_MaxSize) == -1)
+                return 1;
             break;
         }
         #if defined(_WIN32) || defined(_WINDOWS)
         case method::createfile:
         {
             auto F = P->F.Handle;
-            ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0);
+            if (ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0))
+                return 1;
             break;
         }
         #endif //defined(_WIN32) || defined(_WINDOWS)
