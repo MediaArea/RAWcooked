@@ -86,6 +86,8 @@ static_assert(error::type_Max == sizeof(ErrorTypes_Infos) / sizeof(const char*),
 //---------------------------------------------------------------------------
 const char* errors::ErrorMessage()
 {
+    std::lock_guard<std::mutex> lock(Mutex);
+
     if (Parsers.empty())
         return NULL;
 
@@ -153,6 +155,8 @@ const char* errors::ErrorMessage()
 //---------------------------------------------------------------------------
 void errors::Error(parser Parser, error::type Type, error::generic::code Code)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
+
     if (Parser >= Parsers.size())
         Parsers.resize(Parser + 1);
     std::vector<per_parser::info> & Codes = Parsers[Parser].Codes[(size_t)Type];
@@ -164,13 +168,13 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code)
     {
         case error::type::Undecodable:
         case error::type::Unsupported:
-            if (!HasErrors_Value)
-                HasErrors_Value = true;
+            if (!HasErrors_Value.load())
+                HasErrors_Value.store(true);
             break;
         case error::type::Incoherent:
         case error::type::Invalid:
-            if (!HasWarnings_Value)
-                HasWarnings_Value = true;
+            if (!HasWarnings_Value.load())
+                HasWarnings_Value.store(true);
             break;
     }
 }
@@ -178,6 +182,8 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code)
 //---------------------------------------------------------------------------
 void errors::Error(parser Parser, error::type Type, error::generic::code Code, const string& String)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
+
     if (Parser >= Parsers.size())
         Parsers.resize(Parser + 1);
     std::vector<per_parser::info> & Codes = Parsers[Parser].Codes[(size_t)Type];
@@ -197,20 +203,20 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code, c
     if (!List.empty() && List.back() == String)
         return;
     List.push_back(String);
-    if ((Type == error::type::Undecodable || Type == error::type::Unsupported) && !HasErrors_Value)
-        HasErrors_Value = true;
+    if ((Type == error::type::Undecodable || Type == error::type::Unsupported) && !HasErrors_Value.load())
+        HasErrors_Value.store(true);
 
     switch (Type)
     {
         case error::type::Undecodable:
         case error::type::Unsupported:
-            if (!HasErrors_Value)
-                HasErrors_Value = true;
+            if (!HasErrors_Value.load())
+                HasErrors_Value.store(true);
             break;
         case error::type::Incoherent:
         case error::type::Invalid:
-            if (!HasWarnings_Value)
-                HasWarnings_Value = true;
+            if (!HasWarnings_Value.load())
+                HasWarnings_Value.store(true);
             break;
     }
 }
@@ -218,9 +224,15 @@ void errors::Error(parser Parser, error::type Type, error::generic::code Code, c
 //---------------------------------------------------------------------------
 void errors::DeleteStrings()
 {
+    std::lock_guard<std::mutex> lock(Mutex);
+
     for (uint8_t i = Parser_Max + 1; i < Parsers.size(); i++)
         for (uint8_t j = 0; j < error::type_Max; j++)
             for (uint8_t k = 0; k < Parsers[i].Codes[j].size(); k++)
                 delete Parsers[i].Codes[j][k].StringList;
+    Parsers.clear();
+    ErrorMessageCache.clear();
+    HasErrors_Value.store(false);
+    HasWarnings_Value.store(false);
 }
 

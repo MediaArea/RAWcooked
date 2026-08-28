@@ -28,6 +28,7 @@
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
+#include <atomic>
 #if defined(_WIN32) || defined(_WINDOWS)
     #define popen _popen
     #define pclose _pclose
@@ -77,6 +78,27 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
 }
 
 //---------------------------------------------------------------------------
+static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_base_uncompressed* SourceParser = nullptr)
+{
+    input_base_uncompressed* Parser;
+    switch (i) {
+    case Parser_DPX: Parser = new dpx(Errors); break;
+    case Parser_TIFF: Parser = new tiff(Errors); break;
+    case Parser_EXR: Parser = new exr(Errors); break;
+    case Parser_WAV: Parser = new wav(Errors); break;
+    case Parser_AIFF: Parser = new aiff(Errors); break;
+    case Parser_AVI: Parser = new avi(Errors); break;
+    default: return  (input_base_uncompressed*)nullptr;
+    }
+
+    if (SourceParser) {
+        Parser->RAWcooked = SourceParser->RAWcooked;
+    }
+
+    return Parser;
+}
+
+//---------------------------------------------------------------------------
 struct parse_info
 {
     string* Name = {};
@@ -94,12 +116,11 @@ struct parse_info
     bool   IsContainer = false;
     bool   Problem = false;
 
-    bool ParseFile_Input(input_base& Input, bool OverrideCheckPadding = false);
-    bool ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
+    bool ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
 };
 
 //---------------------------------------------------------------------------
-bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPadding)
+bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* InputInfo, bool OverrideCheckPadding = false)
 {
     // Init
     SingleFile.Actions = Global.Actions;
@@ -107,17 +128,13 @@ bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPaddi
         SingleFile.Actions.set(Action_CheckPadding);
     SingleFile.Hashes = &Global.Hashes;
     SingleFile.FileName = &RAWcooked.OutputFileName;
-    SingleFile.InputInfo = &InputInfo;
+    SingleFile.InputInfo = InputInfo;
 
     // Parse
     SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
 
-    // Management
-    if (SingleFile.IsDetected() && SingleFile.ParserCode != Parser_Unknown && SingleFile.ParserCode != Parser_HashSum)
-        IsDetected = true;
-
-    if (SingleFile.ParserCode == Parser_EXR && IsDetected && !Global.Actions[Action_Check])
+    if (SingleFile.ParserCode == Parser_EXR && SingleFile.IsDetected() && !Global.Actions[Action_Check])
     {
         Global.ProgressIndicator_Stop();
         cerr << "EXR support depends a lot on the FFmpeg version you have, it is safer to double check the output,\n"
@@ -146,9 +163,81 @@ bool parse_info::ParseFile_Input(input_base& SingleFile, bool OverrideCheckPaddi
 }
 
 //---------------------------------------------------------------------------
-bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos)
+bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding, size_t i)
 {
-    if (IsDetected)
+    const auto& Name = RemovedFiles[i];
+    if (input::OpenInput(FileMap, Name, &Global.Errors)) {
+        return true;
+    }
+    if (Global.Actions[Action_Encode]) {
+        RAWcooked.OutputFileName = Name.substr(Global.Path_Pos_Global);
+        FormatPath(RAWcooked.OutputFileName);
+    }
+
+    if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
+        return true;
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------
+struct worker_data {
+    thread Thread;
+    filemap FileMap;
+    input_base_uncompressed* Parser;
+};
+bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding)
+{
+    if (Global.IoThreads > 1) {
+        const size_t numFiles = RemovedFiles.size();
+        atomic<size_t> nextIndex{ 1 };
+        atomic<bool> AnyError{ false };
+        vector<worker_data> Pool;
+        Pool.resize(Global.IoThreads);
+        for (size_t w = 0; w < Global.IoThreads; ++w) {
+            // Initialize each worker
+            Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
+            if (!Pool[w].Parser) {
+                AnyError = true;
+                continue;
+            }
+
+            // Launch each worker
+            worker_data* p = &Pool[w];
+            p->Thread = thread([p, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError]() {
+                for (;;) {
+                    auto i = nextIndex.fetch_add(1, memory_order_relaxed);
+                    if (i >= numFiles) break;
+                    if (ParseFile_AdditionalInput(*p->Parser, p->FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+                        AnyError = true;
+                    }
+                }
+            });
+        }
+
+        // Join threads and cleanup parsers
+        for (auto& P : Pool) {
+            if (P.Thread.joinable())
+                P.Thread.join();
+            delete P.Parser;
+        }
+
+        return AnyError.load();
+    }
+
+    for (size_t i = 1; i < RemovedFiles.size(); i++) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//---------------------------------------------------------------------------
+bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos)
+{
+    if (SingleFile.IsDetected())
         return false;
 
     // Init
@@ -157,14 +246,16 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     RAWcooked.ProgressIndicator_IsEnd = &Global.ProgressIndicator_IsEnd;
     RAWcooked.ProgressIndicator_IsPaused = &Global.ProgressIndicator_IsPaused;
     RAWcooked.Errors = &Global.Errors;
-    SingleFile.RAWcooked = &RAWcooked;
+    if (Global.Actions[Action_Encode]) {
+        SingleFile.RAWcooked = &RAWcooked;
+    }
     RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
     FormatPath(RAWcooked.OutputFileName);
 
     // Parse
-    if (ParseFile_Input((input_base&)SingleFile, !Global.Actions[Action_CheckPaddingOptionIsSet]))
+    if (ParseFile_Input((input_base&)SingleFile, FileMap, &InputInfo, !Global.Actions[Action_CheckPaddingOptionIsSet]))
         return true;
-    if (!IsDetected)
+    if (!SingleFile.IsDetected() || SingleFile.ParserCode >= Uncompressed_Max)
         return false;
 
     // Management
@@ -278,16 +369,8 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
 
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
-        for (size_t i = 1; i < SingleFile.InputInfo->FrameCount; i++)
-        {
-            Name = &RemovedFiles[i];
-            if (input::OpenInput(FileMap, *Name, &Global.Errors))
-                return true;
-            RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
-            FormatPath(RAWcooked.OutputFileName);
-
-            if (ParseFile_Input((input_base&)SingleFile, OverrideCheckPadding))
-                return true;
+        if (ParseFile_AdditionalInputs(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding)) {
+            return true;
         }
     }
 
@@ -324,82 +407,30 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // Init
     RAWcooked.ResetTrack();
 
-    // WAV
-    if (!ParseInfo.IsDetected)
-    {
-        wav WAV(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(WAV, Input, Files_Pos))
-            return 1;
-    }
-
-    // AIFF
-    if (!ParseInfo.IsDetected)
-    {
-        aiff AIFF(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(AIFF, Input, Files_Pos))
-            return 1;
-    }
-
-    // DPX
-    if (!ParseInfo.IsDetected)
-    {
-        dpx DPX(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(DPX, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << DPX.slice_x * DPX.slice_y;
-            ParseInfo.Slices = t.str();
+    for (int i = 0; i < Uncompressed_Max; i++) {
+        auto Parser = CreateParser(i, &Global.Errors);
+        if (!Parser)
+            continue;
+        auto NOK = ParseInfo.ParseFile_Input_Uncompressed(*Parser, Input, Files_Pos);
+        if (!NOK && Parser->IsDetected()) {
+            switch (i) {
+            case Parser_AVI:
+                Global.SetAcceptFiles();
+                ParseInfo.IsContainer = true;
+                ParseInfo.StreamCountMinus1 = ((avi*)Parser)->GetStreamCount() - 1;
+                // fallthrough
+            case Parser_DPX:
+            case Parser_TIFF:
+            case Parser_EXR:
+                ParseInfo.Slices = std::to_string(Parser->slice_x * Parser->slice_y);
+            }
+            ParseInfo.IsDetected = true;
+            delete Parser;
+            break;
         }
-    }
-
-    // TIFF
-    if (!ParseInfo.IsDetected)
-    {
-        tiff TIFF(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(TIFF, Input, Files_Pos))
+        delete Parser;
+        if (NOK) {
             return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << TIFF.slice_x * TIFF.slice_y;
-            ParseInfo.Slices = t.str();
-        }
-    }
-
-    // EXR
-    if (!ParseInfo.IsDetected)
-    {
-        exr EXR(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(EXR, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << EXR.slice_x * EXR.slice_y;
-            ParseInfo.Slices = t.str();
-        }
-    }
-
-    // AVI
-    if (!ParseInfo.IsDetected)
-    {
-        avi AVI(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(AVI, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            Global.SetAcceptFiles();
-            ParseInfo.IsContainer = true;
-            ParseInfo.StreamCountMinus1 = AVI.GetStreamCount() - 1;
-            stringstream t;
-            t << AVI.slice_x * AVI.slice_y;
-            ParseInfo.Slices = t.str();
         }
     }
 
@@ -412,7 +443,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             hashsum HashSum;
             HashSum.HomePath = ParseInfo.Name->substr(Global.Path_Pos_Global);
             HashSum.List = &Global.Hashes;
-            if (ParseInfo.ParseFile_Input(HashSum, Input, Files_Pos))
+            if (ParseInfo.ParseFile_Input_Uncompressed(HashSum, Input, Files_Pos))
                 return 1;
             HashFileParsed = HashSum.IsDetected();
         }
@@ -423,7 +454,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         else
         {
             unknown Unknown;
-            if (ParseInfo.ParseFile_Input(Unknown, Input, Files_Pos))
+            if (ParseInfo.ParseFile_Input_Uncompressed(Unknown, Input, Files_Pos))
                 return 1;
         }
     }
@@ -538,12 +569,14 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         M->NoOutputCheck = NoOutputCheck;
         M->OpenName = FileOpenName;
         M->OpenStyle = Global.FileOpenMethod;
-        if (ParseInfo.ParseFile_Input(*M))
+        if (ParseFile_Input(*M, ParseInfo.FileMap, &ParseInfo.InputInfo))
         {
             ReturnValue = 1;
         }
         else if (M->IsDetected())
         {
+            ParseInfo.IsDetected = true;
+
             if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
                 HasCheckedReversibility = true;
 

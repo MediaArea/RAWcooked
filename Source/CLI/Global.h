@@ -14,6 +14,7 @@
 #include "Lib/Common/Common.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <vector>
@@ -31,6 +32,7 @@ public:
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
     vector<string>              MoreOutputOptions;
+    size_t                      IoThreads;
     size_t                      AttachmentMaxSize;
     string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
@@ -113,7 +115,7 @@ public:
 private:
     // Progress indicator
     thread*                     ProgressIndicator_Thread;
-    size_t                      ProgressIndicator_Current;
+    atomic<size_t>              ProgressIndicator_Current;
     size_t                      ProgressIndicator_Total;
 
     // Temp

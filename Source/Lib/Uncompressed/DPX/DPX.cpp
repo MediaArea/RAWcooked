@@ -273,14 +273,6 @@ void dpx::ParseBuffer()
         //TODO: no need to check again if the file is supported
     }
 
-    // Test that it is a DPX
-    if (Buffer.Size() < 4)
-    {
-        if (IsDetected())
-            Undecodable(undecodable::Header);
-        return;
-    }
-
     dpx_tested Info;
 
     Buffer_Offset = 0;
@@ -296,8 +288,7 @@ void dpx::ParseBuffer()
             IsBigEndian = true;
             break;
         default:
-            if (IsDetected())
-                Undecodable(undecodable::Header);
+            Undecodable(undecodable::Header);
             return;
     }
     SetDetected();

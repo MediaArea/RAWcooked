@@ -397,11 +397,8 @@ void tiff::ParseBuffer()
             Current.Endianness = endianness::BE;
             break;
         default:
-    {
-        if (IsDetected())
             Undecodable(undecodable::Header);
-        return;
-    }
+            return;
     }
     SetDetected();
     uint32_t FirstIFDOffset = Get_X4();

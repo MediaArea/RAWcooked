@@ -92,6 +92,13 @@ The default name is \fI${Input}.rawcooked_reversibility_data\fR.
 .br
 \fBNote:\fR Not yet implemented for decoding.
 .TP
+.B --io-threads value
+Force the number of IO threads to value.
+.br
+Default value is found in the system hardware concurrency, if
+.br
+available, otherwise it will default to 4.
+.TP
 .B --quiet
 Do not show information related to RAWcooked.
 .br

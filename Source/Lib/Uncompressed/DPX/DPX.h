@@ -31,8 +31,6 @@ public:
 
     // General info
     string                      Flavor_String();
-    size_t                      slice_x;
-    size_t                      slice_y;
 
     // Flavors
     ENUM_BEGIN(flavor)

@@ -318,7 +318,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
 
 //---------------------------------------------------------------------------
 void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files);
-void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<string>& Files)
+void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<string>& Files, int IsDirFromFileRead)
 {
     if (File_Name != "." && File_Name != "..") // Avoid . and ..
     {
@@ -328,7 +328,11 @@ void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden
         if (Dir_Name[Dir_Name.size() - 1] != PathSeparator)
             Dir_Name += PathSeparator;
         File_Name_Complete += File_Name;
-        if (IsDir(File_Name_Complete.c_str()))
+#if defined(_WIN32) || defined(_WINDOWS)
+        if (IsDirFromFileRead < 0)
+            IsDirFromFileRead = IsDir(File_Name_Complete.c_str());
+#endif
+        if (IsDirFromFileRead != 0)
             DetectSequence_FromDir(File_Name_Complete.c_str(), Files);
         else if (!IsHidden && (File_Name_Complete.size()<29 || File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29))
             Files.push_back(File_Name_Complete);
@@ -347,15 +351,11 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files)
         HANDLE hFind = FindFirstFileA((Dir_Name2 + '*').c_str() , &FindFileData);
         if (hFind == INVALID_HANDLE_VALUE)
             return;
-        bool ReturnValue;
 
-        do
-        {
-            string File_Name(FindFileData.cFileName);
-            DetectSequence_FromDir_Sub(Dir_Name2, File_Name, FindFileData.dwFileAttributes&FILE_ATTRIBUTE_HIDDEN, Files);
-            ReturnValue = FindNextFileA(hFind, &FindFileData);
+        do {
+            DetectSequence_FromDir_Sub(Dir_Name2, FindFileData.cFileName, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
         }
-        while (ReturnValue);
+        while (FindNextFileA(hFind, &FindFileData));
 
         FindClose(hFind);
     #else //WINDOWS
@@ -368,7 +368,17 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files)
         {
             //A file
             string File_Name(DirEnt->d_name);
-            DetectSequence_FromDir_Sub(Dir_Name2, File_Name, DirEnt->d_name[0]=='.', Files);
+            int isDir;
+#if defined(DT_DIR)
+            if (DirEnt->d_type != DT_UNKNOWN) {
+                isDir = (DirEnt->d_type == DT_DIR);
+            }
+            else
+#endif
+            {
+                isDir = -1; // Unknown, will be determined later
+            }
+            DetectSequence_FromDir_Sub(Dir_Name2, File_Name, DirEnt->d_name[0]=='.', Files, isDir);
         }
 
         closedir(Dir);
