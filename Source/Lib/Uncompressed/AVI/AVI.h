@@ -32,8 +32,6 @@ public:
     uint8_t                     BitDepth();
     sign                        Sign();
     endianness                  Endianness();
-    size_t                      slice_x;
-    size_t                      slice_y;
 
     ENUM_BEGIN(flavor)
         v210,

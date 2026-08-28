@@ -173,6 +173,9 @@ public:
     input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
     virtual ~input_base_uncompressed() {}
 
+    size_t                      slice_x = 0;
+    size_t                      slice_y = 0;
+
 protected:
     void                        RegisterAsAttachment();
 };
