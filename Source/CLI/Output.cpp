@@ -89,7 +89,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     // Info
     bool Problem = false;
 
-    if (Streams.size() > 2 && !Global.License.IsSupported(feature::MultipleTracks))
+    if (Streams.size() > 2 && Global.Actions[Action_Encode] && !Global.License.IsSupported(feature::MultipleTracks))
     {
         if (!Global.Quiet)
             cerr << "*** More than 2 tracks is not supported by the current license key. ***" << endl;

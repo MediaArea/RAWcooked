@@ -914,18 +914,20 @@ int global::ManageCommandLine(const char* argv[], int argc)
         BinName = "ffmpeg";
 
     // License
-    if (License.LoadLicense(LicenseKey, StoreLicenseKey))
-        return true;
-    if (!License.IsSupported())
-    {
-        cerr << "\nOne or more requested features are not supported with the current license key.\n";
-        cerr << "****** Please contact info@mediaarea.net for a quote or a temporary key." << endl;
-        if (!IgnoreLicenseKey)
+    if (Actions[Action_Encode]) {
+        if (License.LoadLicense(LicenseKey, StoreLicenseKey))
+            return true;
+        if (!License.IsSupported())
+        {
+            cerr << "\nOne or more requested features are not supported with the current license key.\n";
+            cerr << "****** Please contact info@mediaarea.net for a quote or a temporary key." << endl;
+            if (!IgnoreLicenseKey)
+                return 1;
+            cerr << "       Ignoring the license for the moment.\n" << endl;
+        }
+        if (License.ShowLicense(ShowLicenseKey, SubLicenseId, SubLicenseDur))
             return 1;
-        cerr << "       Ignoring the license for the moment.\n" << endl;
     }
-    if (License.ShowLicense(ShowLicenseKey, SubLicenseId, SubLicenseDur))
-        return 1;
     if (Inputs.empty() && (ShowLicenseKey || SubLicenseId))
         return 0;
 

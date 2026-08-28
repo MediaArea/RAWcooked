@@ -292,7 +292,7 @@ bool parse_info::ParseFile_Input(input_base_uncompressed& SingleFile, input& Inp
     }
 
     // License
-    if (!Problem)
+    if (!Problem && Global.Actions[Action_Encode])
         Problem = !Global.License.IsSupported(SingleFile.ParserCode, (uint8_t)SingleFile.Flavor);
 
     // Technical limitations
@@ -688,7 +688,7 @@ int main(int argc, const char* argv[])
     RAWcooked.FileName = Global.rawcooked_reversibility_FileName;
     if (Global.Actions[Action_VersionValueIsAuto])
         RAWcooked.Version = rawcooked::version::mini;
-    else if (Global.Actions[Action_Version2])
+    else if (Global.Actions[Action_Version2]) 
         RAWcooked.Version = rawcooked::version::v2;
     int Value = 0;
     for (size_t i = 0; i < Input.Files.size(); i++)
