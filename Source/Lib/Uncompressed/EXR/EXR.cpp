@@ -198,20 +198,11 @@ exr::~exr()
 //---------------------------------------------------------------------------
 void exr::ParseBuffer()
 {
-    // Test that it is a EXR
-    if (Buffer.Size() < 8)
-    {
-        if (IsDetected())
-            Undecodable(undecodable::Header);
-        return;
-    }
-
     Buffer_Offset = 0;
     uint32_t MagicNumber = Get_B4();
     if (MagicNumber != 0x762F3101)
     {
-        if (IsDetected())
-            Undecodable(undecodable::Header);
+        Undecodable(undecodable::Header);
         return;
     }
     SetDetected();

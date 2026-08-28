@@ -247,7 +247,7 @@ uint64_t input_base::Get_EB()
 //---------------------------------------------------------------------------
 void input_base::Error(error::type Type, error::generic::code Code)
 {
-    if (HasBufferOverflow())
+    if (HasBufferOverflow() || !IsDetected())
         return; // Next errors are not real, due to buffer overflow
     if (!HasErrors())
     {
