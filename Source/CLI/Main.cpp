@@ -77,6 +77,27 @@ user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& Ex
 }
 
 //---------------------------------------------------------------------------
+static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_base_uncompressed* SourceParser = nullptr)
+{
+    input_base_uncompressed* Parser;
+    switch (i) {
+    case Parser_DPX: Parser = new dpx(Errors); break;
+    case Parser_TIFF: Parser = new tiff(Errors); break;
+    case Parser_EXR: Parser = new exr(Errors); break;
+    case Parser_WAV: Parser = new wav(Errors); break;
+    case Parser_AIFF: Parser = new aiff(Errors); break;
+    case Parser_AVI: Parser = new avi(Errors); break;
+    default: return  (input_base_uncompressed*)nullptr;
+    }
+
+    if (SourceParser) {
+        Parser->RAWcooked = SourceParser->RAWcooked;
+    }
+
+    return Parser;
+}
+
+//---------------------------------------------------------------------------
 struct parse_info
 {
     string* Name = {};
@@ -324,82 +345,30 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     // Init
     RAWcooked.ResetTrack();
 
-    // WAV
-    if (!ParseInfo.IsDetected)
-    {
-        wav WAV(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(WAV, Input, Files_Pos))
-            return 1;
-    }
-
-    // AIFF
-    if (!ParseInfo.IsDetected)
-    {
-        aiff AIFF(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(AIFF, Input, Files_Pos))
-            return 1;
-    }
-
-    // DPX
-    if (!ParseInfo.IsDetected)
-    {
-        dpx DPX(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(DPX, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << DPX.slice_x * DPX.slice_y;
-            ParseInfo.Slices = t.str();
+    for (int i = 0; i < Uncompressed_Max; i++) {
+        auto Parser = CreateParser(i, &Global.Errors);
+        if (!Parser)
+            continue;
+        auto NOK = ParseInfo.ParseFile_Input(*Parser, Input, Files_Pos);
+        if (!NOK && Parser->IsDetected()) {
+            switch (i) {
+            case Parser_AVI:
+                Global.SetAcceptFiles();
+                ParseInfo.IsContainer = true;
+                ParseInfo.StreamCountMinus1 = ((avi*)Parser)->GetStreamCount() - 1;
+                // fallthrough
+            case Parser_DPX:
+            case Parser_TIFF:
+            case Parser_EXR:
+                ParseInfo.Slices = std::to_string(Parser->slice_x * Parser->slice_y);
+            }
+            ParseInfo.IsDetected = true;
+            delete Parser;
+            break;
         }
-    }
-
-    // TIFF
-    if (!ParseInfo.IsDetected)
-    {
-        tiff TIFF(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(TIFF, Input, Files_Pos))
+        delete Parser;
+        if (NOK) {
             return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << TIFF.slice_x * TIFF.slice_y;
-            ParseInfo.Slices = t.str();
-        }
-    }
-
-    // EXR
-    if (!ParseInfo.IsDetected)
-    {
-        exr EXR(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(EXR, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            stringstream t;
-            t << EXR.slice_x * EXR.slice_y;
-            ParseInfo.Slices = t.str();
-        }
-    }
-
-    // AVI
-    if (!ParseInfo.IsDetected)
-    {
-        avi AVI(&Global.Errors);
-        if (ParseInfo.ParseFile_Input(AVI, Input, Files_Pos))
-            return 1;
-
-        if (ParseInfo.IsDetected)
-        {
-            Global.SetAcceptFiles();
-            ParseInfo.IsContainer = true;
-            ParseInfo.StreamCountMinus1 = AVI.GetStreamCount() - 1;
-            stringstream t;
-            t << AVI.slice_x * AVI.slice_y;
-            ParseInfo.Slices = t.str();
         }
     }
 
