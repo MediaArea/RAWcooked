@@ -39,10 +39,10 @@ public:
 
 private:
     //Location of content in frame
-    uint32_t                    x; // From slice_x
-    uint32_t                    y; // From slice_y
-    uint32_t                    w; // From slice_width
-    uint32_t                    h; // From slice_height
+    uint32_t                    slice_x; // From slice_x
+    uint32_t                    slice_y; // From slice_y
+    uint32_t                    slice_w; // From slice_width
+    uint32_t                    slice_h; // From slice_height
 
     // Slice related content
     quant_table_set_indexes_struct quant_table_set_indexes;

@@ -5,12 +5,12 @@
  */
 
 //---------------------------------------------------------------------------
+#include <algorithm>
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/AVI/AVI.h"
-#include <algorithm>
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------

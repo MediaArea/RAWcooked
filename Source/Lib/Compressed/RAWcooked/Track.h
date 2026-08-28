@@ -10,18 +10,17 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "Lib/CoDec/FFV1/FFV1_Frame.h"
-#include "Lib/Utils/FileIO/Input_Base.h"
-#include "Lib/Utils/FileIO/FileIO.h"
 #include <bitset>
 #include <cstdint>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
+#include "Lib/CoDec/FFV1/FFV1_Frame.h"
+#include "Lib/Utils/FileIO/Input_Base.h"
+#include "Lib/Utils/FileIO/FileIO.h"
 class base_wrapper;
 class frame_writer;
-using namespace std;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -61,9 +60,9 @@ enum class format_kind
 };
 
 //---------------------------------------------------------------------------
-format Format_FromCodecID(const char* Name);
-format_kind FormatKind(format Format);
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool);
+::format Format_FromCodecID(const char* Name);
+format_kind FormatKind(::format Format);
+base_wrapper* CreateWrapper(::format Format, ThreadPool* Pool);
 class reversibility;
 
 //---------------------------------------------------------------------------
@@ -102,7 +101,7 @@ private:
     input_base_uncompressed*    DecodedFrameParser = nullptr;
     base_wrapper*               Wrapper = nullptr;
     raw_frame*                  RawFrame = nullptr;
-    format                      Format = format::None;
+    ::format                    Format = format::None;
     uint32_t                    Width = 0;
     uint32_t                    Height = 0;
 

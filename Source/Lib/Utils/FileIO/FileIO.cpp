@@ -8,7 +8,6 @@
 #ifndef _GNU_SOURCE
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
-#include "Lib/Utils/FileIO/FileIO.h"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -28,6 +27,12 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
+#endif
+#include "Lib/Utils/FileIO/FileIO.h"
+#if defined(_WIN32) || defined(_WINDOWS)
+    #define pclose _pclose
+#else
+    #define _read read
 #endif
 //---------------------------------------------------------------------------
 
@@ -239,14 +244,18 @@ int filemap::Remap(size_t Begin, size_t End)
         case method::open:
         {
             auto F = P->F.Int;
-            read(F, (void*)Buffer, Buffer_MaxSize);
+            if (Buffer_MaxSize >= (unsigned int)-1)
+                return 1;
+            if (_read(F, (void*)Buffer, (unsigned int)Buffer_MaxSize) == -1)
+                return 1;
             break;
         }
         #if defined(_WIN32) || defined(_WINDOWS)
         case method::createfile:
         {
             auto F = P->F.Handle;
-            ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0);
+            if (ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0))
+                return 1;
             break;
         }
         #endif //defined(_WIN32) || defined(_WINDOWS)

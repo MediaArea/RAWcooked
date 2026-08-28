@@ -180,7 +180,7 @@ public:
 
     void SetPre(buffer_or_view&& NewPre)
     {
-        Pre_ = move(NewPre);
+        Pre_ = std::move(NewPre);
     }
 
     const buffer_or_view& Post() const
@@ -190,12 +190,12 @@ public:
 
     void SetPost(buffer_or_view&& NewPost)
     {
-        Post_ = move(NewPost);
+        Post_ = std::move(NewPost);
     }
 
     void SetIn(buffer_or_view&& NewIn)
     {
-        In_ = move(NewIn);
+        In_ = std::move(NewIn);
     }
 
     buffer_or_view& Buffer()

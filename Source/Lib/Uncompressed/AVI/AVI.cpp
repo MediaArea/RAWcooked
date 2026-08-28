@@ -356,7 +356,7 @@ void avi::AVI__hdrl_strl_strf_auds()
         return;
     }
 
-    uint16_t FormatTag = Get_L2();
+    uint32_t FormatTag = Get_L2();
     uint16_t Channels = Get_L2();
     uint32_t SamplesPerSec = Get_L4();
     uint32_t AvgBytesPerSec = Get_L4();

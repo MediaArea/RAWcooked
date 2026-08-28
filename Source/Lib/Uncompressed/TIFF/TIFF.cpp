@@ -382,7 +382,7 @@ void tiff::ParseBuffer()
     if (Buffer.Size() < 8)
         return;
 
-    tiff_tested Info;
+    tiff_tested Current;
 
     Buffer_Offset = 0;
     uint32_t Magic = Get_B4();
@@ -390,11 +390,11 @@ void tiff::ParseBuffer()
     {
         case 0x49492A00: // "II" + 42 in 16-bit hex
             IsBigEndian = false;
-            Info.Endianness = endianness::LE;
+            Current.Endianness = endianness::LE;
             break;
         case 0x4D4D002A: // "MM" + 42 in 16-bit hex
             IsBigEndian = true;
-            Info.Endianness = endianness::BE;
+            Current.Endianness = endianness::BE;
             break;
         default:
     {
@@ -579,21 +579,21 @@ void tiff::ParseBuffer()
     case  1: // Y
         switch (SamplesPerPixel)
         {
-        case  1: Info.ColorSpace = colorspace::Y; break;
-        default: Info.ColorSpace = (decltype(Info.ColorSpace))-1;
+        case  1: Current.ColorSpace = colorspace::Y; break;
+        default: Current.ColorSpace = (decltype(Current.ColorSpace))-1;
         }
         break;
     case  2 : // RGB / RGBA
         switch (SamplesPerPixel)
         {
-        case  3: Info.ColorSpace = colorspace::RGB; break;
-        case  4: Info.ColorSpace = colorspace::RGBA; break;
-        default: Info.ColorSpace = (decltype(Info.ColorSpace))-1;
+        case  3: Current.ColorSpace = colorspace::RGB; break;
+        case  4: Current.ColorSpace = colorspace::RGBA; break;
+        default: Current.ColorSpace = (decltype(Current.ColorSpace))-1;
         }
         break;
-    default: Info.ColorSpace = (decltype(Info.ColorSpace))-1;
+    default: Current.ColorSpace = (decltype(Current.ColorSpace))-1;
     }
-    switch (Info.ColorSpace)
+    switch (Current.ColorSpace)
     {
     case colorspace::RGBA:
         if (!ExtraSamples_IsPresent || ExtraSamples != 2)
@@ -609,10 +609,10 @@ void tiff::ParseBuffer()
             Unsupported(unsupported::Flavor);
         return;
     }
-    Info.BitsPerSample = (decltype(tiff_tested::BitsPerSample))BitsPerSample;
+    Current.BitsPerSample = (decltype(tiff_tested::BitsPerSample))BitsPerSample;
     for (const auto& TIFF_Tested_Item : TIFF_Tested)
     {
-        if (TIFF_Tested_Item == Info)
+        if (TIFF_Tested_Item == Current)
         {
             Flavor = (decltype(Flavor))(&TIFF_Tested_Item - TIFF_Tested);
             break;
@@ -622,7 +622,7 @@ void tiff::ParseBuffer()
     {
         for (const auto& TIFF_Also_Item : TIFF_Also)
         {
-            if (TIFF_Also_Item.Test == Info)
+            if (TIFF_Also_Item.Test == Current)
             {
                 Flavor = (decltype(Flavor))TIFF_Also_Item.Flavor;
                 break;
@@ -659,7 +659,7 @@ void tiff::ParseBuffer()
         slice_x <<= 1;
     if (Width >= 2880) // more than 3/2 of 1920, oversampled HD is not included
         slice_x <<= 1;
-    if (Info.BitsPerSample > 10)
+    if (Current.BitsPerSample > 10)
         slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
     if (slice_x > Width / 2)
         slice_x = Width / 2;

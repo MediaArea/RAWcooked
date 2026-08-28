@@ -5,6 +5,16 @@
  */
 
 //---------------------------------------------------------------------------
+#include <chrono>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <thread>
+extern "C"
+{
+#include "md5.h"
+}
+#include "zlib.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Utils/FileIO/FileWriter.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
@@ -20,16 +30,6 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-#include "zlib.h"
-#include <chrono>
-#include <cstring>
-#include <iomanip>
-#include <iostream>
-#include <thread>
-extern "C"
-{
-#include "md5.h"
-}
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -92,8 +92,12 @@ struct output_hash {
 
     void Update(size_t Size)
     {
-        MD5_Update(&MD5, Buffer + Offset, Size);
-        Offset += Size;
+        do {
+            unsigned long SizeLong = Size >= (unsigned long)-1 ? (unsigned long)-1 : (unsigned long)Size;
+            MD5_Update(&MD5, Buffer + Offset, SizeLong);
+            Offset += SizeLong;
+            Size -= SizeLong;
+        } while (Size);
     }
 
     md5 MD5_Final()
@@ -351,7 +355,7 @@ void matroska::ParseBuffer()
     // Progress indicator
     Cluster_Timestamp = 0;
     Block_Timestamp = 0;
-    thread* ProgressIndicator_Thread;
+    thread* ProgressIndicator_Thread = {};
     if (!Quiet)
         ProgressIndicator_Thread=new thread(matroska_ProgressIndicator_Show, this);
     
@@ -459,7 +463,7 @@ void matroska::ParseBuffer()
 
     // Progress indicator
     Buffer_Offset = Buffer.Size();
-    if (!Quiet)
+    if (ProgressIndicator_Thread)
     {
         ProgressIndicator_IsEnd.notify_one();
         ProgressIndicator_Thread->join();

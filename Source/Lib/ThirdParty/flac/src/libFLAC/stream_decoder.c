@@ -58,6 +58,9 @@
 /* technically this should be in an "export.c" but this is convenient enough */
 FLAC_API int FLAC_API_SUPPORTS_OGG_FLAC = FLAC__HAS_OGG;
 
+#if defined(_WIN32) || defined(_WINDOWS)
+	#define fileno _fileno
+#endif
 
 /***********************************************************************
  *

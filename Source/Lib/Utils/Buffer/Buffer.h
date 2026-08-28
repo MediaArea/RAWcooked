@@ -45,7 +45,7 @@ public:
 
     operator string() const
     {
-        return move(string((const char*)Data(), Size()));
+        return std::move(string((const char*)Data(), Size()));
     }
 
 protected:

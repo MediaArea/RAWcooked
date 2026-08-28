@@ -38,6 +38,11 @@
 #ifndef FLAC__SHARE_SAFE_STR_H
 #define FLAC__SHARE_SAFE_STR_H
 
+#if defined(_WIN32) || defined(_WINDOWS)
+	#define strdup _strdup
+	#define strncat _strncat
+#endif
+
 static inline char *
 safe_strncat(char *dest, const char *src, size_t dest_size)
 {

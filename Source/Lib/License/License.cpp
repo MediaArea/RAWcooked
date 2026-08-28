@@ -5,17 +5,21 @@
  */
 
 //---------------------------------------------------------------------------
-#include "Lib/License/License.h"
-#include "Lib/License/License_Internal.h"
-#include "Lib/Utils/FileIO/Input_Base.h"
 #define __STDC_WANT_LIB_EXT1__ 1
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
+#if defined(_WIN32) || defined(_WINDOWS)
     #include <Shlobj.h>
+#else
+    #include <sys/stat.h>
+#endif
+#include "Lib/License/License.h"
+#include "Lib/License/License_Internal.h"
+#include "Lib/Utils/FileIO/Input_Base.h"
+#if defined(_WIN32) || defined(_WINDOWS)
     #define PathSeparator "\\"
 #else
     #include <sys/stat.h>
@@ -31,7 +35,7 @@ using namespace std;
 //---------------------------------------------------------------------------
 static string getenv_string(const char* name)
 {
-    #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__)) // TODO: getenv_s is supported with GCC only with C++17.
+    #if defined(_WIN32) || defined(_WINDOWS) // TODO: getenv_s is supported with GCC only with C++17.
         // Get size
         size_t len;
         if (getenv_s(&len, NULL, 0, name) || !len)
@@ -61,7 +65,7 @@ static string getenv_string(const char* name)
 static tm localtime_tm(const time_t& time)
 {
     tm result;
-    #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
+    #if defined(_WIN32) || defined(_WINDOWS)
         localtime_s(&result, &time);
     #else
         localtime_r(&time, &result);
@@ -73,7 +77,7 @@ static tm localtime_tm(const time_t& time)
 //---------------------------------------------------------------------------
 bool CreateDirectory (const string& Dir)
 {
-    #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
+    #if defined(_WIN32) || defined(_WINDOWS)
         DWORD dwAttrib = GetFileAttributesA(Dir.c_str());
         if (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
             return false;
@@ -96,7 +100,7 @@ bool CreateDirectory (const string& Dir)
 string GetLocalConfigPath (bool Create = false)
 {
     string result;
-    #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
+    #if defined(_WIN32) || defined(_WINDOWS)
         char szPath[MAX_PATH];
         if(SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, szPath)))
             result = szPath;
