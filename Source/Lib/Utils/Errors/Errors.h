@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <mutex>
 using namespace std;
 class rawcooked;
 class filemap;
@@ -93,17 +95,17 @@ class errors
 {
 public:
     // Constructor / Destructor
-    ~errors()                   { if (Parsers.size() > Parser_Max) DeleteStrings(); }
-    
+    ~errors()                   { DeleteStrings(); }
+
     // Error message read
     const char*                 ErrorMessage();
 
     // Error message write
     void                        Error(parser Parser, error::type Type, error::generic::code Code);
     void                        Error(parser Parser, error::type Type, error::generic::code Code, const string& String);
-    bool                        HasErrors() { return HasErrors_Value; }
-    bool                        HasWarnings() { return HasWarnings_Value; }
-    void                        ClearErrors() { Parsers.clear(); }
+    bool                        HasErrors() { return HasErrors_Value.load(); }
+    bool                        HasWarnings() { return HasWarnings_Value.load(); }
+    void                        ClearErrors() { std::lock_guard<std::mutex> lock(Mutex); Parsers.clear(); ErrorMessageCache.clear(); HasErrors_Value.store(false); HasWarnings_Value.store(false); }
 
 private:
     struct per_parser
@@ -118,8 +120,9 @@ private:
     std::vector<per_parser>     Parsers;
     string                      ErrorMessageCache;
     void                        DeleteStrings();
-    bool                        HasErrors_Value = false;
-    bool                        HasWarnings_Value = false;
+    std::atomic<bool>           HasErrors_Value { false };
+    std::atomic<bool>           HasWarnings_Value { false };
+    std::mutex                  Mutex;
 };
 
 #endif
