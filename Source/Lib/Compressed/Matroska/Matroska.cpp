@@ -463,7 +463,7 @@ void matroska::ParseBuffer()
 
     // Progress indicator
     Buffer_Offset = Buffer.Size();
-    if (!ProgressIndicator_Thread)
+    if (ProgressIndicator_Thread)
     {
         ProgressIndicator_IsEnd.notify_one();
         ProgressIndicator_Thread->join();

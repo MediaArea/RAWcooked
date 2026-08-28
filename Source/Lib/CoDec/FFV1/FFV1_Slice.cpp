@@ -114,7 +114,7 @@ bool slice::SliceHeader()
 {
     states_struct States(states_default);
 
-    uint32_t slice_x, slice_y, slice_width_minus1, slice_height_minus1;
+    uint32_t slice_width_minus1, slice_height_minus1;
     slice_x = E.u(States);
     if (slice_x >= P->num_h_slices)
     {
@@ -150,10 +150,10 @@ bool slice::SliceHeader()
     }
 
     //Computing boundaries, being careful about how are computed boundaries when there is not an integral number for Width  / num_h_slices or Height / num_v_slices (the last slice has more pixels)
-    x = slice_x  * P->width / P->num_h_slices;
-    y = slice_y  * P->height / P->num_v_slices;
-    w = slice_x2 * P->width / P->num_h_slices - x;
-    h = slice_y2 * P->height / P->num_v_slices - y;
+    slice_x = slice_x  * P->width / P->num_h_slices;
+    slice_y = slice_y  * P->height / P->num_v_slices;
+    slice_w = slice_x2 * P->width / P->num_h_slices - slice_x;
+    slice_h = slice_y2 * P->height / P->num_v_slices - slice_y;
 
     for (uint8_t i = 0; i < P->quant_table_set_index_count; i++)
     {
@@ -184,7 +184,7 @@ void slice::GOP_Init()
         switch (P->coder_type)
         {
             case 0 : 
-                    Coder = new coder_golombrice(P->QuantTableSets, P->quant_table_set_index_count, w, P->bits_max);
+                    Coder = new coder_golombrice(P->QuantTableSets, P->quant_table_set_index_count, slice_w, P->bits_max);
                     break;
             case 1 : 
                     Coder = new coder_rangecoder(P->QuantTableSets, P->quant_table_set_index_count, P->RC_ContextSets);
@@ -260,10 +260,10 @@ bool slice::Parse()
     }
     else
     {
-        x = 0;
-        y = 0;
-        w = P->width;
-        h = P->height;
+        slice_x = 0;
+        slice_y = 0;
+        slice_w = P->width;
+        slice_h = P->height;
         picture_structure = (uint32_t)-1;
         sar_num = 0;
         sar_den = 0;
@@ -350,22 +350,22 @@ size_t slice::SliceContent()
 //---------------------------------------------------------------------------
 void slice::SliceContent_PlaneThenLine()
 {
-    pixel_t* SamplesBuffer = new pixel_t[2 * (w + 3)];
-    memset(SamplesBuffer, 0, 2 * (w + 3) * sizeof(pixel_t));
-    auto Transform = Transform_Init(RawFrame, pix_style::YUVA, P->bits_per_raw_sample, x, y, w, h);
+    pixel_t* SamplesBuffer = new pixel_t[2 * (slice_w + 3)];
+    memset(SamplesBuffer, 0, 2 * (slice_w + 3) * sizeof(pixel_t));
+    auto Transform = Transform_Init(RawFrame, pix_style::YUVA, P->bits_per_raw_sample, slice_x, slice_y, slice_w, slice_h);
 
     SliceContent_PlaneThenLine(Transform, SamplesBuffer, 0);
     if (P->chroma_planes)
     {
-        uint32_t w_Save = w;
-        uint32_t h_Save = h;
+        uint32_t w_Save = slice_w;
+        uint32_t h_Save = slice_h;
 
-        w = w_Save >> P->log2_h_chroma_subsample;
+        slice_w = w_Save >> P->log2_h_chroma_subsample;
         if (w_Save & ((1 << P->log2_h_chroma_subsample) - 1))
-            w++; //Is ceil
-        h = h_Save >> P->log2_v_chroma_subsample;
+            slice_w++; //Is ceil
+        slice_h = h_Save >> P->log2_v_chroma_subsample;
         if (h_Save & ((1 << P->log2_v_chroma_subsample) - 1))
-            h++; //Is ceil
+            slice_h++; //Is ceil
         memset(SamplesBuffer, 0, 2 * (w_Save + 3) * sizeof(pixel_t));
         SliceContent_PlaneThenLine(Transform, SamplesBuffer, 1);
         memset(SamplesBuffer, 0, 2 * (w_Save + 3) * sizeof(pixel_t));
@@ -384,16 +384,16 @@ void slice::SliceContent_PlaneThenLine(transform_base* Transform, pixel_t* Sampl
 {
     pixel_t* sample[2];
     sample[0] = SamplesBuffer + 2;
-    sample[1] = sample[0] + w + 3;
+    sample[1] = sample[0] + slice_w + 3;
 
     Coder->Plane_Init();
 
-    for (size_t y = 0; y < h; y++)
+    for (size_t y = 0; y < slice_h; y++)
     {
         swap(sample[0], sample[1]);
 
         sample[1][-1] = sample[0][0];
-        sample[0][w] = sample[0][w - 1];
+        sample[0][slice_w] = sample[0][slice_w - 1];
 
         Line(pos, sample);
 
@@ -405,17 +405,17 @@ void slice::SliceContent_PlaneThenLine(transform_base* Transform, pixel_t* Sampl
 //---------------------------------------------------------------------------
 void slice::SliceContent_LineThenPlane()
 {
-    pixel_t* SamplesBuffer = new pixel_t[2 * P->plane_count * (w + 3)];
-    memset(SamplesBuffer, 0, 2 * P->plane_count * (w + 3) * sizeof(pixel_t));
-    auto Transform = Transform_Init(RawFrame, pix_style::RGBA, P->bits_per_raw_sample, x, y, w, h);
+    pixel_t* SamplesBuffer = new pixel_t[2 * P->plane_count * (slice_w + 3)];
+    memset(SamplesBuffer, 0, 2 * P->plane_count * (slice_w + 3) * sizeof(pixel_t));
+    auto Transform = Transform_Init(RawFrame, pix_style::RGBA, P->bits_per_raw_sample, slice_x, slice_y, slice_w, slice_h);
 
     Coder->Plane_Init();
 
     pixel_t *sample[4][2];
     for (size_t x = 0; x < P->plane_count; x++)
     {
-        sample[x][0] = SamplesBuffer + 2 * x * (w + 3) + 2;
-        sample[x][1] = sample[x][0] + w + 3;
+        sample[x][0] = SamplesBuffer + 2 * x * (slice_w + 3) + 2;
+        sample[x][1] = sample[x][0] + slice_w + 3;
     }
     for (size_t x = P->plane_count; x < 4; x++)
     {
@@ -423,14 +423,14 @@ void slice::SliceContent_LineThenPlane()
         sample[x][1] = NULL;
     }
 
-    for (size_t y = 0; y < h; y++)
+    for (size_t y = 0; y < slice_h; y++)
     {
         for (size_t c = 0; c < P->plane_count; c++)
         {
             swap(sample[c][0], sample[c][1]);
 
             sample[c][1][-1] = sample[c][0][0];
-            sample[c][0][w] = sample[c][0][w - 1];
+            sample[c][0][slice_w] = sample[c][0][slice_w - 1];
 
             Line((c + 1) >> 1, sample[c]);
         }
@@ -452,7 +452,7 @@ void slice::Line(size_t quant_table_set_index, pixel_t *sample[2])
     pixel_t& bits_mask=P->bits_mask;
     bool Is5 = QuantTables[3][127] ? true : false;
     pixel_t* s0c = sample[0];
-    pixel_t* s0e = s0c + w;
+    pixel_t* s0e = s0c + slice_w;
     pixel_t* s1c = sample[1];
 
     while (s0c<s0e)

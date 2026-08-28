@@ -82,8 +82,8 @@ public:
     filemap::method             OpenStyle = {};
 
     // Parse
-    bool                        Parse(const buffer_view& Buffer, size_t FileSize = (size_t)-1) { return Parse(nullptr, Buffer, FileSize); }
-    bool                        Parse(filemap& FileMap) { return Parse(&FileMap, FileMap); }
+    bool                        Parse(const buffer_view& Buffer_Source, size_t FileSize_Source = (size_t)-1) { return Parse(nullptr, Buffer_Source, FileSize_Source); }
+    bool                        Parse(filemap& FileMap_Source) { return Parse(&FileMap_Source, FileMap_Source); }
 
     // Info
     bool                        IsDetected() { return Info[Info_IsDetected]; }
@@ -108,7 +108,7 @@ protected:
     uint8_t                     Get_X1();
     uint16_t                    Get_L2();
     uint16_t                    Get_B2();
-    uint32_t                    Get_X2() { return IsBigEndian ? Get_B2() : Get_L2(); }
+    uint16_t                    Get_X2() { return IsBigEndian ? Get_B2() : Get_L2(); }
     uint32_t                    Get_L4();
     uint32_t                    Get_B4();
     uint32_t                    Get_X4() { return IsBigEndian ? Get_B4() : Get_L4(); }

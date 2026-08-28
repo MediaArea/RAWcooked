@@ -52,7 +52,7 @@ size_t Colorspace2Count(colorspace ColorSpace)
         return 4;
     case colorspace::Y:
         return 1;
-    default: return -1;
+    default: return (size_t)-1;
     }
 }
 

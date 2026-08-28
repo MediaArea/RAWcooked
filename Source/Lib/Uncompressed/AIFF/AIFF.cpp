@@ -375,7 +375,7 @@ void aiff::AIFF_COMM()
         return;
     }
 
-    aiff_tested Info;
+    aiff_tested Current;
     uint16_t numChannels = Get_B2();
     Get_B4(); // numSamplesFrames
     uint16_t sampleSize = Get_B2();
@@ -387,13 +387,13 @@ void aiff::AIFF_COMM()
         {
         case 0x4E4F4E45: // NONE
         case 0x74776F73: // twos
-            Info.Endianness = endianness::BE;
-            Info.Sign = sign::S;
+            Current.Endianness = endianness::BE;
+            Current.Sign = sign::S;
             break;
         case 0x72617720: // raw
         case 0x736F7774: // sowt
-            Info.Endianness = endianness::LE;
-            Info.Sign = sampleSize > 8 ? sign::S : sign::U;
+            Current.Endianness = endianness::LE;
+            Current.Sign = sampleSize > 8 ? sign::S : sign::U;
             break;
         default:
             Unsupported(unsupported::COMM_compressionType_NotPcm);
@@ -402,8 +402,8 @@ void aiff::AIFF_COMM()
     }
     else
     {
-        Info.Sign = sign::S;
-        Info.Endianness = sampleSize > 8 ? endianness::BE : endianness::LE;
+        Current.Sign = sign::S;
+        Current.Endianness = sampleSize > 8 ? endianness::BE : endianness::LE;
     }
 
     // Supported?
@@ -416,12 +416,12 @@ void aiff::AIFF_COMM()
         Unsupported(unsupported::Flavor);
         return;
     }
-    Info.sampleSize = (decltype(aiff_tested::sampleSize))sampleSize;
-    Info.numChannels = (decltype(aiff_tested::numChannels))numChannels;
-    Info.sampleRateCode = SampleRate2Code((uint32_t)sampleRate);
+    Current.sampleSize = (decltype(aiff_tested::sampleSize))sampleSize;
+    Current.numChannels = (decltype(aiff_tested::numChannels))numChannels;
+    Current.sampleRateCode = SampleRate2Code((uint32_t)sampleRate);
     for (const auto& AIFF_Tested_Item : AIFF_Tested)
     {
-        if (AIFF_Tested_Item == Info)
+        if (AIFF_Tested_Item == Current)
         {
             Flavor = (decltype(Flavor))(&AIFF_Tested_Item - AIFF_Tested);
             break;
