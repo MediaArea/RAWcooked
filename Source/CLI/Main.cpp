@@ -28,6 +28,7 @@
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
+#include <atomic>
 #if defined(_WIN32) || defined(_WINDOWS)
     #define popen _popen
     #define pclose _pclose
@@ -180,8 +181,51 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
     return false;
 }
 
+//---------------------------------------------------------------------------
+struct worker_data {
+    thread Thread;
+    filemap FileMap;
+    input_base_uncompressed* Parser;
+};
 bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding)
 {
+    if (Global.IoThreads > 1) {
+        const size_t numFiles = RemovedFiles.size();
+        atomic<size_t> nextIndex{ 1 };
+        atomic<bool> AnyError{ false };
+        vector<worker_data> Pool;
+        Pool.resize(Global.IoThreads);
+        for (size_t w = 0; w < Global.IoThreads; ++w) {
+            // Initialize each worker
+            Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
+            if (!Pool[w].Parser) {
+                AnyError = true;
+                continue;
+            }
+
+            // Launch each worker
+            worker_data* p = &Pool[w];
+            p->Thread = thread([p, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError]() {
+                for (;;) {
+                    auto i = nextIndex.fetch_add(1, memory_order_relaxed);
+                    if (i >= numFiles) break;
+                    if (ParseFile_AdditionalInput(*p->Parser, p->FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+                        AnyError = true;
+                    }
+                }
+            });
+        }
+
+        // Join threads and cleanup parsers
+        for (auto& P : Pool) {
+            if (P.Thread.joinable())
+                P.Thread.join();
+            delete P.Parser;
+        }
+
+        return AnyError.load();
+    }
+
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
         if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, i)) {
             return true;

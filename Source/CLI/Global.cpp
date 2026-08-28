@@ -491,6 +491,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
         return Usage(argv[0]);
 
     AttachmentMaxSize = (size_t)-1;
+    IoThreads = 0;
     IgnoreLicenseKey = !License.IsSupported_License();
     SubLicenseId = 0;
     SubLicenseDur = 1;
@@ -835,6 +836,19 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (!strcmp(argv[i], "--io-threads"))
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            IoThreads = atoi(argv[i]);
+            if (!IoThreads)
+            {
+                cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a non zero positive number.\n";
+                return 1;
+            }
+        }
         else if (!strcmp(argv[i], "-framerate"))
         {
             if (OptionsForOtherFiles)
@@ -912,6 +926,16 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     if (BinName.empty())
         BinName = "ffmpeg";
+
+    if (!IoThreads && !Actions[Action_Encode]) {
+        IoThreads = thread::hardware_concurrency();
+        if (!IoThreads)
+            IoThreads = 4;
+    }
+    if (IoThreads > 1 && Actions[Action_Encode]) {
+        cerr << "Error: Multiple IO threads is not yet supported while encoding." << endl;
+        return 1;
+    }
 
     // License
     if (Actions[Action_Encode]) {
