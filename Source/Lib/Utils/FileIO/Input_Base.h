@@ -15,6 +15,7 @@
 #include "Lib/Utils/FileIO/FileIO.h"
 #include <bitset>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 using namespace std;
@@ -175,6 +176,9 @@ public:
 
     size_t                      slice_x = 0;
     size_t                      slice_y = 0;
+
+    // Edit
+    map<string, string>* Edits = nullptr;
 
     void                        CopyCommon(const input_base_uncompressed& Parser);
 

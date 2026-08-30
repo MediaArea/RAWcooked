@@ -23,7 +23,7 @@ public:
         return Data_;
     }
 
-    const uint8_t& operator [] (size_t n) const
+    uint8_t& operator [] (size_t n) const
     {
         return Data_[n];
     }
@@ -51,7 +51,7 @@ public:
 protected:
     buffer_base() = default;
     buffer_base(const uint8_t* NewData, size_t NewSize) :
-        Data_(NewData),
+        Data_((uint8_t*)NewData),
         Size_(NewSize)
     {}
     buffer_base(buffer_base& Buffer) = delete;
@@ -77,13 +77,13 @@ protected:
 
     void AssignBase(const uint8_t* NewData, size_t NewSize)
     {
-        Data_ = NewData;
+        Data_ = (uint8_t*)NewData;
         Size_ = NewSize;
     }
 
     void AssignKeepSizeBase(const uint8_t* NewData)
     {
-        Data_ = NewData;
+        Data_ = (uint8_t*)NewData;
     }
 
     void AssignKeepDataBase(size_t NewSize) // Use it only as intermediate setting
@@ -92,7 +92,7 @@ protected:
     }
 
 private:
-    const uint8_t*              Data_ = nullptr;
+    uint8_t*                    Data_ = nullptr;
     size_t                      Size_ = 0;
 };
 
