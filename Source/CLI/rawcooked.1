@@ -35,6 +35,9 @@ Decodes the Matroska file back to the original RAW image sequence, including res
 .B --help \fR|\fB -h
 Displays the help guide.
 .TP
+.B --help-edit \fR|\fB -h
+Displays the help guide for edit options.
+.TP
 .B --version
 Tells you which installed version you are using.
 .TP
@@ -206,6 +209,13 @@ This is default.
 .TP
 .B --no-encode
 Do not carry out encode (see above).
+.TP
+.B --edit \fIkey=value
+Edit audio-visual RAW data.
+.br
+Valid keys are listed by using --help-edit option.\n".
+.br
+All other features are deactivated when using this option.
 .TP
 .B --hash
 Computes the hash of audio-visual RAW data files.
