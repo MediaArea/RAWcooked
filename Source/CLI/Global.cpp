@@ -842,7 +842,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Error_Missing(argv[i]);
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
-            IoThreads = atoi(argv[i]);
+            IoThreads = atoi(argv[++i]);
             if (!IoThreads)
             {
                 cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a non zero positive number.\n";
