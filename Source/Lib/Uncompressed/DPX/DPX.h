@@ -83,6 +83,12 @@ private:
     void                        Unsupported(dpx_issue::unsupported::code Code) { input_base::Unsupported((error::unsupported::code)Code); }
     void                        Invalid(dpx_issue::invalid::code Code) { input_base::Invalid((error::invalid::code)Code); }
 
+    // Edit
+    void                        AddEditsParser(map<string, string>& Edits);
+    string                      ListEditsParser();
+    void                        Edit();
+    map<unsigned, buffer>       Edits;
+
     // Comparison
     uint8_t*                    HeaderCopy = NULL;
     uint64_t                    HeaderCopy_Info; // 0-11: buffer size - 1, 12: ignore offsets to data image 
