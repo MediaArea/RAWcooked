@@ -102,14 +102,21 @@ public:
     buffer() :
         buffer_base(nullptr, 0)
     {}
-    buffer(const buffer_base& Buffer) = delete;
+    buffer(const buffer& Buffer)
+    {
+        Create(Buffer);
+    }
     buffer(buffer&& Buffer) :
         buffer_base(Buffer.Data(), Buffer.Size())
     {
         Buffer.ClearBase();
     }
 
-    buffer& operator = (buffer_base& Buffer) = delete;
+    buffer& operator = (const buffer& Buffer)
+    {
+        Create(Buffer);
+        return *this;
+    }
     buffer& operator = (buffer&& Buffer)
     {
         if (this == &Buffer)

@@ -176,7 +176,10 @@ public:
     size_t                      slice_x = 0;
     size_t                      slice_y = 0;
 
+    void                        CopyCommon(const input_base_uncompressed& Parser);
+
 protected:
+    virtual void                CopyCommonParser(const input_base_uncompressed& Parser) {}
     void                        RegisterAsAttachment();
 };
 

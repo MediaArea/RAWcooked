@@ -247,6 +247,24 @@ dpx::~dpx()
 }
 
 //---------------------------------------------------------------------------
+void dpx::CopyCommonParser(const input_base_uncompressed& Parser)
+{
+    const dpx& DPX = (const dpx&)Parser;
+
+    // Comparison
+    if (DPX.HeaderCopy) {
+        HeaderCopy_Info = DPX.HeaderCopy_Info;
+        HeaderCopy = new uint8_t[2048];
+        size_t HeaderCopy_Size = (HeaderCopy_Info & 0xFFF) + 1;
+        memcpy(HeaderCopy, DPX.HeaderCopy, HeaderCopy_Size);
+    }
+
+    // Temp
+    In = DPX.In;
+    In_FirstNonZero = DPX.In_FirstNonZero;
+}
+
+//---------------------------------------------------------------------------
 void dpx::ParseBuffer()
 {
     // Handle "same as the previous frame" content

@@ -92,7 +92,7 @@ static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_
     }
 
     if (SourceParser) {
-        Parser->RAWcooked = SourceParser->RAWcooked;
+        Parser->CopyCommon(*SourceParser);
     }
 
     return Parser;

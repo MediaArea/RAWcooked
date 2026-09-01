@@ -29,6 +29,9 @@ public:
     dpx(errors* Errors = nullptr);
     ~dpx();
 
+    // Common
+    void                        CopyCommonParser(const input_base_uncompressed& Parser);
+
     // General info
     string                      Flavor_String();
 
