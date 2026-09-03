@@ -32,6 +32,9 @@ public:
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
     vector<string>              MoreOutputOptions;
+    map<string, string>         Edits;
+    bool                        Edits_Enabled;
+    bool                        Edits_Help;
     size_t                      IoThreads;
     size_t                      AttachmentMaxSize;
     string                      rawcooked_reversibility_FileName;
@@ -102,6 +105,7 @@ public:
     int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetDecode(bool Value);
+    int SetEdit(const char* Value);
     int SetEncode(bool Value);
     int SetInfo(bool Value);
     int SetFrameMd5(bool Value);

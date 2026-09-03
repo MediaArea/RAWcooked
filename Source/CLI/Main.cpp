@@ -98,6 +98,18 @@ static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_
     return Parser;
 }
 
+int Help_Edit() {
+    for (int i = 0; i < Uncompressed_Max; i++) {
+        auto Parser = CreateParser(i, &Global.Errors);
+        if (!Parser)
+            continue;
+        Parser->ListEdits();
+        delete Parser;
+    }
+
+    return ReturnValue_OK;
+}
+
 //---------------------------------------------------------------------------
 struct parse_info
 {
@@ -166,7 +178,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding, size_t i)
 {
     const auto& Name = RemovedFiles[i];
-    if (input::OpenInput(FileMap, Name, &Global.Errors)) {
+    if (input::OpenInput(FileMap, Name, &Global.Errors, Global.Edits_Enabled)) {
         return true;
     }
     if (Global.Actions[Action_Encode]) {
@@ -366,6 +378,9 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
                 return true;
             }
         }
+
+        if (Global.Edits_Enabled && SingleFile.AddEdits(Global.Edits))
+            return true;
 
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
@@ -669,7 +684,7 @@ int ParseFile(size_t Files_Pos)
     ParseInfo.Name = &Input.Files[Files_Pos];
 
     // Open file
-    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors))
+    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors, Global.Edits_Enabled))
         return 1;
 
     // Compressed content

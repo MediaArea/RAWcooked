@@ -8,6 +8,7 @@
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/endianness.h"
+#include <algorithm>
 #include <sstream>
 #include <ios>
 using namespace std;
@@ -259,9 +260,240 @@ void dpx::CopyCommonParser(const input_base_uncompressed& Parser)
         memcpy(HeaderCopy, DPX.HeaderCopy, HeaderCopy_Size);
     }
 
+    // Edits
+    Edits = DPX.Edits;
+
     // Temp
     In = DPX.In;
     In_FirstNonZero = DPX.In_FirstNonZero;
+}
+
+enum edit_type : uint8_t
+{
+    Edit_S,
+    Edit_U,
+    Edit_F,
+};
+
+struct edit_list {
+    unsigned    Offset;
+    unsigned    Size;
+    edit_type   Type;
+    const char* Name;
+    const char* Description;
+};
+static edit_list EditList[] = {
+    // 5.1 File Information Header
+    {    8,    8, Edit_S,   "Version number", nullptr },
+    {   16,    4, Edit_U,   "Total image file size", nullptr },
+    {   20,    4, Edit_U,   "Ditto key", "0 = same as previous frame; 1 = new"},
+    {   24,    4, Edit_U,   "Generic section header length", nullptr },
+    {   28,    4, Edit_U,   "Industry specific header length", nullptr },
+    {   32,    4, Edit_U,   "User-defined header length", nullptr },
+    {   36,  100, Edit_S,   "Image filename", nullptr },
+    {  136,   24, Edit_S,   "Creation date/time", "yyyy:mm:dd:hh:mm:ssLTZ" },
+    {  160,  100, Edit_S,   "Creator", nullptr },
+    {  260,  200, Edit_S,   "Project name", nullptr },
+    {  460,  200, Edit_S,   "Copyright", nullptr },
+    {  660,    4, Edit_U,   "Encryption key", "0xFFFFFFFF means unencrypted"},
+    //{  664,  104,    TBD,   "File Information Header Reserved", nullptr },
+
+    // Image Information Header
+    {  768,    2, Edit_U,   "Image orientation", nullptr },
+    {  770,    2, Edit_U,   "Number of image elements", nullptr },
+    {  772,    4, Edit_U,   "Pixels per line", nullptr },
+    {  776,    4, Edit_U,   "Lines per image element", nullptr },
+
+    // Image element 1
+    {  780,    4, Edit_U,   "Data sign", "0 = unsigned; 1 = signed" },
+    {  784,    4, Edit_U,   "Reference low data code value", nullptr },
+    {  788,    4, Edit_F,   "Reference low quantity represented", nullptr },
+    {  792,    4, Edit_U,   "Reference high data code value", nullptr },
+    {  796,    4, Edit_F,   "Reference high quantity represented", nullptr },
+    {  800,    1, Edit_U,   "Descriptor", nullptr },
+    {  801,    1, Edit_U,   "Transfer characteristic", nullptr },
+    {  802,    1, Edit_U,   "Colorimetric specification", nullptr },
+    {  803,    1, Edit_U,   "Bit depth", nullptr },
+    {  804,    2, Edit_U,   "Packing", nullptr },
+    {  806,    2, Edit_U,   "Encoding", nullptr },
+    {  808,    4, Edit_U,   "Offset to data", nullptr },
+    {  812,    4, Edit_U,   "End-of-line padding", nullptr },
+    {  816,    4, Edit_U,   "End-of-image padding", nullptr },
+    {  820,   32, Edit_S,   "Description of image element", nullptr },
+
+    // Image elements 2-8
+    // {  852,   72,    TBD,   "Data structure for image element 2", nullptr },
+    // {  924,   72,    TBD,   "Data structure for image element 3", nullptr },
+    // {  996,   72,    TBD,   "Data structure for image element 4", nullptr },
+    // { 1068,   72,    TBD,   "Data structure for image element 5", nullptr },
+    // { 1140,   72,    TBD,   "Data structure for image element 6", nullptr },
+    // { 1212,   72,    TBD,   "Data structure for image element 7", nullptr },
+    // { 1284,   72,    TBD,   "Data structure for image element 8", nullptr },
+    // { 1356,   52,    TBD,   "Reserved for future use", nullptr },
+
+    // Image Source Information Header
+    { 1408,    4, Edit_U,   "X offset", nullptr },
+    { 1412,    4, Edit_U,   "Y offset", nullptr },
+    { 1416,    4, Edit_F,   "X center", nullptr },
+    { 1420,    4, Edit_F,   "Y center", nullptr },
+    { 1424,    4, Edit_U,   "X original size", nullptr },
+    { 1428,    4, Edit_U,   "Y original size", nullptr },
+    { 1432,  100, Edit_S,   "Source image filename", nullptr },
+    { 1532,   24, Edit_S,   "Source image date/time", "yyyy:mm:dd:hh:mm:ssLTZ" },
+    { 1556,   32, Edit_S,   "Input device name", nullptr },
+    { 1588,   32, Edit_S,   "Input device serial number", nullptr },
+    { 1620,    8, Edit_U,   "Border validity XL", nullptr },
+    { 1620,    8, Edit_U,   "Border validity XR", nullptr },
+    { 1620,    8, Edit_U,   "Border validity YT", nullptr },
+    { 1620,    8, Edit_U,   "Border validity YB", nullptr },
+    { 1628,    8, Edit_U,   "Pixel aspect ratio horizontal", nullptr },
+    { 1628,    8, Edit_U,   "Pixel aspect ratio vertical", nullptr },
+    { 1636,    4, Edit_F,   "X scanned size", nullptr },
+    { 1640,    4, Edit_F,   "Y scanned size", nullptr },
+    // { 1644,   20,    TBD,   "Image Source Information Header Reserved", nullptr },
+
+    // Motion-Picture Film Information Header
+    { 1664,    2, Edit_S,   "Film manufacturing ID code", "2 digits from film edge code"},
+    { 1666,    2, Edit_S,   "Film type", "2 digits from film edge code" },
+    { 1668,    2, Edit_S,   "Offset in perfs", "2 digits from film edge code" },
+    { 1670,    6, Edit_S,   "Prefix", "6 digits from film edge code" },
+    { 1676,    4, Edit_S,   "Count", "4 digits from film edge code" },
+    { 1680,   32, Edit_S,   "Format", "e.g. Academy"},
+    { 1712,    4, Edit_U,   "Frame position in sequence", nullptr },
+    { 1716,    4, Edit_U,   "Sequence length", "frames"},
+    { 1720,    4, Edit_U,   "Held count", "1 = default"},
+    { 1724,    4, Edit_F,   "Frame rate of original", nullptr },
+    { 1728,    4, Edit_F,   "Shutter angle of camera in degrees", nullptr },
+    { 1732,   32, Edit_S,   "Frame identification", nullptr },
+    { 1764,  100, Edit_S,   "Slate information", nullptr },
+    // { 1864,   56,    TBD,   "Motion-Picture Film Information Header Reserved", nullptr },
+
+    // 6.2 Television Information Header
+    { 1920,    4, Edit_U,   "SMPTE time code", nullptr },
+    { 1924,    4, Edit_U,   "SMPTE user bits", nullptr },
+    { 1928,    1, Edit_U,   "Interlace", "0 = noninterlaced; 1 = 2:1 interlace"},
+    { 1929,    1, Edit_U,   "Field number", nullptr },
+    { 1930,    1, Edit_U,   "Video signal standard", nullptr },
+    // { 1931,    1, Edit_U,   "Zero", nullptr },
+    { 1932,    4, Edit_F,   "Horizontal sampling rate", "Hz"},
+    { 1936,    4, Edit_F,   "Vertical sampling rate", "Hz" },
+    { 1940,    4, Edit_F,   "Temporal sampling rate or frame rate", "Hz" },
+    { 1944,    4, Edit_F,   "Time offset from sync to first pixel", "microseconds" },
+    { 1948,    4, Edit_F,   "Gamma", nullptr },
+    { 1952,    4, Edit_F,   "Black level code value", nullptr },
+    { 1956,    4, Edit_F,   "Black gain", nullptr },
+    { 1960,    4, Edit_F,   "Breakpoint", nullptr },
+    { 1964,    4, Edit_F,   "Reference white level code value", nullptr },
+    { 1968,    4, Edit_F,   "Integration time", "s" },
+    // { 1972,   76,    TBD,   "Reserved for future use", nullptr },
+};
+
+void dpx::AddEditsParser(map<string, string>& Edits)
+{
+    for (auto it = Edits.begin(); it != Edits.end(); ) {
+        bool Found = false;
+        string key_lower = it->first;
+        transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+        for (auto& EditInfo : EditList) {
+            string name_lower = EditInfo.Name;
+            transform(name_lower.begin(), name_lower.end(), name_lower.begin(), ::tolower);
+            if (key_lower == name_lower) {
+                switch (EditInfo.Type) {
+                case Edit_S:
+                {
+                    if (it->second.size() > EditInfo.Size)
+                        it->second = "value is too long, max is " + to_string(EditInfo.Size);
+                    else {
+                        auto& EditBuffer = this->Edits[EditInfo.Offset];
+                        EditBuffer.Resize(EditInfo.Size);
+                        memcpy(EditBuffer.Data(), it->second.c_str(), it->second.size());
+                        memset(EditBuffer.Data() + it->second.size(), 0, EditInfo.Size - it->second.size());
+                        it = Edits.erase(it);
+                        Found = true;
+                    }
+                    break;
+                }
+                case Edit_U:
+                {
+                    try {
+                        auto& EditBuffer = this->Edits[EditInfo.Offset];
+                        EditBuffer.Resize(EditInfo.Size);
+
+                        uint64_t Value = stoull(it->second);
+                        uint8_t* BufferPtr = EditBuffer.Data();
+
+                        if (EditInfo.Size == 1) {
+                            *BufferPtr = (uint8_t)Value;
+                        } else if (EditInfo.Size == 2) {
+                            uint16_t Value16 = (uint16_t)Value;
+                            Value16 = IsBigEndian ? htob16(Value16) : htol16(Value16);
+                            memcpy(BufferPtr, &Value16, 2);
+                        } else if (EditInfo.Size == 4) {
+                            uint32_t Value32 = (uint32_t)Value;
+                            Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
+                            memcpy(BufferPtr, &Value32, 4);
+                        } else if (EditInfo.Size == 8) {
+                            uint64_t Value64 = Value;
+                            Value64 = IsBigEndian ? htob64(Value64) : htol64(Value64);
+                            memcpy(BufferPtr, &Value64, 8);
+                        } else {
+                            it->second = "unsupported size: " + to_string(EditInfo.Size);
+                            break;
+                        }
+                        it = Edits.erase(it);
+                        Found = true;
+                    } catch (const exception&) {
+                        it->second = "invalid unsigned integer value";
+                    }
+                    break;
+                }
+                case Edit_F:
+                {
+                    try {
+                        auto& EditBuffer = this->Edits[EditInfo.Offset];
+                        EditBuffer.Resize(EditInfo.Size);
+
+                        uint8_t* BufferPtr = EditBuffer.Data();
+
+                        if (EditInfo.Size == 4) {
+                            float Value = stof(it->second);
+                            Value = IsBigEndian ? htobf(Value) : htolf(Value);
+                            memcpy(BufferPtr, &Value, 4);
+                        } else if (EditInfo.Size == 8) {
+                            double Value = stod(it->second);
+                            Value = IsBigEndian ? htobd(Value) : htold(Value);
+                            memcpy(BufferPtr, &Value, 8);
+                        } else {
+                            it->second = "unsupported size: " + to_string(EditInfo.Size);
+                            break;
+                        }
+                        it = Edits.erase(it);
+                        Found = true;
+                    } catch (const exception&) {
+                        it->second = "invalid float value";
+                    }
+                    break;
+                }
+                }
+                break;
+            }
+        }
+        if (!Found)
+            ++it;
+    }
+}
+
+//---------------------------------------------------------------------------
+string dpx::ListEditsParser()
+{
+    string Result = "DPX:\n";
+    for (auto& EditInfo : EditList) {
+        Result += "  " + string(EditInfo.Name);
+        if (EditInfo.Description)
+            Result += " (" + string(EditInfo.Description) + ")";
+        Result += "\n";
+    }
+    return Result;
 }
 
 //---------------------------------------------------------------------------
@@ -297,17 +529,17 @@ void dpx::ParseBuffer()
     uint32_t MagicNumber = Get_B4();
     switch (MagicNumber)
     {
-        case 0x58504453: // XPDS
-            Info.Endianness = endianness::LE;
-            IsBigEndian = false;
-            break;
-        case 0x53445058: // SDPX
-            Info.Endianness = endianness::BE;
-            IsBigEndian = true;
-            break;
-        default:
-            Undecodable(undecodable::Header);
-            return;
+    case 0x58504453: // XPDS
+        Info.Endianness = endianness::LE;
+        IsBigEndian = false;
+        break;
+    case 0x53445058: // SDPX
+        Info.Endianness = endianness::BE;
+        IsBigEndian = true;
+        break;
+    default:
+        Undecodable(undecodable::Header);
+        return;
     }
     SetDetected();
 
@@ -371,10 +603,10 @@ void dpx::ParseBuffer()
     if (Get_X4() != 0)
         Unsupported(unsupported::EolPadding);
     bool IsAltern = Info.BitDepth == 10
-                 && Info.ColorSpace != colorspace::RGB
-                 && (!memcmp(Buffer.Data() +  160, "Lasergraphics Inc.", 18) // Creator
-                  || !memcmp(Buffer.Data() +  160, "DIAMANT-Film", 12) // Creator
-                  || !memcmp(Buffer.Data() + 1556, "Scanity", 7)); // Input device name
+        && Info.ColorSpace != colorspace::RGB
+        && (!memcmp(Buffer.Data() + 160, "Lasergraphics Inc.", 18) // Creator
+            || !memcmp(Buffer.Data() + 160, "DIAMANT-Film", 12) // Creator
+            || !memcmp(Buffer.Data() + 1556, "Scanity", 7)); // Input device name
 
     if (IndustryHeaderSize && InputInfo)
     {
@@ -640,6 +872,8 @@ void dpx::ParseBuffer()
 
     if (Actions[Action_Conch])
         ConformanceCheck();
+
+    Edit();
 }
 
 //---------------------------------------------------------------------------
@@ -714,6 +948,16 @@ void dpx::ConformanceCheck()
         memmove(HeaderCopy, Buffer.Data(), HeaderCopy_Info >= 2048 ? 2048 : HeaderCopy_Info);
         HeaderCopy_Info--;
         HeaderCopy_Info |= (HasEncoding ? 1 : 0) << 12;
+    }
+}
+
+//---------------------------------------------------------------------------
+void dpx::Edit()
+{
+    for (const auto& Edit : Edits) {
+        if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
+            memcpy((void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
+        }
     }
 }
 

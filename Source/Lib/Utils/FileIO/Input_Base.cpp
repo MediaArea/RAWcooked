@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include <cmath>
+#include <iostream>
 extern "C"
 {
 #include "md5.h"
@@ -288,6 +289,32 @@ void input_base_uncompressed::CopyCommon(const input_base_uncompressed& Parser)
     RAWcooked = Parser.RAWcooked;
 
     CopyCommonParser(Parser);
+}
+
+int input_base_uncompressed::AddEdits(map<string, string>& Edits)
+{
+    AddEditsParser(Edits);
+    for (auto& Edit : Edits) {
+        cerr << "Edit \"" << Edit.first;
+        if (Edit.second.empty()) {
+            cerr << "\" unknown." << endl;
+        }
+        else {
+            cerr << "\" " << Edit.second << '.' << endl;
+        }
+    }
+
+    auto WillEdit = !Edits.empty();
+    if (!WillEdit) {
+        Edit();
+    }
+    return WillEdit;
+}
+
+int input_base_uncompressed::ListEdits()
+{
+    cerr << ListEditsParser();
+    return 0;
 }
 
 //---------------------------------------------------------------------------

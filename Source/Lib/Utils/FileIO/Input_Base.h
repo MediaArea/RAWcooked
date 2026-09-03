@@ -15,6 +15,7 @@
 #include "Lib/Utils/FileIO/FileIO.h"
 #include <bitset>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 using namespace std;
@@ -177,9 +178,14 @@ public:
     size_t                      slice_y = 0;
 
     void                        CopyCommon(const input_base_uncompressed& Parser);
+    int                         AddEdits(map<string, string>& Edits);
+    int                         ListEdits();
 
 protected:
     virtual void                CopyCommonParser(const input_base_uncompressed& Parser) {}
+    virtual void                AddEditsParser(map<string, string>& Edits) {}
+    virtual void                Edit() {};
+    virtual string              ListEditsParser() { return string(); }
     void                        RegisterAsAttachment();
 };
 

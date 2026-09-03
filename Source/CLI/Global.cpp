@@ -17,6 +17,7 @@
 #endif
 #include "CLI/Global.h"
 #include "CLI/Help.h"
+int Help_Edit();
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -199,6 +200,23 @@ int global::SetConch(bool Value)
 int global::SetDecode(bool Value)
 {
     Actions.set(Action_Decode, Value);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int global::SetEdit(const char* Value)
+{
+    int Result = SetAll(false);
+    if (Result)
+        return Result;
+
+    auto Delimiter = strchr(Value, '=');
+    if (!Delimiter) {
+        return 1;
+    }
+    auto ValueS = string(Value);
+    Edits[ValueS.substr(0, Delimiter - Value)] = ValueS.substr(Delimiter - Value + 1);
+    Edits_Enabled = true;
     return 0;
 }
 
@@ -491,6 +509,8 @@ int global::ManageCommandLine(const char* argv[], int argc)
         return Usage(argv[0]);
 
     AttachmentMaxSize = (size_t)-1;
+    Edits_Enabled = false;
+    Edits_Help = false;
     IoThreads = 0;
     IgnoreLicenseKey = !License.IsSupported_License();
     SubLicenseId = 0;
@@ -602,6 +622,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--edit") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetEdit(argv[++i]);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--encode") == 0)
         {
             int Value = SetEncode(true);
@@ -659,6 +687,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
         {
             int Value = Help(argv[0]);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--help-edit") == 0)
+        {
+            int Value = Help_Edit();
             if (Value)
                 return Value;
         }
@@ -926,6 +960,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     if (BinName.empty())
         BinName = "ffmpeg";
+
+    if (!Edits.empty() && Actions[Action_Encode]) {
+        cerr << "Error: Edit while encoding is not supported." << endl;
+        return 1;
+    }
 
     if (!IoThreads && !Actions[Action_Encode]) {
         IoThreads = thread::hardware_concurrency();

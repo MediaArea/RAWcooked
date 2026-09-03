@@ -54,9 +54,11 @@ struct private_buffered
 };
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, size_t End)
+int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
 {
     Close();
+
+    AlsoWrite = AlsoWrite_;
 
     if (NewStyle != method::mmap)
     {
@@ -139,7 +141,9 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
 
     size_t NewSize;
 #if defined(_WIN32) || defined(_WINDOWS)
-    auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
+    static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
+    auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if (NewFile != INVALID_HANDLE_VALUE)
     {
         DWORD FileSizeHigh;
@@ -150,7 +154,8 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
             NewSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
             if (NewSize)
             {
-                auto NewMapping = CreateFileMapping(NewFile, 0, PAGE_READONLY, 0, 0, 0);
+                static const DWORD Protects[2] = { PAGE_READONLY, PAGE_READWRITE };
+                auto NewMapping = CreateFileMapping(NewFile, 0, Protects[AlsoWrite], 0, 0, 0);
                 if (NewMapping)
                 {
                     Private = NewFile;
@@ -167,8 +172,9 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
             CloseHandle(NewFile);
         }
     }
-#else
-    auto fd = open(FileName, O_RDONLY, 0);
+#else 
+    static const int oflag[2] = { O_RDONLY, O_RDWR };
+    auto fd = open(FileName, oflag[AlsoWrite], 0);
     if (fd != -1)
     {
         struct stat Fstat;
@@ -277,10 +283,13 @@ int filemap::Remap(size_t Begin, size_t End)
 
     // New map
 #if defined(_WIN32) || defined(_WINDOWS)
-    auto NewData = MapViewOfFile(Private2, FILE_MAP_READ, 0, 0, 0);
+    static const DWORD DesiredAccess[2] = { FILE_MAP_READ, FILE_MAP_READ | FILE_MAP_WRITE };
+    auto NewData = MapViewOfFile(Private2, DesiredAccess[AlsoWrite], 0, 0, 0);
     const decltype(NewData) NewData_Fail = NULL;
 #else
-    auto NewData = mmap(nullptr, Size(), PROT_READ, MAP_FILE | MAP_PRIVATE, Private, 0);
+    static const int prot[2] = { PROT_READ, PROT_READ | PROT_WRITE };
+    static const int flags[2] = { MAP_PRIVATE, MAP_SHARED };
+    auto NewData = mmap(nullptr, Size(), prot[AlsoWrite], flags[AlsoWrite], Private, 0);
     const decltype(NewData) NewData_Fail = MAP_FAILED;
 #endif
 
