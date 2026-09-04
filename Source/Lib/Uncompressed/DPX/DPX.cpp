@@ -825,25 +825,19 @@ void dpx::ParseBuffer()
     }
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = false;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = OffsetToData;
-        RAWcooked->AfterData = Buffer.Data() + OffsetAfterData;
-        RAWcooked->AfterData_Size = Buffer.Size() - OffsetAfterData;
-        RAWcooked->InData = In.Data();
-        RAWcooked->InData_Size = In.Size();
-        RAWcooked->FileSize = (uint64_t)-1;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = OffsetToData;
+            Params.AfterData = Buffer.Data() + OffsetAfterData;
+            Params.AfterData_Size = Buffer.Size() - OffsetAfterData;
+            Params.InData = In.Data();
+            Params.InData_Size = In.Size();
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 
     if (Actions[Action_Conch])

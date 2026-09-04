@@ -139,7 +139,6 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
     if (OverrideCheckPadding)
         SingleFile.Actions.set(Action_CheckPadding);
     SingleFile.Hashes = &Global.Hashes;
-    SingleFile.FileName = &RAWcooked.OutputFileName;
     SingleFile.InputInfo = InputInfo;
 
     // Parse
@@ -182,8 +181,8 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
         return true;
     }
     if (Global.Actions[Action_Encode]) {
-        RAWcooked.OutputFileName = Name.substr(Global.Path_Pos_Global);
-        FormatPath(RAWcooked.OutputFileName);
+        S.FileName = Name.substr(Global.Path_Pos_Global);
+        FormatPath(S.FileName);
     }
 
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
@@ -261,8 +260,8 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     if (Global.Actions[Action_Encode]) {
         SingleFile.RAWcooked = &RAWcooked;
     }
-    RAWcooked.OutputFileName = Name->substr(Global.Path_Pos_Global);
-    FormatPath(RAWcooked.OutputFileName);
+    SingleFile.FileName = Name->substr(Global.Path_Pos_Global);
+    FormatPath(SingleFile.FileName);
 
     // Parse
     if (ParseFile_Input((input_base&)SingleFile, FileMap, &InputInfo, !Global.Actions[Action_CheckPaddingOptionIsSet]))
@@ -348,7 +347,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     else
     {
         // OverrideCheckPadding info
-        bool OverrideCheckPadding = !Global.Actions[Action_CheckPadding] && SingleFile.RAWcooked && SingleFile.RAWcooked->InData;
+        bool OverrideCheckPadding = !Global.Actions[Action_CheckPadding] && SingleFile.RAWcooked && SingleFile.RAWcooked->HasInData();
         if (OverrideCheckPadding) // There are non-zero padding bits
         {
             Global.ProgressIndicator_Stop();
@@ -457,6 +456,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             hashsum HashSum;
             HashSum.HomePath = ParseInfo.Name->substr(Global.Path_Pos_Global);
+            FormatPath(HashSum.HomePath);
             HashSum.List = &Global.Hashes;
             if (ParseInfo.ParseFile_Input_Uncompressed(HashSum, Input, Files_Pos))
                 return 1;
@@ -465,7 +465,11 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         else
             HashFileParsed = false;
         if (HashFileParsed)
-            Global.Hashes.Ignore(RAWcooked.OutputFileName);
+        {
+            auto FileName = ParseInfo.Name->substr(Global.Path_Pos_Global);
+            FormatPath(FileName);
+            Global.Hashes.Ignore(FileName);
+        }
         else
         {
             unknown Unknown;
@@ -532,7 +536,9 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             if (Duration)
             {
                 Global.Durations.push_back(Duration);
-                Global.Durations_FileName.push_back(RAWcooked.OutputFileName);
+                auto FileName = ParseInfo.Name->substr(Global.Path_Pos_Global);
+                FormatPath(FileName);
+                Global.Durations_FileName.push_back(FileName);
             }
         }
     }
@@ -582,7 +588,8 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
         M->NoOutputCheck = NoOutputCheck;
-        M->OpenName = FileOpenName;
+        if (FileOpenName)
+            M->FileName = *FileOpenName;
         M->OpenStyle = Global.FileOpenMethod;
         if (ParseFile_Input(*M, ParseInfo.FileMap, &ParseInfo.InputInfo))
         {
@@ -711,6 +718,7 @@ int ParseFile(size_t Files_Pos)
         attachment Attachment;
         Attachment.FileName_In = *ParseInfo.Name;
         Attachment.FileName_Out = ParseInfo.Name->substr(Global.Path_Pos_Global);
+        FormatPath(Attachment.FileName_Out);
         Output.Attachments.push_back(Attachment);
     }
     return 0;
@@ -1001,7 +1009,6 @@ int main(int argc, const char* argv[])
             Global.OutputFileName = Global.Inputs[0];
             if (!Global.Actions[Action_Hash]) // If hashes are present in the file, output is checked by using hashes
                 Global.OutputFileName_IsProvided = true;
-            RAWcooked.OutputFileName.clear();
 
             // Remove directory name (already in RAWcooked file data)
             size_t Path_Pos = Global.OutputFileName.find_last_of("/\\");

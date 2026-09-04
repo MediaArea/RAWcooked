@@ -78,8 +78,7 @@ public:
     // Config
     bitset<Action_Max>          Actions;
     hashes*                     Hashes = nullptr;
-    const string*               FileName = nullptr;
-    const string*               OpenName = nullptr; // TODO: merge with FileName
+    string                      FileName;
     filemap::method             OpenStyle = {};
 
     // Parse
@@ -177,9 +176,12 @@ public:
     size_t                      slice_x = 0;
     size_t                      slice_y = 0;
 
+    string                      UncompressedFileName;
+
     void                        CopyCommon(const input_base_uncompressed& Parser);
     int                         AddEdits(map<string, string>& Edits);
     int                         ListEdits();
+    void                        ParseRAWcooked(parse_params& Params);
 
 protected:
     virtual void                CopyCommonParser(const input_base_uncompressed& Parser) {}
@@ -234,7 +236,6 @@ public:
 
     // Demux
     uint64_t                    InputOutput_Diff = 0;
-    string                      Output_FileName;
     struct position
     {
         uint16_t                Index;

@@ -277,35 +277,24 @@ void avi::ParseBuffer()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        // Last part
-        auto InSize = Buffer_Offset - Buffer_LastPos;
-        memcpy(In + In_Pos, Buffer.Data() + Buffer_LastPos, InSize);
-        In_Pos += InSize;
-        Buffer_LastPos = Levels[Level].Offset_End;
-
-        RAWcooked->Unique = true;
-        RAWcooked->BeforeData = nullptr;
-        RAWcooked->BeforeData_Size = 0;
-        RAWcooked->AfterData = nullptr;
-        RAWcooked->AfterData_Size =0;
-        RAWcooked->InData = In;
-        RAWcooked->InData_Size = In_Pos;
-        RAWcooked->FileSize = FileSize;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            // Last part
+            auto InSize = Buffer_Offset - Buffer_LastPos;
+            memcpy(In + In_Pos, Buffer.Data() + Buffer_LastPos, InSize);
+            In_Pos += InSize;
+            Buffer_LastPos = Levels[Level].Offset_End;
+
+            Params.Unique = true;
+            Params.InData = In;
+            Params.InData_Size = In_Pos;
+            Params.InputFile_Size = FileSize;
+            Params.IsContainer = true;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->IsContainer = true;
-        auto SeparatorPos = RAWcooked->OutputFileName.find('/');
-        if (SeparatorPos != (size_t)-1)
-            RAWcooked->OutputFileName.erase(0, SeparatorPos + 1); // TODO: more generic removal of directory name for unique files
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 

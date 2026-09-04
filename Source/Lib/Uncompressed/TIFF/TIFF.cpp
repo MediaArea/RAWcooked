@@ -691,25 +691,18 @@ void tiff::ParseBuffer()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = false;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = StripOffsets[0];
-        RAWcooked->AfterData = Buffer.Data() + Buffer.Size() - EndOfImagePadding;
-        RAWcooked->AfterData_Size = EndOfImagePadding;
-        RAWcooked->InData = nullptr;
-        RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = Buffer.Size();
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = StripOffsets[0];
+            Params.AfterData = Buffer.Data() + Buffer.Size() - EndOfImagePadding;
+            Params.AfterData_Size = EndOfImagePadding;
+            Params.InputFile_Size = Buffer.Size();
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 

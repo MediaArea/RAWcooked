@@ -445,25 +445,18 @@ void aiff::AIFF_SSND()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = true;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = Buffer_Offset + 8;
-        RAWcooked->AfterData = Buffer.Data() + Levels[Level].Offset_End;
-        RAWcooked->AfterData_Size = Buffer.Size() - Levels[Level].Offset_End;
-        RAWcooked->InData = nullptr;
-        RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = (uint64_t)-1;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.Unique = true;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = Buffer_Offset + 8;
+            Params.AfterData = Buffer.Data() + Levels[Level].Offset_End;
+            Params.AfterData_Size = Buffer.Size() - Levels[Level].Offset_End;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 
