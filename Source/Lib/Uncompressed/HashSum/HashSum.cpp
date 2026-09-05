@@ -82,30 +82,35 @@ struct Hash_FileSearch
 //---------------------------------------------------------------------------
 size_t hashes::NewHashFile()
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     return List_FromHashFiles.size();
 }
 
 //---------------------------------------------------------------------------
 void hashes::ResetHashFile(size_t OldSize)
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     List_FromHashFiles.resize(OldSize);
 }
 
 //---------------------------------------------------------------------------
 void hashes::FromHashFile(string const& FileName, md5 const& MD5)
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     List_FromHashFiles.emplace_back(FileName, MD5);
 }
 
 //---------------------------------------------------------------------------
 void hashes::Ignore(string const& FileName)
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     HashFiles.push_back(FileName);
 }
 
 //---------------------------------------------------------------------------
 void hashes::RemoveEmptyFiles()
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     md5 EmptyMD5 = { 0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e };
 
     auto List_FromHashFiles_Size = List_FromHashFiles.size();
@@ -121,6 +126,13 @@ void hashes::RemoveEmptyFiles()
 
 //---------------------------------------------------------------------------
 void hashes::FromFile(string const& FileName, md5 const& MD5)
+{
+    std::lock_guard<std::mutex> lock(DataMutex);
+    FromFile_Internal(FileName, MD5);
+}
+
+//---------------------------------------------------------------------------
+void hashes::FromFile_Internal(string const& FileName, md5 const& MD5)
 {
     // Hash files maybe not yet there, we wait if we don't know that files are not all there
     if (!IsSorted)
@@ -160,6 +172,7 @@ void hashes::FromFile(string const& FileName, md5 const& MD5)
 //---------------------------------------------------------------------------
 void hashes::NoMoreHashFiles_Internal()
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     // Coherency
     if (IsSorted || (!CheckFromFiles && List_FromHashFiles.empty()))
         return;
@@ -173,13 +186,14 @@ void hashes::NoMoreHashFiles_Internal()
     if (!List_FromHashFiles.empty())
     {
         for (auto Value : List_FromFiles)
-            FromFile(Value.Name, Value.MD5);
+            FromFile_Internal(Value.Name, Value.MD5);
     }
 }
 
 //---------------------------------------------------------------------------
 void hashes::Finish()
 {
+    std::lock_guard<std::mutex> lock(DataMutex);
     // Coherency
     if (!IsSorted || (!CheckFromFiles && List_FromHashFiles.empty()))
         return;

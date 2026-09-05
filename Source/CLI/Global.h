@@ -63,7 +63,7 @@ public:
     set<int>                    LogFile_IgnorePos;
     license                     License;
     user_mode                   Mode = Ask;
-    hashes                      Hashes;
+    hashes*                     Hashes = nullptr;
     errors                      Errors;
     ask_callback                Ask_Callback = nullptr;
     string*                     Log = nullptr;

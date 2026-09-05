@@ -525,7 +525,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     Actions.set(Action_Encode);
     Actions.set(Action_Decode);
     Actions.set(Action_Coherency);
-    Hashes = hashes(&Errors);
+    Hashes = new hashes(&Errors);
     ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)

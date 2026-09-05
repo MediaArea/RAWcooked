@@ -138,7 +138,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
     SingleFile.Actions = Global.Actions;
     if (OverrideCheckPadding)
         SingleFile.Actions.set(Action_CheckPadding);
-    SingleFile.Hashes = &Global.Hashes;
+    SingleFile.Hashes = Global.Hashes;
     SingleFile.InputInfo = InputInfo;
 
     // Parse
@@ -457,7 +457,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             hashsum HashSum;
             HashSum.HomePath = ParseInfo.Name->substr(Global.Path_Pos_Global);
             FormatPath(HashSum.HomePath);
-            HashSum.List = &Global.Hashes;
+            HashSum.List = Global.Hashes;
             if (ParseInfo.ParseFile_Input_Uncompressed(HashSum, Input, Files_Pos))
                 return 1;
             HashFileParsed = HashSum.IsDetected();
@@ -468,7 +468,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         {
             auto FileName = ParseInfo.Name->substr(Global.Path_Pos_Global);
             FormatPath(FileName);
-            Global.Hashes.Ignore(FileName);
+            Global.Hashes->Ignore(FileName);
         }
         else
         {
@@ -764,10 +764,10 @@ int main(int argc, const char* argv[])
     // Hashes
     if (Global.Actions[Action_Hash])
     {
-        Global.Hashes.NoMoreHashFiles();
-        Global.Hashes.Finish();
-        Global.Hashes.CheckFromFiles = true;
-        Global.Hashes.WouldBeError = true;
+        Global.Hashes->NoMoreHashFiles();
+        Global.Hashes->Finish();
+        Global.Hashes->CheckFromFiles = true;
+        Global.Hashes->WouldBeError = true;
     }
 
     // Progress indicator
