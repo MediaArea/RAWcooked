@@ -368,7 +368,7 @@ void input_base_uncompressed::ParseRAWcooked(parse_params& Params)
         }
     }
 
-    RAWcooked->Parse(Params);
+    RAWcooked->Parse(Params, Index);
 }
 
 //---------------------------------------------------------------------------

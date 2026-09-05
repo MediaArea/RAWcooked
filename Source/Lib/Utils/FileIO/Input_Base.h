@@ -160,6 +160,7 @@ public:
     // Common info
     bool                        IsSequence;
     rawcooked*                  RAWcooked = nullptr;
+    uint64_t                    Index = 0;
 
     // Features
     rawcooked::version          Version() { return RAWcooked ? RAWcooked->Version : rawcooked::version::v1; }

@@ -185,6 +185,7 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
         FormatPath(S.FileName);
     }
 
+    S.Index = i;
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
         return true;
     }

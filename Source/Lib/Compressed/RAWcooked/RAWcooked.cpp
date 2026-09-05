@@ -10,6 +10,7 @@
 #include "zlib.h"
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -465,6 +466,11 @@ public:
     // Info
     bool                        HasInData = false;
 
+    // Thread synchronization
+    std::mutex                  ParseMutex;
+    std::condition_variable     ParseCondition;
+    uint64_t                    NextIndex = 0;
+
 private:
     compressed_buffer           Buffers[element_Max];
 };
@@ -502,8 +508,15 @@ rawcooked::~rawcooked()
 }
 
 //---------------------------------------------------------------------------
-void rawcooked::Parse(const parse_params& Params)
+void rawcooked::Parse(const parse_params& Params, uint64_t Index)
 {
+    // Thread fence: ensure sequential execution in order of Index
+    if (!Params.IsAttachment)
+    {
+        std::unique_lock<std::mutex> lock(Data_->ParseMutex);
+        Data_->ParseCondition.wait(lock, [this, Index]() { return Data_->NextIndex == Index; });
+    }
+
     // Cross-platform support
     // RAWcooked file format supports setting of the path separator but
     // we currently set all to "/", which is supported by both Windows and Unix based platforms
@@ -656,12 +669,23 @@ void rawcooked::Parse(const parse_params& Params)
         if (Version != version::v2)
             SetErrorFileBecomingTooBig();
     }
+
+    // Thread fence: increment NextIndex and notify waiting threads
+    if (!Params.IsAttachment)
+    {
+        {
+            std::unique_lock<std::mutex> lock(Data_->ParseMutex);
+            Data_->NextIndex++;
+        }
+        Data_->ParseCondition.notify_all();
+    }
 }
 
 //---------------------------------------------------------------------------
 void rawcooked::ResetTrack()
 {
     Data_->BlockCount = 0;
+    Data_->NextIndex = 0;
 }
 
 //---------------------------------------------------------------------------

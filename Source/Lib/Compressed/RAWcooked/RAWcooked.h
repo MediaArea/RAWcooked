@@ -45,7 +45,7 @@ public:
                                 rawcooked();
                                 ~rawcooked();
 
-    void                        Parse(const parse_params& Params = {});
+    void                        Parse(const parse_params& Params = {}, uint64_t Index = 0);
     void                        ResetTrack();
 
     bool                        HasInData();
