@@ -397,9 +397,9 @@ void avi::AVI__hdrl_strl_strf_auds()
          && (Channels != 4 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000107))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
          && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
-        {
-            bool ChannelCountSupported=false;
-            for (auto i=0; i<wav::flavor_Max; i++)
+            {
+                bool ChannelCountSupported=false;
+                for (size_t i=0; i<wav::flavor_Max; i++)
                 if (WAV_Channels((wav::flavor)i)==Channels)
                     ChannelCountSupported=true;
             if (ChannelCountSupported) //If no flavor has such channel count, error will be raised later about channel count, better error report than here
@@ -447,7 +447,7 @@ void avi::AVI__hdrl_strl_strf_vids()
     }
     Width = Get_L4();
     Height = Get_L4();
-    uint16_t Planes = Get_L2();
+    Get_L2(); // Planes (unused)
     uint16_t BitCount = Get_L2();
     uint32_t Compression = Get_B4();
     uint32_t SizeOfImage = Get_L4();
@@ -670,7 +670,7 @@ endianness avi::Endianness()
 }
 
 //---------------------------------------------------------------------------
-string AVI_Flavor_String(uint8_t Flavor)
+string AVI_Flavor_String(uint8_t /*Flavor*/)
 {
     string ToReturn("AVI/v210");
     return ToReturn;
@@ -683,13 +683,13 @@ size_t avi::GetStreamCount()
 }
 
 //---------------------------------------------------------------------------
-size_t avi::BytesPerBlock(avi::flavor Flavor)
+size_t avi::BytesPerBlock(avi::flavor /*Flavor*/)
 {
     return 32;
 }
 
 //---------------------------------------------------------------------------
-size_t avi::PixelsPerBlock(avi::flavor Flavor)
+size_t avi::PixelsPerBlock(avi::flavor /*Flavor*/)
 {
     return 12;
 }

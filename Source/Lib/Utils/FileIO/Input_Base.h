@@ -185,8 +185,8 @@ public:
     void                        ParseRAWcooked(parse_params& Params);
 
 protected:
-    virtual void                CopyCommonParser(const input_base_uncompressed& Parser) {}
-    virtual void                AddEditsParser(map<string, string>& Edits) {}
+    virtual void                CopyCommonParser(const input_base_uncompressed& /*Parser*/) {}
+    virtual void                AddEditsParser(map<string, string>& /*Edits*/) {}
     virtual void                Edit() {};
     virtual string              ListEditsParser() { return string(); }
     void                        RegisterAsAttachment();

@@ -1,4 +1,4 @@
-/*  Copyright (c) MediaArea.net SARL & Reto Kromer.
+﻿/*  Copyright (c) MediaArea.net SARL & Reto Kromer.
  *
  *  Use of this source code is governed by a BSD-style license that can
  *  be found in the License.html file in the root of the source tree.
@@ -179,11 +179,11 @@ license_internal::license_internal(bool IgnoreDefault)
 {
     // Default license flags
     if (!IgnoreDefault)
-        for (size_t i = 0; DefaultLicense_Parsers[i].Value != (uint8_t)-1; i++)
+        for (uint8_t i = 0; DefaultLicense_Parsers[i].Value != (uint8_t)-1; i++)
             SetSupported(DefaultLicense_Parsers[i].Value, DefaultLicense_Parsers[i].Flavor);
 }
 
-size_t license_internal::Flags_Pos_Get(uint8_t Type, uint8_t SubType)
+size_t license_internal::Flags_Pos_Get(size_t Type, size_t SubType)
 {
     size_t Flags_Pos = 0;
     for (size_t i = 0; i < Type; i++)
@@ -196,12 +196,12 @@ size_t license_internal::Flags_Pos_Get(uint8_t Type, uint8_t SubType)
     return Flags_Pos;
 }
 
-void license_internal::SetSupported(uint8_t Type, uint8_t SubType)
+void license_internal::SetSupported(size_t Type, size_t SubType)
 {
     Flags_[Flags_Pos_Get(Type, SubType)] = true;
 }
 
-bool license_internal::IsSupported(uint8_t Type, uint8_t SubType)
+bool license_internal::IsSupported(size_t Type, size_t SubType)
 {
     return Flags_[Flags_Pos_Get(Type, SubType)];
 }
@@ -440,10 +440,10 @@ bool license::ShowLicense(bool Verbose, uint64_t NewSublicenseId, uint64_t NewSu
         return false;
 
     // Info
-    for (int8_t i = 0; i < License_Infos_Size; i++)
+    for (size_t i = 0; i < License_Infos_Size; i++)
     {
         cerr << "Licensed " << License_Infos[i].Name << ':' << endl;
-        for (int8_t j = 0; j < License_Infos[i].Size; j++)
+        for (uint8_t j = 0; j < License_Infos[i].Size; j++)
         {
             const char* Supported = License->IsSupported(i, j) ? "Yes" : "No ";
             cerr << Supported << ' ' << License_Infos[i].Flavor_String(j) << endl;
@@ -473,11 +473,11 @@ bool license::IsSupported(feature Feature)
 {
     license_internal* License = (license_internal*)Internal;
 
-    return License->IsSupported(0, (uint8_t)Feature);
+    return License->IsSupported(0, (size_t)Feature);
 }
 
 //---------------------------------------------------------------------------
-bool license::IsSupported(parser Parser, uint8_t Flavor)
+bool license::IsSupported(parser Parser, size_t Flavor)
 {
     license_internal* License = (license_internal*)Internal;
 

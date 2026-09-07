@@ -169,7 +169,7 @@ static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), Inc
 
 struct dpx_also TIFF_Also[] =
 {
-    { { colorspace::Y        ,  8, endianness::BE }, tiff::flavor::Raw_Y_8_U                 },
+    { { colorspace::Y        ,  8, endianness::BE, 1 }, tiff::flavor::Raw_Y_8_U              },
 };
 
 //***************************************************************************

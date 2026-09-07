@@ -259,43 +259,45 @@ void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
         switch (bits_per_sample_)
         {
         case 8:
-            switch (SignOrEndianess.Sign)
-            {
-            case sign::S:
-                for (size_t i = 0; i < blocksize; i++)
-                    for (size_t j = 0; j < channels; j++)
-                    {
-                        *(Data++) = (uint8_t)(buffer[j][i]);
-                    }
-                break;
-            case sign::U:
-                for (size_t i = 0; i < blocksize; i++)
-                    for (size_t j = 0; j < channels; j++)
-                    {
-                        *(Data++) = (uint8_t)((buffer[j][i]) + 128);
-                    }
-                break;
-            }
-            break;
+           switch (SignOrEndianess.Sign)
+           {
+           case sign::S:
+           case sign::F:
+               for (size_t i = 0; i < blocksize; i++)
+                   for (size_t j = 0; j < channels; j++)
+                   {
+                       *(Data++) = (uint8_t)(buffer[j][i]);
+                   }
+               break;
+           case sign::U:
+               for (size_t i = 0; i < blocksize; i++)
+                   for (size_t j = 0; j < channels; j++)
+                   {
+                       *(Data++) = (uint8_t)((buffer[j][i]) + 128);
+                   }
+               break;
+           }
+           break;
         case 16:
-            switch (SignOrEndianess.Sign)
-            {
-            case sign::S:
-                for (size_t i = 0; i < blocksize; i++)
-                    for (size_t j = 0; j < channels; j++)
-                    {
-                        *(Data++) = (uint8_t)(buffer[j][i] >> 8);
-                    }
-                break;
-            case sign::U:
-                for (size_t i = 0; i < blocksize; i++)
-                    for (size_t j = 0; j < channels; j++)
-                    {
-                        *(Data++) = (uint8_t)((buffer[j][i] >> 8) + 128);
-                    }
-                break;
-            }
-            break;
+           switch (SignOrEndianess.Sign)
+           {
+           case sign::S:
+           case sign::F:
+               for (size_t i = 0; i < blocksize; i++)
+                   for (size_t j = 0; j < channels; j++)
+                   {
+                       *(Data++) = (uint8_t)(buffer[j][i] >> 8);
+                   }
+               break;
+           case sign::U:
+               for (size_t i = 0; i < blocksize; i++)
+                   for (size_t j = 0; j < channels; j++)
+                   {
+                       *(Data++) = (uint8_t)((buffer[j][i] >> 8) + 128);
+                   }
+               break;
+           }
+           break;
         }
         break;
     case 16:

@@ -571,7 +571,7 @@ endianness wav::Endianness()
 {
     return endianness::LE;
 }
-endianness WAV_Endianness(wav::flavor Flavor)
+endianness WAV_Endianness(wav::flavor /*Flavor*/)
 {
     return endianness::LE;
 }

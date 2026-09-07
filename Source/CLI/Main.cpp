@@ -827,7 +827,7 @@ int main(int argc, const char* argv[])
                                 Result2 += 8;
                             auto Result3 = strchr(Result2, ' ');
                             if (!Result3)
-                                auto Result3 = strchr(Result2, '\0');
+                                Result3 = strchr(Result2, '\0');
                             if (Result3)
                             {
                                 *Global.Log += ", FFmpeg ";

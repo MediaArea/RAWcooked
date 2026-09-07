@@ -61,7 +61,7 @@ public:
     // Checks
     bool IsSupported();
     bool IsSupported(feature Feature);
-    bool IsSupported(parser Parser, uint8_t Flavor);
+    bool IsSupported(parser Parser, size_t Flavor);
     bool IsSupported_License();
 
 private:

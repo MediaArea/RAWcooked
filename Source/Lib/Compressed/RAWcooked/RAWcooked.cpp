@@ -583,12 +583,12 @@ void rawcooked::Parse(const parse_params& Params, uint64_t Index)
             {
                 // Copy content
                 File_WasCreated = true;
-                if (auto Result = File.Open_WriteMode(string(), FileName))
+                if (File.Open_WriteMode(string(), FileName))
                 {
                     SetErrorFileBecomingTooBig(); //TODO: dedicated error
                     return;
                 }
-                if (auto Result = File.Seek(0, file::End))
+                if (File.Seek(0, file::End))
                 {
                     SetErrorFileBecomingTooBig(); //TODO: dedicated error
                     return;

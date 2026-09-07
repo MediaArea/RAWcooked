@@ -950,7 +950,7 @@ void dpx::Edit()
 {
     for (const auto& Edit : Edits) {
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
-            memcpy((void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
+            memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
         }
     }
 }
