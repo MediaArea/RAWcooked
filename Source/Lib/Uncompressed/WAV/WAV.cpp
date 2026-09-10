@@ -413,25 +413,18 @@ void wav::WAVE_data()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = true;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = Buffer_Offset;
-        RAWcooked->AfterData = Buffer.Data() + Levels[Level].Offset_End;
-        RAWcooked->AfterData_Size = Buffer.Size() - Levels[Level].Offset_End;
-        RAWcooked->InData = nullptr;
-        RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = (uint64_t)-1;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.Unique = true;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = Buffer_Offset;
+            Params.AfterData = Buffer.Data() + Levels[Level].Offset_End;
+            Params.AfterData_Size = Buffer.Size() - Levels[Level].Offset_End;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 
@@ -578,7 +571,7 @@ endianness wav::Endianness()
 {
     return endianness::LE;
 }
-endianness WAV_Endianness(wav::flavor Flavor)
+endianness WAV_Endianness(wav::flavor /*Flavor*/)
 {
     return endianness::LE;
 }
@@ -601,4 +594,3 @@ string WAV_Flavor_String(uint8_t Flavor)
     ToReturn += PCM_Flavor_String(Info.BitDepth, Info.Sign, endianness::LE, Info.Channels, Info.SamplesPerSecCode);
     return ToReturn;
 }
-

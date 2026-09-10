@@ -45,13 +45,13 @@ public:
 
     operator string() const
     {
-        return std::move(string((const char*)Data(), Size()));
+        return string((const char*)Data(), Size());
     }
 
 protected:
     buffer_base() = default;
     buffer_base(const uint8_t* NewData, size_t NewSize) :
-        Data_((uint8_t*)NewData),
+        Data_(const_cast<uint8_t*>(NewData)),
         Size_(NewSize)
     {}
     buffer_base(buffer_base& Buffer) = delete;
@@ -77,13 +77,13 @@ protected:
 
     void AssignBase(const uint8_t* NewData, size_t NewSize)
     {
-        Data_ = (uint8_t*)NewData;
+        Data_ = const_cast<uint8_t*>(NewData);
         Size_ = NewSize;
     }
 
     void AssignKeepSizeBase(const uint8_t* NewData)
     {
-        Data_ = (uint8_t*)NewData;
+        Data_ = const_cast<uint8_t*>(NewData);
     }
 
     void AssignKeepDataBase(size_t NewSize) // Use it only as intermediate setting
@@ -102,7 +102,8 @@ public:
     buffer() :
         buffer_base(nullptr, 0)
     {}
-    buffer(const buffer& Buffer)
+    buffer(const buffer& Buffer) :
+        buffer_base(nullptr, 0)
     {
         Create(Buffer);
     }

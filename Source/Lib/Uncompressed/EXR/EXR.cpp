@@ -605,25 +605,17 @@ void exr::ParseBuffer()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = false;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = Buffer_Offset;
-        RAWcooked->AfterData = Buffer.Data() + OffsetAfterData;
-        RAWcooked->AfterData_Size = Buffer.Size() - OffsetAfterData;
-        RAWcooked->InData = nullptr;
-        RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = (uint64_t)-1;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = Buffer_Offset;
+            Params.AfterData = Buffer.Data() + OffsetAfterData;
+            Params.AfterData_Size = Buffer.Size() - OffsetAfterData;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 

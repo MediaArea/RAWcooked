@@ -235,8 +235,8 @@ void matroska_ProgressIndicator_Show(matroska* M)
 //---------------------------------------------------------------------------
 matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, ThreadPool* Pool, errors* Errors_Source) :
     input_base(Errors_Source, Parser_Matroska),
-    FrameWriter_Template(new frame_writer(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source)),
-    FramesPool(Pool)
+    FramesPool(Pool),
+    FrameWriter_Template(new frame_writer(OutputDirectoryName, Mode, Ask_Callback, this, Errors_Source))
 {
 }
 
@@ -426,7 +426,7 @@ void matroska::ParseBuffer()
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
 
-        if (Cluster_Level != -1 && Buffer_Offset >= Buffer.Size() && Cluster_Offset != (size_t)-1 && !RAWcooked_LibraryName.empty())
+        if (Cluster_Level != (size_t)-1 && Buffer_Offset >= Buffer.Size() && Cluster_Offset != (size_t)-1 && !RAWcooked_LibraryName.empty())
         {
             memcpy(Levels, Cluster_Levels, sizeof(Levels));
             Level = Cluster_Level;
@@ -887,13 +887,10 @@ void matroska::Segment_Cluster()
     // Check if Hashes check is useful
     if (Hashes_FromRAWcooked)
     {
-        for (const auto& AttachedFile : AttachedFiles)
+        if (ReversibilityCompat >= Compat_18_10_1 && !AttachedFile_FileNames_IsHash.empty()) // In previous versions hash files were not listed in reversibility file
         {
-            if (ReversibilityCompat >= Compat_18_10_1 && !AttachedFile_FileNames_IsHash.empty()) // In previous versions hash files were not listed in reversibility file
-            {
-                for (const auto& Name : AttachedFile_FileNames_IsHash)
-                    Hashes_FromRAWcooked->Ignore(Name);
-            }
+            for (const auto& Name : AttachedFile_FileNames_IsHash)
+                Hashes_FromRAWcooked->Ignore(Name);
         }
 
         Hashes_FromRAWcooked->WouldBeError = true;
@@ -930,10 +927,10 @@ void matroska::Segment_Cluster()
     if (!FileMap2)
     {
         FileMap2 = FileMap;
-        if (OpenStyle != filemap::method::mmap && OpenName)
+        if (OpenStyle != filemap::method::mmap && !FileName.empty())
         {
             FileMap = new filemap;
-            FileMap->Open_ReadMode(*OpenName, OpenStyle, 0, 256 * 1024 * 1024);
+            FileMap->Open_ReadMode(FileName, OpenStyle, 0, 256 * 1024 * 1024);
             Buffer = *FileMap;
         }
     }

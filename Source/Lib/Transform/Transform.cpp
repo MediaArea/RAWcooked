@@ -1167,22 +1167,28 @@ public:
             }
             break;
         case 1:
-            for (size_t x = 0; x < w; x += 3)
-            {
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x    ]      ));
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 1] << 10));
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 2] << 20));
-                FrameBuffer_Temp_32++;
-            }
+           for (size_t x = 0; x < w; x += 3)
+           {
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x    ]      ));
+               FrameBuffer_Temp_32++;
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x + 1] << 10));
+               FrameBuffer_Temp_32++;
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x + 2] << 20));
+               FrameBuffer_Temp_32++;
+               FrameBuffer_Temp_32++;
+           }
             break;
         case 2:
-            for (size_t x = 0; x < w; x += 3)
-            {
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x    ] << 20));
-                FrameBuffer_Temp_32++;
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 1]      ));
-                *(FrameBuffer_Temp_32++) = htol(ltoh(*(FrameBuffer_Temp_32)) | ((uint32_t)y[x + 2] << 10));
-            }
+           for (size_t x = 0; x < w; x += 3)
+           {
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x    ] << 20));
+               FrameBuffer_Temp_32++;
+               FrameBuffer_Temp_32++;
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x + 1]      ));
+               FrameBuffer_Temp_32++;
+               *FrameBuffer_Temp_32 = htol(ltoh(*FrameBuffer_Temp_32) | ((uint32_t)y[x + 2] << 10));
+               FrameBuffer_Temp_32++;
+           }
             break;
         }
 

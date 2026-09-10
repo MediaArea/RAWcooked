@@ -78,8 +78,7 @@ public:
     // Config
     bitset<Action_Max>          Actions;
     hashes*                     Hashes = nullptr;
-    const string*               FileName = nullptr;
-    const string*               OpenName = nullptr; // TODO: merge with FileName
+    string                      FileName;
     filemap::method             OpenStyle = {};
 
     // Parse
@@ -161,6 +160,7 @@ public:
     // Common info
     bool                        IsSequence;
     rawcooked*                  RAWcooked = nullptr;
+    uint64_t                    Index = 0;
 
     // Features
     rawcooked::version          Version() { return RAWcooked ? RAWcooked->Version : rawcooked::version::v1; }
@@ -177,13 +177,16 @@ public:
     size_t                      slice_x = 0;
     size_t                      slice_y = 0;
 
+    string                      UncompressedFileName;
+
     void                        CopyCommon(const input_base_uncompressed& Parser);
     int                         AddEdits(map<string, string>& Edits);
     int                         ListEdits();
+    void                        ParseRAWcooked(parse_params& Params);
 
 protected:
-    virtual void                CopyCommonParser(const input_base_uncompressed& Parser) {}
-    virtual void                AddEditsParser(map<string, string>& Edits) {}
+    virtual void                CopyCommonParser(const input_base_uncompressed& /*Parser*/) {}
+    virtual void                AddEditsParser(map<string, string>& /*Edits*/) {}
     virtual void                Edit() {};
     virtual string              ListEditsParser() { return string(); }
     void                        RegisterAsAttachment();
@@ -234,7 +237,6 @@ public:
 
     // Demux
     uint64_t                    InputOutput_Diff = 0;
-    string                      Output_FileName;
     struct position
     {
         uint16_t                Index;

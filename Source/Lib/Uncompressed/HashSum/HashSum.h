@@ -13,6 +13,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/FileIO/Input_Base.h"
 #include <vector>
+#include <mutex>
 //---------------------------------------------------------------------------
 
 class hashes
@@ -68,8 +69,10 @@ public:
 private:
     // Internal
     void                        NoMoreHashFiles_Internal();
+    void                        FromFile_Internal(string const& FileName, md5 const& MD5);
 
     // Data
+    mutable std::mutex          DataMutex;
     list                        List_FromHashFiles;
     list                        List_FromFiles;
     std::vector<string>         HashFiles;

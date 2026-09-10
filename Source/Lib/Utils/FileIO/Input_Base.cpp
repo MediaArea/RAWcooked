@@ -75,8 +75,8 @@ void input_base::Hash()
         }
 
         MD5_Final(HashValue.data(), &MD5);
-        if (Hashes&& FileName && !FileName->empty())
-            Hashes->FromFile(*FileName, HashValue);
+        if (Hashes && !FileName.empty())
+            Hashes->FromFile(FileName, HashValue);
     }
     HashComputed = true;
 }
@@ -280,6 +280,7 @@ uncompressed::~uncompressed()
 void unknown::ParseBuffer()
 {
     SetDetected();
+    SetSupported();
     RegisterAsAttachment();
 }
 
@@ -287,6 +288,8 @@ void unknown::ParseBuffer()
 void input_base_uncompressed::CopyCommon(const input_base_uncompressed& Parser)
 {
     RAWcooked = Parser.RAWcooked;
+    SetDetected();
+    SetSupported();
 
     CopyCommonParser(Parser);
 }
@@ -323,30 +326,49 @@ void input_base_uncompressed::RegisterAsAttachment()
     // Write RAWcooked file
     if (RAWcooked)
     {
-        RAWcooked->Unique = true;
-        RAWcooked->BeforeData = nullptr;
-        RAWcooked->BeforeData_Size = 0;
-        RAWcooked->AfterData = nullptr;
-        RAWcooked->AfterData_Size = 0;
-        RAWcooked->InData = nullptr;
-        RAWcooked->InData_Size = 0;
-        RAWcooked->FileSize = FileSize;
-        if (RAWcooked->Version == rawcooked::version::v2 && FileSize)
+        parse_params Params;
+        Params.Unique = true;
+        if (RAWcooked->Version == rawcooked::version::v2)
         {
-            RAWcooked->InData = Buffer.Data();
-            RAWcooked->InData_Size = FileSize;
-            RAWcooked->FileSize = (size_t)-1;
+            Params.InData = Buffer.Data();
+            Params.InData_Size = FileSize;
+        }
+        else
+        {
+            Params.InputFile_Size = FileSize;
         }
         if (Actions[Action_Hash])
         {
             Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.HashValue = &HashValue;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = true;
-        RAWcooked->Parse();
+        Params.IsAttachment = true;
+        ParseRAWcooked(Params);
     }
+}
+
+//---------------------------------------------------------------------------
+void input_base_uncompressed::ParseRAWcooked(parse_params& Params)
+{
+    if (!RAWcooked)
+        return;
+
+    if (IsSupported())
+    {
+        if (Actions[Action_Hash])
+        {
+            Hash();
+            Params.HashValue = &HashValue;
+        }
+        Params.InputFile_Name = FileName;
+        if (Params.IsContainer) {
+            auto SeparatorPos = Params.InputFile_Name.find('/');
+            if (SeparatorPos != (size_t)-1)
+                Params.InputFile_Name.erase(0, SeparatorPos + 1); // TODO: more generic removal of directory name for unique files
+        }
+    }
+
+    RAWcooked->Parse(Params, Index);
 }
 
 //---------------------------------------------------------------------------

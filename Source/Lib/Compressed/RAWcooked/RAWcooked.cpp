@@ -10,6 +10,7 @@
 #include "zlib.h"
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -462,6 +463,14 @@ public:
     // Write
     ebml_writer                 Writer;
 
+    // Info
+    bool                        HasInData = false;
+
+    // Thread synchronization
+    std::mutex                  ParseMutex;
+    std::condition_variable     ParseCondition;
+    uint64_t                    NextIndex = 0;
+
 private:
     compressed_buffer           Buffers[element_Max];
 };
@@ -499,8 +508,15 @@ rawcooked::~rawcooked()
 }
 
 //---------------------------------------------------------------------------
-void rawcooked::Parse()
+void rawcooked::Parse(const parse_params& Params, uint64_t Index)
 {
+    // Thread fence: ensure sequential execution in order of Index
+    if (!Params.IsAttachment)
+    {
+        std::unique_lock<std::mutex> lock(Data_->ParseMutex);
+        Data_->ParseCondition.wait(lock, [this, Index]() { return Data_->NextIndex == Index; });
+    }
+
     // Cross-platform support
     // RAWcooked file format supports setting of the path separator but
     // we currently set all to "/", which is supported by both Windows and Unix based platforms
@@ -508,30 +524,34 @@ void rawcooked::Parse()
     // If not doing this, files are not considered as in a sub-directory when encoded with a Windows platform then decoded with a Unix-based platform.
     // FormatPath(OutputFileName); // Already done elsewhere
 
+    // Info
+    if (!Data_->HasInData)
+        Data_->HasInData = Params.InData_Size;
+
     // FileName
-    auto FileNameData = (const uint8_t*)OutputFileName.c_str();
-    auto FileNameData_Size = OutputFileName.size();
+    auto FileNameData = (const uint8_t*)Params.InputFile_Name.c_str();
+    auto FileNameData_Size = Params.InputFile_Name.size();
 
     // Temp
     auto& BlockCount = Data_->BlockCount;
     auto& FirstFrame = Data_->FirstFrame;
 
     // Create mask when needed
-    if (!Unique && !BlockCount)
+    if (!Params.Unique && !BlockCount)
     {
         FirstFrame[(size_t)element::MaskFileName].Create(FileNameData, FileNameData_Size);
-        FirstFrame[(size_t)element::MaskBefore].Create(BeforeData, BeforeData_Size);
-        FirstFrame[(size_t)element::MaskAfter].Create(AfterData, AfterData_Size);
+        FirstFrame[(size_t)element::MaskBefore].Create(Params.BeforeData, Params.BeforeData_Size);
+        FirstFrame[(size_t)element::MaskAfter].Create(Params.AfterData, Params.AfterData_Size);
     }
 
     // Apply mask and/or compress when useful
-    Data_->Parse(element::MaskFileName, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
-    Data_->Parse(element::MaskBefore, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
-    Data_->Parse(element::MaskAfter, Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
-    Data_->Parse(element::FileName, buffer_view(FileNameData, FileNameData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
-    Data_->Parse(element::Before, buffer_view(BeforeData, BeforeData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
-    Data_->Parse(element::After, buffer_view(AfterData, AfterData_Size), Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
-    Data_->Parse(element::In, buffer_view(InData, InData_Size));
+    Data_->Parse(element::MaskFileName, Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
+    Data_->Parse(element::MaskBefore, Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
+    Data_->Parse(element::MaskAfter, Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
+    Data_->Parse(element::FileName, buffer_view(FileNameData, FileNameData_Size), Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskFileName]));
+    Data_->Parse(element::Before, buffer_view(Params.BeforeData, Params.BeforeData_Size), Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskBefore]));
+    Data_->Parse(element::After, buffer_view(Params.AfterData, Params.AfterData_Size), Params.Unique ? buffer_view() : buffer_view(FirstFrame[(size_t)element::MaskAfter]));
+    Data_->Parse(element::In, buffer_view(Params.InData, Params.InData_Size));
 
     auto& Writer = Data_->Writer;;
     Writer.Set1stPass();
@@ -563,12 +583,12 @@ void rawcooked::Parse()
             {
                 // Copy content
                 File_WasCreated = true;
-                if (auto Result = File.Open_WriteMode(string(), FileName))
+                if (File.Open_WriteMode(string(), FileName))
                 {
                     SetErrorFileBecomingTooBig(); //TODO: dedicated error
                     return;
                 }
-                if (auto Result = File.Seek(0, file::End))
+                if (File.Seek(0, file::End))
                 {
                     SetErrorFileBecomingTooBig(); //TODO: dedicated error
                     return;
@@ -598,26 +618,26 @@ void rawcooked::Parse()
             Writer.Block_Begin(Name_RawCookedSegment);
             Writer.String(Name_RawCooked_LibraryName, LibraryName);
             Writer.String(Name_RawCooked_LibraryVersion, LibraryVersion);
-            if (!IsContainer)
+            if (!Params.IsContainer)
                 Writer.Block_End();
         }
 
         // Track (or attachment) only
-        if (!BlockCount && !IsContainer)
+        if (!BlockCount && !Params.IsContainer)
         {
-            Writer.Block_Begin(IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack);
-            if (!Unique && FirstFrame[(size_t)element::MaskFileName])
+            Writer.Block_Begin(Params.IsAttachment ? Name_RawCookedAttachment : Name_RawCookedTrack);
+            if (!Params.Unique && FirstFrame[(size_t)element::MaskFileName])
                 Writer.CompressableData(Name_RawCooked_MaskBaseFileName, Data_->Compressed(element::MaskFileName));
-            if (!Unique && FirstFrame[(size_t)element::MaskBefore])
+            if (!Params.Unique && FirstFrame[(size_t)element::MaskBefore])
                 Writer.CompressableData(Name_RawCooked_MaskBaseBeforeData, Data_->Compressed(element::MaskBefore));
-            if (!Unique && FirstFrame[(size_t)element::MaskAfter])
+            if (!Params.Unique && FirstFrame[(size_t)element::MaskAfter])
                 Writer.CompressableData(Name_RawCooked_MaskBaseAfterData, Data_->Compressed(element::MaskAfter));
-            if (!Unique)
+            if (!Params.Unique)
                 Writer.Block_End();
         }
 
         // Block only
-        if (BlockCount || !Unique)
+        if (BlockCount || !Params.Unique)
             Writer.Block_Begin(Name_RawCookedBlock);
 
         // Common to track and block parts
@@ -625,10 +645,10 @@ void rawcooked::Parse()
         Writer.CompressableData(Data_->IsUsingMask(element::Before) ? Name_RawCooked_MaskAdditionBeforeData : Name_RawCooked_BeforeData, Data_->Compressed(element::Before));
         Writer.CompressableData(Data_->IsUsingMask(element::After) ? Name_RawCooked_MaskAdditionAfterData : Name_RawCooked_AfterData, Data_->Compressed(element::After));
         Writer.CompressableData(Name_RawCooked_InData, Data_->Compressed(element::In));
-        if (HashValue)
-            Writer.DataWithEncodedPrefix(Name_RawCooked_FileHash, HashFormat_MD5, buffer_view(HashValue->data(), HashValue->size()));
-        if (FileSize != (uint64_t)-1)
-            Writer.Number(Name_RawCooked_FileSize, FileSize);
+        if (Params.HashValue)
+            Writer.DataWithEncodedPrefix(Name_RawCooked_FileHash, HashFormat_MD5, buffer_view(Params.HashValue->data(), Params.HashValue->size()));
+        if (Params.InputFile_Size != (uint64_t)-1)
+            Writer.Number(Name_RawCooked_FileSize, Params.InputFile_Size);
         Writer.Block_End();
 
         // Init 2nd pass
@@ -649,10 +669,27 @@ void rawcooked::Parse()
         if (Version != version::v2)
             SetErrorFileBecomingTooBig();
     }
+
+    // Thread fence: increment NextIndex and notify waiting threads
+    if (!Params.IsAttachment)
+    {
+        {
+            std::unique_lock<std::mutex> lock(Data_->ParseMutex);
+            Data_->NextIndex++;
+        }
+        Data_->ParseCondition.notify_all();
+    }
 }
 
 //---------------------------------------------------------------------------
 void rawcooked::ResetTrack()
 {
     Data_->BlockCount = 0;
+    Data_->NextIndex = 0;
+}
+
+//---------------------------------------------------------------------------
+bool rawcooked::HasInData()
+{
+    return Data_->HasInData;
 }

@@ -182,7 +182,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                     CurrentPath = new char[FILENAME_MAX];
                                     if (!getcwd(CurrentPath, FILENAME_MAX))
                                     {
-                                        delete CurrentPath;
+                                        delete[] CurrentPath;
                                         CurrentPath = nullptr;
                                     }
                                 }

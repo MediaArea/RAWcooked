@@ -277,35 +277,24 @@ void avi::ParseBuffer()
         SetSupported();
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        // Last part
-        auto InSize = Buffer_Offset - Buffer_LastPos;
-        memcpy(In + In_Pos, Buffer.Data() + Buffer_LastPos, InSize);
-        In_Pos += InSize;
-        Buffer_LastPos = Levels[Level].Offset_End;
-
-        RAWcooked->Unique = true;
-        RAWcooked->BeforeData = nullptr;
-        RAWcooked->BeforeData_Size = 0;
-        RAWcooked->AfterData = nullptr;
-        RAWcooked->AfterData_Size =0;
-        RAWcooked->InData = In;
-        RAWcooked->InData_Size = In_Pos;
-        RAWcooked->FileSize = FileSize;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            // Last part
+            auto InSize = Buffer_Offset - Buffer_LastPos;
+            memcpy(In + In_Pos, Buffer.Data() + Buffer_LastPos, InSize);
+            In_Pos += InSize;
+            Buffer_LastPos = Levels[Level].Offset_End;
+
+            Params.Unique = true;
+            Params.InData = In;
+            Params.InData_Size = In_Pos;
+            Params.InputFile_Size = FileSize;
+            Params.IsContainer = true;
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->IsContainer = true;
-        auto SeparatorPos = RAWcooked->OutputFileName.find('/');
-        if (SeparatorPos != (size_t)-1)
-            RAWcooked->OutputFileName.erase(0, SeparatorPos + 1); // TODO: more generic removal of directory name for unique files
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 }
 
@@ -408,9 +397,9 @@ void avi::AVI__hdrl_strl_strf_auds()
          && (Channels != 4 || (ChannelMask != 0x00000000 && ChannelMask != 0x00000107))
          && (Channels != 6 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000003F && ChannelMask != 0x0000060F))
          && (Channels != 8 || (ChannelMask != 0x00000000 && ChannelMask != 0x0000063F)))
-        {
-            bool ChannelCountSupported=false;
-            for (auto i=0; i<wav::flavor_Max; i++)
+            {
+                bool ChannelCountSupported=false;
+                for (size_t i=0; i<wav::flavor_Max; i++)
                 if (WAV_Channels((wav::flavor)i)==Channels)
                     ChannelCountSupported=true;
             if (ChannelCountSupported) //If no flavor has such channel count, error will be raised later about channel count, better error report than here
@@ -458,7 +447,7 @@ void avi::AVI__hdrl_strl_strf_vids()
     }
     Width = Get_L4();
     Height = Get_L4();
-    uint16_t Planes = Get_L2();
+    Get_L2(); // Planes (unused)
     uint16_t BitCount = Get_L2();
     uint32_t Compression = Get_B4();
     uint32_t SizeOfImage = Get_L4();
@@ -681,7 +670,7 @@ endianness avi::Endianness()
 }
 
 //---------------------------------------------------------------------------
-string AVI_Flavor_String(uint8_t Flavor)
+string AVI_Flavor_String(uint8_t /*Flavor*/)
 {
     string ToReturn("AVI/v210");
     return ToReturn;
@@ -694,13 +683,13 @@ size_t avi::GetStreamCount()
 }
 
 //---------------------------------------------------------------------------
-size_t avi::BytesPerBlock(avi::flavor Flavor)
+size_t avi::BytesPerBlock(avi::flavor /*Flavor*/)
 {
     return 32;
 }
 
 //---------------------------------------------------------------------------
-size_t avi::PixelsPerBlock(avi::flavor Flavor)
+size_t avi::PixelsPerBlock(avi::flavor /*Flavor*/)
 {
     return 12;
 }

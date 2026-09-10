@@ -525,7 +525,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     Actions.set(Action_Encode);
     Actions.set(Action_Decode);
     Actions.set(Action_Coherency);
-    Hashes = hashes(&Errors);
+    Hashes = new hashes(&Errors);
     ProgressIndicator_Thread = NULL;
 
     for (int i = 1; i < argc; i++)
@@ -966,14 +966,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
         return 1;
     }
 
-    if (!IoThreads && !Actions[Action_Encode]) {
+    if (!IoThreads) {
         IoThreads = thread::hardware_concurrency();
         if (!IoThreads)
             IoThreads = 4;
-    }
-    if (IoThreads > 1 && Actions[Action_Encode]) {
-        cerr << "Error: Multiple IO threads is not yet supported while encoding." << endl;
-        return 1;
     }
 
     // License

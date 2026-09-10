@@ -105,7 +105,7 @@ public:
     void                        Error(parser Parser, error::type Type, error::generic::code Code, const string& String);
     bool                        HasErrors() { return HasErrors_Value.load(); }
     bool                        HasWarnings() { return HasWarnings_Value.load(); }
-    void                        ClearErrors() { std::lock_guard<std::mutex> lock(Mutex); Parsers.clear(); ErrorMessageCache.clear(); HasErrors_Value.store(false); HasWarnings_Value.store(false); }
+    void                        ClearErrors() { DeleteStrings(); }
 
 private:
     struct per_parser

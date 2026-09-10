@@ -25,8 +25,9 @@ class frame_writer : public raw_frame_process
 public:
     // Constructor / Destructor
     frame_writer(const string& BaseDirectory_Source, user_mode* UserMode_Soure, ask_callback Ask_Callback_Source, matroska* M_Source, errors* Errors_Source = nullptr) :
-        Output(nullptr),
+        Mode(),
         Compound(nullptr),
+        Output(nullptr),
         BaseDirectory(BaseDirectory_Source),
         UserMode(UserMode_Soure),
         Ask_Callback(Ask_Callback_Source),
@@ -35,9 +36,9 @@ public:
     {
     }
     frame_writer(const frame_writer& Source) :
-        Output(nullptr),
-        Compound(Source.Compound),
         Mode(Source.Mode),
+        Compound(Source.Compound),
+        Output(nullptr),
         BaseDirectory(Source.BaseDirectory),
         UserMode(Source.UserMode),
         Ask_Callback(Source.Ask_Callback),

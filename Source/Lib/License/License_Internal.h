@@ -118,18 +118,19 @@ public:
     uint8_t             Input_Flags[License_Parser_Offset] = {};
 
     // Tests
-    void                SetSupported(uint8_t Type, uint8_t SubType);
-    void                SetSupported(feature Flavor) { SetSupported(0, (uint8_t)Flavor); }
-    void                SetSupported(muxer Flavor) { SetSupported(1, (uint8_t)Flavor); }
-    void                SetSupported(encoder Flavor) { SetSupported(2, (uint8_t)Flavor); }
-    void                SetSupported(parser Parser, uint8_t Flavor) { SetSupported(License_Parser_Offset + Parser, Flavor); }
-    void                SetSupported(dpx::flavor Flavor) { SetSupported(Parser_DPX, (uint8_t)Flavor); }
-    void                SetSupported(tiff::flavor Flavor) { SetSupported(Parser_TIFF, (uint8_t)Flavor); }
-    void                SetSupported(exr::flavor Flavor) { SetSupported(Parser_EXR, (uint8_t)Flavor); }
-    void                SetSupported(wav::flavor Flavor) { SetSupported(Parser_WAV, (uint8_t)Flavor); }
-    void                SetSupported(aiff::flavor Flavor) { SetSupported(Parser_AIFF, (uint8_t)Flavor); }
-    bool                IsSupported(uint8_t Type, uint8_t SubType);
-    bool                IsSupported(parser Parser, uint8_t Flavor) { return IsSupported(License_Parser_Offset + Parser, Flavor); }
+    void                SetSupported(size_t Type, size_t SubType);
+    void                SetSupported(feature Flavor) { SetSupported(0, (size_t)Flavor); }
+    void                SetSupported(muxer Flavor) { SetSupported(1, (size_t)Flavor); }
+    void                SetSupported(encoder Flavor) { SetSupported(2, (size_t)Flavor); }
+    void                SetSupported(parser Parser, size_t Flavor) { SetSupported(License_Parser_Offset + Parser, Flavor); }
+    void                SetSupported(dpx::flavor Flavor) { SetSupported(Parser_DPX, (size_t)Flavor); }
+    void                SetSupported(tiff::flavor Flavor) { SetSupported(Parser_TIFF, (size_t)Flavor); }
+    void                SetSupported(exr::flavor Flavor) { SetSupported(Parser_EXR, (size_t)Flavor); }
+    void                SetSupported(wav::flavor Flavor) { SetSupported(Parser_WAV, (size_t)Flavor); }
+    void                SetSupported(aiff::flavor Flavor) { SetSupported(Parser_AIFF, (size_t)Flavor); }
+    void                SetSupported(avi::flavor Flavor) { SetSupported(Parser_AVI, (size_t)Flavor); }
+    bool                IsSupported(size_t Type, size_t SubType);
+    bool                IsSupported(parser Parser, size_t Flavor) { return IsSupported(License_Parser_Offset + Parser, Flavor); }
 
     // I/O
     buffer              ToBuffer();
@@ -143,7 +144,7 @@ public:
 private:
     vector<bool>        Flags_;
 
-    size_t              Flags_Pos_Get(uint8_t Type, uint8_t SubType);
+    size_t              Flags_Pos_Get(size_t Type, size_t SubType);
 };
 
 #endif

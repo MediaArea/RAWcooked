@@ -226,7 +226,7 @@ int filemap::Remap(size_t Begin, size_t End)
         End -= P->Data_Shift;
         auto Buffer_Middle = Buffer + Begin;
         auto Buffer_Middle_Size = Buffer_MaxSize - Begin;
-        memmove((void*)Buffer, (void*)Buffer_Middle, Buffer_Middle_Size);
+        memmove(const_cast<uint8_t*>(Buffer), const_cast<uint8_t*>(Buffer_Middle), Buffer_Middle_Size);
         P->Data_Shift += Begin;
         AssignKeepSizeBase(Buffer - P->Data_Shift);
         Buffer += Buffer_Middle_Size;
@@ -237,13 +237,13 @@ int filemap::Remap(size_t Begin, size_t End)
         default: // case style::fstream:
         {
             auto F = P->F.Ifstream;
-            F->read((char*)Buffer, Buffer_MaxSize);
+            F->read((char*)const_cast<uint8_t*>(Buffer), Buffer_MaxSize);
             break;
         }
         case method::fopen:
         {
             auto F = P->F.File;
-            if (fread((char*)Buffer, Buffer_MaxSize, 1, F) != 1)
+            if (fread((char*)const_cast<uint8_t*>(Buffer), Buffer_MaxSize, 1, F) != 1)
                 return 1;
             break;
         }
@@ -252,7 +252,7 @@ int filemap::Remap(size_t Begin, size_t End)
             auto F = P->F.Int;
             if (Buffer_MaxSize >= (unsigned int)-1)
                 return 1;
-            if (_read(F, (void*)Buffer, (unsigned int)Buffer_MaxSize) == -1)
+            if (_read(F, const_cast<uint8_t*>(Buffer), (unsigned int)Buffer_MaxSize) == -1)
                 return 1;
             break;
         }

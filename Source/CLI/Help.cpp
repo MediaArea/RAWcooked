@@ -16,7 +16,7 @@ extern const char* LibraryVersion;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-ReturnValue Help(const char* Name)
+ReturnValue Help(const char* /*Name*/)
 {
     // Copy of rawcooked.1 manpage, with limit to 80 columns
     cout <<

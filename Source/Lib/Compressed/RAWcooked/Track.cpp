@@ -293,8 +293,8 @@ void track_info::UpdateReversibility(reversibility* ContainerReversibility, inpu
 track_info::track_info(const frame_writer& FrameWriter_Source, const bitset<Action_Max>& Actions, errors* Errors, ThreadPool* Pool_) :
     input_base(Errors, Parser_ReversibilityData),
     ReversibilityData(nullptr),
-    FrameWriter(new frame_writer(FrameWriter_Source)),
-    Pool(Pool_)
+    Pool(Pool_),
+    FrameWriter(new frame_writer(FrameWriter_Source))
 {
     input_base::Actions = Actions;
 }

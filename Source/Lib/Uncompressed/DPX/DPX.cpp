@@ -255,8 +255,8 @@ void dpx::CopyCommonParser(const input_base_uncompressed& Parser)
     // Comparison
     if (DPX.HeaderCopy) {
         HeaderCopy_Info = DPX.HeaderCopy_Info;
-        HeaderCopy = new uint8_t[2048];
         size_t HeaderCopy_Size = (HeaderCopy_Info & 0xFFF) + 1;
+        HeaderCopy = new uint8_t[HeaderCopy_Size];
         memcpy(HeaderCopy, DPX.HeaderCopy, HeaderCopy_Size);
     }
 
@@ -499,30 +499,6 @@ string dpx::ListEditsParser()
 //---------------------------------------------------------------------------
 void dpx::ParseBuffer()
 {
-    // Handle "same as the previous frame" content
-    if (HeaderCopy)
-    {
-        // Size
-        size_t HeaderCopy_Size = HeaderCopy_Info & 0xFFF;
-        HeaderCopy_Size++;
-
-        // Adapt previous frame content from new frame content
-        uint32_t* HeaderCopy32 = (uint32_t*)HeaderCopy;
-        const uint32_t* Buffer32 = (const uint32_t*)Buffer.Data();
-        memmove(HeaderCopy + 36, Buffer.Data() + 36, 160 - 36); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
-        memmove(HeaderCopy + 1532, Buffer.Data() + 1532, 24); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
-        HeaderCopy32[1676 / 4] = Buffer32[1676 / 4]; // Count
-        HeaderCopy32[1712 / 4] = Buffer32[1712 / 4]; // Frame position in sequence
-        HeaderCopy32[1920 / 4] = Buffer32[1920 / 4]; // SMPTE time code
-        HeaderCopy[1929] = Buffer[1929]; // Field number
-
-        // Compare
-        if (memcmp(HeaderCopy, Buffer.Data(), Buffer.Size() >= 2048 ? 2048 : Buffer.Size()))
-            Invalid(invalid::DittoKey_NotSame);
-
-        //TODO: no need to check again if the file is supported
-    }
-
     dpx_tested Info;
 
     Buffer_Offset = 0;
@@ -849,25 +825,19 @@ void dpx::ParseBuffer()
     }
 
     // Write RAWcooked file
-    if (IsSupported() && RAWcooked)
+    if (RAWcooked)
     {
-        RAWcooked->Unique = false;
-        RAWcooked->BeforeData = Buffer.Data();
-        RAWcooked->BeforeData_Size = OffsetToData;
-        RAWcooked->AfterData = Buffer.Data() + OffsetAfterData;
-        RAWcooked->AfterData_Size = Buffer.Size() - OffsetAfterData;
-        RAWcooked->InData = In.Data();
-        RAWcooked->InData_Size = In.Size();
-        RAWcooked->FileSize = (uint64_t)-1;
-        if (Actions[Action_Hash])
+        parse_params Params;
+        if (IsSupported())
         {
-            Hash();
-            RAWcooked->HashValue = &HashValue;
+            Params.BeforeData = Buffer.Data();
+            Params.BeforeData_Size = OffsetToData;
+            Params.AfterData = Buffer.Data() + OffsetAfterData;
+            Params.AfterData_Size = Buffer.Size() - OffsetAfterData;
+            Params.InData = In.Data();
+            Params.InData_Size = In.Size();
         }
-        else
-            RAWcooked->HashValue = nullptr;
-        RAWcooked->IsAttachment = false;
-        RAWcooked->Parse();
+        ParseRAWcooked(Params);
     }
 
     if (Actions[Action_Conch])
@@ -936,7 +906,31 @@ void dpx::ConformanceCheck()
         Buffer_Offset += 68; // Next element
     }
 
-    if (DittoKey == 0 && Buffer.Size() >= 1664)
+    // Handle "same as the previous frame" content
+    if (HeaderCopy)
+    {
+        // Size
+        size_t HeaderCopy_Size = HeaderCopy_Info & 0xFFF;
+        HeaderCopy_Size++;
+
+        // Adapt previous frame content from new frame content
+        uint32_t* HeaderCopy32 = (uint32_t*)HeaderCopy;
+        const uint32_t* Buffer32 = (const uint32_t*)Buffer.Data();
+        memmove(HeaderCopy + 36, Buffer.Data() + 36, 160 - 36); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
+        memmove(HeaderCopy + 1532, Buffer.Data() + 1532, 24); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
+        if (Buffer.Size() >= 2048)
+        {
+            HeaderCopy32[1676 / 4] = Buffer32[1676 / 4]; // Count
+            HeaderCopy32[1712 / 4] = Buffer32[1712 / 4]; // Frame position in sequence
+            HeaderCopy32[1920 / 4] = Buffer32[1920 / 4]; // SMPTE time code
+            HeaderCopy[1929] = Buffer[1929]; // Field number
+        }
+
+        // Compare
+        if (memcmp(HeaderCopy, Buffer.Data(), HeaderCopy_Size))
+            Invalid(invalid::DittoKey_NotSame);
+    }
+    else if (DittoKey == 0 && Buffer.Size() >= 1664)
     {
         // Copy header content so we compare content in next frames
         HeaderCopy_Info = OffsetToImageData;
@@ -945,7 +939,7 @@ void dpx::ConformanceCheck()
         if (HeaderCopy_Info > 2048)
             HeaderCopy_Info = 2048; // Do not compare user data
         HeaderCopy = new uint8_t[2048];
-        memmove(HeaderCopy, Buffer.Data(), HeaderCopy_Info >= 2048 ? 2048 : HeaderCopy_Info);
+        memmove(HeaderCopy, Buffer.Data(), HeaderCopy_Info);
         HeaderCopy_Info--;
         HeaderCopy_Info |= (HasEncoding ? 1 : 0) << 12;
     }
@@ -956,7 +950,7 @@ void dpx::Edit()
 {
     for (const auto& Edit : Edits) {
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
-            memcpy((void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
+            memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
         }
     }
 }
