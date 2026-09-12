@@ -71,29 +71,39 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
         {
         default: // case style::fstream:
         {
-            auto F = new ifstream(FileName, ios::binary);
-            F->seekg(0, F->end);
+            auto Flags = ios::binary | ios::ate;
+            auto F = new ifstream(FileName, Flags);
+            if (!F->is_open())
+                return 1;
             FileSize = F->tellg();
             F->seekg(Begin, F->beg);
+            if (!F->good())
+                return 1;
             P->F.Ifstream = F;
             break;
         }
         case method::fopen:
         {
-            struct stat Fstat;
-            if (stat(FileName, &Fstat))
+            FILE* F = fopen(FileName, "rb");
+            if (!F)
                 return 1;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            struct _stat64i32 Fstat;
+            if (_fstat(_fileno(F), &Fstat))
+            #else
+            struct stat Fstat;
+            if (fstat(fileno(F), &Fstat))
+            #endif
+            {
+                fclose(F);
+                return 1;
+            }
             FileSize = Fstat.st_size;
-            auto F = fopen(FileName, "rb");
             P->F.File = F;
             break;
         }
         case method::open:
         {
-            struct stat Fstat;
-            if (stat(FileName, &Fstat))
-                return 1;
-            FileSize = Fstat.st_size;
             #if defined(_WIN32) || defined(_WINDOWS)
             auto F = _open(FileName, _O_BINARY | _O_RDONLY | _O_SEQUENTIAL, _S_IREAD);
             #else //defined(_WIN32) || defined(_WINDOWS)
@@ -101,6 +111,22 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
             #endif //defined(_WIN32) || defined(_WINDOWS)
             if (F == -1)
                 return 1;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            struct _stat64i32 Fstat;
+            if (_fstat(F, &Fstat))
+            #else
+            struct stat Fstat;
+            if (fstat(F, &Fstat))
+            #endif
+            {
+                #if defined(_WIN32) || defined(_WINDOWS)
+                _close(F);
+                #else
+                close(F);
+                #endif
+                return 1;
+            }
+            FileSize = Fstat.st_size;
             P->F.Int = F;
             break;
         }
@@ -108,7 +134,7 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
         case method::createfile:
         {
             DWORD FileSizeHigh;
-            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, 0);
             auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
             if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
                 && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
@@ -143,7 +169,8 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
-    auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, FILE_ATTRIBUTE_NORMAL };
+    auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
     if (NewFile != INVALID_HANDLE_VALUE)
     {
         DWORD FileSizeHigh;
@@ -226,7 +253,10 @@ int filemap::Remap(size_t Begin, size_t End)
         End -= P->Data_Shift;
         auto Buffer_Middle = Buffer + Begin;
         auto Buffer_Middle_Size = Buffer_MaxSize - Begin;
-        memmove(const_cast<uint8_t*>(Buffer), const_cast<uint8_t*>(Buffer_Middle), Buffer_Middle_Size);
+        if (Buffer_Middle_Size < Buffer_MaxSize)
+        {
+            memmove(const_cast<uint8_t*>(Buffer), const_cast<uint8_t*>(Buffer_Middle), Buffer_Middle_Size);
+        }
         P->Data_Shift += Begin;
         AssignKeepSizeBase(Buffer - P->Data_Shift);
         Buffer += Buffer_Middle_Size;
@@ -243,7 +273,7 @@ int filemap::Remap(size_t Begin, size_t End)
         case method::fopen:
         {
             auto F = P->F.File;
-            if (fread((char*)const_cast<uint8_t*>(Buffer), Buffer_MaxSize, 1, F) != 1)
+            if (fread((char*)const_cast<uint8_t*>(Buffer), 1, Buffer_MaxSize, F) != Buffer_MaxSize)
                 return 1;
             break;
         }
@@ -260,7 +290,8 @@ int filemap::Remap(size_t Begin, size_t End)
         case method::createfile:
         {
             auto F = P->F.Handle;
-            if (ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, nullptr, 0))
+            DWORD BytesRead = 0;
+            if (!ReadFile(F, (LPVOID)Buffer, (DWORD)Buffer_MaxSize, &BytesRead, nullptr) || BytesRead == 0)
                 return 1;
             break;
         }
