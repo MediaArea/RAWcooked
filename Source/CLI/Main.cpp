@@ -7,7 +7,6 @@
 //---------------------------------------------------------------------------
 #include <algorithm>
 #include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -23,7 +22,6 @@
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "Lib/Uncompressed/AVI/AVI.h"
-#include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
@@ -177,7 +175,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding, size_t i)
 {
     const auto& Name = RemovedFiles[i];
-    if (input::OpenInput(FileMap, Name, &Global.Errors, Global.Edits_Enabled)) {
+    if (input::OpenInput(FileMap, Name, 0, &Global.Errors, Global.Edits_Enabled)) {
         return true;
     }
     if (Global.Actions[Action_Encode]) {
@@ -689,10 +687,10 @@ int ParseFile(size_t Files_Pos)
 {
     // Init
     parse_info ParseInfo;
-    ParseInfo.Name = &Input.Files[Files_Pos];
+    ParseInfo.Name = &Input.Files[Files_Pos].FileName;
 
     // Open file
-    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors, Global.Edits_Enabled))
+    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, Input.Files[Files_Pos].FileSize, &Global.Errors, Global.Edits_Enabled))
         return 1;
 
     // Compressed content
@@ -739,7 +737,7 @@ int main(int argc, const char* argv[])
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
     sort(Input.Files.begin(), Input.Files.end(),
-        [](const string& l, const string& r) {return doj::alphanum_comp(l, r) < 0; });
+        [](const FileEntry& l, const FileEntry& r) {return doj::alphanum_comp(l.FileName, r.FileName) < 0; });
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_FileName;

@@ -310,13 +310,42 @@ bool license::LoadLicense(string LicenseKey, bool StoreLicenseKey)
     if (LicenseKey.empty())
     {
         string Path = GetLocalConfigPath() + PathSeparator "Config.txt";
-        ifstream F(Path);
-        string temp;
-        while (!F.fail() && !F.eof())
+        filemap FileMap;
+        if (FileMap.Open_ReadMode(Path) == 0)
         {
-            F >> temp;
-            if (temp.rfind("License=", 8) == 0 || temp.rfind("Licence=", 8) == 0)
-                LicenseKey = temp.substr(8);
+            const uint8_t* Buffer = FileMap.Data();
+            size_t BufferSize = FileMap.Size();
+
+            // Parse buffer line by line
+            for (size_t Begin = 0; Begin < BufferSize; )
+            {
+                // Find begin, middle and end of line
+                while (Begin < BufferSize && Buffer[Begin] == ' ' && Buffer[Begin] == '\t')
+                    Begin++;
+                size_t End = Begin;
+                while (End < BufferSize && Buffer[End] != '\n' && Buffer[End] != '\r')
+                    End++;
+                size_t Middle = Begin;
+                while (Middle < End && Buffer[Middle] != '=')
+                    Middle++;
+                if (Middle != End)
+                {
+                    switch ((Middle++) - Begin)
+                    {
+                    case 7:
+                        if (memcmp(Buffer + Begin, "License", 7) == 0
+                         || memcmp(Buffer + Begin, "Licence", 7) == 0)
+                        {
+                            LicenseKey = string((const char*)Buffer + Middle, End - Middle);
+                        }
+                    }
+                }
+
+                // Skip to next line
+                Begin = End;
+                while (Begin < BufferSize && (Buffer[Begin] == '\n' || Buffer[Begin] == '\r'))
+                    Begin++;
+            }
         }
     }
 

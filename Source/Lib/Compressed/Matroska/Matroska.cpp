@@ -930,7 +930,7 @@ void matroska::Segment_Cluster()
         if (OpenStyle != filemap::method::mmap && !FileName.empty())
         {
             FileMap = new filemap;
-            FileMap->Open_ReadMode(FileName, OpenStyle, 0, 256 * 1024 * 1024);
+            FileMap->Open_ReadMode(FileName, 0, OpenStyle, 0, 256 * 1024 * 1024);
             Buffer = *FileMap;
         }
     }
