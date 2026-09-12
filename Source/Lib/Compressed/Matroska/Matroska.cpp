@@ -275,6 +275,8 @@ void matroska::Shutdown()
         Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
     }
+    delete OutputHash;
+    OutputHash = nullptr;
 
     // Threads
     if (FramesPool)
