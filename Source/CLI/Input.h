@@ -17,10 +17,17 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+// File entry with size from stat/FindFirstFile to avoid redundant stat/GetFileSize calls
+struct FileEntry
+{
+    string FileName;
+    uintmax_t FileSize;
+};
+
 class input
 {
 public:
-    vector<string>              Files;
+    vector<FileEntry>           Files;
 
     // Commands
     int AnalyzeInputs(global& Global);
@@ -30,7 +37,7 @@ public:
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);
 
     // I/O
-    static bool OpenInput(filemap& FileMap, const string& Name, errors* Errors, bool AlsoWrite = false);
+    static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false);
 };
 
 #endif

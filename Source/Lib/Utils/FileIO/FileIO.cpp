@@ -54,7 +54,7 @@ struct private_buffered
 };
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
+int filemap::Open_ReadMode(const char* FileName, size_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
 {
     Close();
 
@@ -65,20 +65,30 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
         Method = NewStyle;
         private_buffered* P = new private_buffered;
         P->MaxSize = End - Begin;
-        size_t FileSize;
 
         switch (Method)
         {
         default: // case style::fstream:
         {
-            auto Flags = ios::binary | ios::ate;
+            auto Flags = ios::binary;
+            if (!FileSize)
+            {
+                Flags |= ios::ate;
+            }
             auto F = new ifstream(FileName, Flags);
             if (!F->is_open())
                 return 1;
-            FileSize = F->tellg();
-            F->seekg(Begin, F->beg);
-            if (!F->good())
-                return 1;
+            auto ShallSeek = !FileSize || Begin;
+            if (!FileSize)
+            {
+                FileSize = F->tellg();
+            }
+            if (ShallSeek)
+            {
+                F->seekg(Begin, F->beg);
+                if (!F->good())
+                    return 1;
+            }
             P->F.Ifstream = F;
             break;
         }
@@ -87,18 +97,21 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
             FILE* F = fopen(FileName, "rb");
             if (!F)
                 return 1;
-            #if defined(_WIN32) || defined(_WINDOWS)
-            struct _stat64i32 Fstat;
-            if (_fstat(_fileno(F), &Fstat))
-            #else
-            struct stat Fstat;
-            if (fstat(fileno(F), &Fstat))
-            #endif
+            if (!FileSize)
             {
-                fclose(F);
-                return 1;
+                #if defined(_WIN32) || defined(_WINDOWS)
+                struct _stat64i32 Fstat;
+                if (_fstat(_fileno(F), &Fstat))
+                #else
+                struct stat Fstat;
+                if (fstat(fileno(F), &Fstat))
+                #endif
+                {
+                    fclose(F);
+                    return 1;
+                }
+                FileSize = Fstat.st_size;
             }
-            FileSize = Fstat.st_size;
             P->F.File = F;
             break;
         }
@@ -111,38 +124,44 @@ int filemap::Open_ReadMode(const char* FileName, method NewStyle, size_t Begin, 
             #endif //defined(_WIN32) || defined(_WINDOWS)
             if (F == -1)
                 return 1;
-            #if defined(_WIN32) || defined(_WINDOWS)
-            struct _stat64i32 Fstat;
-            if (_fstat(F, &Fstat))
-            #else
-            struct stat Fstat;
-            if (fstat(F, &Fstat))
-            #endif
+            if (!FileSize)
             {
                 #if defined(_WIN32) || defined(_WINDOWS)
-                _close(F);
+                struct _stat64i32 Fstat;
+                if (_fstat(F, &Fstat))
                 #else
-                close(F);
+                struct stat Fstat;
+                if (fstat(F, &Fstat))
                 #endif
-                return 1;
+                {
+                    #if defined(_WIN32) || defined(_WINDOWS)
+                    _close(F);
+                    #else
+                    close(F);
+                    #endif
+                    return 1;
+                }
+                FileSize = Fstat.st_size;
             }
-            FileSize = Fstat.st_size;
             P->F.Int = F;
             break;
         }
         #if defined(_WIN32) || defined(_WINDOWS)
         case method::createfile:
         {
-            DWORD FileSizeHigh;
             auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, 0);
-            auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
-            if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
-                && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
+            if (!FileSize)
             {
-                FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
+                DWORD FileSizeHigh;
+                auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
+                if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
+                    && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
+                {
+                    FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
+                }
+                else
+                    return 1;
             }
-            else
-                return 1;
             if (Begin)
             {
                 LARGE_INTEGER GoTo;

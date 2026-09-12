@@ -122,7 +122,7 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 //---------------------------------------------------------------------------
 void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
 {
-    string FN(Files[AllFiles_Pos]);
+    string FN(Files[AllFiles_Pos].FileName);
     string After;
     string Before;
 
@@ -179,7 +179,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
             else
             {
                 // Test from already created files list
-                if (AllFiles_PosToDelete >= Files.size() || FullPath != Files[AllFiles_PosToDelete])
+                if (AllFiles_PosToDelete >= Files.size() || FullPath != Files[AllFiles_PosToDelete].FileName)
                 {
                     // Remove files from the list (except the first one, used for loop increment)
                     Files.erase(Files.begin() + AllFiles_Pos + KeepFirst, Files.begin() + AllFiles_PosToDelete);
@@ -190,7 +190,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                     }
 
                     // Check if there is more from the sequence
-                    while (AllFiles_Pos < Files.size() && doj::alphanum_comp(FullPath, Files[AllFiles_Pos]) > 0)
+                    while (AllFiles_Pos < Files.size() && doj::alphanum_comp(FullPath, Files[AllFiles_Pos].FileName) > 0)
                     {
                         // Test of unsupported file names e.g. 09 and 9 in the list
                         size_t Pos1 = FN.size();
@@ -222,7 +222,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                             while (!FN3.empty() && FN3[0] == '0')
                             {
                                 FN3.erase(0, 1);
-                                if (Before + FN3 + After == Files[AllFiles_Pos])
+                                if (Before + FN3 + After == Files[AllFiles_Pos].FileName)
                                 {
                                     Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN2 + After);
                                     Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::undecodable::FileNameSequence, Before.substr(Path_Pos) + FN3 + After);
@@ -234,24 +234,24 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                     }
                     if (AllFiles_Pos >= Files.size())
                         break;
-                    if (FullPath != Files[AllFiles_Pos])
+                    if (FullPath != Files[AllFiles_Pos].FileName)
                     {
                         // Coherency test
                         auto NextFileFound = false;
                         for (auto AllFiles_Pos_Next = AllFiles_Pos; AllFiles_Pos_Next < Files.size(); AllFiles_Pos_Next++)
                         {
-                            auto& File2 = Files[AllFiles_Pos_Next];
-                            if (!File2.compare(0, Before.size(), Before)) // Same start
+                            auto& File2_FileName = Files[AllFiles_Pos_Next].FileName;
+                            if (!File2_FileName.compare(0, Before.size(), Before)) // Same start
                             {
-                                if (File2.size() < Before.size() + FN.size() + After.size()) // Not enough characters for storing the expected string
+                                if (File2_FileName.size() < Before.size() + FN.size() + After.size()) // Not enough characters for storing the expected string
                                     continue;
-                                auto End = File2.size() - After.size();
-                                if (File2.compare(End, After.size(), After)) // Not same end
+                                auto End = File2_FileName.size() - After.size();
+                                if (File2_FileName.compare(End, After.size(), After)) // Not same end
                                     continue;
                                 auto TestDigit = Before.size();
                                 do
                                 {
-                                    const auto& Char = File2[TestDigit];
+                                    const auto& Char = File2_FileName[TestDigit];
                                     if (Char < '0' || Char > '9')
                                         break;
                                     TestDigit++;
@@ -259,7 +259,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                                 if (TestDigit == End)
                                 {
                                     auto Number1 = stoull(FN);
-                                    auto Number2 = stoull(File2.substr(Before.size(), TestDigit - Before.size()));
+                                    auto Number2 = stoull(File2_FileName.substr(Before.size(), TestDigit - Before.size()));
                                     if (Number1 < Number2)
                                     {
                                         if (Actions[Action_Coherency] && !Actions[Action_AcceptGaps] && Errors)
@@ -275,7 +275,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                                                 Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
                                             }
                                         }
-                                        FN = File2.substr(Before.size(), TestDigit - Before.size());
+                                        FN = File2_FileName.substr(Before.size(), TestDigit - Before.size());
                                         NextFileFound = true;
                                         MustCreateFileList = true;
                                     }
@@ -297,8 +297,8 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
 
     if (RemovedFiles.empty())
     {
-        RemovedFiles.push_back(Files[AllFiles_Pos]);
-        FileName_Template = Files[AllFiles_Pos];
+        RemovedFiles.push_back(Files[AllFiles_Pos].FileName);
+        FileName_Template = Files[AllFiles_Pos].FileName;
     }
     else
     {
@@ -317,8 +317,8 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
 }
 
 //---------------------------------------------------------------------------
-void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files);
-void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<string>& Files, int IsDirFromFileRead)
+void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files);
+void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<FileEntry>& Files, int IsDirFromFileRead, uintmax_t FileSize = 0)
 {
     if (File_Name != "." && File_Name != "..") // Avoid . and ..
     {
@@ -335,12 +335,12 @@ void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden
         if (IsDirFromFileRead != 0)
             DetectSequence_FromDir(File_Name_Complete.c_str(), Files);
         else if (!IsHidden && (File_Name_Complete.size()<29 || File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29))
-            Files.push_back(File_Name_Complete);
+            Files.push_back({File_Name_Complete, FileSize});
     }
 }
 
 //---------------------------------------------------------------------------
-void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files)
+void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
 {
     string Dir_Name2 = Dir_Name;
 
@@ -353,7 +353,8 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<string>& Files)
             return;
 
         do {
-            DetectSequence_FromDir_Sub(Dir_Name2, FindFileData.cFileName, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+            size_t FileSize = ((size_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
+            DetectSequence_FromDir_Sub(Dir_Name2, FindFileData.cFileName, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
         }
         while (FindNextFileA(hFind, &FindFileData));
 
@@ -413,7 +414,7 @@ int input::AnalyzeInputs(global& Global)
                 HasMoreThanOneFile = true;
             Global.HasAtLeastOneFile = true;
 
-            Files.push_back(Global.Inputs[i]);
+            Files.push_back({Global.Inputs[i], 0});
         }
     }
     if (Global.HasAtLeastOneDir && HasMoreThanOneFile)
@@ -451,7 +452,7 @@ int input::AnalyzeInputs(global& Global)
     for (size_t i = 0; i < Files.size(); i++)
     {
         size_t Path_Pos;
-        DetectPathPos(Files[i], Path_Pos);
+        DetectPathPos(Files[i].FileName, Path_Pos);
         if (Global.Path_Pos_Global > Path_Pos)
             Global.Path_Pos_Global = Path_Pos;
     }
@@ -491,9 +492,9 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
 }
 
 //---------------------------------------------------------------------------
-bool input::OpenInput(filemap& FileMap, const string& Name, errors* Errors, bool AlsoWrite)
+bool input::OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite)
 {
-    if (FileMap.Open_ReadMode(Name, {}, {}, {}, AlsoWrite))
+    if (FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, AlsoWrite))
     {
         if (Errors)
         {
