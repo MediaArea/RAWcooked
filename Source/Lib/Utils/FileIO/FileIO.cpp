@@ -54,7 +54,7 @@ struct private_buffered
 };
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName, size_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
+int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
 {
     Close();
 
@@ -150,6 +150,8 @@ int filemap::Open_ReadMode(const char* FileName, size_t FileSize, method NewStyl
         case method::createfile:
         {
             auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, 0);
+            if (NewFile == INVALID_HANDLE_VALUE)
+                return 1;
             if (!FileSize)
             {
                 DWORD FileSizeHigh;
@@ -184,59 +186,58 @@ int filemap::Open_ReadMode(const char* FileName, size_t FileSize, method NewStyl
         return Remap(Begin, End);
     }
 
-    size_t NewSize;
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
     static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, FILE_ATTRIBUTE_NORMAL };
     auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
-    if (NewFile != INVALID_HANDLE_VALUE)
+    if (NewFile == INVALID_HANDLE_VALUE)
+        return 1;
+    if (!FileSize)
     {
         DWORD FileSizeHigh;
         auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
         if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
             && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
         {
-            NewSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
-            if (NewSize)
-            {
-                static const DWORD Protects[2] = { PAGE_READONLY, PAGE_READWRITE };
-                auto NewMapping = CreateFileMapping(NewFile, 0, Protects[AlsoWrite], 0, 0, 0);
-                if (NewMapping)
-                {
-                    Private = NewFile;
-                    Private2 = NewMapping;
-                }
-                else
-                    CloseHandle(NewFile);
-            }
-            else
-                Private = NewFile; // CreateFileMapping does not support 0-byte files, so we will map manually to nullptr
+            FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
         }
         else
+            return 1;
+    }
+    if (FileSize)
+    {
+        static const DWORD Protects[2] = { PAGE_READONLY, PAGE_READWRITE };
+        auto NewMapping = CreateFileMapping(NewFile, 0, Protects[AlsoWrite], 0, 0, 0);
+        if (!NewMapping)
         {
             CloseHandle(NewFile);
+            return 1;
         }
+        Private = NewFile;
+        Private2 = NewMapping;
     }
+    else
+        Private = NewFile; // CreateFileMapping does not support 0-byte files, so we will map manually to nullptr
 #else 
     static const int oflag[2] = { O_RDONLY, O_RDWR };
     auto fd = open(FileName, oflag[AlsoWrite], 0);
-    if (fd != -1)
+    if (fd == -1)
+        return 1;
+    if (!FileSize)
     {
         struct stat Fstat;
-        if (!stat(FileName, &Fstat))
+        if (fstat(fd, &Fstat))
         {
-            NewSize = Fstat.st_size;
-            Private = fd;
-        }
-        else
             close(fd);
+            return 1;
+        }
+        FileSize = Fstat.st_size;
+        Private = fd;
     }
 #endif
 
-    if (Private == (decltype(Private))-1)
-        return 1;
-    AssignKeepDataBase(NewSize); // Intermediate, Remap() will set the data pointer
+    AssignKeepDataBase(FileSize); // Intermediate, Remap() will set the data pointer
     return Remap();
 }
 
