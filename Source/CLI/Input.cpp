@@ -348,7 +348,7 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
         if (Dir_Name2[Dir_Name2.size() - 1] != '/' && Dir_Name2[Dir_Name2.size() - 1] != '\\')
             Dir_Name2 += PathSeparator;
         WIN32_FIND_DATAA FindFileData;
-        HANDLE hFind = FindFirstFileA((Dir_Name2 + '*').c_str() , &FindFileData);
+        HANDLE hFind = FindFirstFileExA((Dir_Name2 + '*').c_str(), FindExInfoBasic, &FindFileData, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
         if (hFind == INVALID_HANDLE_VALUE)
             return;
 

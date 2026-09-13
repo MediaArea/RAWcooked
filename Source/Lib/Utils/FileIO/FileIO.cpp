@@ -149,7 +149,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         #if defined(_WIN32) || defined(_WINDOWS)
         case method::createfile:
         {
-            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, 0);
+            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
             if (NewFile == INVALID_HANDLE_VALUE)
                 return 1;
             if (!FileSize)
@@ -189,7 +189,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
-    static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_RANDOM_ACCESS, FILE_ATTRIBUTE_NORMAL };
+    static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, FILE_ATTRIBUTE_NORMAL };
     auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
     if (NewFile == INVALID_HANDLE_VALUE)
         return 1;

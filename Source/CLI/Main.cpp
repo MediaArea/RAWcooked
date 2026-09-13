@@ -205,7 +205,8 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         atomic<bool> AnyError{ false };
         vector<worker_data> Pool;
         Pool.resize(Global.IoThreads);
-        for (size_t w = 0; w < Global.IoThreads; ++w) {
+        Pool[0].Parser = &SingleFile;
+        for (size_t w = 1; w < Global.IoThreads; ++w) {
             // Initialize each worker
             Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
             if (!Pool[w].Parser) {
@@ -227,10 +228,12 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         }
 
         // Join threads and cleanup parsers
-        for (auto& P : Pool) {
+        for (size_t w = 0; w < Global.IoThreads; ++w) {
+            auto& P = Pool[w];
             if (P.Thread.joinable())
                 P.Thread.join();
-            delete P.Parser;
+            if (w)
+                delete P.Parser;
         }
 
         return AnyError.load();
@@ -438,10 +441,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
                 ParseInfo.Slices = std::to_string(Parser->slice_x * Parser->slice_y);
             }
             ParseInfo.IsDetected = true;
-            delete Parser;
             break;
         }
-        delete Parser;
         if (NOK) {
             return 1;
         }
