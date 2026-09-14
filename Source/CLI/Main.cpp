@@ -441,8 +441,10 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
                 ParseInfo.Slices = std::to_string(Parser->slice_x * Parser->slice_y);
             }
             ParseInfo.IsDetected = true;
+            delete Parser;
             break;
         }
+        delete Parser;
         if (NOK) {
             return 1;
         }
