@@ -216,12 +216,12 @@ void exr::ParseBuffer()
         Undecodable(undecodable::VersionNumber);
         return;
     }
-    bool LongName = false;
-    if (Version&0xFFFFFF)
+    if (Version & (~0xFF040000))
     {
         Undecodable(undecodable::VersionFlags);
         return;
     }
+    bool LongName = Version & 0x00040000;
 
     IsBigEndian = false;
     exr_tested Info;
@@ -249,12 +249,12 @@ void exr::ParseBuffer()
         if (name_End >= Buffer.Size() - Buffer_Offset)
         {
             Invalid(invalid::FieldNameSize);
-            return;
+            break;
         }
         if (name_End > (LongName ? 255 : 31))
         {
             Invalid(invalid::FieldNameSize);
-            return;
+            break;
         }
         if (!name_End)
         {
@@ -275,12 +275,12 @@ void exr::ParseBuffer()
         if (name_End + 1 + type_End > Buffer.Size() - Buffer_Offset)
         {
             Invalid(invalid::FieldNameSize);
-            return;
+            break;
         }
         if (type_End > (LongName ? 255 : 31) || name_End + 1 + type_End + 1 + 4 >= Buffer.Size() - Buffer_Offset)
         {
             Invalid(invalid::FieldNameSize);
-            return;
+            break;
         }
 
         // Size
@@ -289,7 +289,7 @@ void exr::ParseBuffer()
         if (Size > Buffer.Size() - Buffer_Offset)
         {
             Invalid(invalid::FieldNameSize);
-            return;
+            break;
         }
 
         // Parse
@@ -324,7 +324,7 @@ void exr::ParseBuffer()
             if (!Size)
             {
                 Invalid(invalid::chListSize); // Should finish with a single null byte
-                return;
+                break;
             }
             uint32_t ColorSpace = 0;
             uint32_t pixelType = 0;
@@ -343,12 +343,14 @@ void exr::ParseBuffer()
                 if (channelName_End > End - Buffer_Offset - 17)
                 {
                     Invalid(invalid::chListSize);
-                    return;
+                    Buffer_Offset = End;
+                    break;
                 }
                 if (!channelName_End || channelName_End > 255)
                 {
                     Invalid(invalid::chListChannelNameSize);
-                    return;
+                    Buffer_Offset = End;
+                    break;
                 }
                 if (Count > 3 || channelName_End != 1)
                     ColorSpace = (uint32_t)-1;
@@ -367,7 +369,8 @@ void exr::ParseBuffer()
                 if (Get_L4() || Get_L4() != 1 || Get_L4() != 1)
                 {
                     Unsupported(unsupported::chListFeatures); // pLinear / reserved / xSampling / ySampling
-                    return;
+                    Buffer_Offset = End;
+                    break;
                 }
 
                 Count++;
@@ -375,7 +378,8 @@ void exr::ParseBuffer()
             if (End - Buffer_Offset || Get_L1())
             {
                 Invalid(invalid::chListSize); // Should finish with a single null byte
-                return;
+                Buffer_Offset = End;
+                break;
             }
 
             switch (ColorSpace)
