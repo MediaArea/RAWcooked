@@ -540,7 +540,8 @@ void exr::ParseBuffer()
         CASE_S("timecodeRate", item_type::Int)
         else
         {
-            UnsupportedFieldName = true;
+            if (strncmp(name, "uk.ltd.filmlight.", 17))
+                UnsupportedFieldName = true;
             Buffer_Offset += Size;
         }
     }
