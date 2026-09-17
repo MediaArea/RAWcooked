@@ -178,6 +178,7 @@ Formats/DPX/Flavors/RGB_16_Packed_BE/058142ce-aeb9-4f5c-b3c7-7590f09c757d_000900
 Formats/DPX/Flavors/RGB_16_Packed_BE/RGB_16_bit.dpx pass
 Formats/DPX/Flavors/RGB_16_Packed_LE/Dufay_000001.dpx pass
 Formats/DPX/Flavors/Y_8_Packed_LE/FFmpeg_gray.dpx pass
+Formats/DPX/Flavors/Y_10_FilledA_BE/5650x4500BN_LasergraphicsDirector.dpx
 Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4.dpx
 Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4_Lasergraphics.dpx
 Formats/DPX/Flavors/Y_10_FilledA_BE/Y_10_FilledA_BE_Modified_4x4_Lasergraphics_padding_not_zero.dpx
