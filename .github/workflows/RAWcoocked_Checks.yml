@@ -34,8 +34,8 @@ jobs:
             cp /usr/bin/ffmpeg-ma ffmpeg
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
-            curl -O https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Mac_Static_x64.zip 2>/dev/null
-            7za e FFmpeg_Bin_Latest_Mac_Static_x64.zip bin/ffmpeg
+            curl -O https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Mac_Static_universal.zip 2>/dev/null
+            7za e FFmpeg_Bin_Latest_Mac_Static_universal.zip bin/ffmpeg
           fi
       - name: Configure
         run: |
