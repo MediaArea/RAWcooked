@@ -594,15 +594,32 @@ void exr::ParseBuffer()
     slice_y = slice_x;
 
     // Offset Tables
-    Buffer_Offset += 8 * Height;
-    
-    // Computing OffsetAfterData
-    size_t ContentSize_Multiplier = BytesPerBlock((flavor)Flavor);
-    size_t OffsetAfterData = Buffer_Offset + (ContentSize_Multiplier * Width + 8) * Height;
-    if (OffsetAfterData > Buffer.Size())
+    auto IsWrong = false;
+    if (!IsWrong && Height > (Buffer.Size() - Buffer_Offset) / 8)
+        IsWrong = true;
+    uint64_t OffsetAfterData = Get_L8(); // Is updated later
+    if (!IsWrong)
     {
-        if (!Actions[Action_AcceptTruncated])
-            Undecodable(undecodable::DataSize);
+        uint64_t ContentSize_Multiplier = BytesPerBlock((flavor)Flavor);
+        uint64_t LineSize = 8 + ContentSize_Multiplier * Width;
+        uint64_t BasePos = OffsetAfterData;
+        OffsetAfterData += LineSize;
+        for (uint32_t i = 1; i < Height; i++)
+        {
+            auto Temp = Get_L8();
+            if (Temp != OffsetAfterData) // Currently we check that it is in sequential order
+            {
+                Undecodable(undecodable::DataSize);
+                break;
+            }
+            OffsetAfterData += LineSize;
+        }
+        if (OffsetAfterData > Buffer.Size())
+        {
+            if (!Actions[Action_AcceptTruncated])
+                Undecodable(undecodable::DataSize);
+        }
+        Buffer_Offset = BasePos;
     }
 
     // Can we compress?
