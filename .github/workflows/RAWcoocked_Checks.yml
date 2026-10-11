@@ -21,7 +21,14 @@ jobs:
             echo "deb https://mediaarea.net/repo/deb/ubuntu $(lsb_release --codename --short)-snapshots main" | sudo tee /etc/apt/sources.list.d/mediaarea-snapshots.list
             sudo curl https://repo.mediaarea.net/deb/ubuntu/keyring.gpg -o /etc/apt/trusted.gpg.d/mediaarea-snapshots.gpg
             sudo apt-get update
-            sudo apt-get install -y nasm valgrind ffmpeg-ma mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
+            sudo apt-get install -y nasm valgrind mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
+            if grep -qw avx512f /proc/cpuinfo; then
+              sudo apt-get install -y ffmpeg-ma # Latest snapshot
+            else
+              # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512
+              curl -fO https://mediaarea.net/download/binary/ffmpeg/9.0.1/ffmpeg-ma_9.0.1-1_amd64.Ubuntu_$(lsb_release --release --short).deb
+              sudo apt-get install -y ./ffmpeg-ma_9.0.1-1_amd64.Ubuntu_$(lsb_release --release --short).deb
+            fi
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew update
