@@ -22,6 +22,9 @@ private:
     }
 
     void operator()() {
+      if (m_pool->m_thread_init) {
+        m_pool->m_thread_init();
+      }
       std::function<void()> func;
       bool dequeued;
       for (;;) {
@@ -46,9 +49,10 @@ private:
   std::vector<std::thread> m_threads;
   std::mutex m_conditional_mutex;
   std::condition_variable m_conditional_lock;
+  void (*m_thread_init)(); // Called at the start of each thread (e.g. for setting its priority)
 public:
-  ThreadPool(const size_t n_threads)
-    : m_threads(std::vector<std::thread>(n_threads)), m_shutdown(false) {
+  ThreadPool(const size_t n_threads, void (*thread_init)() = nullptr)
+    : m_threads(std::vector<std::thread>(n_threads)), m_shutdown(false), m_thread_init(thread_init) {
   }
 
   ThreadPool(const ThreadPool &) = delete;
