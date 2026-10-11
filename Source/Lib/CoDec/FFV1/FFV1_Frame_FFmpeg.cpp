@@ -41,20 +41,36 @@ struct ffv1_frame_ffmpeg_frames
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_) :
+static AVPixelFormat Vulkan_Format(AVCodecContext*, const AVPixelFormat* Formats)
+{
+    // Vulkan only, so decoding fails if Vulkan decoding is not possible
+    while (*Formats != AV_PIX_FMT_NONE && *Formats != AV_PIX_FMT_VULKAN)
+        Formats++;
+    return *Formats;
+}
+
+//---------------------------------------------------------------------------
+ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
     RawFrame(nullptr),
     Pool(Pool_),
     Context(ffmpeg::avcodec_alloc_context3(ffmpeg::avcodec_find_decoder(AV_CODEC_ID_FFV1))),
     Packet(ffmpeg::av_packet_alloc()),
-    Frames(new ffv1_frame_ffmpeg_frames)
+    Frames(new ffv1_frame_ffmpeg_frames),
+    Frame_Sw(ffmpeg::av_frame_alloc())
 {
     Context->thread_type = FF_THREAD_SLICE; // Frame is output immediately
     Context->thread_count = Pool ? 0 : 1;
+    if (Vulkan)
+    {
+        ffmpeg::av_hwdevice_ctx_create(&Context->hw_device_ctx, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0);
+        Context->get_format = Vulkan_Format;
+    }
 }
 
 //---------------------------------------------------------------------------
 ffv1_frame_ffmpeg::~ffv1_frame_ffmpeg()
 {
+    ffmpeg::av_frame_free(&Frame_Sw);
     delete Frames;
     ffmpeg::av_packet_free(&Packet);
     ffmpeg::avcodec_free_context(&Context);
@@ -105,8 +121,8 @@ static void Buffer_Release(void* Holder, uint8_t*)
 //---------------------------------------------------------------------------
 bool ffv1_frame_ffmpeg::Process(const uint8_t*, size_t Buffer_Size, data_holder* Holder)
 {
-    // Frame data kept by FFmpeg as long as needed (no copy), with FFmpeg padding
-    auto Data = Holder->Hold();
+    // Frame data kept by FFmpeg as long as needed (no copy), with FFmpeg padding, in allocated memory if Vulkan imports it in GPU memory space
+    auto Data = Holder->Hold(Context->get_format == Vulkan_Format);
     auto Buffer = ffmpeg::av_buffer_create(const_cast<uint8_t*>(Data), Buffer_Size + AV_INPUT_BUFFER_PADDING_SIZE, Buffer_Release, Holder, AV_BUFFER_FLAG_READONLY);
     if (!Buffer)
     {
@@ -169,8 +185,8 @@ bool ffv1_frame_ffmpeg::Decode(AVBufferRef* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 bool ffv1_frame_ffmpeg::Decode(AVFrame* Frame, AVBufferRef* Buffer, size_t Buffer_Size)
 {
-    if (!ffmpeg::avcodec_is_open(Context) && ffmpeg::avcodec_open2(Context, nullptr, nullptr) < 0)
-        return true;
+    if (!ffmpeg::avcodec_is_open(Context) && ((Context->get_format == Vulkan_Format && !Context->hw_device_ctx) || ffmpeg::avcodec_open2(Context, nullptr, nullptr) < 0))
+        return true; // Vulkan device is not available, or other error
     Packet->buf = ffmpeg::av_buffer_ref(Buffer);
     if (!Packet->buf)
         return true;
@@ -207,7 +223,22 @@ bool ffv1_frame_ffmpeg::Output(AVFrame* Frame)
         return true; // Decoding failed
     size_t Parts = Pool ? Parallel_Parts() : 1;
 
+    // Download from GPU memory if hardware decoding (waiting for the end of the decoding), then release the GPU frame
+    // Buffers of the downloaded frame are reused (no new memory pages for each frame)
     auto Picture = Frame;
+    if (Frame->hw_frames_ctx)
+    {
+        if (Frame_Sw->buf[0] && (Frame_Sw->width != Frame->width || Frame_Sw->height != Frame->height || Frame_Sw->format != ((AVHWFramesContext*)Frame->hw_frames_ctx->data)->sw_format))
+            ffmpeg::av_frame_unref(Frame_Sw);
+        auto Result = ffmpeg::av_hwframe_transfer_data(Frame_Sw, Frame, 0);
+        ffmpeg::av_frame_unref(Frame);
+        if (Result < 0)
+        {
+            ffmpeg::av_frame_unref(Frame_Sw);
+            return true;
+        }
+        Picture = Frame_Sw;
+    }
 
     // Raw frame configuration, from the decoded pixel format
     auto Desc = ffmpeg::av_pix_fmt_desc_get((AVPixelFormat)Picture->format);

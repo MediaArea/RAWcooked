@@ -14,6 +14,7 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
 }
 //---------------------------------------------------------------------------
@@ -33,6 +34,8 @@ extern "C"
     _F(avutil,  av_frame_free) \
     _F(avutil,  av_frame_unref) \
     _F(avutil,  av_freep) \
+    _F(avutil,  av_hwdevice_ctx_create) \
+    _F(avutil,  av_hwframe_transfer_data) \
     _F(avutil,  av_mallocz) \
     _F(avutil,  av_pix_fmt_desc_get) \
     _F(avutil,  av_read_image_line2) \

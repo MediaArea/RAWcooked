@@ -444,7 +444,7 @@ bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holde
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseFFmpegDecoder)
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseFFmpegDecoder, bool UseVulkanDecoder)
 {
     switch (Format)
     {
@@ -454,10 +454,11 @@ base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseFFmpegDecod
         {
             if (!FFmpeg_Library_Load())
                 return nullptr; // Availability of FFmpeg libraries is checked when the decoder is selected
-            return new ffv1_ffmpeg_wrapper(new ffv1_frame_ffmpeg(Pool));
+            return new ffv1_ffmpeg_wrapper(new ffv1_frame_ffmpeg(Pool, UseVulkanDecoder));
         }
         #else
         (void)UseFFmpegDecoder;
+        (void)UseVulkanDecoder;
         #endif
         return new ffv1_split_wrapper(new ffv1_frame(Pool));
     CREATEWRAPPER(flac, FLAC);

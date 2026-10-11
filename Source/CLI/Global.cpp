@@ -308,11 +308,12 @@ int global::SetDecoder(const char* Value)
     if (strcmp(Value, "internal") == 0 || strcmp(Value, "auto") == 0)
     {
         Actions.set(Action_FFmpegDecoder, false);
+        Actions.set(Action_VulkanDecoder, false);
         Actions.set(Action_AutoDecoder, strcmp(Value, "auto") == 0); // Resolved when a decoder is needed
         Decoder_IsProvided = true;
         return 0;
     }
-    if (strcmp(Value, "ffmpeg") == 0)
+    if (strcmp(Value, "ffmpeg") == 0 || strcmp(Value, "vulkan") == 0)
     {
         string Error;
         if (!FFmpeg_Library_Load(&Error))
@@ -321,6 +322,7 @@ int global::SetDecoder(const char* Value)
             return 1;
         }
         Actions.set(Action_FFmpegDecoder, true);
+        Actions.set(Action_VulkanDecoder, strcmp(Value, "ffmpeg") != 0);
         Actions.set(Action_AutoDecoder, false);
         Decoder_IsProvided = true;
         return 0;
@@ -1015,8 +1017,13 @@ int global::ManageCommandLine(const char* argv[], int argc)
             IoThreads = 4;
     }
 
+    // GPU decoding needs the same license feature as GPU encoding
+    auto HwAccelDecoder = Actions[Action_VulkanDecoder];
+    if (HwAccelDecoder)
+        License.Feature(feature::HwAccel);
+
     // License
-    if (Actions[Action_Encode]) {
+    if (Actions[Action_Encode] || HwAccelDecoder) {
         if (License.LoadLicense(LicenseKey, StoreLicenseKey))
             return true;
         if (!License.IsSupported())
