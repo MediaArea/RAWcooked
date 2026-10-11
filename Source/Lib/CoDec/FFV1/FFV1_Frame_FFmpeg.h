@@ -43,6 +43,7 @@ public:
 
     // Process in 2 steps: Decode() of next frames may run during Output() of current frame (from another thread)
     bool Decode(AVBufferRef* Buffer, size_t Buffer_Size); // Buffer with FFmpeg padding, a reference is kept by FFmpeg if needed (no copy)
+    size_t RawFrame_Index = (size_t)-1; // Index of the frame given to Decode(), for instrumentation
     bool Output(); // To raw frame
     void Discard(); // Last decoded frame, instead of Output()
 

@@ -12,6 +12,7 @@
 #include "Lib/CoDec/FFmpeg_Functions.h"
 #include "Lib/CoDec/Wrapper.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include "ThreadPool.h"
 #include <chrono>
 #include <condition_variable>
@@ -48,9 +49,30 @@ enum decoder_index : size_t
 };
 
 //---------------------------------------------------------------------------
+// Names of the threads, stages, counters and events of each decoder, for the trace
+struct decoder_names
+{
+    const char*                 Thread;
+    const char*                 Pool;
+    const char*                 Decode;
+    const char*                 WarmUp;
+    const char*                 Transfer; // Thread and stage
+    const char*                 Queue;
+    const char*                 Duration;
+    const char*                 To;
+};
+static const decoder_names Names[Decoder_Max] =
+{
+    { "Ours decoder",   "Ours slices", nullptr,         nullptr,          nullptr,           nullptr,                 "Ours duration (ms)",   "To ours"   },
+    { "FFmpeg decoder", "FFmpeg pool", "FFmpeg decode", "FFmpeg warm-up", "FFmpeg transfer", "FFmpeg transfer queue", "FFmpeg duration (ms)", "To FFmpeg" },
+    { "Vulkan decoder", "Vulkan pool", "Vulkan decode", "Vulkan warm-up", "Vulkan transfer", "Vulkan transfer queue", "Vulkan duration (ms)", "To Vulkan" },
+};
+
+//---------------------------------------------------------------------------
 // Lower priority for the threads of our decoder, so the threads feeding FFmpeg decoders and the output threads are not delayed by our decoder
 static void LowPriority()
 {
+    trace::ThreadName(Names[Decoder_Ours].Pool);
     #if defined(_WIN32)
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
     #elif defined(__linux__)
@@ -59,6 +81,15 @@ static void LowPriority()
         pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
     #endif
 }
+
+//---------------------------------------------------------------------------
+// Start of the threads of the pool of each decoder
+template<size_t i>
+static void Pool_Start()
+{
+    trace::ThreadName(Names[i].Pool);
+}
+static void (* const Pool_Starts[Decoder_Max])() = { LowPriority, Pool_Start<Decoder_FFmpeg>, Pool_Start<Decoder_Vulkan> };
 
 //---------------------------------------------------------------------------
 struct hybrid_job
@@ -132,7 +163,7 @@ struct ffv1_frame_hybrid_private
                 Pending[i] = true;
             if (Pool)
             {
-                Pools[i] = new ThreadPool(Count, i == Decoder_Ours ? LowPriority : nullptr);
+                Pools[i] = new ThreadPool(Count, Pool_Starts[i]);
                 Pools[i]->init();
             }
         }
@@ -167,6 +198,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
 {
     if (i == Decoder_Ours)
         LowPriority();
+    trace::ThreadName(Names[i].Thread);
 
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
@@ -215,6 +247,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         }
         else
         {
+            TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
             auto& Decoder = FFmpeg[i];
             if (!Decoder)
             {
@@ -224,6 +257,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
                 if (!Extradata.empty())
                     Decoder->OutOfBand(Extradata.data(), Extradata.size());
             }
+            Decoder->RawFrame_Index = Job->Frame ? Job->Frame->Index : (size_t)-1;
             Error = Decoder->Decode(Job->Packet, Job->Packet_Size);
             if (Job->WarmUp || (Job->First && Error))
                 Decoder->Discard(); // Not output
@@ -237,7 +271,10 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         if (Job->First)
             First_Pending--;
         if (!Job->WarmUp && !Job->First)
+        {
             Duration[i] = Duration[i] ? (Duration[i] * 3 + Job_Duration) / 4 : Job_Duration; // Duration of the first frame includes the initialization
+            trace::Counter(Names[i].Duration, (int64_t)(Duration[i] * 1000));
+        }
         if (i == Decoder_Ours)
         {
             Job_Free(Job);
@@ -263,6 +300,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         {
             Job->Error = Error;
             Transfer_Jobs[i].push_back(Job);
+            trace::Counter(Names[i].Queue, (int64_t)Transfer_Jobs[i].size());
             Busy[i] = i == Fallback && !Redo.empty(); // Fallback decoder is not available for a new frame until the first frames for other FFmpeg decoders which failed are decoded
         }
         Condition.notify_all();
@@ -273,6 +311,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
 // Transfer thread, frames decoded by an FFmpeg decoder to raw frames
 void ffv1_frame_hybrid_private::Transfer(size_t i)
 {
+    trace::ThreadName(Names[i].Transfer);
     auto& Jobs = Transfer_Jobs[i];
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
@@ -300,10 +339,12 @@ void ffv1_frame_hybrid_private::Transfer(size_t i)
         }
         auto Job = Jobs.front();
         Jobs.pop_front();
+        trace::Counter(Names[i].Queue, (int64_t)Jobs.size());
         auto Decoder = FFmpeg[i];
         Lock.unlock();
 
         Decoder->RawFrame = Job->Frame;
+        TRACE_SCOPE(Names[i].Transfer, Job->Frame->Index);
         auto Error = Decoder->Output() || Job->Error;
         Job->FrameReady->Ready(Job->Opaque, Error);
 
@@ -499,6 +540,7 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
 
     // Decoder of the previous frame if it is not a keyframe, fallback decoder if FFmpeg decoders warm up, else first available decoder (Vulkan decoder first, then FFmpeg decoder, then our decoder)
     std::unique_lock<std::mutex> Lock(P->Mutex);
+    TRACE_SCOPE("Wait decoder", Frame->Index);
     size_t i = Decoder_Max;
     P->Condition.wait(Lock, [&]
     {
@@ -539,6 +581,7 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
     P->Busy[i] = true;
     P->Next[i] = Job;
     P->Last = i;
+    trace::Instant(Names[i].To, Frame->Index);
     P->Condition.notify_all();
 }
 

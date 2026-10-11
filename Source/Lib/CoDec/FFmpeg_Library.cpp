@@ -8,6 +8,7 @@
 #include "Lib/CoDec/FFmpeg_Library.h"
 #ifdef RAWCOOKED_FFMPEG
 #include "Lib/CoDec/FFmpeg_Functions.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
 #include <cstring>
 #include <vector>
@@ -322,7 +323,7 @@ static bool Library_Load(string&)
 bool FFmpeg_Library_Load(string* Error)
 {
     static string Load_Error;
-    static const bool Loaded = Library_Load(Load_Error); // Once, thread safe
+    static const bool Loaded = [] { TRACE_SCOPE("FFmpeg load"); return Library_Load(Load_Error); }(); // Once, thread safe
     if (!Loaded && Error)
         *Error = Load_Error;
     return Loaded;
@@ -396,8 +397,10 @@ bool FFmpeg_Library_Vulkan(bool AllowCPU)
 
         // Same device as the one created by the decoder, kept for the decoder (device creation is long)
         AVBufferRef* Device = nullptr;
+        trace::scope Trace_Device("Vulkan device creation");
         if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) < 0)
             return vulkan_device::none;
+        Trace_Device.End();
         Vulkan_Device = Device;
         return Vulkan_IsGPU(Device) ? vulkan_device::gpu : vulkan_device::cpu;
     }();

@@ -11,6 +11,7 @@
 #include "ThreadPool.h"
 #include "Lib/Transform/Transform.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -57,13 +58,17 @@ ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
     Frames(new ffv1_frame_ffmpeg_frames),
     Frame_Sw(ffmpeg::av_frame_alloc())
 {
+    TRACE_SCOPE("FFmpeg decoder creation");
     Context->thread_type = FF_THREAD_SLICE; // Frame is output immediately (frame threading is done by Decode()/Output())
     Context->thread_count = Pool ? 0 : 1;
     if (Vulkan)
     {
         Context->hw_device_ctx = FFmpeg_Library_VulkanDevice(); // Already created if the decoder was selected automatically
         if (!Context->hw_device_ctx)
+        {
+            TRACE_SCOPE("Vulkan device creation");
             ffmpeg::av_hwdevice_ctx_create(&Context->hw_device_ctx, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0);
+        }
         Context->get_format = Vulkan_Format;
     }
 }
@@ -164,15 +169,22 @@ bool ffv1_frame_ffmpeg::Decode(AVBufferRef* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 bool ffv1_frame_ffmpeg::Decode(AVFrame* Frame, AVBufferRef* Buffer, size_t Buffer_Size)
 {
-    if (!ffmpeg::avcodec_is_open(Context) && ((Context->get_format == Vulkan_Format && !Context->hw_device_ctx) || ffmpeg::avcodec_open2(Context, nullptr, nullptr) < 0))
-        return true; // Vulkan device is not available, or other error
+    if (!ffmpeg::avcodec_is_open(Context))
+    {
+        TRACE_SCOPE("FFmpeg open");
+        if ((Context->get_format == Vulkan_Format && !Context->hw_device_ctx) || ffmpeg::avcodec_open2(Context, nullptr, nullptr) < 0)
+            return true; // Vulkan device is not available, or other error
+    }
     Packet->buf = ffmpeg::av_buffer_ref(Buffer);
     if (!Packet->buf)
         return true;
     Packet->data = Buffer->data;
     Packet->size = (int)Buffer_Size;
+    trace::scope Trace_Send("FFmpeg send packet", RawFrame_Index);
     auto Result = ffmpeg::avcodec_send_packet(Context, Packet); // Decoding is synchronous (slice threads only), FFmpeg keeps its own reference to the buffer if it needs it after the decoding (e.g. Vulkan)
+    Trace_Send.End();
     ffmpeg::av_packet_unref(Packet);
+    TRACE_SCOPE("FFmpeg receive frame", RawFrame_Index);
     return Result < 0 || ffmpeg::avcodec_receive_frame(Context, Frame) < 0;
 }
 
@@ -221,7 +233,9 @@ bool ffv1_frame_ffmpeg::Output(AVFrame* Frame)
     {
         if (Frame_Sw->buf[0] && (Frame_Sw->width != Frame->width || Frame_Sw->height != Frame->height || Frame_Sw->format != ((AVHWFramesContext*)Frame->hw_frames_ctx->data)->sw_format))
             ffmpeg::av_frame_unref(Frame_Sw);
+        trace::scope Download_Scope("Download", RawFrame->Index);
         auto Result = ffmpeg::av_hwframe_transfer_data(Frame_Sw, Frame, 0);
+        Download_Scope.End();
         ffmpeg::av_frame_unref(Frame);
         if (Result < 0)
         {
@@ -262,6 +276,7 @@ bool ffv1_frame_ffmpeg::Output(AVFrame* Frame)
             auto Plane = RawFrame->Plane(0);
             Parallel(Pool, Parts < 4 ? Parts : 4, h, 1, [&](size_t y_Begin, size_t y_End) -> int // Limited by memory bandwidth, more threads would only wait
             {
+                TRACE_SCOPE("Direct band", RawFrame->Index);
                 for (size_t y = y_Begin; y < y_End; y++)
                 {
                     const uint8_t* Src[4];
@@ -278,6 +293,7 @@ bool ffv1_frame_ffmpeg::Output(AVFrame* Frame)
     // Transfer of a band of lines, with the same transforms as our decoder
     auto Transfer = [&](size_t y_Begin, size_t y_End) -> int
     {
+        TRACE_SCOPE("Transform band", RawFrame->Index);
         // Lines with some room after the end of the line, like in our decoder
         std::vector<pixel_t> Lines(4 * (w + 3));
         pixel_t* Line[4];
