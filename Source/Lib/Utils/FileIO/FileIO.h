@@ -39,6 +39,13 @@ public:
     int                         Remap(size_t Begin = 0, size_t End = 0);
     int                         Close();
 
+    // Memory map kept until released, also after a Remap() or a Close() (memory map method only, else nullptr)
+    void*                       Hold();
+    static void                 Release(void* Map);
+
+    // End of the bytes readable from Data(), offset in the file (more than Size() if bytes after the end of the file are readable)
+    size_t                      Readable_End();
+
 private:
     #if defined(_WIN32) || defined(_WINDOWS)
     void*                       Private = (void*)-1;
@@ -48,6 +55,7 @@ private:
     void*                       Private2 = (void*)-1;
     method                      Method = {};
     bool                        AlsoWrite = false;
+    void*                       Map = nullptr; // Memory map, with the count of its users
 };
 
 class file
