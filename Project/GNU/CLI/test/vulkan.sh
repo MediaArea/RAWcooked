@@ -11,6 +11,15 @@ fi
 # CPU, a CPU implementation of Vulkan (e.g. lavapipe) generates code for this CPU
 echo "CPU:$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2-), AVX-512: $(grep -qw avx512f /proc/cpuinfo 2>/dev/null && echo yes || echo no)" >&${fd}
 
+# Vulkan devices seen by the system, shown once if FFmpeg Vulkan encoding fails
+show_vulkan_devices() {
+    if [ -z "${vulkan_devices_shown}" ] ; then
+        vulkan_devices_shown=1
+        local devices="$(vulkaninfo --summary 2>&1 | grep -E 'deviceName|deviceType|driverInfo|apiVersion|ERROR|rror' | head -n 10 | tr -s ' \t' ' ' | tr '\n' ' ')"
+        echo "Vulkan devices (vulkaninfo --summary): ${devices:-none}" >&${fd}
+    fi
+}
+
 while read line ; do
     file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
     path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
@@ -59,7 +68,17 @@ while read line ; do
             cmd="${cmd/-c:v ffv1/-vf hwupload -c:v ffv1_vulkan}"
             cmd="${cmd/-context 1/}"
             rm -f "${file}.mkv" # Not the file of the previous variant
-            run_ffmpeg "${cmd}"
+            if ! run_ffmpeg "${cmd}" ; then
+                exit_code="exit code ${ffmpeg_status}"
+                if [ "${ffmpeg_status}" -gt 128 ] ; then
+                    exit_code="${exit_code}, signal $(kill -l $((ffmpeg_status - 128)) 2>/dev/null)" # e.g. crash
+                fi
+                echo "NOK: ${test}/${file}, FFmpeg Vulkan encoding failed (${exit_code}): $(echo "${ffmpeg_stderr}" | tr '\n' ' ')" >&${fd}
+                show_vulkan_devices
+                status=1
+                rm -f "${file}.mkv"
+                continue
+            fi
 
             if [ ! -e "${file}.mkv" ] ; then
                 echo "NOK: ${test}/${file}, mkv not generated" >&${fd}
