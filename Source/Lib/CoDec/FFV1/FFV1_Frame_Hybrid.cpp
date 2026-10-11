@@ -235,20 +235,35 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         Working[i] = true;
         Lock.unlock();
 
-        bool Error;
         auto Start = std::chrono::steady_clock::now();
         if (i == Decoder_Ours)
         {
+            // Decoding of the end of the frame during the decoding of the next frame, the job is released at the end of its decoding
             Ours->RawFrame = Job->Frame;
-            Ours->Process(Job->Packet->data, Job->Packet_Size, [&Error](bool Ours_Error) { Error = Ours_Error; });
-            Ours->Wait(); // End of the decoding of the frame
-            ffmpeg::av_buffer_unref(&Job->Packet);
-            Job->FrameReady->Ready(Job->Opaque, Error);
+            Ours->Process(Job->Packet->data, Job->Packet_Size, [this, Job, Start](bool Error)
+            {
+                ffmpeg::av_buffer_unref(&Job->Packet);
+                Job->FrameReady->Ready(Job->Opaque, Error);
+                auto Job_Duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - Start).count();
+                std::lock_guard<std::mutex> Lock_(Mutex);
+                Duration[Decoder_Ours] = Duration[Decoder_Ours] ? (Duration[Decoder_Ours] * 3 + Job_Duration) / 4 : Job_Duration;
+                trace::Counter(Names[Decoder_Ours].Duration, (int64_t)(Duration[Decoder_Ours] * 1000));
+                Job_Free(Job);
+                Condition.notify_all();
+            });
+
+            Lock.lock();
+            Working[i] = false;
+            Busy[i] = !Redo.empty(); // Fallback decoder is not available for a new frame until the first frames for FFmpeg decoders which failed are decoded
+            Condition.notify_all();
+            continue;
         }
-        else
+
+        // FFmpeg decoder
+        auto& Decoder = FFmpeg[i];
+        bool Error;
         {
             TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
-            auto& Decoder = FFmpeg[i];
             if (!Decoder)
             {
                 Decoder = new ffv1_frame_ffmpeg(Pools[i], i == Decoder_Vulkan);
@@ -275,12 +290,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             Duration[i] = Duration[i] ? (Duration[i] * 3 + Job_Duration) / 4 : Job_Duration; // Duration of the first frame includes the initialization
             trace::Counter(Names[i].Duration, (int64_t)(Duration[i] * 1000));
         }
-        if (i == Decoder_Ours)
-        {
-            Job_Free(Job);
-            Busy[i] = !Redo.empty(); // Fallback decoder is not available for a new frame until the first frames for FFmpeg decoders which failed are decoded
-        }
-        else if (Job->First && Error)
+        if (Job->First && Error)
         {
             // FFmpeg decoder can not decode the stream, the frame is decoded by the fallback decoder
             Disabled[i] = true; // FFmpeg decoder stays busy
