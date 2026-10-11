@@ -302,6 +302,15 @@ int global::SetFileOpenMethod(const char* Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetDecoder(const char* Value)
+{
+    if (strcmp(Value, "internal") == 0 || strcmp(Value, "auto") == 0)
+        return 0; // Only our decoder is available
+    cerr << "Error: unknown decoder value '" << Value << "'." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int global::SetLogFileName(const char* FileName)
 {
     LogFileName = FileName;
@@ -619,6 +628,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--decode") == 0)
         {
             int Value = SetDecode(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--decoder") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetDecoder(argv[++i]);
             if (Value)
                 return Value;
         }

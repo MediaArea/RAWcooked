@@ -105,6 +105,7 @@ public:
     int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetDecode(bool Value);
+    int SetDecoder(const char* Value);
     int SetEdit(const char* Value);
     int SetEncode(bool Value);
     int SetInfo(bool Value);
