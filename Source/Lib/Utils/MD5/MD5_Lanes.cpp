@@ -26,6 +26,10 @@
 #define TARGET_AVX512VL __attribute__((target("avx2,avx512f,avx512vl")))
 #endif
 #define MD5_LANES_SIMD
+#elif (defined(__aarch64__) || defined(_M_ARM64)) && !defined(__ARM_BIG_ENDIAN) && !defined(HAVE_OPENSSL)
+#include <arm_neon.h>
+#define MD5_LANES_SIMD
+#define MD5_LANES_NEON
 #endif
 
 //---------------------------------------------------------------------------
@@ -48,6 +52,7 @@ static void MD5_Update_Parts(MD5_CTX* Ctx, const md5_part* Parts, size_t Count, 
 
 #ifdef MD5_LANES_SIMD
 
+#ifndef MD5_LANES_NEON
 //---------------------------------------------------------------------------
 // 0: none, 1: AVX2, 2: AVX-512 (F + VL)
 static int SimdLevel()
@@ -113,12 +118,16 @@ static int SimdLevel()
     }
 
 //---------------------------------------------------------------------------
-// MD5 steps, same as md5.c
+// MD5 step, same as md5.c
 #define MD5_LANES_STEP(f, a, b, c, d, k, t, s) \
     a = _mm256_add_epi32(a, _mm256_add_epi32(W[k], _mm256_set1_epi32((int)t))); \
     a = _mm256_add_epi32(a, f(b, c, d)); \
     a = ROTL(a, s); \
     a = _mm256_add_epi32(a, b);
+#endif //MD5_LANES_NEON
+
+//---------------------------------------------------------------------------
+// MD5 steps, same as md5.c, with the MD5_LANES_STEP() of the instruction set
 #define MD5_LANES_BODY(F, G, H, I) \
     MD5_LANES_STEP(F, a, b, c, d,  0, 0xd76aa478,  7) \
     MD5_LANES_STEP(F, d, a, b, c,  1, 0xe8c7b756, 12) \
@@ -185,6 +194,7 @@ static int SimdLevel()
     MD5_LANES_STEP(I, c, d, a, b,  2, 0x2ad7d2bb, 15) \
     MD5_LANES_STEP(I, b, c, d, a,  9, 0xeb86d391, 21)
 
+#ifndef MD5_LANES_NEON
 //---------------------------------------------------------------------------
 // 8 lanes, Blocks blocks of 64 bytes per lane, State: a, b, c, d of each lane
 #define MD5_LANES_FUNCTION(NAME, TARGET) \
@@ -238,12 +248,96 @@ MD5_LANES_FUNCTION(MD5_Lanes_AVX512VL, TARGET_AVX512VL)
 #undef I
 #undef ROTL
 
+#else //MD5_LANES_NEON
+
+//---------------------------------------------------------------------------
+// NEON is always available on AArch64
+static int SimdLevel()
+{
+    return 1;
+}
+
+//---------------------------------------------------------------------------
+// 4 lanes of 16 bytes to 4 vectors of 4 lanes (4x4 transposition of 32-bit words)
+static inline void MD5_Lanes_Transpose_NEON(uint32x4_t* W, const uint8_t* const* Data, size_t Offset)
+{
+    uint32x4_t r0 = vreinterpretq_u32_u8(vld1q_u8(Data[0] + Offset));
+    uint32x4_t r1 = vreinterpretq_u32_u8(vld1q_u8(Data[1] + Offset));
+    uint32x4_t r2 = vreinterpretq_u32_u8(vld1q_u8(Data[2] + Offset));
+    uint32x4_t r3 = vreinterpretq_u32_u8(vld1q_u8(Data[3] + Offset));
+    uint64x2_t t0 = vreinterpretq_u64_u32(vtrn1q_u32(r0, r1));
+    uint64x2_t t1 = vreinterpretq_u64_u32(vtrn2q_u32(r0, r1));
+    uint64x2_t t2 = vreinterpretq_u64_u32(vtrn1q_u32(r2, r3));
+    uint64x2_t t3 = vreinterpretq_u64_u32(vtrn2q_u32(r2, r3));
+    W[0] = vreinterpretq_u32_u64(vtrn1q_u64(t0, t2));
+    W[1] = vreinterpretq_u32_u64(vtrn1q_u64(t1, t3));
+    W[2] = vreinterpretq_u32_u64(vtrn2q_u64(t0, t2));
+    W[3] = vreinterpretq_u32_u64(vtrn2q_u64(t1, t3));
+}
+
+//---------------------------------------------------------------------------
+// MD5 step, same as md5.c, on 2 vectors of 4 lanes (independent dependency chains, so the vector units are used while a step waits for the previous one)
+#define MD5_LANES_STEP(f, a, b, c, d, k, t, s) \
+    { \
+        uint32x4_t T = vdupq_n_u32(t); \
+        a##0 = vaddq_u32(vaddq_u32(a##0, vaddq_u32(W0[k], T)), f(b##0, c##0, d##0)); \
+        a##1 = vaddq_u32(vaddq_u32(a##1, vaddq_u32(W1[k], T)), f(b##1, c##1, d##1)); \
+        a##0 = vaddq_u32(ROTL(a##0, s), b##0); \
+        a##1 = vaddq_u32(ROTL(a##1, s), b##1); \
+    }
+
+//---------------------------------------------------------------------------
+// 8 lanes, Blocks blocks of 64 bytes per lane, State: a, b, c, d of each lane
+#define F(x, y, z) vbslq_u32(x, y, z)
+#define G(x, y, z) vbslq_u32(z, x, y)
+#if defined(__ARM_FEATURE_SHA3)
+#define H(x, y, z) veor3q_u32(x, y, z)
+#else
+#define H(x, y, z) veorq_u32(veorq_u32(x, y), z)
+#endif
+#define I(x, y, z) veorq_u32(y, vornq_u32(x, z))
+#define ROTL(x, s) vsriq_n_u32(vshlq_n_u32(x, s), x, 32 - (s))
+static void MD5_Lanes_NEON(uint32_t State[4][8], const uint8_t* const* Data, size_t Blocks)
+{
+    uint32x4_t a0 = vld1q_u32(State[0]), a1 = vld1q_u32(State[0] + 4);
+    uint32x4_t b0 = vld1q_u32(State[1]), b1 = vld1q_u32(State[1] + 4);
+    uint32x4_t c0 = vld1q_u32(State[2]), c1 = vld1q_u32(State[2] + 4);
+    uint32x4_t d0 = vld1q_u32(State[3]), d1 = vld1q_u32(State[3] + 4);
+    for (size_t n = 0; n < Blocks; n++)
+    {
+        uint32x4_t W0[16], W1[16];
+        for (size_t i = 0; i < 16; i += 4)
+        {
+            MD5_Lanes_Transpose_NEON(W0 + i, Data, n * 64 + i * 4);
+            MD5_Lanes_Transpose_NEON(W1 + i, Data + 4, n * 64 + i * 4);
+        }
+        uint32x4_t sa0 = a0, sb0 = b0, sc0 = c0, sd0 = d0;
+        uint32x4_t sa1 = a1, sb1 = b1, sc1 = c1, sd1 = d1;
+        MD5_LANES_BODY(F, G, H, I)
+        a0 = vaddq_u32(a0, sa0); a1 = vaddq_u32(a1, sa1);
+        b0 = vaddq_u32(b0, sb0); b1 = vaddq_u32(b1, sb1);
+        c0 = vaddq_u32(c0, sc0); c1 = vaddq_u32(c1, sc1);
+        d0 = vaddq_u32(d0, sd0); d1 = vaddq_u32(d1, sd1);
+    }
+    vst1q_u32(State[0], a0); vst1q_u32(State[0] + 4, a1);
+    vst1q_u32(State[1], b0); vst1q_u32(State[1] + 4, b1);
+    vst1q_u32(State[2], c0); vst1q_u32(State[2] + 4, c1);
+    vst1q_u32(State[3], d0); vst1q_u32(State[3] + 4, d1);
+}
+#undef F
+#undef G
+#undef H
+#undef I
+#undef ROTL
+
+#endif //MD5_LANES_NEON
+
 //---------------------------------------------------------------------------
 namespace
 {
 
 const size_t Lanes_Max = 8;
-const size_t Lanes_Min = 3; // Fewer jobs computed together are slower than scalar code in the threads of the callers (measured on AMD Zen 5: 1 lane 2x slower, 2 lanes using the same CPU and 2x slower in wall time)
+const size_t Lanes_Min = 3; // Fewer jobs computed together are slower than scalar code in the threads of the callers (measured on AMD Zen 5: 1 lane 2x slower, 2 lanes using the same CPU and 2x slower in wall time; on Apple M1 with NEON: 1 lane 2x slower, 2 lanes using more CPU)
 const size_t Run_Max = 16384; // Max count of blocks per lane before new jobs can use free lanes
 const size_t Batch_Min = Lanes_Min; // Count of jobs computed together if jobs accept to wait for other jobs
 const auto Batch_Wait_Max = std::chrono::seconds(1);
@@ -363,7 +457,11 @@ private:
 //---------------------------------------------------------------------------
 void md5_lanes::Run()
 {
-    auto Function = SimdLevel() >= 2 ? MD5_Lanes_AVX512VL : MD5_Lanes_AVX2;
+    #ifdef MD5_LANES_NEON
+        auto Function = MD5_Lanes_NEON;
+    #else
+        auto Function = SimdLevel() >= 2 ? MD5_Lanes_AVX512VL : MD5_Lanes_AVX2;
+    #endif
     std::vector<md5_job*> Active;
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
