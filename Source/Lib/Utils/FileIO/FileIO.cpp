@@ -431,9 +431,9 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
             if (access(t.c_str(), 0))
             {
                 #if defined(_WIN32) || defined(_WINDOWS)
-                if (mkdir(t.c_str()))
+                if (mkdir(t.c_str()) && access(t.c_str(), 0)) // Directory may be created by another thread in the meantime
                 #else
-                if (mkdir(t.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
+                if (mkdir(t.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) && access(t.c_str(), 0)) // Directory may be created by another thread in the meantime
                 #endif
                 {
                     Private = (void*)-1;
