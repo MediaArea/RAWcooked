@@ -126,12 +126,12 @@ public:
 
     // Actions
     bool                        CanSplit() { return true; }
-    void                        Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque);
+    void                        Decode(const uint8_t* Data, size_t Size, data_holder* Holder, raw_frame* Frame, void* Opaque);
     size_t                      Depth() { return 4; } // Outputs of up to 3 frames in parallel during the decoding of next frame
 };
 
 //---------------------------------------------------------------------------
-void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque)
+void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, data_holder* /*Holder*/, raw_frame* Frame, void* Opaque)
 {
     Ffv1Frame->RawFrame = Frame;
     auto Error = Ffv1Frame->Process(Data, Size);
@@ -146,8 +146,8 @@ public:
     ~flac_wrapper();
 
     // Actions
-    bool                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size); }
-    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size, nullptr); }
+    bool                        Process(const uint8_t* Data, size_t Size, data_holder* Holder);
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -212,7 +212,7 @@ flac_wrapper::~flac_wrapper()
     FLAC__stream_decoder_delete(Decoder_);
 }
 
-bool flac_wrapper::Process(const uint8_t* Data, size_t Size)
+bool flac_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holder*/)
 {
     Data_ = Data;
     Size_ = Size;
@@ -390,11 +390,11 @@ class pcm_wrapper : public audio_wrapper
 {
 public:
     // Actions
-    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        Process(const uint8_t* Data, size_t Size, data_holder* Holder);
 };
 
 //---------------------------------------------------------------------------
-bool pcm_wrapper::Process(const uint8_t* Data, size_t Size)
+bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holder*/)
 {
     RawFrame->AssignBufferView(Data, Size);
     return RawFrame->Process();

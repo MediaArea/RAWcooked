@@ -149,10 +149,10 @@ bool track_info::Init(const uint8_t* BaseData)
 }
 
 //---------------------------------------------------------------------------
-bool track_info::Process(const uint8_t* Data, size_t Size)
+bool track_info::Process(const uint8_t* Data, size_t Size, data_holder* Holder)
 {
     if (Wrapper && Wrapper->CanSplit())
-        return Process_Split(Data, Size);
+        return Process_Split(Data, Size, Holder);
 
     if (ReversibilityData && !ReversibilityData->Unique())
     {
@@ -169,7 +169,7 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
         Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
         return true;
     }
-    if (Wrapper->Process(Data, Size))
+    if (Wrapper->Process(Data, Size, Holder))
     {
         string OutputFileName = ReversibilityData->Data(reversibility::element::FileName);
         FormatPath(OutputFileName);
@@ -192,7 +192,7 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
 //---------------------------------------------------------------------------
 // Same as Process() but the decoding may be in other threads and the output (writing or checking) is done in output threads, during the decoding of next frames
 // Outputs are in parallel if each frame is in its own file, else in order
-bool track_info::Process_Split(const uint8_t* Data, size_t Size)
+bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Holder)
 {
     if (!Output_Pending)
     {
@@ -261,7 +261,7 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size)
     Item->Frame->Flavor_Private = RawFrame->Flavor_Private;
 
     // Decoding (maybe in another thread), then output in an output thread
-    Wrapper->Decode(Data, Size, Item->Frame, Item);
+    Wrapper->Decode(Data, Size, Holder, Item->Frame, Item);
     if (Pool)
         return false;
 
@@ -415,6 +415,12 @@ void track_info::Parse_Flush(bool Force)
         }
         P->Parse_Items.pop_front();
     }
+}
+
+//---------------------------------------------------------------------------
+size_t track_info::Padding()
+{
+    return Wrapper ? Wrapper->Padding() : 0;
 }
 
 //---------------------------------------------------------------------------
