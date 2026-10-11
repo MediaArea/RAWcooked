@@ -10,6 +10,7 @@
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/CRC32/ZenCRC32.h"
 #include "Lib/Utils/Trace/Trace.h"
+#include <atomic>
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreorder"
@@ -20,15 +21,23 @@
 //---------------------------------------------------------------------------
 
 //***************************************************************************
-// Threads
+// Frames being decoded
 //***************************************************************************
 
-int Frame_Thread(slice* Slice, size_t Index)
+const size_t Slots_Count = 2; // End of a frame and begin of the next frame
+
+struct ffv1_frame_slot
 {
-    TRACE_SCOPE("Slice", Index);
-    Slice->Parse();
-    return 1;
-}
+    slice_struct*               Slices = nullptr;
+    size_t                      Slices_Count = 0; // Allocated
+    raw_frame*                  Frame = nullptr;
+    std::function<void(bool)>   Done;
+    uint64_t                    Trace_Begin = 0; // Begin of the decoding, for instrumentation
+    size_t                      Count = 0; // Slices of the frame
+    std::atomic<size_t>         Started{ 0 };
+    std::atomic<size_t>         Finished{ 0 };
+    bool                        Busy = false; // From the slot selection to the end of the decoding
+};
 
 //***************************************************************************
 // Info
@@ -71,8 +80,8 @@ ffv1_frame::ffv1_frame(ThreadPool* Pool_) :
     RawFrame(NULL),
     // Temp
     KeyFrame_IsPresent(false),
-    Slices(NULL),
-    Pool(Pool_)
+    Pool(Pool_),
+    Slots(new ffv1_frame_slot[Slots_Count])
 {
     E.AssignStateTransitions(default_state_transitions);
 }
@@ -81,6 +90,7 @@ ffv1_frame::ffv1_frame(ThreadPool* Pool_) :
 ffv1_frame::~ffv1_frame()
 {
     Clear();
+    delete[] Slots;
 }
 
 //***************************************************************************
@@ -124,8 +134,13 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
         return true;
 
     // Slices
-    Slices = new slice_struct[P.num_h_slices*P.num_v_slices];
-    memset(Slices, 0x00, P.num_h_slices*P.num_v_slices * sizeof(slice_struct));
+    for (size_t s = 0; s < Slots_Count; s++)
+    {
+        auto& Slot = Slots[s];
+        Slot.Slices_Count = P.num_h_slices * P.num_v_slices;
+        Slot.Slices = new slice_struct[Slot.Slices_Count];
+        memset(Slot.Slices, 0x00, Slot.Slices_Count * sizeof(slice_struct));
+    }
 
     // Reserved + configuration_record_crc_parity
 
@@ -133,16 +148,12 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 }
 
 //---------------------------------------------------------------------------
-bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
+void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::function<void(bool Error)> Done)
 {
-    if (!Slices)
+    if (P.ConfigurationRecord_IsPresent && !Slots[0].Slices)
     {
-        if (P.ConfigurationRecord_IsPresent)
-            return true; //There is a problem
-
-        // No slice in this stream, fake 1 slice
-        Slices = new slice_struct[1];
-        memset(Slices, 0x00, sizeof(slice_struct));
+        Done(true); //There is a problem
+        return;
     }
 
     E.AssignBuffer(Buffer, Buffer_Size);
@@ -151,19 +162,95 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
     uint8_t State = states_default;
     bool keyframe = E.b(State);
     if (P.ConfigurationRecord_IsPresent && P.intra && !keyframe)
-        return P.Error("FFV1-FRAME-key_frame-ISNOTINTRA:1");
+    {
+        P.Error("FFV1-FRAME-key_frame-ISNOTINTRA:1");
+        Done(true);
+        return;
+    }
     if (keyframe)
         KeyFrame_IsPresent = true;
     if (!KeyFrame_IsPresent)
-        return P.Error("FFV1-FRAME-key_frame-NOINFIRSTFRAME:1");
+    {
+        P.Error("FFV1-FRAME-key_frame-NOINFIRSTFRAME:1");
+        Done(true);
+        return;
+    }
+
+    // Slot: a keyframe uses a free slot, other frames use the slot of the previous frame (decoding states of the previous frame),
+    // all previous frames are decoded if there is no configuration record (parameters are parsed by the slice)
+    ffv1_frame_slot* Slot;
+    auto Trace_Begin = trace::Enabled() ? trace::Now() : 0;
+    {
+        trace::scope Trace_Wait("Ours slot wait", RawFrame->Index);
+        std::unique_lock<std::mutex> Lock(Mutex);
+        auto s = Slot_Last;
+        if (P.ConfigurationRecord_IsPresent && keyframe)
+        {
+            Condition.wait(Lock, [&]
+            {
+                for (size_t i = 1; i <= Slots_Count; i++)
+                {
+                    s = (Slot_Last + i) % Slots_Count;
+                    if (!Slots[s].Busy)
+                        return true;
+                }
+                return false;
+            });
+        }
+        else
+        {
+            Condition.wait(Lock, [&]
+            {
+                for (size_t i = 0; i < Slots_Count; i++)
+                    if (Slots[i].Busy && (i == Slot_Last || !P.ConfigurationRecord_IsPresent))
+                        return false;
+                return true;
+            });
+        }
+        Slot = &Slots[s];
+        Slot->Busy = true;
+        Slot_Last = s;
+        trace::Counter("Ours frames", (int64_t)Slots_Busy());
+    }
+    Slot->Frame = RawFrame;
+    Slot->Done = std::move(Done);
+    Slot->Trace_Begin = Trace_Begin;
+    auto Abort = [&]()
+    {
+        Done = std::move(Slot->Done);
+        {
+            std::lock_guard<std::mutex> Lock(Mutex);
+            Slot->Busy = false;
+            trace::Counter("Ours frames", (int64_t)Slots_Busy());
+        }
+        Condition.notify_all();
+        Done(true);
+    };
+
+    if (!Slot->Slices)
+    {
+        // No slice in this stream, fake 1 slice
+        Slot->Slices_Count = 1;
+        Slot->Slices = new slice_struct[1];
+        memset(Slot->Slices, 0x00, sizeof(slice_struct));
+    }
+    auto Slices = Slot->Slices;
 
     size_t Slices_Size = 0;
     if (P.ConfigurationRecord_IsPresent)
     {
         if (P.num_h_slices >= P.width)
-            return P.Error("FFV1-HEADER-num_h_slices:1");
+        {
+            P.Error("FFV1-HEADER-num_h_slices:1");
+            Abort();
+            return;
+        }
         if (P.num_v_slices >= P.height)
-            return P.Error("FFV1-HEADER-num_v_slices:1");
+        {
+            P.Error("FFV1-HEADER-num_v_slices:1");
+            Abort();
+            return;
+        }
 
         size_t info = 0
         | ((P.bits_per_raw_sample - 1)          <<  0)
@@ -179,14 +266,20 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)
         {
-            if (Slices_BufferPos < P.TailSize)
-                return true; //There is a problem
+            if (Slices_BufferPos < P.TailSize || Slices_Size >= Slot->Slices_Count)
+            {
+                Abort(); //There is a problem
+                return;
+            }
 
             size_t Size = BigEndian2int24u(Buffer + (size_t)Slices_BufferPos - P.TailSize);
             Size += P.TailSize;
 
             if (Size > Slices_BufferPos)
-                return true; //There is a problem
+            {
+                Abort(); //There is a problem
+                return;
+            }
             Slices_BufferPos -= Size;
 
             Slices[Slices_Size].BufferSize = Size;
@@ -210,23 +303,85 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
         Slice_Content->Init(Buffer, Buffer_Size, keyframe, true, RawFrame);
     }
 
+    Slot->Count = Slices_Size + 1;
+    Slot->Started = 0;
+    Slot->Finished = 0;
     if (Pool)
     {
-        std::vector<std::future<int>> Futures;
         for (size_t i = Slices_Size; i <= Slices_Size; i--)
-            Futures.push_back(Pool->submit(Frame_Thread, Slices[i].Content, RawFrame->Index));
-        for (size_t i = Slices_Size; i <= Slices_Size; i--) // TODO: don't wait for the parsing of the frame before peeking the next frame
-            Futures[i].get();
+        {
+            auto Slice = Slices[i].Content;
+            Pool->submit([this, Slot, Slice] { Slice_Run(Slot, Slice); });
+        }
+
+        // Next frame when all slices of this frame are being decoded
+        TRACE_SCOPE("Ours slices dispatch", RawFrame->Index);
+        std::unique_lock<std::mutex> Lock(Mutex);
+        Condition.wait(Lock, [&] { return Slot->Started == Slot->Count; });
     }
     else
     {
         for (size_t i = Slices_Size; i <= Slices_Size; i--)
-            Frame_Thread(Slices[i].Content, RawFrame->Index);
+            Slice_Run(Slot, Slices[i].Content);
     }
+}
 
-    RawFrame->Finalize(P.num_h_slices, P.num_v_slices);
+//---------------------------------------------------------------------------
+void ffv1_frame::Slice_Run(ffv1_frame_slot* Slot, slice* Slice)
+{
+    // Slot content must not be read after the increment of Finished if this is not the last slice (the slot may be reused or deleted)
+    auto Count = Slot->Count;
+    if (++Slot->Started == Count)
+    {
+        std::lock_guard<std::mutex> Lock(Mutex);
+        Condition.notify_all();
+    }
+    {
+        TRACE_SCOPE("Slice", Slot->Frame->Index);
+        Slice->Parse();
+    }
+    if (++Slot->Finished == Count)
+        Frame_End(Slot);
+}
 
-    return P.Error() ? true : false;
+//---------------------------------------------------------------------------
+void ffv1_frame::Frame_End(ffv1_frame_slot* Slot)
+{
+    Slot->Frame->Finalize(P.num_h_slices, P.num_v_slices);
+    if (Slot->Trace_Begin)
+        trace::Span("Ours frame", Slot->Trace_Begin, trace::Now(), Slot->Frame->Index);
+    auto Done = std::move(Slot->Done);
+    Done(P.Error() ? true : false);
+
+    // Notification with the lock, else this object may be deleted (after a Wait()) before the notification
+    std::lock_guard<std::mutex> Lock(Mutex);
+    Slot->Busy = false;
+    trace::Counter("Ours frames", (int64_t)Slots_Busy());
+    Condition.notify_all();
+}
+
+//---------------------------------------------------------------------------
+// Mutex must be locked
+size_t ffv1_frame::Slots_Busy()
+{
+    size_t Count = 0;
+    for (size_t i = 0; i < Slots_Count; i++)
+        if (Slots[i].Busy)
+            Count++;
+    return Count;
+}
+
+//---------------------------------------------------------------------------
+void ffv1_frame::Wait()
+{
+    std::unique_lock<std::mutex> Lock(Mutex);
+    Condition.wait(Lock, [&]
+    {
+        for (size_t i = 0; i < Slots_Count; i++)
+            if (Slots[i].Busy)
+                return false;
+        return true;
+    });
 }
 
 //***************************************************************************
@@ -246,13 +401,18 @@ const char* ffv1_frame::ErrorMessage() const
 //---------------------------------------------------------------------------
 void ffv1_frame::Clear()
 {
-    if (Slices)
+    Wait();
+    for (size_t s = 0; s < Slots_Count; s++)
     {
-        size_t Slices_Count = (P.ConfigurationRecord_IsPresent ? (P.num_h_slices*P.num_v_slices) : 1);
-        for (size_t i = 0; i < Slices_Count; i++)
-            delete Slices[i].Content;
-        delete[] Slices;
+        auto& Slot = Slots[s];
+        if (Slot.Slices)
+        {
+            for (size_t i = 0; i < Slot.Slices_Count; i++)
+                delete Slot.Slices[i].Content;
+            delete[] Slot.Slices;
+        }
+        Slot.Slices = nullptr;
+        Slot.Slices_Count = 0;
     }
-    Slices = nullptr;
 }
 

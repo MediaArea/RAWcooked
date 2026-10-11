@@ -11,6 +11,9 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/CoDec/FFV1/FFV1_Slice.h"
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 //---------------------------------------------------------------------------
 
 //***************************************************************************
@@ -19,6 +22,7 @@
 
 class ThreadPool;
 class raw_frame;
+struct ffv1_frame_slot;
 
 class ffv1_frame
 {
@@ -32,7 +36,10 @@ public:
     void SetHeight(uint32_t width);
 
     // Actions
-    bool Process(const uint8_t* Buffer, size_t Buffer_Size);
+    // Decoding of Buffer to RawFrame, Done(Error) is called when the frame is decoded (in a thread of the pool if there is a pool), Buffer must stay valid until this call
+    // With a pool, returns when all slices of the frame are being decoded, so the slices of the next frame are decoded during the decoding of the last slices of this frame
+    void Process(const uint8_t* Buffer, size_t Buffer_Size, std::function<void(bool Error)> Done);
+    void Wait(); // Waits for the end of the decoding of all frames
     bool OutOfBand(const uint8_t* Buffer, size_t Buffer_Size);
 
     // Decoded frame
@@ -51,11 +58,19 @@ private:
 
     // Temp
     bool                        KeyFrame_IsPresent;
-    slice_struct*               Slices;
     ThreadPool*                 Pool;
+
+    // Frames being decoded, each one with its slices: a keyframe uses a free slot, other frames use the slot of the previous frame (decoding states of the previous frame)
+    ffv1_frame_slot*            Slots;
+    size_t                      Slot_Last = 0;
+    std::mutex                  Mutex;
+    std::condition_variable     Condition;
 
     // Helpers
     void Clear();
+    void Slice_Run(ffv1_frame_slot* Slot, slice* Slice);
+    void Frame_End(ffv1_frame_slot* Slot);
+    size_t Slots_Busy();
 };
 
 //---------------------------------------------------------------------------
