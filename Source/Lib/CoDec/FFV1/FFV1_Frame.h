@@ -41,6 +41,9 @@ public:
     // Error message
     const char* ErrorMessage() const;
 
+    // Info
+    bool Intra() const { return P.ConfigurationRecord_IsPresent && P.intra; } // All frames are keyframes
+
 private:
     // Parameters
     parameters                  P;
