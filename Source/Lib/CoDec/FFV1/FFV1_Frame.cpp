@@ -9,6 +9,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/CRC32/ZenCRC32.h"
+#include "Lib/Utils/Trace/Trace.h"
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreorder"
@@ -22,8 +23,9 @@
 // Threads
 //***************************************************************************
 
-int Frame_Thread(slice* Slice)
+int Frame_Thread(slice* Slice, size_t Index)
 {
+    TRACE_SCOPE("Slice", Index);
     Slice->Parse();
     return 1;
 }
@@ -212,14 +214,14 @@ bool ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size)
     {
         std::vector<std::future<int>> Futures;
         for (size_t i = Slices_Size; i <= Slices_Size; i--)
-            Futures.push_back(Pool->submit(Frame_Thread, Slices[i].Content));
+            Futures.push_back(Pool->submit(Frame_Thread, Slices[i].Content, RawFrame->Index));
         for (size_t i = Slices_Size; i <= Slices_Size; i--) // TODO: don't wait for the parsing of the frame before peeking the next frame
             Futures[i].get();
     }
     else
     {
         for (size_t i = Slices_Size; i <= Slices_Size; i--)
-            Frame_Thread(Slices[i].Content);
+            Frame_Thread(Slices[i].Content, RawFrame->Index);
     }
 
     RawFrame->Finalize(P.num_h_slices, P.num_v_slices);

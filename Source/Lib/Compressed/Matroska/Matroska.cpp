@@ -20,6 +20,7 @@ extern "C"
 #include "zlib.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/CoDec/Wrapper.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include "Lib/Utils/FileIO/FileWriter.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
@@ -417,12 +418,16 @@ void matroska::ParseBuffer()
         {
             auto Hash_Size = Buffer_Offset - OutputHash->Offset;
             if (NeedRemap || Hash_Size >= 0x100000)
+            {
+                TRACE_SCOPE("Hash file");
                 OutputHash->Update(Hash_Size);
+            }
         }
 
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
         if (NeedRemap)
         {
+            TRACE_SCOPE("Remap");
             FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
             if (OpenStyle == filemap::method::mmap)
@@ -1069,6 +1074,7 @@ private:
 
     void Copy()
     {
+        TRACE_SCOPE("Copy block");
         Buffer = Pool->Get(Size + Padding, Buffer_Capacity);
         memcpy(Buffer, Data, Size);
         memset(Buffer + Size, 0, Padding);
@@ -1111,6 +1117,7 @@ void matroska::ProcessBlock()
         auto Readable_End = FileMap ? FileMap->Readable_End() : Buffer.Size();
         if (!Block_Pool)
             Block_Pool = make_shared<block_pool>();
+        TRACE_SCOPE("Block");
         auto Data = new block_data(FileMap, Block_Pool, CurrentBufferData, CurrentBufferSize, Padding, Levels[Level].Offset_End + Padding <= Readable_End);
         TrackInfo_Current->Process(Data->Data, CurrentBufferSize, Data);
         Data->Release();
@@ -1227,6 +1234,7 @@ static void ShowRealTime(float RealTime)
 //---------------------------------------------------------------------------
 void matroska::ProgressIndicator_Show()
 {
+    trace::ThreadName("Progress");
     // Configure progress indicator precision
     size_t ProgressIndicator_Value = (size_t)-1;
     size_t ProgressIndicator_Frequency = 100;

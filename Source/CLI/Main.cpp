@@ -26,6 +26,7 @@
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
 #if defined(_WIN32) || defined(_WINDOWS)
     #define popen _popen
@@ -581,7 +582,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         ThreadPool* Thread_Pool;
         if (threads > 1)
         {
-            Thread_Pool = new ThreadPool(threads);
+            Thread_Pool = new ThreadPool(threads, [] { trace::ThreadName("Pool"); });
             Thread_Pool->init();
         }
         else

@@ -14,6 +14,7 @@ extern "C"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
 #include "Lib/Utils/MD5/MD5_Lanes.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <mutex>
 #include <vector>
 //---------------------------------------------------------------------------
@@ -181,6 +182,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
     // Check hash operation
     if (Output->MD5)
     {
+        TRACE_SCOPE("MD5", RawFrame->Index);
         CheckMD5(RawFrame);
 
         if (!Mode[IsNotEnd])
@@ -201,6 +203,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
     bool DataIsCheckedAndOk;
     if (Output->Read.IsOpen())
     {
+        trace::scope Check_Scope("Check file", RawFrame->Index);
         if (!CheckFile(RawFrame))
         {
             if (Mode[IsNotEnd] || Output->Offset == Output->Read.Size())
@@ -274,6 +277,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         // Write in the created file or file with wrong data being replaced
         if (!DataIsCheckedAndOk)
         {
+            TRACE_SCOPE("Write file", RawFrame->Index);
             if (WriteFile(RawFrame))
             {
                 if (Errors)
