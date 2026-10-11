@@ -189,6 +189,9 @@
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.h">
       <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h">
       <Filter>Header Files\Utils\RawFrame</Filter>
     </ClInclude>
@@ -402,6 +405,9 @@
       <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.cpp">
       <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.cpp">

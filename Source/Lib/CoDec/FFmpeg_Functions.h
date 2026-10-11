@@ -14,6 +14,7 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
+#include <libavutil/pixdesc.h>
 }
 //---------------------------------------------------------------------------
 
@@ -25,7 +26,27 @@ extern "C"
 // Library, name
 #define FFMPEG_FUNCTIONS(_F) \
     _F(avutil,  avutil_version) \
+    _F(avutil,  av_buffer_create) \
+    _F(avutil,  av_buffer_ref) \
+    _F(avutil,  av_buffer_unref) \
+    _F(avutil,  av_frame_alloc) \
+    _F(avutil,  av_frame_free) \
+    _F(avutil,  av_frame_unref) \
+    _F(avutil,  av_freep) \
+    _F(avutil,  av_mallocz) \
+    _F(avutil,  av_pix_fmt_desc_get) \
+    _F(avutil,  av_read_image_line2) \
     _F(avcodec, avcodec_version) \
+    _F(avcodec, av_packet_alloc) \
+    _F(avcodec, av_packet_free) \
+    _F(avcodec, av_packet_unref) \
+    _F(avcodec, avcodec_alloc_context3) \
+    _F(avcodec, avcodec_find_decoder) \
+    _F(avcodec, avcodec_free_context) \
+    _F(avcodec, avcodec_is_open) \
+    _F(avcodec, avcodec_open2) \
+    _F(avcodec, avcodec_receive_frame) \
+    _F(avcodec, avcodec_send_packet) \
 
 namespace ffmpeg
 {

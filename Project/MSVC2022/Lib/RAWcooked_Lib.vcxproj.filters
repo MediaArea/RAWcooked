@@ -180,6 +180,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Compressed\Matroska\Matroska.h">
       <Filter>Header Files\Compressed\Matroska</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.h">
+      <Filter>Header Files\CoDec\FFV1</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.h">
       <Filter>Header Files\CoDec\FFV1</Filter>
     </ClInclude>
@@ -394,6 +397,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Compressed\Matroska\Matroska.cpp">
       <Filter>Source Files\Compressed\Matroska</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.cpp">
+      <Filter>Source Files\CoDec\FFV1</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.cpp">
       <Filter>Source Files\CoDec\FFV1</Filter>
