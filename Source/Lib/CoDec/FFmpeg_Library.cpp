@@ -379,6 +379,22 @@ static bool Vulkan_IsGPU(AVBufferRef* Device)
 static atomic<AVBufferRef*> Vulkan_Device(nullptr); // Device created by FFmpeg_Library_Vulkan(), until a decoder uses it
 
 //---------------------------------------------------------------------------
+// Default Vulkan device of FFmpeg, with imports of host memory for the downloads of decoded frames (no copy from an intermediate buffer):
+// FFmpeg avoids them by default with the NVIDIA driver as they are slow in some environments, but with frames reused by the decoder they are faster
+// (measured with NVIDIA RTX 3050 on Windows, 6464x4852 RGB 16-bit: GPU time per frame 266 ms instead of 284 ms, no CPU copy)
+static AVBufferRef* Vulkan_Device_Create()
+{
+    TRACE_SCOPE("Vulkan device creation");
+    AVBufferRef* Device = nullptr;
+    AVDictionary* Options = nullptr;
+    ffmpeg::av_dict_set(&Options, "avoid_host_import", "0", 0);
+    if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, nullptr, Options, 0) < 0)
+        Device = nullptr;
+    ffmpeg::av_dict_free(&Options);
+    return Device;
+}
+
+//---------------------------------------------------------------------------
 enum class vulkan_device
 {
     none,
@@ -396,11 +412,9 @@ bool FFmpeg_Library_Vulkan(bool AllowCPU)
         ffmpeg::av_log_set_level(AV_LOG_QUIET); // No message if Vulkan is not available, or if the decoding fails later (the caller falls back to our decoder)
 
         // Same device as the one created by the decoder, kept for the decoder (device creation is long)
-        AVBufferRef* Device = nullptr;
-        trace::scope Trace_Device("Vulkan device creation");
-        if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) < 0)
+        auto Device = Vulkan_Device_Create();
+        if (!Device)
             return vulkan_device::none;
-        Trace_Device.End();
         Vulkan_Device = Device;
         return Vulkan_IsGPU(Device) ? vulkan_device::gpu : vulkan_device::cpu;
     }();
@@ -414,7 +428,9 @@ bool FFmpeg_Library_Vulkan(bool AllowCPU)
 //---------------------------------------------------------------------------
 AVBufferRef* FFmpeg_Library_VulkanDevice()
 {
-    return Vulkan_Device.exchange(nullptr);
+    if (auto Device = Vulkan_Device.exchange(nullptr))
+        return Device;
+    return Vulkan_Device_Create();
 }
 
 #else //RAWCOOKED_FFMPEG
