@@ -261,6 +261,7 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Ho
     Item->Frame->Flavor_Private = RawFrame->Flavor_Private;
 
     // Decoding (maybe in another thread), then output in an output thread
+    Wrapper->Remaining = Item->HasFrameData ? ReversibilityData->RemainingCount() : (size_t)-1;
     Wrapper->Decode(Data, Size, Holder, Item->Frame, Item);
     if (Pool)
         return false;
@@ -592,6 +593,7 @@ void track_info::Output_End()
 {
     if (Output_Pending)
     {
+        Wrapper->End();
         std::vector<raw_frame*> Frames;
         {
             std::lock_guard<std::mutex> Lock(Output_Pending->Mutex);

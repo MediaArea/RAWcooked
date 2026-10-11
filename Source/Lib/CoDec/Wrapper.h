@@ -56,6 +56,8 @@ public:
     inline virtual bool         CanSplit() { return false; }
     inline virtual void         Decode(const uint8_t* /*Data*/, size_t /*Size*/, data_holder* /*Holder*/, raw_frame* /*Frame*/, void* Opaque) { FrameReady->Ready(Opaque, true); }
     inline virtual size_t       Depth() { return 2; } // Max count of frames between Decode() and the end of their use by the caller
+    inline virtual void         End() {} // No more frames, resources may be released after the decoding of pending frames
+    size_t                      Remaining = (size_t)-1; // Count of frames after the frame given to Decode(), (size_t)-1 if unknown
 
 public:
     raw_frame*                  RawFrame = nullptr; // Decoded frame if not split, else frame with the configuration of decoded frames (flavor)
