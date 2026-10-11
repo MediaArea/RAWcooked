@@ -8,6 +8,9 @@ if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
     exit 77
 fi
 
+# CPU, a CPU implementation of Vulkan (e.g. lavapipe) generates code for this CPU
+echo "CPU:$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2-), AVX-512: $(grep -qw avx512f /proc/cpuinfo 2>/dev/null && echo yes || echo no)" >&${fd}
+
 while read line ; do
     file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
     path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
