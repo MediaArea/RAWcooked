@@ -13,7 +13,12 @@ extern "C"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
+#include <mutex>
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// Frames may be written by several threads, one question at a time
+static std::mutex Ask_Mutex;
 
 //---------------------------------------------------------------------------
 // Errors
@@ -215,6 +220,7 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
         bool HasNoError = false;
         if (!Mode[NoWrite] && UserMode)
         {
+            std::unique_lock<std::mutex> Ask_Lock(Ask_Mutex);
             user_mode NewMode = *UserMode;
             if (*UserMode == Ask && Ask_Callback)
             {
