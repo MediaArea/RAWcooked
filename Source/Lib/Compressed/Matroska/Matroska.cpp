@@ -389,6 +389,8 @@ void matroska::ParseBuffer()
         else if (UnknownSize(Name, Size))
             break; // Problem, we stop
         call Call = (this->*Levels[Level - 1].SubElements)(Name);
+        if (Call != &matroska::Segment_Cluster && Call != &matroska::Segment_Cluster_Timestamp && Call != &matroska::Segment_Cluster_SimpleBlock && Call != &matroska::Segment_Cluster_BlockGroup && Call != &matroska::Segment_Cluster_BlockGroup_Block && Call != &matroska::Void)
+            Output_Wait(); // Only blocks are parsed during the output of a frame in another thread
         IsList = false;
         (this->*Call)();
         if (!IsList)
@@ -452,6 +454,11 @@ void matroska::ParseBuffer()
         // Progress indicator
         ProgressIndicator_Offset.store(Buffer_Offset, std::memory_order_relaxed);
     }
+
+    // End of the outputs of frames decoded in other threads, so all errors are known at the end of the parsing
+    for (auto TrackInfo_Current : TrackInfo)
+        TrackInfo_Current->Output_End();
+    Output_Wait();
 
     // Clean up
     if (RAWcooked_LibraryName.empty())
@@ -981,8 +988,21 @@ void matroska::ProcessBlock()
         auto CurrentBufferOffset = Buffer_Offset + 4;
         auto CurrentBufferData = Buffer.Data() + CurrentBufferOffset;
         auto CurrentBufferSize = Levels[Level].Offset_End - CurrentBufferOffset;
+        if (Output_Track && Output_Track != TrackInfo_Current && (Output_Track->Output_IsShared() || TrackInfo_Current->Output_IsShared()))
+            Output_Wait(); // Outputs of different tracks may share data (e.g. compound file)
+        Output_Track = TrackInfo_Current;
         TrackInfo_Current->Process(CurrentBufferData, CurrentBufferSize);
     }
+}
+
+//---------------------------------------------------------------------------
+void matroska::Output_Wait()
+{
+    if (!Output_Track)
+        return;
+    for (auto TrackInfo_Current : TrackInfo)
+        TrackInfo_Current->Output_Wait();
+    Output_Track = nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -1208,6 +1228,36 @@ bool track_info::ParseDecodedFrame(input_base_uncompressed* Parser)
         ParseResult = FrameParser->Parse(RawFrame->Pre(), Parser ? (decltype(RawFrame->TotalSize()))-1 : RawFrame->TotalSize());
     }
     return ParseResult;
+}
+
+//---------------------------------------------------------------------------
+bool track_info::ParseDecodedFrame(const buffer& BeforeData, const buffer& AfterData, uint64_t FileSize)
+{
+    if (!DecodedFrameParser)
+        return true;
+    auto Pre_Size = BeforeData.Size();
+    auto Post_Size = AfterData.Size();
+    auto Post_Offset = FileSize - Post_Size;
+    if (Pre_Size >= FileSize || Post_Size >= FileSize || Pre_Size >= Post_Offset)
+        return true; // Overlaps detected
+
+    // Same content as the full frame with zeroes instead of the decoded content, only the parts before and after the decoded content are modified between frames
+    auto& Frame_Buffer = ParseDecodedFrame_Buffer;
+    if (Frame_Buffer.Size() != FileSize)
+    {
+        Frame_Buffer.Create(FileSize);
+        Frame_Buffer.SetZero(0, FileSize);
+    }
+    else
+    {
+        Frame_Buffer.SetZero(0, ParseDecodedFrame_BeforeSize);
+        Frame_Buffer.SetZero(FileSize - ParseDecodedFrame_AfterSize, ParseDecodedFrame_AfterSize);
+    }
+    Frame_Buffer.CopyLimit(BeforeData);
+    Frame_Buffer.CopyLimit(Post_Offset, AfterData);
+    ParseDecodedFrame_BeforeSize = Pre_Size;
+    ParseDecodedFrame_AfterSize = Post_Size;
+    return DecodedFrameParser->Parse(Frame_Buffer);
 }
 
 //---------------------------------------------------------------------------

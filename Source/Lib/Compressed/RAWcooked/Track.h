@@ -21,6 +21,8 @@
 #include "Lib/Utils/FileIO/FileIO.h"
 class base_wrapper;
 class frame_writer;
+struct output_item;
+struct output_pending;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -80,6 +82,7 @@ public:
     ~track_info();
 
     bool                        ParseDecodedFrame(input_base_uncompressed* Parser = nullptr);
+    bool                        ParseDecodedFrame(const buffer& BeforeData, const buffer& AfterData, uint64_t FileSize); // Without the decoded content, which is not needed if the file size is known
 
     bool                        Init(const uint8_t* BaseData);
     input_base_uncompressed*    InitOutput_Find();
@@ -91,6 +94,11 @@ public:
     void                        SetFormat(const char* NewFormat) { Format = Format_FromCodecID(NewFormat); }
     void                        SetWidth(uint32_t NewWidth) { Width = NewWidth; }
     void                        SetHeight(uint32_t NewHeight) { Height = NewHeight; }
+
+    // Frame threading: wait for the end of the output of the last frame
+    void                        Output_Wait();
+    void                        Output_End(); // No more frames
+    bool                        Output_IsShared(); // Output may share data with other tracks (e.g. compound file)
 
     // Late updates
     void                        UpdateReversibility(reversibility* Reversibility, input_base_uncompressed_compound* Compound, raw_frame::flavor Flavor);
@@ -104,6 +112,18 @@ private:
     ::format                    Format = format::None;
     uint32_t                    Width = 0;
     uint32_t                    Height = 0;
+
+    // Frame threading: decoding of frames during the output of previous frames (if the wrapper can split), outputs in parallel if frames are in different files
+    output_pending*             Output_Pending = nullptr;
+    bool                        Process_Split(const uint8_t* Data, size_t Size);
+    void                        Output_Run();
+    void                        Output(output_item* Item, frame_writer* Writer);
+    void                        Parse_Flush(bool Force);
+
+    // Decoded frame parsing without the decoded content, buffer with zeroes kept between frames
+    buffer                      ParseDecodedFrame_Buffer;
+    size_t                      ParseDecodedFrame_BeforeSize = 0;
+    size_t                      ParseDecodedFrame_AfterSize = 0;
 
     void                        ParseBuffer() {}
     void                        BufferOverflow() {}

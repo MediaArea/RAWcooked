@@ -80,10 +80,9 @@ public:
     void                        SetHeight(uint32_t Height);
 
     // Actions
-    bool                        Process(const uint8_t* Data, size_t Size);
     bool                        OutOfBand(const uint8_t* Data, size_t Size);
 
-private:
+protected:
     ffv1_frame*                 Ffv1Frame;
 };
 
@@ -112,19 +111,31 @@ void ffv1_wrapper::SetHeight(uint32_t Height)
 }
 
 //---------------------------------------------------------------------------
-bool ffv1_wrapper::Process(const uint8_t* Data, size_t Size)
-{
-    Ffv1Frame->RawFrame = RawFrame;
-    auto Value = Ffv1Frame->Process(Data, Size);
-    RawFrame->Process();
-    return Value;
-}
-
-//---------------------------------------------------------------------------
 bool ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
 {
     Ffv1Frame->RawFrame = RawFrame;
     return Ffv1Frame->OutOfBand(Data, Size);
+}
+
+//---------------------------------------------------------------------------
+// Our decoder in 2 steps: decoding to a frame given by the caller (synchronous), then output by the caller (maybe in another thread)
+class ffv1_split_wrapper : public ffv1_wrapper
+{
+public:
+    using ffv1_wrapper::ffv1_wrapper;
+
+    // Actions
+    bool                        CanSplit() { return true; }
+    void                        Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque);
+    size_t                      Depth() { return 4; } // Outputs of up to 3 frames in parallel during the decoding of next frame
+};
+
+//---------------------------------------------------------------------------
+void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque)
+{
+    Ffv1Frame->RawFrame = Frame;
+    auto Error = Ffv1Frame->Process(Data, Size);
+    FrameReady->Ready(Opaque, Error);
 }
 
 //---------------------------------------------------------------------------
@@ -396,7 +407,7 @@ base_wrapper* CreateWrapper(format Format, ThreadPool* Pool)
 {
     switch (Format)
     {
-    CREATEWRAPPER_THREADED(ffv1, FFV1, Pool);
+    CREATEWRAPPER_THREADED(ffv1_split, FFV1, Pool);
     CREATEWRAPPER(flac, FLAC);
     CREATEWRAPPER(pcm, PCM);
     case format::None:
