@@ -40,6 +40,7 @@
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_RangeCoder.h" />
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.h" />
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.h" />
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_Hybrid.h" />
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.h" />
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_RangeCoder.h" />
     <ClInclude Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Slice.h" />
@@ -110,6 +111,7 @@
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\Coder\FFV1_Coder_RangeCoder.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_FFmpeg.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Frame_Hybrid.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Parameters.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_RangeCoder.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\CoDec\FFV1\FFV1_Slice.cpp" />

@@ -11,6 +11,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Frame.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Frame_FFmpeg.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Frame_Hybrid.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Parameters.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Slice.cpp \

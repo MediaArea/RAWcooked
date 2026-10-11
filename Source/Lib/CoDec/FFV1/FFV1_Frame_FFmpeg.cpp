@@ -8,7 +8,6 @@
 #include "Lib/CoDec/FFV1/FFV1_Frame_FFmpeg.h"
 #ifdef RAWCOOKED_FFMPEG
 #include "Lib/CoDec/FFmpeg_Functions.h"
-#include "Lib/CoDec/Wrapper.h"
 #include "ThreadPool.h"
 #include "Lib/Transform/Transform.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
@@ -58,7 +57,7 @@ ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
     Frames(new ffv1_frame_ffmpeg_frames),
     Frame_Sw(ffmpeg::av_frame_alloc())
 {
-    Context->thread_type = FF_THREAD_SLICE; // Frame is output immediately
+    Context->thread_type = FF_THREAD_SLICE; // Frame is output immediately (frame threading is done by Decode()/Output())
     Context->thread_count = Pool ? 0 : 1;
     if (Vulkan)
     {
@@ -110,28 +109,6 @@ bool ffv1_frame_ffmpeg::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 size_t ffv1_frame_ffmpeg::Padding()
 {
     return AV_INPUT_BUFFER_PADDING_SIZE;
-}
-
-//---------------------------------------------------------------------------
-static void Buffer_Release(void* Holder, uint8_t*)
-{
-    ((data_holder*)Holder)->Release();
-}
-
-//---------------------------------------------------------------------------
-bool ffv1_frame_ffmpeg::Process(const uint8_t*, size_t Buffer_Size, data_holder* Holder)
-{
-    // Frame data kept by FFmpeg as long as needed (no copy), with FFmpeg padding, in allocated memory if Vulkan imports it in GPU memory space
-    auto Data = Holder->Hold(Context->get_format == Vulkan_Format);
-    auto Buffer = ffmpeg::av_buffer_create(const_cast<uint8_t*>(Data), Buffer_Size + AV_INPUT_BUFFER_PADDING_SIZE, Buffer_Release, Holder, AV_BUFFER_FLAG_READONLY);
-    if (!Buffer)
-    {
-        Holder->Release();
-        return true;
-    }
-    auto Result = Decode(Buffer, Buffer_Size);
-    ffmpeg::av_buffer_unref(&Buffer);
-    return Output() || Result;
 }
 
 //---------------------------------------------------------------------------
@@ -214,6 +191,18 @@ bool ffv1_frame_ffmpeg::Output()
     std::lock_guard<std::mutex> Lock(Frames->Mutex);
     Frames->Free.push_back(Frame);
     return Result;
+}
+
+//---------------------------------------------------------------------------
+void ffv1_frame_ffmpeg::Discard()
+{
+    std::lock_guard<std::mutex> Lock(Frames->Mutex);
+    if (Frames->Decoded.empty())
+        return;
+    auto Frame = Frames->Decoded.back();
+    Frames->Decoded.pop_back();
+    ffmpeg::av_frame_unref(Frame);
+    Frames->Free.push_back(Frame);
 }
 
 //---------------------------------------------------------------------------

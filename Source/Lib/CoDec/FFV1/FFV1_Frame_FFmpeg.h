@@ -24,7 +24,6 @@ struct ffv1_frame_ffmpeg_frames;
 //***************************************************************************
 
 class ThreadPool;
-class data_holder;
 class raw_frame;
 
 class ffv1_frame_ffmpeg
@@ -39,13 +38,13 @@ public:
     void SetHeight(uint32_t height);
 
     // Actions
-    bool Process(const uint8_t* Buffer, size_t Buffer_Size, data_holder* Holder); // Frame data kept by FFmpeg as long as needed (no copy)
     bool OutOfBand(const uint8_t* Buffer, size_t Buffer_Size);
     static size_t Padding(); // Count of bytes FFmpeg reads after the frame data
 
     // Process in 2 steps: Decode() of next frames may run during Output() of current frame (from another thread)
     bool Decode(AVBufferRef* Buffer, size_t Buffer_Size); // Buffer with FFmpeg padding, a reference is kept by FFmpeg if needed (no copy)
     bool Output(); // To raw frame
+    void Discard(); // Last decoded frame, instead of Output()
 
     // Decoded frame
     raw_frame*                  RawFrame;

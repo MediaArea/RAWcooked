@@ -43,8 +43,9 @@ enum action : uint8_t
     Action_FrameMd5An,
     Action_ComputeOutputHash,
     Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
-    Action_FFmpegDecoder, // Use FFmpeg libavcodec instead of our decoder for FFV1
-    Action_VulkanDecoder, // Use FFmpeg libavcodec with Vulkan hardware decoding
+    Action_InternalDecoder, // Use our decoder for FFV1 in parallel with the FFmpeg decoders, if any (our decoder is used if no FFmpeg decoder is used)
+    Action_FFmpegDecoder, // Use FFmpeg libavcodec decoder for FFV1
+    Action_VulkanDecoder, // Use FFmpeg libavcodec decoder with Vulkan hardware decoding for FFV1
     Action_AutoDecoder, // Use the best available decoder, resolved when a decoder is needed (our decoder for the moment)
     Action_VulkanEncoder, // FFmpeg Vulkan encoder is used, so Vulkan is wanted: Action_AutoDecoder by default
     Action_Max

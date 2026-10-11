@@ -305,15 +305,32 @@ int global::SetFileOpenMethod(const char* Value)
 //---------------------------------------------------------------------------
 int global::SetDecoder(const char* Value)
 {
-    if (strcmp(Value, "internal") == 0 || strcmp(Value, "auto") == 0)
-    {
-        Actions.set(Action_FFmpegDecoder, false);
-        Actions.set(Action_VulkanDecoder, false);
-        Actions.set(Action_AutoDecoder, strcmp(Value, "auto") == 0); // Resolved when a decoder is needed
-        Decoder_IsProvided = true;
-        return 0;
-    }
-    if (strcmp(Value, "ffmpeg") == 0 || strcmp(Value, "vulkan") == 0)
+    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order
+    static const char* const Names[] = { "internal", "ffmpeg", "vulkan" };
+    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder, Action_VulkanDecoder };
+    bool Decoders[3] = {};
+    auto IsAuto = strcmp(Value, "auto") == 0;
+    if (IsAuto)
+        Decoders[0] = true;
+    else
+        for (auto Name = Value;;)
+        {
+            auto Name_End = strchr(Name, '+');
+            auto Name_Size = Name_End ? (size_t)(Name_End - Name) : strlen(Name);
+            size_t i = 0;
+            while (i < 3 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
+                i++;
+            if (i == 3)
+            {
+                cerr << "Error: unknown decoder value '" << Value << "'." << endl;
+                return 1;
+            }
+            Decoders[i] = true;
+            if (!Name_End)
+                break;
+            Name = Name_End + 1;
+        }
+    if (Decoders[1] || Decoders[2])
     {
         string Error;
         if (!FFmpeg_Library_Load(&Error))
@@ -321,14 +338,12 @@ int global::SetDecoder(const char* Value)
             cerr << "Error: decoder value '" << Value << "' is not available (" << Error << ")." << endl;
             return 1;
         }
-        Actions.set(Action_FFmpegDecoder, true);
-        Actions.set(Action_VulkanDecoder, strcmp(Value, "ffmpeg") != 0);
-        Actions.set(Action_AutoDecoder, false);
-        Decoder_IsProvided = true;
-        return 0;
     }
-    cerr << "Error: unknown decoder value '" << Value << "'." << endl;
-    return 1;
+    for (size_t i = 0; i < 3; i++)
+        Actions.set(Decoders_Actions[i], Decoders[i]);
+    Actions.set(Action_AutoDecoder, IsAuto);
+    Decoder_IsProvided = true;
+    return 0;
 }
 
 //---------------------------------------------------------------------------
