@@ -48,16 +48,18 @@ while read line ; do
         source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
 
         # check result file generation
+        encode_cmd="${cmd_stdout}" # cmd_stdout is overwritten by the decoding
         for variant in swdpx hwdpx ; do
             test="$(basename "${path}") (${variant})"
 
-            cmd_stdout="${cmd_stdout/-xerror/-xerror -init_hw_device vulkan=vk:0,debug=0}"
+            cmd="${encode_cmd/-xerror/-xerror -init_hw_device vulkan=vk:0,debug=0}"
             if [ "${variant}" == "hwdpx" ] ; then
-               cmd_stdout="${cmd_stdout/-xerror/-xerror -hwaccel vulkan -hwaccel_output_format vulkan}"
+               cmd="${cmd/-xerror/-xerror -hwaccel vulkan -hwaccel_output_format vulkan}"
             fi
-            cmd_stdout="${cmd_stdout/-c:v ffv1/-vf hwupload -c:v ffv1_vulkan}"
-            cmd_stdout="${cmd_stdout/-context 1/}"
-            run_ffmpeg "${cmd_stdout}"
+            cmd="${cmd/-c:v ffv1/-vf hwupload -c:v ffv1_vulkan}"
+            cmd="${cmd/-context 1/}"
+            rm -f "${file}.mkv" # Not the file of the previous variant
+            run_ffmpeg "${cmd}"
 
             if [ ! -e "${file}.mkv" ] ; then
                 echo "NOK: ${test}/${file}, mkv not generated" >&${fd}
