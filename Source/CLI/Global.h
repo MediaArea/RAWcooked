@@ -54,6 +54,7 @@ public:
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
+    bool                        Decoder_IsProvided;
     bool                        Quiet;
     bitset<Action_Max>          Actions;
 
