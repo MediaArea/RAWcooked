@@ -19,6 +19,7 @@ class raw_frame;
 class transform_base
 {
 public:
+    virtual ~transform_base() {}
     virtual void From(pixel_t* P1, pixel_t* P2 = nullptr, pixel_t* P3 = nullptr, pixel_t* P4 = nullptr) = 0;
 };
 
