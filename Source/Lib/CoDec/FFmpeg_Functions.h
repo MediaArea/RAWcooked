@@ -36,6 +36,7 @@ extern "C"
     _F(avutil,  av_freep) \
     _F(avutil,  av_hwdevice_ctx_create) \
     _F(avutil,  av_hwframe_transfer_data) \
+    _F(avutil,  av_log_set_level) \
     _F(avutil,  av_mallocz) \
     _F(avutil,  av_pix_fmt_desc_get) \
     _F(avutil,  av_read_image_line2) \
@@ -57,6 +58,9 @@ namespace ffmpeg
     FFMPEG_FUNCTIONS(FFMPEG_FUNCTION_DECLARE)
     #undef FFMPEG_FUNCTION_DECLARE
 }
+
+// Vulkan device created by FFmpeg_Library_Vulkan() if it returned true, given to the first caller (who owns the reference) so it is not created twice, else nullptr
+AVBufferRef* FFmpeg_Library_VulkanDevice();
 
 //---------------------------------------------------------------------------
 #endif

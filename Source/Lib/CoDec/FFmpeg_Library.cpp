@@ -8,6 +8,7 @@
 #include "Lib/CoDec/FFmpeg_Library.h"
 #ifdef RAWCOOKED_FFMPEG
 #include "Lib/CoDec/FFmpeg_Functions.h"
+#include <atomic>
 #include <cstring>
 #include <vector>
 #if (defined(_WIN32) || defined(__APPLE__)) && !defined(RAWCOOKED_FFMPEG_DYNAMIC)
@@ -327,6 +328,92 @@ bool FFmpeg_Library_Load(string* Error)
     return Loaded;
 }
 
+//***************************************************************************
+// Vulkan
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+// Begin of AVVulkanDeviceContext (libavutil/hwcontext_vulkan.h) and of VkPhysicalDeviceProperties (Vulkan 1.0 ABI, frozen), so Vulkan headers are not needed
+#if defined(_WIN32)
+    #define VULKAN_CALL __stdcall
+#else
+    #define VULKAN_CALL
+#endif
+typedef void (VULKAN_CALL* vulkan_void_function)();
+typedef vulkan_void_function (VULKAN_CALL* vulkan_get_instance_proc_addr)(void* Instance, const char* Name);
+typedef void (VULKAN_CALL* vulkan_get_physical_device_properties)(void* PhysicalDevice, void* Properties);
+struct vulkan_device_context
+{
+    const void*                     alloc;
+    vulkan_get_instance_proc_addr   get_proc_addr;
+    void*                           inst;
+    void*                           phys_dev;
+};
+struct vulkan_physical_device_properties
+{
+    uint32_t                        apiVersion;
+    uint32_t                        driverVersion;
+    uint32_t                        vendorID;
+    uint32_t                        deviceID;
+    uint32_t                        deviceType;
+    char                            deviceName[256];
+    uint64_t                        Others[128]; // pipelineCacheUUID, limits, sparseProperties (548 bytes)
+};
+static const uint32_t Vulkan_PhysicalDeviceType_Cpu = 4; // VK_PHYSICAL_DEVICE_TYPE_CPU
+
+//---------------------------------------------------------------------------
+// Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe)
+static bool Vulkan_IsGPU(AVBufferRef* Device)
+{
+    auto Vulkan = (const vulkan_device_context*)((AVHWDeviceContext*)Device->data)->hwctx;
+    auto GetPhysicalDeviceProperties = Vulkan->get_proc_addr ? (vulkan_get_physical_device_properties)Vulkan->get_proc_addr(Vulkan->inst, "vkGetPhysicalDeviceProperties") : nullptr;
+    if (!GetPhysicalDeviceProperties)
+        return false;
+    vulkan_physical_device_properties Properties;
+    GetPhysicalDeviceProperties(Vulkan->phys_dev, &Properties);
+    return Properties.deviceType != Vulkan_PhysicalDeviceType_Cpu;
+}
+
+//---------------------------------------------------------------------------
+static atomic<AVBufferRef*> Vulkan_Device(nullptr); // Device created by FFmpeg_Library_Vulkan(), until a decoder uses it
+
+//---------------------------------------------------------------------------
+enum class vulkan_device
+{
+    none,
+    cpu,
+    gpu,
+};
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_Vulkan(bool AllowCPU)
+{
+    static const vulkan_device Device_Kind = []() -> vulkan_device // Once, thread safe
+    {
+        if (!FFmpeg_Library_Load())
+            return vulkan_device::none;
+        ffmpeg::av_log_set_level(AV_LOG_QUIET); // No message if Vulkan is not available, or if the decoding fails later (the caller falls back to our decoder)
+
+        // Same device as the one created by the decoder, kept for the decoder (device creation is long)
+        AVBufferRef* Device = nullptr;
+        if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) < 0)
+            return vulkan_device::none;
+        Vulkan_Device = Device;
+        return Vulkan_IsGPU(Device) ? vulkan_device::gpu : vulkan_device::cpu;
+    }();
+    if (Device_Kind == vulkan_device::gpu || (Device_Kind == vulkan_device::cpu && AllowCPU))
+        return true;
+    if (auto Device = Vulkan_Device.exchange(nullptr))
+        ffmpeg::av_buffer_unref(&Device); // Not used
+    return false;
+}
+
+//---------------------------------------------------------------------------
+AVBufferRef* FFmpeg_Library_VulkanDevice()
+{
+    return Vulkan_Device.exchange(nullptr);
+}
+
 #else //RAWCOOKED_FFMPEG
 
 //---------------------------------------------------------------------------
@@ -334,6 +421,12 @@ bool FFmpeg_Library_Load(std::string* Error)
 {
     if (Error)
         *Error = "FFmpeg is not supported in this build";
+    return false;
+}
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_Vulkan(bool)
+{
     return false;
 }
 

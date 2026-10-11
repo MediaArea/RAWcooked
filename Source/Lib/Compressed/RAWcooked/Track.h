@@ -65,7 +65,7 @@ enum class format_kind
 //---------------------------------------------------------------------------
 ::format Format_FromCodecID(const char* Name);
 format_kind FormatKind(::format Format);
-base_wrapper* CreateWrapper(::format Format, ThreadPool* Pool, bool UseInternalDecoder = false, bool UseFFmpegDecoder = false, bool UseVulkanDecoder = false);
+base_wrapper* CreateWrapper(::format Format, ThreadPool* Pool, bool UseInternalDecoder = false, bool UseFFmpegDecoder = false, bool UseVulkanDecoder = false, bool UseAutoDecoder = false, bool AllowVulkanCPU = false);
 class reversibility;
 
 //---------------------------------------------------------------------------

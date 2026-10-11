@@ -61,7 +61,9 @@ ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
     Context->thread_count = Pool ? 0 : 1;
     if (Vulkan)
     {
-        ffmpeg::av_hwdevice_ctx_create(&Context->hw_device_ctx, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0);
+        Context->hw_device_ctx = FFmpeg_Library_VulkanDevice(); // Already created if the decoder was selected automatically
+        if (!Context->hw_device_ctx)
+            ffmpeg::av_hwdevice_ctx_create(&Context->hw_device_ctx, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0);
         Context->get_format = Vulkan_Format;
     }
 }

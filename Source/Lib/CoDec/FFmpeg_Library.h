@@ -22,5 +22,9 @@
 // Load the libraries if not already done, false if they are not available (Error is set to the reason)
 bool FFmpeg_Library_Load(std::string* Error = nullptr);
 
+// Libraries are available and the Vulkan device used by default by FFmpeg is a GPU, or any device if AllowCPU (also a CPU implementation e.g. lavapipe), FFmpeg log is quiet after this call
+// Not needed if Vulkan is explicitly requested, any Vulkan device is used in that case
+bool FFmpeg_Library_Vulkan(bool AllowCPU = false);
+
 //---------------------------------------------------------------------------
 #endif

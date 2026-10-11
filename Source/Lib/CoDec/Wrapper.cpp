@@ -442,11 +442,18 @@ bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holde
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder)
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseAutoDecoder, bool AllowVulkanCPU)
 {
     switch (Format)
     {
     case format::FFV1:
+        if (UseAutoDecoder)
+        {
+            // Our decoder and FFmpeg Vulkan decoder in parallel if a GPU (or a CPU implementation if allowed) is available, else our decoder only
+            UseInternalDecoder = true;
+            UseFFmpegDecoder = false;
+            UseVulkanDecoder = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+        }
         #ifdef RAWCOOKED_FFMPEG
         if (UseFFmpegDecoder || UseVulkanDecoder)
         {
