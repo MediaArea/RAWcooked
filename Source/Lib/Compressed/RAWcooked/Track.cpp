@@ -16,6 +16,7 @@
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "ThreadPool.h"
+#include "Lib/Utils/MD5/MD5_Lanes.h"
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -238,7 +239,13 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size)
     // Frame for the decoding, with a limited count of frames between the decoding and the end of the output
     {
         std::unique_lock<std::mutex> Lock(P->Mutex);
-        P->Condition.wait(Lock, [&] { return P->Count < Wrapper->Depth(); });
+        if (P->Count >= Wrapper->Depth())
+        {
+            // Pending hashes are computed now, else frames would wait for other frames which can not be decoded
+            MD5_Lanes_Flush(true);
+            P->Condition.wait(Lock, [&] { return P->Count < Wrapper->Depth(); });
+            MD5_Lanes_Flush(false);
+        }
         P->Count++;
         if (Item->Ordered)
             Item->Order = P->Order_Count++;
@@ -305,6 +312,7 @@ void track_info::Output_Run()
         {
             delete Writer;
             Writer = new frame_writer(*FrameWriter);
+            Writer->Hash_Batch = true; // Hash of several frames in parallel
             Writer_Generation = P->Writer_Generation;
         }
         Lock.unlock();
@@ -375,8 +383,10 @@ void track_info::Output_Wait()
     if (!Output_Pending)
         return;
     {
+        MD5_Lanes_Flush(true); // No more frames until the end of pending outputs
         std::unique_lock<std::mutex> Lock(Output_Pending->Mutex);
         Output_Pending->Condition.wait(Lock, [this] { return !Output_Pending->Count; });
+        MD5_Lanes_Flush(false);
     }
     Parse_Flush(true);
 }

@@ -183,6 +183,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.h" />
@@ -256,6 +257,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c">
