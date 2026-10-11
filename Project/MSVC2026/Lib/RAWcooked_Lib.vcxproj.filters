@@ -360,6 +360,12 @@
     <ClInclude Include="..\..\..\Source\Lib\Utils\Buffer\Buffer.h">
       <Filter>Header Files\Utils\Buffer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFmpeg_Functions.h">
+      <Filter>Header Files\CoDec</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\CoDec\FFmpeg_Library.h">
+      <Filter>Header Files\CoDec</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\CoDec\Wrapper.h">
       <Filter>Header Files\CoDec</Filter>
     </ClInclude>
@@ -523,6 +529,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp">
       <Filter>Source Files\Compressed\RAWcooked</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\CoDec\FFmpeg_Library.cpp">
+      <Filter>Source Files\CoDec</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\CoDec\Wrapper.cpp">
       <Filter>Source Files\CoDec</Filter>

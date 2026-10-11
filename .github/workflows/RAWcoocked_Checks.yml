@@ -100,13 +100,18 @@ jobs:
         run: |
           cd Project/GNU/CLI
           if grep -qw avx512f /proc/cpuinfo; then
-            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Windows_Static_x64.zip # Latest snapshot
+            Base=https://mediaarea.net/download/snapshots/binary/ffmpeg/latest Version=Latest # Latest snapshot
           else
             # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512
-            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/binary/ffmpeg/9.0.1/FFmpeg_Bin_9.0.1_Windows_Static_x64.zip
+            Base=https://mediaarea.net/download/binary/ffmpeg/9.0.1 Version=9.0.1
           fi
+          curl -fsSL -o FFmpeg.zip ${Base}/FFmpeg_Bin_${Version}_Windows_Static_x64.zip
           7z e -y FFmpeg.zip -r ffmpeg.exe > /dev/null
-          rm FFmpeg.zip
+          # Headers of the FFmpeg libraries for the build, in the include directory at the root of the tree
+          curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Windows_Shared_x64.zip
+          7z x -y -oFFmpeg_Dev FFmpeg_Dev.zip > /dev/null
+          mv FFmpeg_Dev/include ../../../include
+          rm -r FFmpeg.zip FFmpeg_Dev.zip FFmpeg_Dev
           ./ffmpeg -hide_banner -version | sed -n 1p
       - name: Vulkan
         run: |

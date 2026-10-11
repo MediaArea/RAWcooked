@@ -51,6 +51,7 @@ dnl Arguments - With
 dnl
 AC_ARG_WITH(macosx-sdk,         AS_HELP_STRING([--with-macosx-sdk],         [Force the Mac SDK]),                         , with_macosx_sdk=no)
 AC_ARG_WITH(macosx-version-min, AS_HELP_STRING([--with-macosx-version-min], [Force the Mac Version]),                     , with_macosx_version_min=no)
+AC_ARG_WITH(ffmpeg,             AS_HELP_STRING([--with-ffmpeg],             [Enable FFmpeg libavcodec FFV1 decoder (--decoder ffmpeg), =dynamic for loading FFmpeg libraries at run time (default on macOS), =DIR for loading at run time with the headers of an FFmpeg package in DIR/include]), , with_ffmpeg=no)
 
 dnl #########################################################################
 dnl ### Specific flags
@@ -150,7 +151,44 @@ dnl #########################################################################
 AC_SEARCH_LIBS([lround],[m], [AC_DEFINE(HAVE_LROUND,1,lround support)])
 AC_FUNC_FSEEKO
 AC_CHECK_HEADERS([stdint.h inttypes.h byteswap.h sys/param.h sys/ioctl.h termios.h x86intrin.h cpuid.h])
-CFLAGS=" -DFLAC__NO_DLL -DFLAC__HAS_OGG=0 -DFLAC__NO_ASM $CFLAGS" 
+CFLAGS=" -DFLAC__NO_DLL -DFLAC__HAS_OGG=0 -DFLAC__NO_ASM $CFLAGS"
+
+dnl #########################################################################
+dnl ### FFmpeg (optional)
+dnl #########################################################################
+
+if test "$with_ffmpeg" != "no"; then
+	if test "$with_ffmpeg" != "yes" && test "$with_ffmpeg" != "dynamic"; then
+		dnl Directory of an FFmpeg package (include and lib directories), libraries are loaded at run time
+		if ! test -f "$with_ffmpeg/include/libavcodec/avcodec.h"; then
+			AC_MSG_ERROR([$with_ffmpeg/include/libavcodec/avcodec.h not found])
+		fi
+		CXXFLAGS="$CXXFLAGS -DRAWCOOKED_FFMPEG -DRAWCOOKED_FFMPEG_DYNAMIC -I$with_ffmpeg/include"
+		AC_SEARCH_LIBS([dlopen], [dl])
+	elif pkg-config --exists libavcodec-ma libavutil-ma || pkg-config --exists libavcodec libavutil; then
+		dnl ffmpeg-ma package (FFmpeg build of MediaArea, with -ma suffix) first, as at run time
+		if pkg-config --exists libavcodec-ma libavutil-ma; then
+			ffmpeg_pkgs="libavcodec-ma libavutil-ma"
+		else
+			ffmpeg_pkgs="libavcodec libavutil"
+		fi
+		CXXFLAGS="$CXXFLAGS -DRAWCOOKED_FFMPEG `pkg-config --cflags $ffmpeg_pkgs`"
+		case "${build}" in
+		  *darwin* )
+			with_ffmpeg=dynamic
+		  ;;
+		esac
+		if test "$with_ffmpeg" = "dynamic"; then
+			dnl Libraries are loaded at run time, so they are optional
+			CXXFLAGS="$CXXFLAGS -DRAWCOOKED_FFMPEG_DYNAMIC"
+			AC_SEARCH_LIBS([dlopen], [dl])
+		else
+			LIBS="$LIBS `pkg-config --libs $ffmpeg_pkgs`"
+		fi
+	else
+		AC_MSG_ERROR([libavcodec/libavutil (or libavcodec-ma/libavutil-ma) not found by pkg-config])
+	fi
+fi
 
 dnl #########################################################################
 dnl ### Output
