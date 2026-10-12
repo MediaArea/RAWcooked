@@ -31,10 +31,7 @@ is_valid() {
 current=""
 
 while read line ; do
-    x="$(echo "${line}" | cut -d':' -f1)"
-    y="$(echo "${line}" | cut -d':' -f2)"
-    f="$(echo "${line}" | cut -d':' -f3)"
-    c="$(echo "${line}" | cut -d':' -f4)"
+    IFS=: read -r x y f c dummy <<< "${line}"
     file="${x}x${y}@${f}.dpx"
 
     if [ "${current}" != "${x}" ] ; then
@@ -65,7 +62,11 @@ while read line ; do
         run_rawcooked --file -d "${file}"
         check_success "file rejected at input" "file accepted at input" || continue
 
-        count=$(echo "${cmd_stdout}" | sed -En 's/.* -slices ([0-9]+) .*/\1/p')
+        count=
+        slices_regex=' -slices ([0-9]+) '
+        if [[ "${cmd_stdout}" =~ ${slices_regex} ]] ; then
+            count="${BASH_REMATCH[1]}"
+        fi
 
         if ! is_number ${count} ; then
             echo "NOK: ${test}/${file}, unable to get slices count" >&${fd}

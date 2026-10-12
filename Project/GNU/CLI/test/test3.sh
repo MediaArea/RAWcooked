@@ -4,10 +4,10 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
-    path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
-    want="$(echo "${line}" | cut -d' ' -f2)"
-    test=$(basename "${path}")
+    read -r entry want dummy <<< "${line}"
+    file="${entry##*/}"
+    path="${entry%/*}"
+    test="${path##*/}"
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         run_rawcooked --file -d "${file}"

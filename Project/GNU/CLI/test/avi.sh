@@ -3,10 +3,10 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
-    path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
-    want="$(echo "${line}" | cut -d' ' -f2)"
-    test=$(basename "${path}")
+    read -r entry want dummy <<< "${line}"
+    file="${entry##*/}"
+    path="${entry%/*}"
+    test="${path##*/}"
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         run_rawcooked -y --conch --encode --check --file "${file}"
@@ -23,7 +23,7 @@ while read line ; do
             continue
         fi
 
-        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines source_warnings "Warning: " "${cmd_stderr}"
 
         # check encoding
         run_rawcooked -y --check "${file}.mkv"
@@ -39,7 +39,7 @@ while read line ; do
             continue
         fi
 
-        decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines decoded_warnings "Warning: " "${cmd_stderr}"
         if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
             echo "NOK: ${test}, warnings differs between the source and the decoded files" >&${fd}
             status=1

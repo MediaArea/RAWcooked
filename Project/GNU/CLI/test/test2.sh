@@ -4,10 +4,9 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
+    read -r path file dummy <<< "${line}"
     file_input="${file}"
-    test="$(basename "${path}")/${file_input}"
+    test="${path##*/}/${file_input}"
 
     if [ "${file: -1}" == "/" ] ; then
         # bash-3.2 compatible substitution, needed for macOSX
@@ -15,11 +14,11 @@ while read line ; do
     fi
 
     if [ "${file}" == "." ] ; then
-        file="../$(basename ${path})"
+        file="../${path##*/}"
     fi
 
     if [ -z "${file}" ] ; then
-        file="../$(basename ${path})"
+        file="../${path##*/}"
         file_input="${file}"
     fi
 
@@ -45,7 +44,7 @@ while read line ; do
         run_rawcooked -y --conch --encode --check-padding --file ${file_input}
         check_success "file rejected at input" "file accepted at input" || continue
 
-        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines source_warnings "Warning: " "${cmd_stderr}"
 
         if [ ! -e "${file}.mkv" ] ; then
             echo "NOK: ${test}, mkv not generated" >&${fd}
@@ -80,7 +79,7 @@ while read line ; do
             continue
         fi
 
-        decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines decoded_warnings "Warning: " "${cmd_stderr}"
         if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
             echo "NOK: ${test}, warnings differs between the source and the decoded files" >&${fd}
             status=1

@@ -6,11 +6,10 @@ script_path="${PWD}/test"
 test="reversibility_data"
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
+    read -r path file dummy <<< "${line}"
 
     if [ -z "${file}" ] ; then
-        file="../$(basename ${path})"
+        file="../${path##*/}"
     fi
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then

@@ -4,9 +4,9 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    file="$(basename "$(echo "${line}")")"
-    path="$(dirname "$(echo "${line}")")"
-    test=$(basename "${path}")
+    file="${line##*/}"
+    path="${line%/*}"
+    test="${path##*/}"
 
     pushd "${files_path}/${path}" >/dev/null 2>&1
         run_rawcooked ${file}

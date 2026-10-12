@@ -21,10 +21,10 @@ show_vulkan_devices() {
 }
 
 while read line ; do
-    file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
-    path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
-    want="$(echo "${line}" | cut -d' ' -f2)"
-    test=$(basename "${path}")
+    read -r entry want dummy <<< "${line}"
+    file="${entry##*/}"
+    path="${entry%/*}"
+    test="${path##*/}"
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
         echo "NOK: ${test}/${file}, file not found" >&${fd}
@@ -54,12 +54,12 @@ while read line ; do
             clean
             continue
         fi
-        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines source_warnings "Warning: " "${cmd_stderr}"
 
         # check result file generation
         encode_cmd="${cmd_stdout}" # cmd_stdout is overwritten by the decoding
         for variant in swdpx hwdpx ; do
-            test="$(basename "${path}") (${variant})"
+            test="${path##*/} (${variant})"
 
             cmd="${encode_cmd/-xerror/-xerror -init_hw_device vulkan=vk:0,debug=0}"
             if [ "${variant}" == "hwdpx" ] ; then
@@ -88,14 +88,14 @@ while read line ; do
 
             # check decoding, by our decoder then by the decoder automatically selected with the Vulkan encoder
             for decoder in internal auto ; do
-                test="$(basename "${path}") (${variant}, ${decoder})"
+                test="${path##*/} (${variant}, ${decoder})"
                 rm -fr "${file}.mkv.RAWcooked" # Not the files of the previous decoding
                 run_rawcooked -y --conch --decoder ${decoder} -c:v ffv1_vulkan --decode "${file}.mkv"
                 if ! check_success "mkv decoding failed" "mkv decoded" ; then
                     continue
                 fi
 
-                decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+                grep_lines decoded_warnings "Warning: " "${cmd_stderr}"
                 if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
                     echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
                     status=1

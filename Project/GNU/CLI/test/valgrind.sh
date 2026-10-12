@@ -13,12 +13,10 @@ fi
 type -p valgrind >/dev/null 2>&1 || fatal "${test}" "valgrind command not found"
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
-    opts="$(echo "${line}" | cut -s -d' ' -f3-)"
+    read -r path file opts <<< "${line}"
 
     if [ -z "${file}" ] ; then
-        file="../$(basename ${path})"
+        file="../${path##*/}"
     fi
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
