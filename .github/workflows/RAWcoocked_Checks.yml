@@ -31,8 +31,12 @@ jobs:
             fi
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
+            # Warnings of Homebrew about formulae of the runner image (migrations, cleanup) in the log but not as annotations
+            StopToken=$(uuidgen)
+            echo "::stop-commands::${StopToken}"
             brew update
             brew install coreutils automake
+            echo "::${StopToken}::"
           fi
       - name: FFmpeg
         run: |
