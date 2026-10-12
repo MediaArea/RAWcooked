@@ -18,8 +18,8 @@
     #include <fcntl.h>
     #include <io.h> // File existence
     #include <direct.h> // Directory creation
-    #define access _access_s
-    #define mkdir _mkdir
+    #define access(FileName, Mode) _waccess_s(WideFileName(FileName).c_str(), Mode)
+    #define mkdir(FileName) _wmkdir(WideFileName(FileName).c_str())
     #define stat _stat
 #else
     #include <dirent.h>
@@ -36,6 +36,54 @@
     #define _read read
 #endif
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+#if defined(_WIN32) || defined(_WINDOWS)
+wstring WideFileName(const char* FileName)
+{
+    // Same code page as the ANSI API
+    auto CodePage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+    auto Size = MultiByteToWideChar(CodePage, 0, FileName, -1, nullptr, 0);
+    if (Size <= 1)
+        return {};
+    wstring Name(Size, L'\0');
+    MultiByteToWideChar(CodePage, 0, FileName, -1, &Name[0], Size);
+    Name.resize(Size - 1);
+
+    // Already a Win32 file or device namespace name
+    if (Name.size() >= 4 && Name[0] == L'\\' && Name[1] == L'\\' && (Name[2] == L'?' || Name[2] == L'.') && Name[3] == L'\\')
+        return Name;
+
+    // Full path, the Win32 API would build it (relative path, '/', "..") with the MAX_PATH limitation (MAX_PATH - 12 for directories)
+    auto FullSize = GetFullPathNameW(Name.c_str(), 0, nullptr, nullptr);
+    if (FullSize < MAX_PATH - 12)
+        return Name; // Short enough or not handled (error)
+    wstring FullName(FullSize, L'\0');
+    FullSize = GetFullPathNameW(Name.c_str(), FullSize, &FullName[0], nullptr);
+    if (!FullSize || FullSize >= FullName.size())
+        return Name;
+    FullName.resize(FullSize);
+
+    // Long path
+    if (FullName[0] == L'\\' && FullName[1] == L'\\')
+        return L"\\\\?\\UNC" + FullName.substr(1); // UNC path, \\server\share --> \\?\UNC\server\share
+    return L"\\\\?\\" + FullName;
+}
+
+//---------------------------------------------------------------------------
+string NarrowFileName(const wchar_t* FileName)
+{
+    // Same code page as the ANSI API
+    auto CodePage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+    auto Size = WideCharToMultiByte(CodePage, 0, FileName, -1, nullptr, 0, nullptr, nullptr);
+    if (Size <= 1)
+        return {};
+    string Name(Size, '\0');
+    WideCharToMultiByte(CodePage, 0, FileName, -1, &Name[0], Size, nullptr, nullptr);
+    Name.resize(Size - 1);
+    return Name;
+}
+#endif //defined(_WIN32) || defined(_WINDOWS)
 
 //---------------------------------------------------------------------------
 struct private_buffered
@@ -76,7 +124,11 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             {
                 Flags |= ios::ate;
             }
+            #if defined(_WIN32) || defined(_WINDOWS)
+            auto F = new ifstream(WideFileName(FileName).c_str(), Flags);
+            #else //defined(_WIN32) || defined(_WINDOWS)
             auto F = new ifstream(FileName, Flags);
+            #endif //defined(_WIN32) || defined(_WINDOWS)
             if (!F->is_open())
                 return 1;
             auto ShallSeek = !FileSize || Begin;
@@ -95,7 +147,11 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         }
         case method::fopen:
         {
+            #if defined(_WIN32) || defined(_WINDOWS)
+            FILE* F = _wfopen(WideFileName(FileName).c_str(), L"rb");
+            #else //defined(_WIN32) || defined(_WINDOWS)
             FILE* F = fopen(FileName, "rb");
+            #endif //defined(_WIN32) || defined(_WINDOWS)
             if (!F)
                 return 1;
             if (!FileSize)
@@ -119,7 +175,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         case method::open:
         {
             #if defined(_WIN32) || defined(_WINDOWS)
-            auto F = _open(FileName, _O_BINARY | _O_RDONLY | _O_SEQUENTIAL, _S_IREAD);
+            auto F = _wopen(WideFileName(FileName).c_str(), _O_BINARY | _O_RDONLY | _O_SEQUENTIAL, _S_IREAD);
             #else //defined(_WIN32) || defined(_WINDOWS)
             auto F = open(FileName, O_RDONLY);
             #endif //defined(_WIN32) || defined(_WINDOWS)
@@ -150,7 +206,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         #if defined(_WIN32) || defined(_WINDOWS)
         case method::createfile:
         {
-            auto NewFile = CreateFileA(FileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+            auto NewFile = CreateFileW(WideFileName(FileName).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
             if (NewFile == INVALID_HANDLE_VALUE)
                 return 1;
             if (!FileSize)
@@ -191,7 +247,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
     static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, FILE_ATTRIBUTE_NORMAL };
-    auto NewFile = CreateFileA(FileName, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
+    auto NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
     if (NewFile == INVALID_HANDLE_VALUE)
         return 1;
     if (!FileSize)
@@ -459,7 +515,7 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
 #if defined(_WIN32) || defined(_WINDOWS)
     HANDLE& P = (HANDLE&)Private;
     DWORD CreationDisposition = Truncate ? (RejectIfExists ? TRUNCATE_EXISTING : CREATE_ALWAYS) : (RejectIfExists ? CREATE_NEW : OPEN_ALWAYS);
-    P = CreateFileA(FullName.c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+    P = CreateFileW(WideFileName(FullName).c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
     if (P == INVALID_HANDLE_VALUE)
 #else
     int& P = (int&)Private;
@@ -490,7 +546,7 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
             }
         }
 #if defined(_WIN32) || defined(_WINDOWS)
-        P = CreateFileA(FullName.c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+        P = CreateFileW(WideFileName(FullName).c_str(), GENERIC_WRITE, 0, 0, CreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
         if (P == INVALID_HANDLE_VALUE)
 #else
         P = open(FullName.c_str(), flags, Mode);

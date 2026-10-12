@@ -15,6 +15,14 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
+#if defined(_WIN32) || defined(_WINDOWS)
+// File name for the wide API, with the \\?\ prefix if the full path is too long for the Win32 API (MAX_PATH)
+wstring WideFileName(const char* FileName);
+inline wstring WideFileName(const string& FileName) { return WideFileName(FileName.c_str()); }
+// File name from the wide API, in the code page of the ANSI API
+string NarrowFileName(const wchar_t* FileName);
+#endif //defined(_WIN32) || defined(_WINDOWS)
+
 class filemap : public buffer_view
 {
 public:
