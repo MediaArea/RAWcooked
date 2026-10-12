@@ -552,8 +552,8 @@ void track_info::End(size_t i)
         return;
     }
 
-    // Write end of the file if the file is unique per track
-    if (ReversibilityData && ReversibilityData->Unique())
+    // Write end of the file if the file is unique per track (no raw frame if there is no cluster e.g. truncated file)
+    if (ReversibilityData && ReversibilityData->Unique() && RawFrame)
     {
         RawFrame->AssignBufferView(nullptr, 0);
         RawFrame->SetPre(buffer_or_view());
