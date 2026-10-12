@@ -33,11 +33,18 @@ public:
     virtual ~base_wrapper() {}
 
     // Actions
-    virtual bool                Process(const uint8_t* Data, size_t Size) = 0;
+    inline virtual bool         Process(const uint8_t* /*Data*/, size_t /*Size*/) { return true; } // Not used if CanSplit()
     inline virtual bool         OutOfBand(const uint8_t* /*Data*/, size_t /*Size*/) { return true; };
 
+    // Process in 2 steps if CanSplit(): Decode() starts the decoding of a frame to Frame, then FrameReady->Ready(Opaque, Error) is called when the frame is decoded
+    // Ready() may be called from any thread, before the end of Decode(), and not in the order of Decode() calls
+    inline virtual bool         CanSplit() { return false; }
+    inline virtual void         Decode(const uint8_t* /*Data*/, size_t /*Size*/, raw_frame* /*Frame*/, void* Opaque) { FrameReady->Ready(Opaque, true); }
+    inline virtual size_t       Depth() { return 2; } // Max count of frames between Decode() and the end of their use by the caller
+
 public:
-    raw_frame*                  RawFrame = nullptr;
+    raw_frame*                  RawFrame = nullptr; // Decoded frame if not split, else frame with the configuration of decoded frames (flavor)
+    raw_frame_ready*            FrameReady = nullptr; // Receiver of decoded frames, if split
 };
 
 //---------------------------------------------------------------------------

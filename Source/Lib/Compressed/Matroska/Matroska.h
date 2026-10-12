@@ -165,6 +165,8 @@ private:
     reversibility*              ReversibilityData = nullptr;
     vector<track_info*>         TrackInfo;
     size_t                      TrackInfo_Pos;
+    track_info*                 Output_Track = nullptr; // Track with a possible frame output in another thread
+    void                        Output_Wait();
     vector<uint8_t>             ID_to_TrackOrder;
     string                      AttachedFile_FileName;
     enum flags

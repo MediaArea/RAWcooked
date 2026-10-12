@@ -13,7 +13,9 @@ extern "C"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
+#include "Lib/Utils/MD5/MD5_Lanes.h"
 #include <mutex>
+#include <vector>
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -712,22 +714,15 @@ bool frame_writer::CheckMD5(raw_frame* RawFrame)
         return false;
     }
 
-    const auto Pre = RawFrame->Pre();
-    if (Pre.Size())
-        MD5_Update((MD5_CTX*)Output->MD5, Pre.Data(), (unsigned long)Pre.Size());
-    const auto Buffer = RawFrame->Buffer();
-    if (Buffer.Size())
-        MD5_Update((MD5_CTX*)Output->MD5, Buffer.Data(), (unsigned long)Buffer.Size());
+    // Frame parts, computed in parallel with frames of other threads
+    std::vector<md5_part> Parts;
+    Parts.push_back({ RawFrame->Pre().Data(), RawFrame->Pre().Size() });
+    Parts.push_back({ RawFrame->Buffer().Data(), RawFrame->Buffer().Size() });
     for (const auto& Plane : RawFrame->Planes())
         if (Plane)
-        {
-            const auto& Buffer = Plane->Buffer();
-            if (Buffer.Size())
-                MD5_Update((MD5_CTX*)Output->MD5, Buffer.Data(), (unsigned long)Buffer.Size());
-        }
-    const auto Post = RawFrame->Post();
-    if (Post.Size())
-        MD5_Update((MD5_CTX*)Output->MD5, Post.Data(), (unsigned long)Post.Size());
+            Parts.push_back({ Plane->Buffer().Data(), Plane->Buffer().Size() });
+    Parts.push_back({ RawFrame->Post().Data(), RawFrame->Post().Size() });
+    MD5_Update_Lanes((MD5_CTX*)Output->MD5, Parts.data(), Parts.size(), Hash_Batch);
 
     return false;
 }
