@@ -412,7 +412,7 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
             return;
 
         do {
-            size_t FileSize = ((size_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
+            uintmax_t FileSize = ((uintmax_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
             DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
         }
         while (FindNextFileW(hFind, &FindFileData));
