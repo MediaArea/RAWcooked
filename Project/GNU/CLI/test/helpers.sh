@@ -196,8 +196,16 @@ run_rawcooked() {
 }
 
 run_ffmpeg() {
+    unset ffmpeg_status
+    unset ffmpeg_stderr
+
     cmdline=$(echo -e "$@" | grep ffmpeg) 2>/dev/null
     if [ -n "${cmdline}" ] ; then
-        eval "${cmdline} </dev/null >/dev/null 2>&1"
+        local temp="$(mktemp -t 'rawcooked_testsuite_ffmpeg.XXXXXX')"
+        eval "${cmdline} </dev/null >/dev/null 2>${temp}"
+        ffmpeg_status="${?}"
+        ffmpeg_stderr="$(tr '\r' '\n' < "${temp}" | grep -v -E '^(ffmpeg version |  built with |  configuration: |  lib[a-z]+ +[0-9]|frame=|size=| *$)' | tail -n 5)" # Last lines without the banner and the progress lines
+        rm -f "${temp}"
+        return ${ffmpeg_status}
     fi
 }
