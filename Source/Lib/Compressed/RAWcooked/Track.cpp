@@ -17,6 +17,7 @@
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "ThreadPool.h"
 #include "Lib/Utils/MD5/MD5_Lanes.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -59,6 +60,7 @@ struct output_pending : public raw_frame_ready
     bool                        Stop = false;
     bool                        Ending = false; // No more frames, decoded frames are not reused
     size_t                      FrameSize = 0; // Size of decoded frames (same for all frames)
+    size_t                      Index = 0; // Index of the next frame, for instrumentation
 
     // Parsing of decoded frames, in order in the parsing thread, waiting for the frame size if the file size is unknown
     struct parse_item
@@ -149,10 +151,10 @@ bool track_info::Init(const uint8_t* BaseData)
 }
 
 //---------------------------------------------------------------------------
-bool track_info::Process(const uint8_t* Data, size_t Size)
+bool track_info::Process(const uint8_t* Data, size_t Size, data_holder* Holder)
 {
     if (Wrapper && Wrapper->CanSplit())
-        return Process_Split(Data, Size);
+        return Process_Split(Data, Size, Holder);
 
     if (ReversibilityData && !ReversibilityData->Unique())
     {
@@ -169,7 +171,7 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
         Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Format_Undetected, string());
         return true;
     }
-    if (Wrapper->Process(Data, Size))
+    if (Wrapper->Process(Data, Size, Holder))
     {
         string OutputFileName = ReversibilityData->Data(reversibility::element::FileName);
         FormatPath(OutputFileName);
@@ -192,7 +194,7 @@ bool track_info::Process(const uint8_t* Data, size_t Size)
 //---------------------------------------------------------------------------
 // Same as Process() but the decoding may be in other threads and the output (writing or checking) is done in output threads, during the decoding of next frames
 // Outputs are in parallel if each frame is in its own file, else in order
-bool track_info::Process_Split(const uint8_t* Data, size_t Size)
+bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Holder)
 {
     if (!Output_Pending)
     {
@@ -242,11 +244,13 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size)
         if (P->Count >= Wrapper->Depth())
         {
             // Pending hashes are computed now, else frames would wait for other frames which can not be decoded
+            TRACE_SCOPE("Wait depth", P->Index);
             MD5_Lanes_Flush(true);
             P->Condition.wait(Lock, [&] { return P->Count < Wrapper->Depth(); });
             MD5_Lanes_Flush(false);
         }
         P->Count++;
+        trace::Counter("Frames in flight", (int64_t)P->Count);
         if (Item->Ordered)
             Item->Order = P->Order_Count++;
         if (P->Frames_Free.empty())
@@ -258,10 +262,12 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size)
         }
     }
     Item->Frame->Flavor = RawFrame->Flavor;
+    Item->Frame->Index = P->Index++;
     Item->Frame->Flavor_Private = RawFrame->Flavor_Private;
 
     // Decoding (maybe in another thread), then output in an output thread
-    Wrapper->Decode(Data, Size, Item->Frame, Item);
+    Wrapper->Remaining = Item->HasFrameData ? ReversibilityData->RemainingCount() : (size_t)-1;
+    Wrapper->Decode(Data, Size, Holder, Item->Frame, Item);
     if (Pool)
         return false;
 
@@ -286,6 +292,7 @@ void track_info::Output_Run()
 {
     auto P = Output_Pending;
     frame_writer* Writer = nullptr; // For frames in their own file
+    trace::ThreadName("Output");
     size_t Writer_Generation = 0;
 
     std::unique_lock<std::mutex> Lock(P->Mutex);
@@ -332,6 +339,7 @@ void track_info::Output_Run()
             P->Frames_Free.push_back(Item->Frame);
         delete Item;
         P->Count--;
+        trace::Counter("Frames in flight", (int64_t)P->Count);
         P->Condition.notify_all();
         if (Frame_ToDelete)
         {
@@ -347,6 +355,7 @@ void track_info::Output_Run()
 //---------------------------------------------------------------------------
 void track_info::Output(output_item* Item, frame_writer* Writer)
 {
+    TRACE_SCOPE("Output", Item->Frame->Index);
     raw_frame* Frame;
     if (Item->Ordered)
     {
@@ -398,6 +407,7 @@ void track_info::Parse_Flush(bool Force)
     auto P = Output_Pending;
     while (!P->Parse_Items.empty())
     {
+        TRACE_SCOPE("Parse decoded frame");
         const auto& Item = P->Parse_Items.front();
         if (Item.FileSize && Item.FileSize != (uint64_t)-1)
             ParseDecodedFrame(Item.BeforeData, Item.AfterData, Item.FileSize);
@@ -415,6 +425,12 @@ void track_info::Parse_Flush(bool Force)
         }
         P->Parse_Items.pop_front();
     }
+}
+
+//---------------------------------------------------------------------------
+size_t track_info::Padding()
+{
+    return Wrapper ? Wrapper->Padding() : 0;
 }
 
 //---------------------------------------------------------------------------
@@ -586,6 +602,7 @@ void track_info::Output_End()
 {
     if (Output_Pending)
     {
+        Wrapper->End();
         std::vector<raw_frame*> Frames;
         {
             std::lock_guard<std::mutex> Lock(Output_Pending->Mutex);

@@ -257,6 +257,7 @@ public:
     // Processing
     bool Process();
     raw_frame_process* FrameProcess = nullptr;
+    size_t Index = (size_t)-1; // Index of the frame in its track, for instrumentation
     void Finalize(size_t num_h_slices, size_t num_v_slices) { if (Finalize_Function) Finalize_Function(this, num_h_slices, num_v_slices); }
     void (*Finalize_Function)(raw_frame*, size_t, size_t) = nullptr;
 

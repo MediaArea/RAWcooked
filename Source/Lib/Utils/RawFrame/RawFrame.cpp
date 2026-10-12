@@ -17,7 +17,13 @@
 void raw_frame::Create(size_t width, size_t height, size_t info)
 {
     if (!Planes_.empty())
-        return; //TODO: manage when it changes
+    {
+        // Reuse if same frame size and enough room for line slices (frames may be reused by decoders using different slice counts), other configuration items do not change during a stream
+        const auto Plane0 = Planes_[0];
+        auto line_slice_count = ((info >> 24) & 0xFF) + 1;
+        if (Plane0 && Plane0->Width() == width && Plane0->Height() == height && (!Plane0->Line_SliceCount() || Plane0->Line_SliceCount() >= line_slice_count))
+            return;
+    }
 
     for (const auto& Plane : Planes_)
         delete Plane;

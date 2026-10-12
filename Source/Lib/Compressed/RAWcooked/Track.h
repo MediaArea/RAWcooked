@@ -20,6 +20,7 @@
 #include "Lib/Utils/FileIO/Input_Base.h"
 #include "Lib/Utils/FileIO/FileIO.h"
 class base_wrapper;
+class data_holder;
 class frame_writer;
 struct output_item;
 struct output_pending;
@@ -87,13 +88,14 @@ public:
     bool                        Init(const uint8_t* BaseData);
     input_base_uncompressed*    InitOutput_Find();
     input_base_uncompressed*    InitOutput(input_base_uncompressed* PotentialParser, raw_frame::flavor Flavor);
-    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        Process(const uint8_t* Data, size_t Size, data_holder* Holder);
     bool                        OutOfBand(const uint8_t* Data, size_t Size);
     void                        End(size_t i);
 
     void                        SetFormat(const char* NewFormat) { Format = Format_FromCodecID(NewFormat); }
     void                        SetWidth(uint32_t NewWidth) { Width = NewWidth; }
     void                        SetHeight(uint32_t NewHeight) { Height = NewHeight; }
+    size_t                      Padding(); // Count of bytes the decoder reads after the frame data
 
     // Frame threading: wait for the end of the output of the last frame
     void                        Output_Wait();
@@ -115,7 +117,7 @@ private:
 
     // Frame threading: decoding of frames during the output of previous frames (if the wrapper can split), outputs in parallel if frames are in different files
     output_pending*             Output_Pending = nullptr;
-    bool                        Process_Split(const uint8_t* Data, size_t Size);
+    bool                        Process_Split(const uint8_t* Data, size_t Size, data_holder* Holder);
     void                        Output_Run();
     void                        Output(output_item* Item, frame_writer* Writer);
     void                        Parse_Flush(bool Force);

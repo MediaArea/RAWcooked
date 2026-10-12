@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Utils/MD5/MD5_Lanes.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -421,6 +422,7 @@ public:
 
     void Compute(md5_job* Job)
     {
+        TRACE_SCOPE("MD5 lanes wait");
         {
             std::unique_lock<std::mutex> Lock(Mutex);
             Pending.push_back(Job);
@@ -428,7 +430,10 @@ public:
             Condition.wait(Lock, [&] { return Job->Done; });
         }
         if (Job->Scalar)
+        {
+            TRACE_SCOPE("MD5 scalar");
             Job->Finish(); // In the thread of the caller, in parallel with other callers
+        }
     }
 
     void Flush(bool Begin)
@@ -463,6 +468,7 @@ void md5_lanes::Run()
         auto Function = SimdLevel() >= 2 ? MD5_Lanes_AVX512VL : MD5_Lanes_AVX2;
     #endif
     std::vector<md5_job*> Active;
+    trace::ThreadName("MD5 lanes");
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
     {
@@ -470,6 +476,7 @@ void md5_lanes::Run()
         Condition.wait(Lock, [&] { return !Pending.empty() || !Active.empty() || Stop; });
         if (Active.empty() && !Pending.empty())
         {
+            TRACE_SCOPE("MD5 batch wait");
             auto Deadline = std::chrono::steady_clock::now() + Batch_Wait_Max;
             Condition.wait_until(Lock, Deadline, [&]
             {
@@ -534,6 +541,8 @@ void md5_lanes::Run()
                 State[3][l] = Job->Ctx->d;
                 Data[l] = Job->Parts[Job->Part].Data + Job->Offset;
             }
+            TRACE_SCOPE("MD5 lanes");
+            trace::Counter("MD5 lanes active", (int64_t)Active.size());
             Function(State, Data, Blocks);
             for (size_t l = 0; l < Active.size(); l++)
             {
@@ -599,5 +608,6 @@ void MD5_Update_Lanes(MD5_CTX* Ctx, const md5_part* Parts, size_t Count, bool Ba
     #endif
 
     // Without SIMD lanes, computed in the thread of the caller
+    TRACE_SCOPE("MD5 scalar");
     MD5_Update_Parts(Ctx, Parts, Count, 0);
 }

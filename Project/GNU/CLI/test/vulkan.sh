@@ -86,21 +86,24 @@ while read line ; do
                 continue
             fi
 
-            # check decoding
-            run_rawcooked -y --conch --decode "${file}.mkv"
-            if ! check_success "mkv decoding failed" "mkv decoded" ; then
-                rm -f "${file}.mkv"
-                continue
-            fi
+            # check decoding, by our decoder then by the decoder automatically selected with the Vulkan encoder
+            for decoder in internal auto ; do
+                test="$(basename "${path}") (${variant}, ${decoder})"
+                rm -fr "${file}.mkv.RAWcooked" # Not the files of the previous decoding
+                run_rawcooked -y --conch --decoder ${decoder} -c:v ffv1_vulkan --decode "${file}.mkv"
+                if ! check_success "mkv decoding failed" "mkv decoded" ; then
+                    continue
+                fi
 
-            decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
-            if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
-                echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
-                status=1
-                rm -fr "${file}.mkv" "${file}.mkv.RAWcooked"
-                continue
-            fi
-            check_files "${file}" "${file}.mkv.RAWcooked/${file}"
+                decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+                if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
+                    echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
+                    status=1
+                    continue
+                fi
+                check_files "${file}" "${file}.mkv.RAWcooked/${file}"
+            done
+            rm -fr "${file}.mkv" "${file}.mkv.RAWcooked"
         done
         clean
     popd >/dev/null 2>&1

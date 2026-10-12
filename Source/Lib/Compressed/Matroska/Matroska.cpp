@@ -5,17 +5,22 @@
  */
 
 //---------------------------------------------------------------------------
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <thread>
+#include <vector>
 extern "C"
 {
 #include "md5.h"
 }
 #include "zlib.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
+#include "Lib/CoDec/Wrapper.h"
+#include "Lib/Utils/Trace/Trace.h"
 #include "Lib/Utils/FileIO/FileWriter.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
@@ -413,12 +418,16 @@ void matroska::ParseBuffer()
         {
             auto Hash_Size = Buffer_Offset - OutputHash->Offset;
             if (NeedRemap || Hash_Size >= 0x100000)
+            {
+                TRACE_SCOPE("Hash file");
                 OutputHash->Update(Hash_Size);
+            }
         }
 
         // Check if we can indicate the system that we'll not need anymore memory below this value, without indicating it too much
         if (NeedRemap)
         {
+            TRACE_SCOPE("Remap");
             FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
             if (OpenStyle == filemap::method::mmap)
@@ -970,6 +979,119 @@ void matroska::Segment_Cluster_SimpleBlock()
 }
 
 //---------------------------------------------------------------------------
+// Buffers for copies of frame data, reused (no new memory pages and no new imports in GPU memory space for each frame)
+class block_pool
+{
+public:
+    ~block_pool()
+    {
+        for (const auto& Item : Free)
+            delete[] Item.Data;
+    }
+
+    uint8_t* Get(size_t Size, size_t& Capacity)
+    {
+        {
+            std::lock_guard<std::mutex> Lock(Mutex);
+            while (!Free.empty())
+            {
+                auto Item = Free.back();
+                Free.pop_back();
+                if (Item.Capacity >= Size)
+                {
+                    Capacity = Item.Capacity;
+                    return Item.Data;
+                }
+                delete[] Item.Data; // Smaller than next frames
+            }
+        }
+        Capacity = Size * 5 / 4; // Some room for bigger next frames
+        return new uint8_t[Capacity];
+    }
+
+    void Put(uint8_t* Data, size_t Capacity)
+    {
+        std::lock_guard<std::mutex> Lock(Mutex);
+        Free.push_back({ Data, Capacity });
+    }
+
+private:
+    struct item
+    {
+        uint8_t*                Data;
+        size_t                  Capacity;
+    };
+    std::mutex                  Mutex;
+    std::vector<item>           Free;
+};
+
+//---------------------------------------------------------------------------
+// Data of a block given to a decoder: in the file map (kept as long as the decoder needs it), or a copy if the padding requested by the decoder
+// is not readable after the block (end of the file), if the file map can not be kept (methods other than memory map) or if the decoder needs allocated memory
+class block_data : public data_holder
+{
+public:
+    block_data(filemap* FileMap_, const shared_ptr<block_pool>& Pool_, const uint8_t* Data_, size_t Size_, size_t Padding_, bool IsPadded) :
+        Data(Data_),
+        FileMap(FileMap_),
+        Pool(Pool_),
+        Size(Size_),
+        Padding(Padding_)
+    {
+        if (!IsPadded)
+            Copy();
+    }
+
+    const uint8_t* Hold(bool Allocated)
+    {
+        if (!Buffer)
+        {
+            if (!Allocated && !Map && FileMap)
+                Map = FileMap->Hold(); // Memory map kept until the release
+            if (Allocated || !Map)
+                Copy();
+        }
+        Count++;
+        return Data;
+    }
+
+    void Release()
+    {
+        if (!--Count)
+            delete this;
+    }
+
+    const uint8_t*              Data;
+
+private:
+    ~block_data()
+    {
+        if (Map)
+            filemap::Release(Map);
+        if (Buffer)
+            Pool->Put(Buffer, Buffer_Capacity);
+    }
+
+    void Copy()
+    {
+        TRACE_SCOPE("Copy block");
+        Buffer = Pool->Get(Size + Padding, Buffer_Capacity);
+        memcpy(Buffer, Data, Size);
+        memset(Buffer + Size, 0, Padding);
+        Data = Buffer;
+    }
+
+    filemap*                    FileMap;
+    shared_ptr<block_pool>      Pool; // Kept until the release of the buffer
+    size_t                      Size;
+    size_t                      Padding;
+    void*                       Map = nullptr;
+    uint8_t*                    Buffer = nullptr;
+    size_t                      Buffer_Capacity = 0;
+    std::atomic<size_t>         Count{ 1 }; // Parser and holders
+};
+
+//---------------------------------------------------------------------------
 void matroska::ProcessBlock()
 {
     if (Levels[Level].Offset_End - Buffer_Offset > 4)
@@ -991,7 +1113,14 @@ void matroska::ProcessBlock()
         if (Output_Track && Output_Track != TrackInfo_Current && (Output_Track->Output_IsShared() || TrackInfo_Current->Output_IsShared()))
             Output_Wait(); // Outputs of different tracks may share data (e.g. compound file)
         Output_Track = TrackInfo_Current;
-        TrackInfo_Current->Process(CurrentBufferData, CurrentBufferSize);
+        auto Padding = TrackInfo_Current->Padding();
+        auto Readable_End = FileMap ? FileMap->Readable_End() : Buffer.Size();
+        if (!Block_Pool)
+            Block_Pool = make_shared<block_pool>();
+        TRACE_SCOPE("Block");
+        auto Data = new block_data(FileMap, Block_Pool, CurrentBufferData, CurrentBufferSize, Padding, Levels[Level].Offset_End + Padding <= Readable_End);
+        TrackInfo_Current->Process(Data->Data, CurrentBufferSize, Data);
+        Data->Release();
     }
 }
 
@@ -1105,6 +1234,7 @@ static void ShowRealTime(float RealTime)
 //---------------------------------------------------------------------------
 void matroska::ProgressIndicator_Show()
 {
+    trace::ThreadName("Progress");
     // Configure progress indicator precision
     size_t ProgressIndicator_Value = (size_t)-1;
     size_t ProgressIndicator_Frequency = 100;

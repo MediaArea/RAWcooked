@@ -8,6 +8,7 @@
 #ifndef _GNU_SOURCE
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
+#include <atomic>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -256,6 +257,49 @@ inline int munmap_const(const void* addr, size_t length)
 #pragma GCC diagnostic pop
 #endif
 #endif
+
+//---------------------------------------------------------------------------
+// Memory map, unmapped when the file map and the users who held it released it
+struct filemap_map
+{
+    const uint8_t*              Data;
+    size_t                      Size;
+    std::atomic<size_t>         Count; // File map and holders
+};
+
+//---------------------------------------------------------------------------
+void* filemap::Hold()
+{
+    if (!Map)
+        return nullptr;
+    ((filemap_map*)Map)->Count++;
+    return Map;
+}
+
+//---------------------------------------------------------------------------
+void filemap::Release(void* Map_)
+{
+    auto Map = (filemap_map*)Map_;
+    if (--Map->Count)
+        return;
+#if defined(_WIN32) || defined(_WINDOWS)
+    UnmapViewOfFile(Map->Data);
+#else
+    munmap_const(Map->Data, Map->Size);
+#endif
+    delete Map;
+}
+
+//---------------------------------------------------------------------------
+size_t filemap::Readable_End()
+{
+    if (Method != method::mmap)
+    {
+        auto P = (private_buffered*)Private2;
+        return P->Data_Shift + P->MaxSize;
+    }
+    return Size();
+}
 int filemap::Remap(size_t Begin, size_t End)
 {
     // Special case for 0-byte files
@@ -321,14 +365,11 @@ int filemap::Remap(size_t Begin, size_t End)
         return 0;
     }
 
-    // Close previous map
+    // Close previous map, kept by its users if any
     if (Data())
     {
-#if defined(_WIN32) || defined(_WINDOWS)
-        UnmapViewOfFile(Data());
-#else
-        munmap_const(Data(), Size());
-#endif
+        Release(Map);
+        Map = nullptr;
         ClearKeepSizeBase(); // Intermediate, size is needed later
     }
 
@@ -351,14 +392,21 @@ int filemap::Remap(size_t Begin, size_t End)
         return 1;
     }
     AssignKeepSizeBase((const uint8_t*)NewData);
+    Map = new filemap_map{ (const uint8_t*)NewData, Size(), { 1 } };
     return 0;
 }
 
 //---------------------------------------------------------------------------
 int filemap::Close()
 {
-    // Close map
-    if (Data())
+    // Close map, kept by its users if any
+    if (Map)
+    {
+        Release(Map);
+        Map = nullptr;
+        ClearBase();
+    }
+    else if (Data())
     {
 #if defined(_WIN32) || defined(_WINDOWS)
             UnmapViewOfFile(Data());

@@ -54,6 +54,7 @@ public:
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
+    bool                        Decoder_IsProvided;
     bool                        Quiet;
     bitset<Action_Max>          Actions;
 
@@ -105,6 +106,7 @@ public:
     int SetCoherency(bool Value);
     int SetConch(bool Value);
     int SetDecode(bool Value);
+    int SetDecoder(const char* Value);
     int SetEdit(const char* Value);
     int SetEncode(bool Value);
     int SetInfo(bool Value);

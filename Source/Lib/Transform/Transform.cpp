@@ -50,6 +50,7 @@ public:
 #else
 #define TARGET_AVX2 __attribute__((target("avx2")))
 #endif
+#define TRANSFORM_SIMD
 
 //---------------------------------------------------------------------------
 // 0: none, 1: AVX2
@@ -118,15 +119,27 @@ struct interleave_16_rgb_avx2
             for (size_t c = 0; c < 3; c++) \
                 M[o][c] = _mm256_load_si256((const __m256i*)Interleave.Masks[o][c]); \
     }
+// Stream: non-temporal stores, Dest must be 32-byte aligned
+template<bool Stream = false>
 TARGET_AVX2 static inline void Interleave_16_RGB_AVX2(uint8_t* Dest, const __m256i* S, const __m256i M[3][3])
 {
     __m256i O[3];
     for (size_t o = 0; o < 3; o++)
         O[o] = _mm256_or_si256(_mm256_or_si256(_mm256_shuffle_epi8(S[0], M[o][0]), _mm256_shuffle_epi8(S[1], M[o][1])), _mm256_shuffle_epi8(S[2], M[o][2]));
     auto D = (__m256i*)Dest;
-    _mm256_storeu_si256(D    , _mm256_permute2x128_si256(O[0], O[1], 0x20)); // Pixels 0-7: O0, O1, O2 of 1st lane
-    _mm256_storeu_si256(D + 1, _mm256_permute2x128_si256(O[2], O[0], 0x30)); // Then pixels 8-15: O0, O1, O2 of 2nd lane
-    _mm256_storeu_si256(D + 2, _mm256_permute2x128_si256(O[1], O[2], 0x31));
+    __m256i V[3] =
+    {
+        _mm256_permute2x128_si256(O[0], O[1], 0x20), // Pixels 0-7: O0, O1, O2 of 1st lane
+        _mm256_permute2x128_si256(O[2], O[0], 0x30), // Then pixels 8-15: O0, O1, O2 of 2nd lane
+        _mm256_permute2x128_si256(O[1], O[2], 0x31),
+    };
+    for (size_t i = 0; i < 3; i++)
+    {
+        if (Stream)
+            _mm256_stream_si256(D + i, V[i]);
+        else
+            _mm256_storeu_si256(D + i, V[i]);
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -1473,4 +1486,224 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
     default:
         return new transform_null;
     }
+}
+
+//***************************************************************************
+// Direct (planar R, G, B, A lines to interleaved line, no JPEG2000-RCT)
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+// 16-bit containers, Components interleaved, samples of Bits bits shifted to the MSB if Shift
+template<size_t Components, size_t Bits, size_t Shift, bool BE>
+static void Direct_16(uint8_t* Dest, const uint8_t* const* Src, size_t w, size_t x_Begin)
+{
+    const uint16_t Mask = (uint16_t)((1 << Bits) - 1);
+    auto D = (uint16_t*)Dest + x_Begin * Components;
+    for (size_t x = x_Begin; x < w; x++)
+        for (size_t c = 0; c < Components; c++)
+        {
+            auto Value = (uint16_t)((((const uint16_t*)Src[c])[x] & Mask) << Shift);
+            *(D++) = BE ? htob(Value) : htol(Value);
+        }
+}
+
+//---------------------------------------------------------------------------
+// 8-bit containers, Components interleaved
+template<size_t Components>
+static void Direct_8(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    for (size_t x = 0; x < w; x++)
+        for (size_t c = 0; c < Components; c++)
+            *(Dest++) = Src[c][x];
+}
+
+//---------------------------------------------------------------------------
+// 10-bit RGB in 32-bit containers, method A (2 padding bits at LSB)
+template<bool BE>
+static void Direct_10_FilledA(uint8_t* Dest, const uint8_t* const* Src, size_t w, size_t x_Begin)
+{
+    auto R = (const uint16_t*)Src[0];
+    auto G = (const uint16_t*)Src[1];
+    auto B = (const uint16_t*)Src[2];
+    auto D = (uint32_t*)Dest;
+    for (size_t x = x_Begin; x < w; x++)
+    {
+        auto Value = ((uint32_t)(R[x] & 0x3FF) << 22) | ((uint32_t)(G[x] & 0x3FF) << 12) | ((uint32_t)(B[x] & 0x3FF) << 2);
+        D[x] = BE ? htob(Value) : htol(Value);
+    }
+}
+
+#ifdef TRANSFORM_SIMD
+//---------------------------------------------------------------------------
+// Count of pixels before a 32-byte aligned destination for non-temporal stores, w if not possible
+static size_t Stream_Head(const uint8_t* Dest, size_t w, size_t PixelSize)
+{
+    auto Step = PixelSize & (0 - PixelSize); // Alignment of the pixels (lowest set bit of the pixel size)
+    if ((uintptr_t)Dest & (Step - 1))
+        return w;
+    size_t x = 0;
+    while (x < w && ((uintptr_t)(Dest + x * PixelSize) & 31))
+        x++;
+    return x;
+}
+
+//---------------------------------------------------------------------------
+// RGB 16-bit containers, 16 pixels per iteration from x, returns the count of pixels done
+template<size_t Bits, size_t Shift, bool BE, bool Stream>
+TARGET_AVX2 static size_t Direct_16_RGB_AVX2_Run(uint8_t* Dest, const uint8_t* const* Src, size_t w, size_t x)
+{
+    INTERLEAVE_16_RGB_AVX2_INIT(BE);
+    const auto Mask = _mm256_set1_epi16((short)((1 << Bits) - 1));
+
+    for (; x + 16 <= w; x += 16)
+    {
+        __m256i S[3];
+        for (size_t c = 0; c < 3; c++)
+        {
+            S[c] = _mm256_loadu_si256((const __m256i*)(((const uint16_t*)Src[c]) + x));
+            if (Bits < 16)
+                S[c] = _mm256_and_si256(S[c], Mask);
+            if (Shift)
+                S[c] = _mm256_slli_epi16(S[c], Shift);
+        }
+        Interleave_16_RGB_AVX2<Stream>(Dest + x * 6, S, M);
+    }
+    return x;
+}
+
+//---------------------------------------------------------------------------
+// Stream: non-temporal stores (the destination is not read in the cache before being written), for frames bigger than the cache
+template<size_t Bits, size_t Shift, bool BE, bool Stream>
+TARGET_AVX2 static void Direct_16_RGB_AVX2(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    size_t x = 0;
+    if (Stream && (x = Stream_Head(Dest, w, 6)) < w)
+    {
+        Direct_16<3, Bits, Shift, BE>(Dest, Src, x, 0);
+        x = Direct_16_RGB_AVX2_Run<Bits, Shift, BE, true>(Dest, Src, w, x);
+        _mm_sfence(); // Before the signaling of the end of the transform to other threads
+    }
+    else
+        x = Direct_16_RGB_AVX2_Run<Bits, Shift, BE, false>(Dest, Src, w, 0);
+    Direct_16<3, Bits, Shift, BE>(Dest, Src, w, x);
+}
+
+//---------------------------------------------------------------------------
+template<bool BE, bool Stream>
+TARGET_AVX2 static size_t Direct_10_FilledA_AVX2_Run(uint8_t* Dest, const uint8_t* const* Src, size_t w, size_t x)
+{
+    const auto Swap = _mm256_set_epi8(
+        12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3,
+        12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
+    const auto Mask = _mm256_set1_epi32(0x3FF);
+    for (; x + 8 <= w; x += 8)
+    {
+        auto R = _mm256_and_si256(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i*)(((const uint16_t*)Src[0]) + x))), Mask);
+        auto G = _mm256_and_si256(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i*)(((const uint16_t*)Src[1]) + x))), Mask);
+        auto B = _mm256_and_si256(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i*)(((const uint16_t*)Src[2]) + x))), Mask);
+        auto O = _mm256_or_si256(_mm256_or_si256(_mm256_slli_epi32(R, 22), _mm256_slli_epi32(G, 12)), _mm256_slli_epi32(B, 2));
+        if (BE)
+            O = _mm256_shuffle_epi8(O, Swap);
+        if (Stream)
+            _mm256_stream_si256((__m256i*)(Dest + x * 4), O);
+        else
+            _mm256_storeu_si256((__m256i*)(Dest + x * 4), O);
+    }
+    return x;
+}
+
+//---------------------------------------------------------------------------
+template<bool BE, bool Stream>
+TARGET_AVX2 static void Direct_10_FilledA_AVX2(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    size_t x = 0;
+    if (Stream && (x = Stream_Head(Dest, w, 4)) < w)
+    {
+        Direct_10_FilledA<BE>(Dest, Src, x, 0);
+        x = Direct_10_FilledA_AVX2_Run<BE, true>(Dest, Src, w, x);
+        _mm_sfence(); // Before the signaling of the end of the transform to other threads
+    }
+    else
+        x = Direct_10_FilledA_AVX2_Run<BE, false>(Dest, Src, w, 0);
+    Direct_10_FilledA<BE>(Dest, Src, w, x);
+}
+
+#endif //TRANSFORM_SIMD
+
+//---------------------------------------------------------------------------
+template<size_t Components, size_t Bits, size_t Shift, bool BE>
+static void Direct_16_Line(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    Direct_16<Components, Bits, Shift, BE>(Dest, Src, w, 0);
+}
+template<bool BE>
+static void Direct_10_FilledA_Line(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    Direct_10_FilledA<BE>(Dest, Src, w, 0);
+}
+
+//---------------------------------------------------------------------------
+template<size_t Bits, size_t Shift, bool BE>
+static transform_direct Direct_16_RGB(bool Stream)
+{
+    #ifdef TRANSFORM_SIMD
+        if (Transform_SimdLevel())
+            return Stream ? Direct_16_RGB_AVX2<Bits, Shift, BE, true> : Direct_16_RGB_AVX2<Bits, Shift, BE, false>;
+    #else
+        (void)Stream;
+    #endif
+    return Direct_16_Line<3, Bits, Shift, BE>;
+}
+
+//---------------------------------------------------------------------------
+template<bool BE>
+static transform_direct Direct_10_FilledA_RGB(bool Stream)
+{
+    #ifdef TRANSFORM_SIMD
+        if (Transform_SimdLevel())
+            return Stream ? Direct_10_FilledA_AVX2<BE, true> : Direct_10_FilledA_AVX2<BE, false>;
+    #else
+        (void)Stream;
+    #endif
+    return Direct_10_FilledA_Line<BE>;
+}
+
+//---------------------------------------------------------------------------
+transform_direct Transform_Direct_Init(const raw_frame* RawFrame, size_t Bits, bool HasAlpha)
+{
+    // Non-temporal stores if the frame is bigger than the cache (the frame would be read again from memory anyway), so the destination is not read before being written
+    auto Stream = RawFrame->Plane(0)->Buffer().Size() >= 32 * 1024 * 1024;
+    #define DIRECT_CASE(_FLAVOR, _BITS, _ALPHA, _FUNCTION) case _FLAVOR: if (Bits != _BITS || HasAlpha != _ALPHA) return nullptr; return _FUNCTION;
+    switch (RawFrame->Flavor)
+    {
+    case raw_frame::flavor::DPX:
+        switch ((dpx::flavor)(uint8_t)RawFrame->Flavor_Private)
+        {
+        DIRECT_CASE(dpx::flavor::Raw_RGB_8,                8, false, Direct_8<3>);
+        DIRECT_CASE(dpx::flavor::Raw_RGB_10_FilledA_LE,   10, false, Direct_10_FilledA_RGB<false>(Stream));
+        DIRECT_CASE(dpx::flavor::Raw_RGB_10_FilledA_BE,   10, false, Direct_10_FilledA_RGB<true>(Stream));
+        DIRECT_CASE(dpx::flavor::Raw_RGB_12_FilledA_LE,   12, false, (Direct_16_RGB<12, 4, false>(Stream)));
+        DIRECT_CASE(dpx::flavor::Raw_RGB_12_FilledA_BE,   12, false, (Direct_16_RGB<12, 4, true>(Stream)));
+        DIRECT_CASE(dpx::flavor::Raw_RGB_16_LE,           16, false, (Direct_16_RGB<16, 0, false>(Stream)));
+        DIRECT_CASE(dpx::flavor::Raw_RGB_16_BE,           16, false, (Direct_16_RGB<16, 0, true>(Stream)));
+        DIRECT_CASE(dpx::flavor::Raw_RGBA_8,               8, true , Direct_8<4>);
+        DIRECT_CASE(dpx::flavor::Raw_RGBA_12_FilledA_LE,  12, true , (Direct_16_Line<4, 12, 4, false>));
+        DIRECT_CASE(dpx::flavor::Raw_RGBA_12_FilledA_BE,  12, true , (Direct_16_Line<4, 12, 4, true>));
+        DIRECT_CASE(dpx::flavor::Raw_RGBA_16_LE,          16, true , (Direct_16_Line<4, 16, 0, false>));
+        DIRECT_CASE(dpx::flavor::Raw_RGBA_16_BE,          16, true , (Direct_16_Line<4, 16, 0, true>));
+        default: return nullptr;
+        }
+    case raw_frame::flavor::TIFF:
+        switch ((tiff::flavor)(uint8_t)RawFrame->Flavor_Private)
+        {
+        DIRECT_CASE(tiff::flavor::Raw_RGB_8_U,             8, false, Direct_8<3>);
+        DIRECT_CASE(tiff::flavor::Raw_RGB_16_U_LE,        16, false, (Direct_16_RGB<16, 0, false>(Stream)));
+        DIRECT_CASE(tiff::flavor::Raw_RGB_16_U_BE,        16, false, (Direct_16_RGB<16, 0, true>(Stream)));
+        DIRECT_CASE(tiff::flavor::Raw_RGBA_8_U,            8, true , Direct_8<4>);
+        DIRECT_CASE(tiff::flavor::Raw_RGBA_16_U_LE,       16, true , (Direct_16_Line<4, 16, 0, false>));
+        default: return nullptr;
+        }
+    default: return nullptr;
+    }
+    #undef DIRECT_CASE
 }

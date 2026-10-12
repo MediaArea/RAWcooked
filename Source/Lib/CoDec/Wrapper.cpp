@@ -118,7 +118,7 @@ bool ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
 }
 
 //---------------------------------------------------------------------------
-// Our decoder in 2 steps: decoding to a frame given by the caller (synchronous), then output by the caller (maybe in another thread)
+// Our decoder in 2 steps: decoding to a frame given by the caller (the end of the decoding is during the decoding of the next frame), then output by the caller (maybe in another thread)
 class ffv1_split_wrapper : public ffv1_wrapper
 {
 public:
@@ -126,16 +126,26 @@ public:
 
     // Actions
     bool                        CanSplit() { return true; }
-    void                        Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque);
-    size_t                      Depth() { return 4; } // Outputs of up to 3 frames in parallel during the decoding of next frame
+    void                        Decode(const uint8_t* Data, size_t Size, data_holder* Holder, raw_frame* Frame, void* Opaque);
+    size_t                      Depth() { return 5; } // Outputs of up to 3 frames in parallel during the decoding of next frames
 };
 
 //---------------------------------------------------------------------------
-void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, raw_frame* Frame, void* Opaque)
+void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, data_holder* Holder, raw_frame* Frame, void* Opaque)
 {
+    // Frame data kept until the end of the decoding
+    if (Holder)
+        Data = Holder->Hold();
     Ffv1Frame->RawFrame = Frame;
-    auto Error = Ffv1Frame->Process(Data, Size);
-    FrameReady->Ready(Opaque, Error);
+    auto Ready = FrameReady;
+    Ffv1Frame->Process(Data, Size, [Ready, Holder, Opaque](bool Error)
+    {
+        if (Holder)
+            Holder->Release();
+        Ready->Ready(Opaque, Error);
+    });
+    if (!Holder)
+        Ffv1Frame->Wait(); // Frame data is valid only during the call
 }
 
 //---------------------------------------------------------------------------
@@ -146,8 +156,8 @@ public:
     ~flac_wrapper();
 
     // Actions
-    bool                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size); }
-    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        OutOfBand(const uint8_t* Data, size_t Size) { return Process(Data, Size, nullptr); }
+    bool                        Process(const uint8_t* Data, size_t Size, data_holder* Holder);
 
     // libFLAC related helping functions
     void                        FLAC_Read(uint8_t buffer[], size_t* bytes);
@@ -212,7 +222,7 @@ flac_wrapper::~flac_wrapper()
     FLAC__stream_decoder_delete(Decoder_);
 }
 
-bool flac_wrapper::Process(const uint8_t* Data, size_t Size)
+bool flac_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holder*/)
 {
     Data_ = Data;
     Size_ = Size;
@@ -390,11 +400,11 @@ class pcm_wrapper : public audio_wrapper
 {
 public:
     // Actions
-    bool                        Process(const uint8_t* Data, size_t Size);
+    bool                        Process(const uint8_t* Data, size_t Size, data_holder* Holder);
 };
 
 //---------------------------------------------------------------------------
-bool pcm_wrapper::Process(const uint8_t* Data, size_t Size)
+bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holder*/)
 {
     RawFrame->AssignBufferView(Data, Size);
     return RawFrame->Process();

@@ -62,6 +62,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Utils/FileIO/FileWriter.cpp \
     ../../../Source/Lib/Utils/FileIO/Input_Base.cpp \
     ../../../Source/Lib/Utils/MD5/MD5_Lanes.cpp \
+    ../../../Source/Lib/Utils/Trace/Trace.cpp \
     ../../../Source/Lib/Utils/RawFrame/RawFrame.cpp
 
 AM_CPPFLAGS = -I../../../Source \

@@ -198,6 +198,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.h">
       <Filter>Header Files\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Utils\Trace\Trace.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\DPX\DPX.h">
       <Filter>Header Files\Uncompressed\DPX</Filter>
     </ClInclude>
@@ -429,6 +432,9 @@
       <Filter>Source Files\Utils\RawFrame</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Utils\Trace\Trace.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.cpp">

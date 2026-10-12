@@ -128,6 +128,16 @@ if test "x$with_macosx_version_min" != xno ; then
 	LDFLAGS="-mmacosx-version-min=$with_macosx_version_min $LDFLAGS"
 fi
 
+dnl -------------------------------------------------------------------------
+dnl Intel JCC erratum (Skylake and derived CPUs): jumps are aligned so they do not cross or end on 32-byte boundaries,
+dnl else the decoding is slower (measured on i7-7800X: 7%), if the assembler supports it (x86)
+dnl
+SAVE_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -Wa,-mbranches-within-32B-boundaries"
+AC_LANG_PUSH([C++])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], [CFLAGS="$CFLAGS -Wa,-mbranches-within-32B-boundaries"], [CXXFLAGS="$SAVE_CXXFLAGS"])
+AC_LANG_POP([C++])
+
 dnl #########################################################################
 dnl ### libFLAC
 dnl #########################################################################

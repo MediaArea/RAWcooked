@@ -302,6 +302,19 @@ int global::SetFileOpenMethod(const char* Value)
 }
 
 //---------------------------------------------------------------------------
+int global::SetDecoder(const char* Value)
+{
+    if (strcmp(Value, "internal") == 0 || strcmp(Value, "auto") == 0)
+    {
+        Actions.set(Action_AutoDecoder, strcmp(Value, "auto") == 0); // Resolved when a decoder is needed
+        Decoder_IsProvided = true;
+        return 0;
+    }
+    cerr << "Error: unknown decoder value '" << Value << "'." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int global::SetLogFileName(const char* FileName)
 {
     LogFileName = FileName;
@@ -379,6 +392,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         if (!strcmp(argv[i], "ffv1"))
         {
             OutputOptions["c:v"] = argv[i];
+            Actions.set(Action_VulkanEncoder, false);
             License.Encoder(encoder::FFV1);
             return 0;
         }
@@ -390,6 +404,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
             else
                 OutputOptions["init_hw_device"] = "\"vulkan=vk:0\"";
             OutputOptions["vf"] = "hwupload";
+            Actions.set(Action_VulkanEncoder, true);
             License.Encoder(encoder::FFV1);
             License.Feature(feature::HwAccel);
             return 0;
@@ -521,6 +536,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     DisplayCommand = false;
     AcceptFiles = false;
     OutputFileName_IsProvided = false;
+    Decoder_IsProvided = false;
     Quiet = false;
     Actions.set(Action_Encode);
     Actions.set(Action_Decode);
@@ -619,6 +635,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--decode") == 0)
         {
             int Value = SetDecode(true);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--decoder") == 0)
+        {
+            if (i + 1 == argc)
+                return Error_Missing(argv[i]);
+            int Value = SetDecoder(argv[++i]);
             if (Value)
                 return Value;
         }
@@ -960,6 +984,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     if (BinName.empty())
         BinName = "ffmpeg";
+
+    // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided
+    if (Actions[Action_VulkanEncoder] && !Decoder_IsProvided)
+        Actions.set(Action_AutoDecoder);
 
     if (!Edits.empty() && Actions[Action_Encode]) {
         cerr << "Error: Edit while encoding is not supported." << endl;

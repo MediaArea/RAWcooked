@@ -43,6 +43,8 @@ enum action : uint8_t
     Action_FrameMd5An,
     Action_ComputeOutputHash,
     Action_QuickCheckAfterEncode, // Internal, indicating the 2nd pass
+    Action_AutoDecoder, // Use the best available decoder, resolved when a decoder is needed (our decoder for the moment)
+    Action_VulkanEncoder, // FFmpeg Vulkan encoder is used, so Vulkan is wanted: Action_AutoDecoder by default
     Action_Max
 };
 
