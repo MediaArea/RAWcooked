@@ -15,12 +15,31 @@ modify_value() {
     printf "%02x" "$((0x${1}^255))"
 }
 
-swap_byte() {
+# invert the bits of ${2} bytes at the position ${1} of the file ${3}, with one read and one write (process creation is slow on Windows)
+swap_bytes() {
     local pos="${1}"
-    local file="${2}"
-    local buffer="$(xxd -u -p -l 1 -s ${pos} ${file})" || return 1
-    buffer="$(printf %02x $((0x${buffer}^255)))" || return 1
-    echo ${buffer} | xxd -r -p -l 1 -s ${pos} - ${file} || return 1
+    local count="${2}"
+    local file="${3}"
+    local buffer swapped= byte i
+    buffer="$(xxd -u -p -c ${count} -l ${count} -s ${pos} ${file})" || return 1
+    for ((i = 0; i < ${#buffer}; i += 2)) ; do
+        printf -v byte %02x $((0x${buffer:i:2}^255))
+        swapped="${swapped}${byte}"
+    done
+    xxd -r -p -l ${count} -s ${pos} - ${file} <<< "${swapped}" || return 1
+}
+
+# count and last of the files expanded by the shell from a pattern, as $(ls -d pattern | wc -l) and $(ls -d pattern | tail -n1)
+list_files() {
+    local f
+    listed_count=0
+    listed_last=
+    for f in "${@}" ; do
+        if [ -e "${f}" ] ; then
+            listed_count=$((listed_count + 1))
+            listed_last="${f}"
+        fi
+    done
 }
 
 # file_1: one ffv1
@@ -88,49 +107,61 @@ file_5() {
 # case_1 remove one file for each file type
 case_1() {
 
-    local dpx_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/1_??.dpx | wc -l)" || fatal "internal" "unable to list dpx files"
+    list_files ${file}.mkv.RAWcooked/${file}/1_??.dpx
+    local dpx_count="${listed_count}"
     if [ "${dpx_count}" -gt "1" ] ; then
-        local last_dpx="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/01_??.dpx | tail -n1)" || fatal "internal" "unable to list dpx files"
+        list_files ${file}.mkv.RAWcooked/${file}/01_??.dpx
+        local last_dpx="${listed_last}"
         rm -f ${last_dpx} || fatal "internal" " rm command failed"
     fi
 
-    local waves_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.wav | wc -l)" || fatal "internal" "unable to list waves files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.wav
+    local waves_count="${listed_count}"
     if [ "${waves_count}" -gt "1" ] ; then
-        local last_wav="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.wav | tail -n1)" || fatal "internal" "unable to list waves files"
+        list_files ${file}.mkv.RAWcooked/${file}/*.wav
+        local last_wav="${listed_last}"
         rm -f ${last_wav} || fatal "internal" " rm command failed"
     fi
 
-    local flac_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.flac | wc -l)" || fatal "internal" "unable to list flac files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.flac
+    local flac_count="${listed_count}"
     if [ "${flac_count}" -gt "1" ] ; then
-        local last_flac="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.flac | tail -n1)" || fatal "internal" "unable to list flac files"
+        list_files ${file}.mkv.RAWcooked/${file}/*.flac
+        local last_flac="${listed_last}"
         rm -f ${last_flac} || fatal "internal" " rm command failed"
     fi
 
-    local attachments_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.txt | wc -l)" || fatal "internal" "unable to list attachments files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.txt
+    local attachments_count="${listed_count}"
     if [ "${attachments_count}" -gt "1" ] ; then
-        local last_attachment="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.txt | tail -n1)" || fatal "internal" "unable to list attachments files"
+        list_files ${file}.mkv.RAWcooked/${file}/*.txt
+        local last_attachment="${listed_last}"
         rm -f ${last_attachment} || fatal "internal" "rm command failed"
     fi
 }
 
 # case_2 add one file for each file type
 case_2() {
-    local dpx_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/1_??.dpx | wc -l)" || fatal "internal" "unable to list dpx files"
+    list_files ${file}.mkv.RAWcooked/${file}/1_??.dpx
+    local dpx_count="${listed_count}"
     if [ "${dpx_count}" -gt "0" ] ; then
         ffmpeg -nostdin -f lavfi -i testsrc=rate=1:duration=1 ${file}.mkv.RAWcooked/${file}/1_$((dpx_count+1)).dpx >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
     fi
 
-    local waves_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.wav | wc -l)" || fatal "internal" "unable to list waves files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.wav
+    local waves_count="${listed_count}"
     if [ "${waves_count}" -gt "0" ] ; then
         ffmpeg -nostdin -f lavfi -i anoisesrc=duration=2 ${file}.mkv.RAWcooked/${file}/$((waves_count+1)).wav >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
     fi
 
-    local flac_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.flac | wc -l)" || fatal "internal" "unable to list flac files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.flac
+    local flac_count="${listed_count}"
     if [ "${flac_count}" -gt "0" ] ; then
         ffmpeg -nostdin  -f lavfi -i anoisesrc=duration=2 ${file}.mkv.RAWcooked/${file}/$((flac_count+1)).flac >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
     fi
 
-    local attachments_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.txt | wc -l)" || fatal "internal" "unable to list attachments files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.txt
+    local attachments_count="${listed_count}"
     if [ "${attachments_count}" -gt "0" ] ; then
         echo "attachment $((attachments_count+1))" > ${file}.mkv.RAWcooked/${file}/$((attachments_count+1)).txt || fatal "internal" "unable to create file"
     fi
@@ -141,32 +172,29 @@ case_3() {
     local buffer
     local size
 
-    if [ "$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/1_??.dpx | wc -l)" -ge "4" ] ; then
+    list_files ${file}.mkv.RAWcooked/${file}/1_??.dpx
+    if [ "${listed_count}" -ge "4" ] ; then
         # swap the first byte of the first file of the first dpx stream
-        swap_byte 0 "${file}.mkv.RAWcooked/${file}/1_01.dpx" || fatal "internal" " unable to modify file"
+        swap_bytes 0 1 "${file}.mkv.RAWcooked/${file}/1_01.dpx" || fatal "internal" " unable to modify file"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_01.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_01.dpx" || fatal "internal" "file not modified"
 
         # swap the last byte of the second file of the first dpx stream
         size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1_02.dpx)" || fatal "internal" "stat command failed"
-        swap_byte $((size-1)) "${file}.mkv.RAWcooked/${file}/1_02.dpx" || fatal "internal" " unable to modify file"
+        swap_bytes $((size-1)) 1 "${file}.mkv.RAWcooked/${file}/1_02.dpx" || fatal "internal" " unable to modify file"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_02.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_02.dpx" || fatal "internal" "file not modified"
 
         # swap 10 bytes in the middle of the third file of the first dpx stream
         size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1_03.dpx)" || fatal "internal" "stat command failed"
-        for pos in $(seq $((size/2-5)) $((size/2+4))) ; do
-            swap_byte ${pos} "${file}.mkv.RAWcooked/${file}/1_03.dpx" || fatal "internal" " unable to modify file"
-        done
+        swap_bytes $((size/2-5)) 10 "${file}.mkv.RAWcooked/${file}/1_03.dpx" || fatal "internal" " unable to modify file"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_03.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_03.dpx" || fatal "internal" "file not modified"
 
         # swap the first byte, 10 bytes in the middle and last the byte of the fourth file of the first dpx stream
-        swap_byte 0 "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
+        swap_bytes 0 1 "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
 
         size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1_04.dpx)" || fatal "internal" "stat command failed"
-        swap_byte $((size-1)) "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
+        swap_bytes $((size-1)) 1 "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
 
-        for pos in $(seq $((size/2-5)) $((size/2+4))) ; do
-            swap_byte ${pos} "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
-        done
+        swap_bytes $((size/2-5)) 10 "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" " unable to modify file"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_04.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_04.dpx" || fatal "internal" "file not modified"
     fi
 
@@ -174,28 +202,26 @@ case_3() {
         if [ -e "${file}.mkv.RAWcooked/${file}/1.${stream}" ] ; then
             # swap 10 bytes in the middle of the first wave stream
             size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1.${stream})" || fatal "internal" "stat command failed"
-            for pos in $(seq $((size/2-5)) $((size/2+4))) ; do
-                swap_byte ${pos} "${file}.mkv.RAWcooked/${file}/1.${stream}" || fatal "internal" " unable to modify file"
-            done
+            swap_bytes $((size/2-5)) 10 "${file}.mkv.RAWcooked/${file}/1.${stream}" || fatal "internal" " unable to modify file"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/1.${stream}" "${file}.mkv.RAWcooked.orig/${file}/1.${stream}" || fatal "internal" "file not modified"
         fi
 
         if [ -e "${file}.mkv.RAWcooked/${file}/2.${stream}" ] ; then
             # swap the 128th byte of the second wave stream
-            swap_byte 127 "${file}.mkv.RAWcooked/${file}/2.${stream}" || fatal "internal" " unable to modify file"
+            swap_bytes 127 1 "${file}.mkv.RAWcooked/${file}/2.${stream}" || fatal "internal" " unable to modify file"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/2.${stream}" "${file}.mkv.RAWcooked.orig/${file}/2.${stream}" || fatal "internal" "file not modified"
         fi
 
         if [ -e "${file}.mkv.RAWcooked/${file}/3.${stream}" ] ; then
             # swap the first byte of the third wave stream
-            swap_byte 0 "${file}.mkv.RAWcooked/${file}/3.${stream}" || fatal "internal" " unable to modify file"
+            swap_bytes 0 1 "${file}.mkv.RAWcooked/${file}/3.${stream}" || fatal "internal" " unable to modify file"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/3.${stream}" "${file}.mkv.RAWcooked.orig/${file}/3.${stream}" || fatal "internal" "file not modified"
         fi
 
         if [ -e "${file}.mkv.RAWcooked/${file}/4.${stream}" ] ; then
             # swap the last byte of the fourth wave stream
             size="$(${fsize} ${file}.mkv.RAWcooked/${file}/4.${stream})" || fatal "internal" "stat command failed"
-            swap_byte $((size-1)) "${file}.mkv.RAWcooked/${file}/4.${stream}" || fatal "internal" " unable to modify file"
+            swap_bytes $((size-1)) 1 "${file}.mkv.RAWcooked/${file}/4.${stream}" || fatal "internal" " unable to modify file"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/4.${stream}" "${file}.mkv.RAWcooked.orig/${file}/4.${stream}" || fatal "internal" "file not modified"
         fi
     done
@@ -205,19 +231,21 @@ case_3() {
 case_4() {
     local size
 
-    if [ "$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/1_??.dpx | wc -l)" -ge "4" ] ; then
+    list_files ${file}.mkv.RAWcooked/${file}/1_??.dpx
+    if [ "${listed_count}" -ge "4" ] ; then
         # truncate the last file of the first dpx stream to 0 byte
-        local last_dpx="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/1_??.dpx | tail -n1)" || fatal "internal" "unable to list dpx files"
+        list_files ${file}.mkv.RAWcooked/${file}/1_??.dpx
+        local last_dpx="${listed_last}"
         > "${last_dpx}" || fatal "internal" "truncate failed"
 
         # remove the last byte of the first file of the first dpx stream
         size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1_01.dpx)" || fatal "internal" "stat command failed"
-        dd if="${file}.mkv.RAWcooked/${file}/1_01.dpx" of="${file}.mkv.RAWcooked/${file}/1_01.dpx.new" bs=1 count=$((size-1)) >/dev/null 2>&1 || fatal "internal" "dd command failed"
+        head -c $((size-1)) "${file}.mkv.RAWcooked/${file}/1_01.dpx" >"${file}.mkv.RAWcooked/${file}/1_01.dpx.new" || fatal "internal" "head command failed"
         mv -f "${file}.mkv.RAWcooked/${file}/1_01.dpx.new" "${file}.mkv.RAWcooked/${file}/1_01.dpx" || fatal "internal" "mv command failed"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_01.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_01.dpx" || fatal "internal" "file not modified"
 
         # truncate the second file of the first dpx stream to half his size
-        dd if="${file}.mkv.RAWcooked/${file}/1_02.dpx" of="${file}.mkv.RAWcooked/${file}/1_02.dpx.new" bs=1 count=$((size/2)) >/dev/null 2>&1 || fatal "internal" "dd command failed"
+        head -c $((size/2)) "${file}.mkv.RAWcooked/${file}/1_02.dpx" >"${file}.mkv.RAWcooked/${file}/1_02.dpx.new" || fatal "internal" "head command failed"
         mv -f "${file}.mkv.RAWcooked/${file}/1_02.dpx.new" "${file}.mkv.RAWcooked/${file}/1_02.dpx" || fatal "internal" "mv command failed"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_02.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_02.dpx" || fatal "internal" "file not modified"
 
@@ -227,8 +255,7 @@ case_4() {
 
         # duplicate the content of the fourth file of the first dpx stream
         size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1_04.dpx)" || fatal "internal" "stat command failed"
-        dd if="${file}.mkv.RAWcooked/${file}/1_04.dpx" of="${file}.mkv.RAWcooked/${file}/1_04.dpx.new" bs=1 count=${size} >/dev/null 2>&1 || fatal "internal" "dd command failed"
-        dd if="${file}.mkv.RAWcooked/${file}/1_04.dpx" of="${file}.mkv.RAWcooked/${file}/1_04.dpx.new" bs=1 count=${size} seek=${size} >/dev/null 2>&1 || fatal "internal" "dd command failed"
+        cat "${file}.mkv.RAWcooked/${file}/1_04.dpx" "${file}.mkv.RAWcooked/${file}/1_04.dpx" >"${file}.mkv.RAWcooked/${file}/1_04.dpx.new" || fatal "internal" "cat command failed"
         mv -f "${file}.mkv.RAWcooked/${file}/1_04.dpx.new" "${file}.mkv.RAWcooked/${file}/1_04.dpx" || fatal "internal" "mv command failed"
         ! cmp -s "${file}.mkv.RAWcooked/${file}/1_04.dpx" "${file}.mkv.RAWcooked.orig/${file}/1_04.dpx" || fatal "internal" "file not modified"
     fi
@@ -237,7 +264,7 @@ case_4() {
         if [ -e "${file}.mkv.RAWcooked/${file}/1.${stream}" ] ; then
             # remove the last byte of the first wave file
             size="$(${fsize} ${file}.mkv.RAWcooked/${file}/1.${stream})" || fatal "internal" "stat command failed"
-            dd if="${file}.mkv.RAWcooked/${file}/1.${stream}" of="${file}.mkv.RAWcooked/${file}/1.${stream}.new" bs=1 count=$((size-1)) >/dev/null 2>&1 || fatal "internal" "dd command failed"
+            head -c $((size-1)) "${file}.mkv.RAWcooked/${file}/1.${stream}" >"${file}.mkv.RAWcooked/${file}/1.${stream}.new" || fatal "internal" "head command failed"
             mv -f "${file}.mkv.RAWcooked/${file}/1.${stream}.new" "${file}.mkv.RAWcooked/${file}/1.${stream}" || fatal "internal" "mv command failed"
            ! cmp -s "${file}.mkv.RAWcooked/${file}/1.${stream}" "${file}.mkv.RAWcooked.orig/${file}/1.${stream}" || fatal "internal" "file not modified"
         fi
@@ -245,7 +272,7 @@ case_4() {
         if [ -e "${file}.mkv.RAWcooked/${file}/2.${stream}" ] ; then
             # truncate the second wave file to half his size
             size="$(${fsize} ${file}.mkv.RAWcooked/${file}/2.${stream})" || fatal "internal" "stat command failed"
-            dd if="${file}.mkv.RAWcooked/${file}/2.${stream}" of="${file}.mkv.RAWcooked/${file}/2.${stream}.new" bs=1 count=$((size/2)) >/dev/null 2>&1 || fatal "internal" "dd command failed"
+            head -c $((size/2)) "${file}.mkv.RAWcooked/${file}/2.${stream}" >"${file}.mkv.RAWcooked/${file}/2.${stream}.new" || fatal "internal" "head command failed"
             mv -f "${file}.mkv.RAWcooked/${file}/2.${stream}.new" "${file}.mkv.RAWcooked/${file}/2.${stream}" || fatal "internal" "mv command failed"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/2.${stream}" "${file}.mkv.RAWcooked.orig/${file}/2.${stream}" || fatal "internal" "file not modified"
         fi
@@ -259,8 +286,7 @@ case_4() {
         if [ -e "${file}.mkv.RAWcooked/${file}/4.${stream}" ] ; then
             # duplicate the content of the fourth wave file
             size="$(${fsize} ${file}.mkv.RAWcooked/${file}/4.${stream})" || fatal "internal" "stat command failed"
-            dd if="${file}.mkv.RAWcooked/${file}/4.${stream}" of="${file}.mkv.RAWcooked/${file}/4.${stream}.new" bs=1 count=${size} >/dev/null 2>&1 || fatal "internal" "dd command failed"
-            dd if="${file}.mkv.RAWcooked/${file}/4.${stream}" of="${file}.mkv.RAWcooked/${file}/4.${stream}.new" bs=1 count=${size} seek=${size} >/dev/null 2>&1 || fatal "internal" "dd command failed"
+            cat "${file}.mkv.RAWcooked/${file}/4.${stream}" "${file}.mkv.RAWcooked/${file}/4.${stream}" >"${file}.mkv.RAWcooked/${file}/4.${stream}.new" || fatal "internal" "cat command failed"
             mv -f "${file}.mkv.RAWcooked/${file}/4.${stream}.new" "${file}.mkv.RAWcooked/${file}/4.${stream}" || fatal "internal" "mv command failed"
             ! cmp -s "${file}.mkv.RAWcooked/${file}/4.${stream}" "${file}.mkv.RAWcooked.orig/${file}/4.${stream}" || fatal "internal" "file not modified"
         fi
@@ -269,7 +295,8 @@ case_4() {
 
 case_5() {
     # corrupt last attachment
-    local attachments_count="$(ls 2>/dev/null -Ubad1 -- ${file}.mkv.RAWcooked/${file}/*.txt | wc -l)" || fatal "internal" "unable to list attachments files"
+    list_files ${file}.mkv.RAWcooked/${file}/*.txt
+    local attachments_count="${listed_count}"
     if [ "${attachments_count}" -gt "0" ] ; then
         echo "attachment X" > ${file}.mkv.RAWcooked/${file}/$((attachments_count)).txt || fatal "internal" "unable to update file"
     fi

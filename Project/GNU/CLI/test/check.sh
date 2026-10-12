@@ -71,7 +71,7 @@ find_and_truncate() {
     done
 
     ((found == occurence)) || fatal "internal" "pattern not found"
-    dd if="${file}" of="${file}.new" bs=1 count=${pos} >/dev/null 2>&1 || fatal "internal" "dd command failed"
+    head -c ${pos} "${file}" >"${file}.new" || fatal "internal" "head command failed"
     mv -f "${file}.new" "${file}" || fatal "internal" "mv command failed"
 }
 
