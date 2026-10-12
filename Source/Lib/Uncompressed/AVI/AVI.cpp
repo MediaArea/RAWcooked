@@ -427,7 +427,7 @@ void avi::AVI__hdrl_strl_strf_auds()
 
     // AVI specific checks
     auto& Track = Tracks.back();
-    if (Track.fccHandler && !(Track.fccHandler && 0xFFFF) && ((FormatTag >> 8) | (FormatTag << 8)) != Track.fccHandler)
+    if (Track.fccHandler && !(Track.fccHandler & 0xFFFF) && (((FormatTag & 0xFF) << 24) | ((FormatTag & 0xFF00) << 8)) != Track.fccHandler) // Format tag in little endian in the 2 first bytes of fccHandler (read in big endian)
         Unsupported(unsupported::fmt_FormatTag_fccHandler);
 }
 
