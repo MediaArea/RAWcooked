@@ -16,6 +16,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/Utils/FileIO/Input_Base.h"
 #include "Lib/Utils/FileIO/FileIO.h"
+#include <atomic>
 #include <bitset>
 #include <cstdint>
 #include <map>
@@ -191,7 +192,11 @@ private:
     frame_writer*               FrameWriter_Template;
     bool                        RAWcooked_FileNameIsValid;
     uint64_t                    Cluster_Timestamp;
-    int16_t                     Block_Timestamp;
+
+    // Progress indicator, values published by the parser for the progress indicator thread
+    size_t                      ProgressIndicator_Total = 0; // Not modified during the life of the thread
+    std::atomic<size_t>         ProgressIndicator_Offset{ 0 };
+    std::atomic<uint64_t>       ProgressIndicator_Timestamp{ 0 };
 
     //Utils
     void                        ProcessBlock();

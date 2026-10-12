@@ -356,7 +356,9 @@ void matroska::ParseBuffer()
 
     // Progress indicator
     Cluster_Timestamp = 0;
-    Block_Timestamp = 0;
+    ProgressIndicator_Total = Buffer.Size(); // Size is kept by remaps
+    ProgressIndicator_Offset = 0;
+    ProgressIndicator_Timestamp = 0;
     thread* ProgressIndicator_Thread = {};
     if (!Quiet)
         ProgressIndicator_Thread=new thread(matroska_ProgressIndicator_Show, this);
@@ -446,6 +448,9 @@ void matroska::ParseBuffer()
                     TrackInfo_Current->ReversibilityData->SetBaseData(Buffer.Data());
             Buffer_Offset_LowerLimit = Buffer_Offset;
         }
+
+        // Progress indicator
+        ProgressIndicator_Offset.store(Buffer_Offset, std::memory_order_relaxed);
     }
 
     // Clean up
@@ -465,6 +470,7 @@ void matroska::ParseBuffer()
 
     // Progress indicator
     Buffer_Offset = Buffer.Size();
+    ProgressIndicator_Offset.store(Buffer_Offset, std::memory_order_relaxed);
     if (ProgressIndicator_Thread)
     {
         ProgressIndicator_IsEnd.notify_one();
@@ -968,7 +974,8 @@ void matroska::ProcessBlock()
         track_info* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
         // Timestamp
-        Block_Timestamp = ((Buffer[Buffer_Offset + 1] << 8) | Buffer[Buffer_Offset + 2]);
+        int16_t Block_Timestamp = ((Buffer[Buffer_Offset + 1] << 8) | Buffer[Buffer_Offset + 2]);
+        ProgressIndicator_Timestamp.store(Cluster_Timestamp + Block_Timestamp, std::memory_order_relaxed);
 
         // Parsing
         auto CurrentBufferOffset = Buffer_Offset + 4;
@@ -1101,7 +1108,8 @@ void matroska::ProgressIndicator_Show()
         if (ProgressIndicator_IsPaused)
             continue;
 
-        size_t ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer.Size());
+        size_t Offset = ProgressIndicator_Offset.load(std::memory_order_relaxed);
+        size_t ProgressIndicator_New = (size_t)(((float)Offset) * ProgressIndicator_Frequency / ProgressIndicator_Total);
         if (ProgressIndicator_New == ProgressIndicator_Value)
         {
             StallDetection++;
@@ -1112,7 +1120,7 @@ void matroska::ProgressIndicator_Show()
                     ProgressIndicator_Frequency *= 10;
                     ProgressIndicator_Value *= 10;
                     Precision++;
-                    ProgressIndicator_New = (size_t)(((float)Buffer_Offset) * ProgressIndicator_Frequency / Buffer.Size());
+                    ProgressIndicator_New = (size_t)(((float)Offset) * ProgressIndicator_Frequency / ProgressIndicator_Total);
                 }
             }
         }
@@ -1120,16 +1128,16 @@ void matroska::ProgressIndicator_Show()
             StallDetection = 0;
         if (ProgressIndicator_New != ProgressIndicator_Value)
         {
-            uint64_t Timestamp = (Cluster_Timestamp + Block_Timestamp);
+            uint64_t Timestamp = ProgressIndicator_Timestamp.load(std::memory_order_relaxed);
             float ByteRate = 0, RealTime = 0;
             if (ProgressIndicator_Value != (size_t)-1)
             {
                 steady_clock::time_point Clock_Current = steady_clock::now();
                 steady_clock::duration Duration = Clock_Current - Clock_Previous;
-                ByteRate = (float)(Buffer_Offset - Buffer_Offset_Previous) * 1000 / duration_cast<milliseconds>(Duration).count();
+                ByteRate = (float)(Offset - Buffer_Offset_Previous) * 1000 / duration_cast<milliseconds>(Duration).count();
                 RealTime = (float)(Timestamp - Timestamp_Previous) / duration_cast<milliseconds>(Duration).count();
                 Clock_Previous = Clock_Current;
-                Buffer_Offset_Previous = Buffer_Offset;
+                Buffer_Offset_Previous = Offset;
                 Timestamp_Previous = Timestamp;
             }
             Timestamp /= 1000;
@@ -1151,13 +1159,13 @@ void matroska::ProgressIndicator_Show()
             ProgressIndicator_Value = ProgressIndicator_New;
         }
     }
-    while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && Buffer_Offset != Buffer.Size());
+    while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && ProgressIndicator_Offset.load(std::memory_order_relaxed) != ProgressIndicator_Total);
 
     // Show summary
     steady_clock::time_point Clock_Current = steady_clock::now();
     steady_clock::duration Duration = Clock_Current - Clock_Init;
-    float ByteRate = (float)(Buffer.Size()) * 1000 / duration_cast<milliseconds>(Duration).count();
-    uint64_t Timestamp = (Cluster_Timestamp + Block_Timestamp);
+    float ByteRate = (float)(ProgressIndicator_Total) * 1000 / duration_cast<milliseconds>(Duration).count();
+    uint64_t Timestamp = ProgressIndicator_Timestamp.load(std::memory_order_relaxed);
     float RealTime = (float)(Timestamp) / duration_cast<milliseconds>(Duration).count();
     cerr << '\r';
     if (ByteRate)
