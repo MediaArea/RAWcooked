@@ -36,6 +36,9 @@ public:
     // Checks
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);
 
+    // Order of file names, negative if Left is before Right, positive if Left is after Right, 0 if same
+    static int FileName_Compare(const string& Left, const string& Right);
+
     // I/O
     static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false);
 };

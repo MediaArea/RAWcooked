@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
       - name: OS packets
@@ -31,8 +31,12 @@ jobs:
             fi
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
+            # Warnings of Homebrew about formulae of the runner image (migrations, cleanup) in the log but not as annotations
+            StopToken=$(uuidgen)
+            echo "::stop-commands::${StopToken}"
             brew update
             brew install coreutils automake
+            echo "::${StopToken}::"
           fi
       - name: FFmpeg
         run: |

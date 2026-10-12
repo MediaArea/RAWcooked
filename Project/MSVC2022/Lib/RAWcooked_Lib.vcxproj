@@ -52,26 +52,21 @@
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp" />
+    <ClInclude Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Utils\Trace\Trace.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\callback.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\export.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\format.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\metadata.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\ordinals.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\stream_decoder.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\alloc.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\compat.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\endswap.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\macros.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\safe_str.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\windows_unicode_filenames.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\win_utf8_io.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitmath.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitreader.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitwriter.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\crc.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\fixed.h" />
@@ -80,8 +75,6 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\macros.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\md5.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\memory.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\metadata.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\window.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\SafeQueue.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\thread-pool\include\ThreadPool.h" />
@@ -125,22 +118,76 @@
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\RAWcooked.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Utils\Trace\Trace.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.cpp" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitreader.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_iterators.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_object.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\window.c" />
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c" />
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitreader.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\cpu.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\crc.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\fixed.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\format.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\md5.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\share\win_utf8_io\win_utf8_io.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\adler32.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\compress.c" />
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\zlib\crc32.c" />
@@ -168,6 +215,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -181,12 +229,13 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -229,75 +278,89 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <IntelJCCErratum>true</IntelJCCErratum>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <LinkIncremental>false</LinkIncremental>
     </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <IntelJCCErratum>true</IntelJCCErratum>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <LinkIncremental>false</LinkIncremental>
     </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -31,10 +31,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/lpc.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/md5.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/memory.c \
-    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/metadata_iterators.c \
-    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/metadata_object.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/stream_decoder.c \
-    ../../../Source/Lib/ThirdParty/flac/src/libFLAC/window.c \
     ../../../Source/Lib/ThirdParty/md5/md5.c \
     ../../../Source/Lib/ThirdParty/zlib/adler32.c \
     ../../../Source/Lib/ThirdParty/zlib/compress.c \
