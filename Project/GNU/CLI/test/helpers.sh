@@ -289,6 +289,14 @@ run_rawcooked() {
     read_file cmd_stdout "${temp_path}/stdout"
     read_file cmd_stderr "${temp_path}/stderr"
 
+    # check crash (illegal instruction, abort, bus error, floating point exception, segmentation fault), never an expected failure
+    case "${cmd_status}" in
+        132|134|135|136|138|139)
+            echo "NOK: ${test}/${file}, rawcooked crashed (exit code ${cmd_status}): rawcooked $@" >&${fd}
+            status=1
+            ;;
+    esac
+
     # check valgrind
     if [ -n "${valgrind}" ] && [ -s "${temp_path}/valgrind" ] ; then
         cat "${temp_path}/valgrind" >&${fd}
