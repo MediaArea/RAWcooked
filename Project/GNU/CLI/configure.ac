@@ -3,9 +3,14 @@ dnl ### Init
 dnl #########################################################################
 
 dnl -------------------------------------------------------------------------
+dnl Name and version
+dnl
+AC_INIT([rawcooked], [0])
+
+dnl -------------------------------------------------------------------------
 dnl Test if we are at the good place
 dnl
-AC_INIT(../../../Source/CLI/Main.cpp)
+AC_CONFIG_SRCDIR([../../../Source/CLI/Main.cpp])
 
 dnl -------------------------------------------------------------------------
 dnl sets build, host, target variables and the same with _alias
@@ -13,9 +18,9 @@ dnl
 AC_CANONICAL_BUILD
 
 dnl -------------------------------------------------------------------------
-dnl Name and version
+dnl Automake
 dnl
-AM_INIT_AUTOMAKE(rawcooked,0)
+AM_INIT_AUTOMAKE
 
 dnl -------------------------------------------------------------------------
 dnl Autotools init
@@ -33,19 +38,19 @@ dnl #########################################################################
 dnl -------------------------------------------------------------------------
 dnl Arguments - Enable
 dnl
-AC_ARG_ENABLE(debug,        AC_HELP_STRING([--enable-debug],        [Enable full debug]),                       , enable_debug=no)
-AC_ARG_ENABLE(gprof,        AC_HELP_STRING([--enable-gprof],        [Enable gprof log]),                        , enable_gprof=no)
-AC_ARG_ENABLE(universal_binary, AC_HELP_STRING([--enable-universal_binary], [Create Mac x86_64/arm64 Universal binary]),  , enable_universal_binary=no)
-AC_ARG_ENABLE(arch-ppc,         AC_HELP_STRING([--with-arch-ppc],           [Create Mac PPC Universal binary]),           , enable_arch_ppc=no)
-AC_ARG_ENABLE(arch-i386,        AC_HELP_STRING([--with-arch-i386],          [Create Mac i386 Universal binary]),          , enable_arch_i386=no)
-AC_ARG_ENABLE(arch-x86_64,      AC_HELP_STRING([--enable-arch-x86_64],      [Create Mac x86_64 architecture]),            , enable_arch_x86_64=no)
-AC_ARG_ENABLE(arch-arm64,       AC_HELP_STRING([--enable-arch-arm64],       [Create Mac arm64 architecture]),             , enable_arch_arm64=no)
+AC_ARG_ENABLE(debug,            AS_HELP_STRING([--enable-debug],            [Enable full debug]),                         , enable_debug=no)
+AC_ARG_ENABLE(gprof,            AS_HELP_STRING([--enable-gprof],            [Enable gprof log]),                          , enable_gprof=no)
+AC_ARG_ENABLE(universal_binary, AS_HELP_STRING([--enable-universal_binary], [Create Mac x86_64/arm64 Universal binary]),  , enable_universal_binary=no)
+AC_ARG_ENABLE(arch-ppc,         AS_HELP_STRING([--with-arch-ppc],           [Create Mac PPC Universal binary]),           , enable_arch_ppc=no)
+AC_ARG_ENABLE(arch-i386,        AS_HELP_STRING([--with-arch-i386],          [Create Mac i386 Universal binary]),          , enable_arch_i386=no)
+AC_ARG_ENABLE(arch-x86_64,      AS_HELP_STRING([--enable-arch-x86_64],      [Create Mac x86_64 architecture]),            , enable_arch_x86_64=no)
+AC_ARG_ENABLE(arch-arm64,       AS_HELP_STRING([--enable-arch-arm64],       [Create Mac arm64 architecture]),             , enable_arch_arm64=no)
 
 dnl -------------------------------------------------------------------------
 dnl Arguments - With
 dnl
-AC_ARG_WITH(macosx-sdk,         AC_HELP_STRING([--with-macosx-sdk],         [Force the Mac SDK]),                         , with_macosx_sdk=no)
-AC_ARG_WITH(macosx-version-min, AC_HELP_STRING([--with-macosx-version-min], [Force the Mac Version]),                     , with_macosx_version_min=no)
+AC_ARG_WITH(macosx-sdk,         AS_HELP_STRING([--with-macosx-sdk],         [Force the Mac SDK]),                         , with_macosx_sdk=no)
+AC_ARG_WITH(macosx-version-min, AS_HELP_STRING([--with-macosx-version-min], [Force the Mac Version]),                     , with_macosx_version_min=no)
 
 dnl #########################################################################
 dnl ### Specific flags
@@ -150,7 +155,8 @@ dnl #########################################################################
 dnl ### Output
 dnl #########################################################################
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 
 dnl #########################################################################
 dnl ### Report how we have been configured
