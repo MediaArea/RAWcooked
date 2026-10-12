@@ -261,16 +261,10 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\callback.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\export.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\format.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\metadata.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\ordinals.h">
@@ -288,25 +282,13 @@
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\endswap.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\macros.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\safe_str.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\win_utf8_io.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\share\windows_unicode_filenames.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitmath.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitreader.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\bitwriter.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\cpu.h">
@@ -331,12 +313,6 @@
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\memory.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\metadata.h">
-      <Filter>ThirdParty\flac</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\private\window.h">
       <Filter>ThirdParty\flac</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\include\protected\stream_decoder.h">
@@ -488,16 +464,7 @@
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\bitmath.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\window.c">
-      <Filter>ThirdParty\flac</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\stream_decoder.c">
-      <Filter>ThirdParty\flac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_object.c">
-      <Filter>ThirdParty\flac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\metadata_iterators.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\memory.c">
@@ -518,7 +485,7 @@
     <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\lpc.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\libFLAC\windows_unicode_filenames.c">
+    <ClCompile Include="..\..\..\Source\Lib\ThirdParty\flac\src\share\win_utf8_io\win_utf8_io.c">
       <Filter>ThirdParty\flac</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.cpp">

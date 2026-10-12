@@ -148,6 +148,7 @@ dnl ### libFLAC
 dnl #########################################################################
 
 AC_SEARCH_LIBS([lround],[m], [AC_DEFINE(HAVE_LROUND,1,lround support)])
+AC_FUNC_FSEEKO
 AC_CHECK_HEADERS([stdint.h inttypes.h byteswap.h sys/param.h sys/ioctl.h termios.h x86intrin.h cpuid.h])
 CFLAGS=" -DFLAC__NO_DLL -DFLAC__HAS_OGG=0 -DFLAC__NO_ASM $CFLAGS" 
 
