@@ -24,7 +24,6 @@
 #include "CLI/Input.h"
 #include "Lib/Common/Common.h"
 #include "Lib/Utils/FileIO/Input_Base.h"
-#include "Lib/ThirdParty/alphanum/alphanum.hpp"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -120,6 +119,62 @@ void DetectPathPos(const string &Name, size_t& Path_Pos)
 }
 
 //---------------------------------------------------------------------------
+// Natural order (e.g. 9 before 10): numbers are compared by value (any count of digits), a digit is before other characters,
+// other characters are compared as unsigned bytes (same order on all platforms), and if all is same except leading zeros,
+// the name with fewer leading zeros in the first number having a different count of leading zeros is before
+int input::FileName_Compare(const string& Left, const string& Right)
+{
+    const auto IsDigit = [](char Char) { return Char >= '0' && Char <= '9'; };
+    size_t l = 0;
+    size_t r = 0;
+    int Zeros = 0; // Order from the leading zeros of the first numbers having different counts of leading zeros
+    while (l < Left.size() && r < Right.size())
+    {
+        const auto l_IsDigit = IsDigit(Left[l]);
+        const auto r_IsDigit = IsDigit(Right[r]);
+        if (l_IsDigit && r_IsDigit)
+        {
+            // Leading zeros
+            const auto l_Zeros = l;
+            const auto r_Zeros = r;
+            while (l < Left.size() && Left[l] == '0')
+                l++;
+            while (r < Right.size() && Right[r] == '0')
+                r++;
+            if (!Zeros && l - l_Zeros != r - r_Zeros)
+                Zeros = l - l_Zeros < r - r_Zeros ? -1 : 1;
+
+            // Values, from the count of digits then from the digits
+            const auto l_Begin = l;
+            const auto r_Begin = r;
+            while (l < Left.size() && IsDigit(Left[l]))
+                l++;
+            while (r < Right.size() && IsDigit(Right[r]))
+                r++;
+            if (l - l_Begin != r - r_Begin)
+                return l - l_Begin < r - r_Begin ? -1 : 1;
+            const auto Result = Left.compare(l_Begin, l - l_Begin, Right, r_Begin, r - r_Begin);
+            if (Result)
+                return Result < 0 ? -1 : 1;
+            continue;
+        }
+        if (l_IsDigit != r_IsDigit)
+            return l_IsDigit ? -1 : 1;
+        const auto l_Char = (unsigned char)Left[l];
+        const auto r_Char = (unsigned char)Right[r];
+        if (l_Char != r_Char)
+            return l_Char < r_Char ? -1 : 1;
+        l++;
+        r++;
+    }
+    if (l < Left.size())
+        return 1;
+    if (r < Right.size())
+        return -1;
+    return Zeros;
+}
+
+//---------------------------------------------------------------------------
 void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos].FileName);
@@ -190,7 +245,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                     }
 
                     // Check if there is more from the sequence
-                    while (AllFiles_Pos < Files.size() && doj::alphanum_comp(FullPath, Files[AllFiles_Pos].FileName) > 0)
+                    while (AllFiles_Pos < Files.size() && FileName_Compare(FullPath, Files[AllFiles_Pos].FileName) > 0)
                     {
                         // Test of unsupported file names e.g. 09 and 9 in the list
                         size_t Pos1 = FN.size();

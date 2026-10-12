@@ -25,9 +25,6 @@
     <Filter Include="ThirdParty\flac">
       <UniqueIdentifier>{57b8e003-f051-4de2-904b-ec5d41c0a70d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ThirdParty\alphanum">
-      <UniqueIdentifier>{e6e2d687-de90-4eec-b4bd-195f49589be0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\CoDec">
       <UniqueIdentifier>{57a65f5e-d6c3-41cf-b398-94aa44291c07}</UniqueIdentifier>
     </Filter>
@@ -353,9 +350,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\HashSum\HashSum.h">
       <Filter>Header Files\Uncompressed\HashSum</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp">
-      <Filter>ThirdParty\alphanum</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\IntermediateWrite.h">
       <Filter>Header Files\Compressed\RAWcooked</Filter>

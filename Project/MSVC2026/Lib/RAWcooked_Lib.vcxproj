@@ -200,7 +200,6 @@
     <ClInclude Include="..\..\..\Source\Lib\Utils\RawFrame\RawFrame.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\MD5\MD5_Lanes.h" />
     <ClInclude Include="..\..\..\Source\Lib\Utils\Trace\Trace.h" />
-    <ClInclude Include="..\..\..\Source\Lib\ThirdParty\alphanum\alphanum.hpp" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\WAV\WAV.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\flac\include\FLAC\assert.h" />

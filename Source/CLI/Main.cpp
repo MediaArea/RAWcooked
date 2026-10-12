@@ -24,7 +24,6 @@
 #include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
-#include "Lib/ThirdParty/alphanum/alphanum.hpp"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
@@ -741,7 +740,7 @@ int main(int argc, const char* argv[])
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
     sort(Input.Files.begin(), Input.Files.end(),
-        [](const FileEntry& l, const FileEntry& r) {return doj::alphanum_comp(l.FileName, r.FileName) < 0; });
+        [](const FileEntry& l, const FileEntry& r) {return input::FileName_Compare(l.FileName, r.FileName) < 0; });
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_FileName;
