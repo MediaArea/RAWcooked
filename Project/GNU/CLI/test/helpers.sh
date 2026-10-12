@@ -13,8 +13,13 @@ if grep -q Microsoft /proc/version; then
   WSL=1
 fi
 
+WINDOWS=
+if [[ "${OSTYPE}" == "msys"* || "${OSTYPE}" == "cygwin"* ]] ; then
+  WINDOWS=1 # Git Bash, msys or cygwin depending on its version
+fi
+
 case "${OSTYPE}" in
-    linux*|cygwin*)
+    linux*|cygwin*|msys*)
         fsize="stat -c %s"
         ;;
     darwin*|bsd*)
@@ -63,6 +68,36 @@ clean() {
 
 contains() {
     echo "${2}" | grep -q "${1}"
+}
+
+# no access rights for the files and directories (and their content), as chmod -R 0000
+# on Windows, chmod sets only the read-only attribute, so reading and writing are denied to everyone with an ACL
+# (Git Bash tools may still access the files with the backup privilege of an administrator, rawcooked does not)
+# (icacls /T only for directories, with a file name it is a pattern searched in all the subdirectories)
+deny_access() {
+    local path recursive
+    for path in "${@}" ; do
+        if test -n "${WINDOWS}" ; then
+            recursive=
+            [ -d "${path}" ] && recursive=/T
+            MSYS_NO_PATHCONV=1 icacls "${path}" /deny '*S-1-1-0:(RD,WD,AD)' ${recursive} /Q >/dev/null || return 1
+        else
+            chmod -R 0000 "${path}" || return 1
+        fi
+    done
+}
+
+# access rights after deny_access, as chmod -R 0644
+allow_access() {
+    local path recursive
+    for path in "${@}" ; do
+        if test -n "${WINDOWS}" ; then
+            recursive=
+            [ -d "${path}" ] && recursive=/T
+            MSYS_NO_PATHCONV=1 icacls "${path}" /remove:d '*S-1-1-0' ${recursive} /Q >/dev/null || return 1
+        fi
+        chmod -R 0644 "${path}" || return 1
+    done
 }
 
 check_success() {
@@ -169,7 +204,17 @@ run_rawcooked() {
         valgrind="valgrind --quiet --track-origins=yes --log-file=${temp}/valgrind"
     fi >/dev/null 2>&1
 
-    if test -z "${WSL}" ; then
+    if test -n "${WINDOWS}" ; then
+        # Windows: no pkill for the watcher, so timeout, and CR LF line endings
+        timeout ${timeout} rawcooked -n -threads 1 $@ >"${temp}/stdout" 2>"${temp}/stderr"
+        cmd_status="${?}"
+        if [ "${cmd_status}" -eq "124" ] ; then
+            rm -fr "${temp}"
+            fatal "command timeout: rawcooked $@"
+        fi
+        cmd_stdout="$(tr -d '\r' <${temp}/stdout)"
+        cmd_stderr="$(tr -d '\r' <${temp}/stderr)"
+    elif test -z "${WSL}" ; then
         ${valgrind} rawcooked -n -threads 1 $@ >"${temp}/stdout" 2>"${temp}/stderr" & kill -STOP ${!}; local pid=${!}
         sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
         kill -CONT ${pid} ; wait ${pid}

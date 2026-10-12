@@ -3,7 +3,7 @@
 script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
-# test disabled on Windows (chmod operation not permitted)
+# test disabled on macOS and in WSL (Windows build of RAWcooked tested from WSL), enabled in Git Bash on Windows
 if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
     exit 77
 fi
@@ -280,7 +280,7 @@ access_readonly() {
 }
 
 access_none() {
-    chmod -R 0000 "${file}.mkv.RAWcooked/${file}/"* || fatal "internal" "chmod command failed"
+    deny_access "${file}.mkv.RAWcooked/${file}/"* || fatal "internal" "access rights change failed"
 }
 
 command_n() {

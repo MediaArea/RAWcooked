@@ -3,7 +3,7 @@
 script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
-# test disabled on macOS and Windows
+# test disabled on macOS and in WSL (Windows build of RAWcooked tested from WSL), enabled in Git Bash on Windows
 if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
     exit 77
 fi
