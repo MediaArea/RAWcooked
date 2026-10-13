@@ -65,3 +65,74 @@ jobs:
         run: |
           cd Project/GNU/CLI
           make check
+
+  Windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Line endings
+        run: git config --global core.autocrlf false # Test scripts with LF line endings
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: MSBuild
+        uses: microsoft/setup-msbuild@v3
+      - name: FFmpeg
+        run: |
+          cd Project/GNU/CLI
+          if grep -qw avx512f /proc/cpuinfo; then
+            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Windows_Static_x64.zip # Latest snapshot
+          else
+            # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512
+            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/binary/ffmpeg/9.0.1/FFmpeg_Bin_9.0.1_Windows_Static_x64.zip
+          fi
+          7z e -y FFmpeg.zip -r ffmpeg.exe > /dev/null
+          rm FFmpeg.zip
+          ./ffmpeg -hide_banner -version | sed -n 1p
+      - name: Vulkan
+        run: |
+          # Vulkan loader and vulkaninfo, next to FFmpeg
+          curl -fsSL -o VulkanRT.zip "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip?u="
+          7z x -y -oVulkanRT VulkanRT.zip > /dev/null
+          for File in vulkan-1.dll vulkaninfo.exe ; do
+            Path=$(find VulkanRT -ipath "*x64*/${File}" -print -quit)
+            [ -n "${Path}" ] || Path=$(find VulkanRT -iname "${File}" -print -quit)
+            echo "${File}: ${Path:-not found}"
+            [ -z "${Path}" ] || cp "${Path}" Project/GNU/CLI/
+          done
+          test -f Project/GNU/CLI/vulkan-1.dll # vulkaninfo is optional
+          # lavapipe, a CPU implementation of Vulkan (Mesa), registered because the Vulkan loader ignores VK_DRIVER_FILES in an elevated process (runner)
+          curl -fsSL -o Mesa.7z https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
+          7z x -y -oMesa Mesa.7z > /dev/null
+          Driver=$(find "${PWD}/Mesa" -ipath '*x64*' -iname 'lvp_icd*.json' -print -quit)
+          echo "lavapipe: ${Driver:-not found}"
+          test -n "${Driver}"
+          MSYS_NO_PATHCONV=1 reg add 'HKLM\SOFTWARE\Khronos\Vulkan\Drivers' /v "$(cygpath -w "${Driver}")" /t REG_DWORD /d 0 /f
+          cd Project/GNU/CLI
+          ./vulkaninfo --summary || true
+      - name: Compile
+        run: |
+          MSBuild.exe Project/MSVC2026/RAWcooked.slnx -p:Configuration=Release -p:Platform=x64 -m
+          cp Project/MSVC2026/x64/Release/RAWcooked_CLI.exe Project/GNU/CLI/rawcooked.exe
+      - name: Check files
+        run: |
+          cd Project/GNU/CLI
+          git clone --depth=1 https://github.com/MediaArea/RAWCooked-RegressionTestingFiles-Light.git test/TestingFiles
+      - name: Check
+        run: |
+          cd Project/GNU/CLI
+          # Tests of make check (no make in Git Bash), 77 is the exit code of a skipped test
+          Status=0
+          for Test in $(sed -n 's/^TESTS = //p' Makefile.am) ; do
+            Result=0
+            bash ${Test} 9>&1 || Result=${?}
+            case ${Result} in
+              0) echo "PASS: ${Test}" ;;
+              77) echo "SKIP: ${Test}" ;;
+              *) echo "FAIL: ${Test} (exit code ${Result})" ; Status=1 ;;
+            esac
+          done
+          exit ${Status}

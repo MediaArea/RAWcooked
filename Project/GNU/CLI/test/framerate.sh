@@ -6,9 +6,7 @@ script_path="${PWD}/test"
 test="framerate"
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
-    rate="$(echo "${line}" | cut -s -d' ' -f3)"
+    read -r path file rate dummy <<< "${line}"
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
         echo "NOK: ${test}/${file}, file not found" >&${fd}

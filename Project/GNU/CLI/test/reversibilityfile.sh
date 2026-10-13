@@ -6,11 +6,10 @@ script_path="${PWD}/test"
 test="reversibility_data"
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
+    read -r path file dummy <<< "${line}"
 
     if [ -z "${file}" ] ; then
-        file="../$(basename ${path})"
+        file="../${path##*/}"
     fi
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
@@ -75,7 +74,7 @@ while read line ; do
         fi
 
         # check for error with -y option and an stale reversibility data file with no rights
-        chmod 0000 "${file}.rawcooked_reversibility_data"
+        deny_access "${file}.rawcooked_reversibility_data"
         run_rawcooked --no-check-padding -y "${file}/"
         check_failure "file rejected due to insufficient rights on stale reversibility data file" "file accepted despite insufficient rights on stale reversibility data file"
         if [ ! -e "${file}.rawcooked_reversibility_data" ] ; then
@@ -84,7 +83,7 @@ while read line ; do
             clean
             continue
         fi
-        chmod 0644 "${file}.rawcooked_reversibility_data"
+        allow_access "${file}.rawcooked_reversibility_data"
 
         # check if stale reversibility data file is deleted with -y option
         run_rawcooked --no-check-padding -y "${file}/"

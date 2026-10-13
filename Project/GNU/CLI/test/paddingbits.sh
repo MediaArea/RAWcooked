@@ -4,11 +4,9 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
-    path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
-    filetomodify="$(echo "${line}" | cut -d' ' -f2)"
-    want="$(echo "${line}" | cut -d' ' -f3)"
-    options="$(echo "${line}" | cut -s -d' ' -f4-)"
+    read -r entry filetomodify want options <<< "${line}"
+    file="${entry##*/}"
+    path="${entry%/*}"
     test="${file} $filetomodify $options"
 
     pushd "${files_path}/${path}" >/dev/null 2>&1

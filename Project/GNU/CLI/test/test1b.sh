@@ -6,10 +6,10 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    file="$(basename "$(echo "${line}" | cut -d' ' -f1)")"
-    path="$(dirname "$(echo "${line}" | cut -d' ' -f1)")"
-    want="$(echo "${line}" | cut -d' ' -f2)"
-    test=$(basename "${path}")
+    read -r entry want dummy <<< "${line}"
+    file="${entry##*/}"
+    path="${entry%/*}"
+    test="${path##*/}"
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
         echo "NOK: ${test}/${file}, file not found" >&${fd}
@@ -36,7 +36,7 @@ while read line ; do
             clean
             continue
         fi
-        source_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines source_warnings "Warning: " "${cmd_stderr}"
 
         # check result file generation
         run_ffmpeg "${cmd_stdout}"
@@ -55,7 +55,7 @@ while read line ; do
             continue
         fi
 
-        decoded_warnings=$(echo "${cmd_stderr}" | grep "Warning: ")
+        grep_lines decoded_warnings "Warning: " "${cmd_stderr}"
         if [ "${source_warnings}" != "${decoded_warnings}" ] ; then
             echo "NOK: ${test}/${file}, warnings differs between the source and the decoded files" >&${fd}
             status=1

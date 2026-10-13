@@ -4,10 +4,9 @@ script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
 while read line ; do
-    path="$(echo "${line}" | cut -d' ' -f1)"
-    file="$(echo "${line}" | cut -s -d' ' -f2)"
-    files="$(echo "${line}" | cut -s -d' ' -f2-)"
-    test=$(basename "${path}")
+    read -r path files <<< "${line}"
+    file="${files%% *}"
+    test="${path##*/}"
 
     if [ ! -e "${files_path}/${path}/${file}" ] ; then
         echo "NOK: ${test}/${file}, file not found" >&${fd}
@@ -29,10 +28,7 @@ while read line ; do
         fi
 
         # check result file generation
-        cmdline=$(echo -e "${cmd_stdout}" | grep ffmpeg) 2>/dev/null
-        if [ -n "${cmdline}" ] ; then
-            eval "${cmdline} </dev/null >/dev/null 2>&1"
-        fi
+        run_ffmpeg "${cmd_stdout}"
 
         rm -f "${file}.rawcooked_reversibility_data"
         if [ ! -e "${file}.mkv" ] ; then
