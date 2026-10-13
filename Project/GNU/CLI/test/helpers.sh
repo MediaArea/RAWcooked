@@ -9,7 +9,7 @@ else
 fi >/dev/null 2>&1
 
 WSL=
-if grep -q Microsoft /proc/version; then
+if grep -q Microsoft /proc/version 2>/dev/null; then # no /proc on macOS
   WSL=1
 fi
 
