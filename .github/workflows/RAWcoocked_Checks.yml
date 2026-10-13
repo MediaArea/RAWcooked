@@ -35,7 +35,7 @@ jobs:
             StopToken=$(uuidgen)
             echo "::stop-commands::${StopToken}"
             brew update
-            brew install coreutils automake
+            brew install coreutils automake mesa vulkan-loader vulkan-tools
             echo "::${StopToken}::"
           fi
       - name: FFmpeg
@@ -45,9 +45,25 @@ jobs:
             cp /usr/bin/ffmpeg-ma ffmpeg
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
-            curl -O https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Mac_Static_universal.zip 2>/dev/null
-            7za e FFmpeg_Bin_Latest_Mac_Static_universal.zip bin/ffmpeg
+            if [ "$(sysctl -n hw.optional.avx512f 2>/dev/null)" == "1" ]; then
+              curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Mac_Static_universal.zip # Latest snapshot
+            else
+              # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512 (e.g. Apple silicon)
+              curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/binary/ffmpeg/9.0.1/FFmpeg_Bin_9.0.1_Mac_Static_universal.zip
+            fi
+            7za e FFmpeg.zip bin/ffmpeg > /dev/null
+            rm FFmpeg.zip
+            ./ffmpeg -hide_banner -version | sed -n 1p
           fi
+      - name: Vulkan
+        if: runner.os == 'macOS'
+        run: |
+          # lavapipe, a CPU implementation of Vulkan (Mesa), as on Linux and Windows (no GPU in the runner, so no KosmicKrisp)
+          Driver=$(find "$(brew --prefix mesa)/share/vulkan/icd.d" -name 'lvp_icd*.json' -print -quit)
+          echo "lavapipe: ${Driver:-not found}"
+          test -n "${Driver}"
+          echo "VK_DRIVER_FILES=${Driver}" >> "${GITHUB_ENV}"
+          VK_DRIVER_FILES="${Driver}" vulkaninfo --summary || true
       - name: Configure
         run: |
           cd Project/GNU/CLI

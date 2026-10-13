@@ -3,13 +3,20 @@
 script_path="${PWD}/test"
 . ${script_path}/helpers.sh
 
-# test disabled on macOS and in WSL (Windows build of RAWcooked tested from WSL), enabled in Git Bash on Windows
-if [[ "${OSTYPE}" == "darwin"* ]] || [ -n "${WSL}" ] ; then
+# test disabled in WSL (Windows build of RAWcooked tested from WSL), enabled in Git Bash on Windows
+if [ -n "${WSL}" ] ; then
     exit 77
 fi
 
 # CPU, a CPU implementation of Vulkan (e.g. lavapipe) generates code for this CPU
-echo "CPU:$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2-), AVX-512: $(grep -qw avx512f /proc/cpuinfo 2>/dev/null && echo yes || echo no)" >&${fd}
+if [[ "${OSTYPE}" == "darwin"* ]] ; then
+    cpu="$(sysctl -n machdep.cpu.brand_string 2>/dev/null)"
+    [ "$(sysctl -n hw.optional.avx512f 2>/dev/null)" == "1" ] && avx512=yes || avx512=no
+else
+    cpu="$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2-)"
+    grep -qw avx512f /proc/cpuinfo 2>/dev/null && avx512=yes || avx512=no
+fi
+echo "CPU: ${cpu# }, AVX-512: ${avx512}" >&${fd}
 
 # Vulkan devices seen by the system, shown once if FFmpeg Vulkan encoding fails
 show_vulkan_devices() {
