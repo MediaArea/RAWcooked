@@ -16,12 +16,17 @@ file=decoders
 alone_frames=100
 alone_file=decoders_alone
 
-# test skipped if FFmpeg libraries are not available, except if an FFmpeg package is next to rawcooked (ffmpeg directory, e.g. CI)
+# test skipped if FFmpeg libraries are not available, except if an FFmpeg package is next to rawcooked (ffmpeg directory, e.g. CI on macOS and Windows)
+# or if the ffmpeg-ma package is installed and FFmpeg is supported in this build (e.g. CI on Linux)
 run_rawcooked --decoder ffmpeg --version
 if [ "${cmd_status}" -ne "0" ] ; then
     rawcooked_path="$(type -p rawcooked)"
     if [ -d "${rawcooked_path%/*}/ffmpeg" ] ; then
         echo "NOK: ${test}, FFmpeg libraries of ${rawcooked_path%/*}/ffmpeg not loaded: ${cmd_stderr}" >&${fd}
+        exit 1
+    fi
+    if type -p ffmpeg-ma >/dev/null && ! contains "not supported in this build" "${cmd_stderr}" ; then
+        echo "NOK: ${test}, FFmpeg libraries of ffmpeg-ma not loaded: ${cmd_stderr}" >&${fd}
         exit 1
     fi
     echo "SKIP: ${test}, ${cmd_stderr}" >&${fd}
