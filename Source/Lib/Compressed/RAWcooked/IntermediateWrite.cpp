@@ -81,7 +81,11 @@ bool intermediate_write::Delete()
         return true;
 
     // Delete the temporary file
+    #if defined(_WIN32) || defined(_WINDOWS)
+    int Result = _wremove(WideFileName(FileName).c_str());
+    #else //defined(_WIN32) || defined(_WINDOWS)
     int Result = remove(FileName.c_str());
+    #endif //defined(_WIN32) || defined(_WINDOWS)
     if (Result)
     {
         if (Errors)
@@ -99,7 +103,11 @@ bool intermediate_write::Rename(const string& NewFileName)
         return true;
 
     // Delete the temporary file
+    #if defined(_WIN32) || defined(_WINDOWS)
+    int Result = _wrename(WideFileName(FileName).c_str(), WideFileName(NewFileName).c_str());
+    #else //defined(_WIN32) || defined(_WINDOWS)
     int Result = rename(FileName.c_str(), NewFileName.c_str());
+    #endif //defined(_WIN32) || defined(_WINDOWS)
     if (Result)
     {
         if (Errors)

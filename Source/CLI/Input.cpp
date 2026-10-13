@@ -10,7 +10,7 @@
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
     #include <io.h> // File existence
-    #define access _access_s
+    #define access(FileName, Mode) _waccess_s(WideFileName(FileName).c_str(), Mode)
     #define stat _stat
     #define	S_ISDIR(m)	((m & 0170000) == 0040000)
 #else
@@ -87,7 +87,11 @@ static_assert(error::type_Max == sizeof(ErrorTexts) / sizeof(const char**), Inco
 bool IsDir(const char* Name)
 {
     struct stat buffer;
+    #if defined(_WIN32) || defined(_WINDOWS)
+    int status = _wstat(WideFileName(Name).c_str(), &buffer);
+    #else //defined(_WIN32) || defined(_WINDOWS)
     int status = stat(Name, &buffer);
+    #endif //defined(_WIN32) || defined(_WINDOWS)
     return (status == 0 && S_ISDIR(buffer.st_mode));
 }
 
@@ -402,16 +406,16 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
     #if defined(_WIN32) || defined(_WINDOWS)
         if (Dir_Name2[Dir_Name2.size() - 1] != '/' && Dir_Name2[Dir_Name2.size() - 1] != '\\')
             Dir_Name2 += PathSeparator;
-        WIN32_FIND_DATAA FindFileData;
-        HANDLE hFind = FindFirstFileExA((Dir_Name2 + '*').c_str(), FindExInfoBasic, &FindFileData, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+        WIN32_FIND_DATAW FindFileData;
+        HANDLE hFind = FindFirstFileExW(WideFileName(Dir_Name2 + '*').c_str(), FindExInfoBasic, &FindFileData, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
         if (hFind == INVALID_HANDLE_VALUE)
             return;
 
         do {
-            size_t FileSize = ((size_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
-            DetectSequence_FromDir_Sub(Dir_Name2, FindFileData.cFileName, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
+            uintmax_t FileSize = ((uintmax_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
+            DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
         }
-        while (FindNextFileA(hFind, &FindFileData));
+        while (FindNextFileW(hFind, &FindFileData));
 
         FindClose(hFind);
     #else //WINDOWS
