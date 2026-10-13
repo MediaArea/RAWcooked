@@ -1076,7 +1076,9 @@ private:
     {
         TRACE_SCOPE("Copy block");
         Buffer = Pool->Get(Size + Padding, Buffer_Capacity);
-        memcpy(Buffer, Data, Size);
+        auto Offset = (uintptr_t)Data - (uintptr_t)(FileMap ? FileMap->Data() : nullptr); // Data is in the current memory map during the call of the holder
+        if (!FileMap || (uintptr_t)Data < (uintptr_t)FileMap->Data() || FileMap->Read(Offset, Buffer, Size)) // Read from the file if possible (faster than the first access to the memory map)
+            memcpy(Buffer, Data, Size);
         memset(Buffer + Size, 0, Padding);
         Data = Buffer;
     }

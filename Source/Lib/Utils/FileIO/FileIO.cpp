@@ -26,6 +26,7 @@
     #define mkdir(FileName) _wmkdir(WideFileName(FileName).c_str())
     #define stat _stat
 #else
+    #include <cerrno>
     #include <dirent.h>
     #include <fcntl.h>
     #include <glob.h>
@@ -717,6 +718,38 @@ size_t filemap::Readable_End()
     }
     return Size();
 }
+
+//---------------------------------------------------------------------------
+bool filemap::Read(size_t Offset, uint8_t* Buffer, size_t Read_Size)
+{
+    if (Method != method::mmap || Private == (decltype(Private))-1 || Offset > Size() || Read_Size > Size() - Offset)
+        return true;
+    while (Read_Size)
+    {
+#if defined(_WIN32) || defined(_WINDOWS)
+        OVERLAPPED Overlapped = {};
+        Overlapped.Offset = (DWORD)Offset;
+        Overlapped.OffsetHigh = (DWORD)((uint64_t)Offset >> 32);
+        DWORD BytesRead = 0;
+        if (!ReadFile(Private, Buffer, Read_Size < 0x40000000 ? (DWORD)Read_Size : 0x40000000, &BytesRead, &Overlapped) || !BytesRead)
+            return true;
+#else
+        auto BytesRead = pread(Private, Buffer, Read_Size, (off_t)Offset);
+        if (BytesRead <= 0)
+        {
+            if (BytesRead && errno == EINTR)
+                continue;
+            return true;
+        }
+#endif
+        Offset += (size_t)BytesRead;
+        Buffer += (size_t)BytesRead;
+        Read_Size -= (size_t)BytesRead;
+    }
+    return false;
+}
+
+//---------------------------------------------------------------------------
 int filemap::Remap(size_t Begin, size_t End)
 {
     // Special case for 0-byte files

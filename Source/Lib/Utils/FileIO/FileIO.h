@@ -93,6 +93,9 @@ public:
     // End of the bytes readable from Data(), offset in the file (more than Size() if bytes after the end of the file are readable)
     size_t                      Readable_End();
 
+    // Copy of bytes of the file at Offset, read from the file instead of the memory map (no page faults, faster for a copy), true if not possible (memory map method only)
+    bool                        Read(size_t Offset, uint8_t* Buffer, size_t Read_Size);
+
 private:
     #if defined(_WIN32) || defined(_WINDOWS)
     void*                       Private = (void*)-1;
