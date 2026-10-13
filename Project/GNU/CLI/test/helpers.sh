@@ -281,7 +281,10 @@ run_rawcooked() {
         sleep ${timeout} && (kill -HUP ${pid} ; fatal "command timeout: rawcooked $@") & local watcher=${!}
         kill -CONT ${pid} ; wait ${pid}
         cmd_status="${?}"
+        # stop the watcher: its sleep, and the watcher itself in case its sleep is not started yet (else it reports a timeout later, maybe during another test)
         pkill -P ${watcher}
+        kill ${watcher} 2>/dev/null
+        wait ${watcher} 2>/dev/null
     else
         rawcooked ${@////\\} >"${temp_path}/stdout" 2>"${temp_path}/stderr"
         cmd_status="${?}"
