@@ -113,7 +113,7 @@ struct parse_info
 {
     string* Name = {};
     filemap FileMap;
-    vector<string> RemovedFiles;
+    vector<FileEntry> RemovedFiles;
     string FileName_Template;
     string FileName_StartNumber;
     string FileName_EndNumber;
@@ -172,10 +172,10 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 }
 
 //---------------------------------------------------------------------------
-bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding, size_t i)
+bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t i)
 {
-    const auto& Name = RemovedFiles[i];
-    if (input::OpenInput(FileMap, Name, 0, &Global.Errors, Global.Edits_Enabled)) {
+    const auto& Name = RemovedFiles[i].FileName;
+    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled)) {
         return true;
     }
     if (Global.Actions[Action_Encode]) {
@@ -197,7 +197,7 @@ struct worker_data {
     filemap FileMap;
     input_base_uncompressed* Parser;
 };
-bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding)
+bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
 {
     if (Global.IoThreads > 1) {
         const size_t numFiles = RemovedFiles.size();
@@ -349,7 +349,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     }
 
     if (RemovedFiles.empty())
-        RemovedFiles.push_back(*Name);
+        RemovedFiles.push_back(Input.Files[Files_Pos]);
     else
     {
         // OverrideCheckPadding info
@@ -495,7 +495,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     {
         stream Stream;
 
-        Stream.FileName = ParseInfo.RemovedFiles[0];
+        Stream.FileName = ParseInfo.RemovedFiles[0].FileName;
         if (!ParseInfo.FileName_StartNumber.empty() && !ParseInfo.FileName_Template.empty())
         {
             Stream.FileName_Template = ParseInfo.FileName_Template;

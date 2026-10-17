@@ -31,7 +31,7 @@ public:
 
     // Commands
     int AnalyzeInputs(global& Global);
-    void DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors = nullptr);
+    void DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<FileEntry>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors = nullptr);
 
     // Checks
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);

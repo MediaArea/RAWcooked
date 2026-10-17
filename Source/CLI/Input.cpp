@@ -179,7 +179,7 @@ int input::FileName_Compare(const string& Left, const string& Right)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
+void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<FileEntry>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos].FileName);
     string After;
@@ -207,9 +207,11 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
+        auto FileSize = Files[AllFiles_Pos].FileSize; // Size of the next file in the sequence, 0 if unknown
         for (;;)
         {
-            RemovedFiles.push_back(Before + FN + After);
+            RemovedFiles.push_back({ Before + FN + After, FileSize });
+            FileSize = 0;
             FileName_EndNumber = FN;
             size_t i = FN.size() - 1;
             for (;;)
@@ -347,8 +349,12 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
                     }
 
                     // Keep checking files in the sequence
+                    if (Files[AllFiles_Pos].FileName == Before + FN + After)
+                        FileSize = Files[AllFiles_Pos].FileSize;
                     AllFiles_PosToDelete = AllFiles_Pos;
                 }
+                else
+                    FileSize = Files[AllFiles_PosToDelete].FileSize;
                 AllFiles_PosToDelete++;
             }
         }
@@ -356,7 +362,7 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
 
     if (RemovedFiles.empty())
     {
-        RemovedFiles.push_back(Files[AllFiles_Pos].FileName);
+        RemovedFiles.push_back(Files[AllFiles_Pos]);
         FileName_Template = Files[AllFiles_Pos].FileName;
     }
     else
@@ -365,10 +371,10 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<s
         FileName_Template = Before + "%0" + Size + "d" + After;
         if (MustCreateFileList && !RemovedFiles.empty())
         {
-            FileList.reserve(RemovedFiles.begin()->size() * RemovedFiles.size());
-            for (auto File : RemovedFiles)
+            FileList.reserve(RemovedFiles.begin()->FileName.size() * RemovedFiles.size());
+            for (const auto& File : RemovedFiles)
             {
-                FileList += File;
+                FileList += File.FileName;
                 FileList += '\n';
             }
         }
