@@ -1030,6 +1030,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
         IoThreads = thread::hardware_concurrency();
         if (!IoThreads)
             IoThreads = 4;
+
+        // Edit only: the threads mainly wait for the storage, more requests in parallel
+        if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch])
+            IoThreads *= 4;
     }
 
     // GPU decoding (vulkan decoder, or auto decoder which uses it with a Vulkan GPU) needs the same license feature as GPU encoding
