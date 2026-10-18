@@ -203,6 +203,15 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         const size_t numFiles = RemovedFiles.size();
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
+        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+            for (;;) {
+                auto i = nextIndex.fetch_add(1, memory_order_relaxed);
+                if (i >= numFiles) break;
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+                    AnyError = true;
+                }
+            }
+        };
         vector<worker_data> Pool;
         Pool.resize(Global.IoThreads);
         Pool[0].Parser = &SingleFile;
@@ -216,16 +225,11 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
 
             // Launch each worker
             worker_data* p = &Pool[w];
-            p->Thread = thread([p, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError]() {
-                for (;;) {
-                    auto i = nextIndex.fetch_add(1, memory_order_relaxed);
-                    if (i >= numFiles) break;
-                    if (ParseFile_AdditionalInput(*p->Parser, p->FileMap, RemovedFiles, OverrideCheckPadding, i)) {
-                        AnyError = true;
-                    }
-                }
-            });
+            p->Thread = thread([p, &Work]() { Work(*p->Parser, p->FileMap); });
         }
+
+        // The current thread is also a worker, with the first parser
+        Work(SingleFile, FileMap);
 
         // Join threads and cleanup parsers
         for (size_t w = 0; w < Global.IoThreads; ++w) {
@@ -356,7 +360,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             cerr << "Info: non-zero padding bits found in first file,\n"
                 << "      forcing the check of padding bits for all files.\n" << endl;
         }
-        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
+        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet] && !Global.Edits_Enabled) // If --no-checking-padding is not present, and padding bits are not relevant when editing
         {
             Global.ProgressIndicator_Stop();
             if (Global.Actions[Action_Check])
