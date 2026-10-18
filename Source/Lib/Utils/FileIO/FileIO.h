@@ -28,7 +28,7 @@ class filemap : public buffer_view
 public:
     // Constructor/Destructor
                                 filemap() : buffer_view(nullptr, 0) {}
-                                ~filemap() { Close(); }
+                                ~filemap() { Close(); delete[] Header_Buffer; }
 
     // Actions
     enum class method
@@ -40,9 +40,14 @@ public:
         #if defined(_WIN32) || defined(_WINDOWS)
         createfile,
         #endif //defined(_WIN32) || defined(_WINDOWS)
+        header, // Internal, set by Open_HeaderMode()
     };
     int                         Open_ReadMode(const char* FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWtite_ = false);
     int                         Open_ReadMode(const string& FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWrite_ = false) { return Open_ReadMode(FileName.c_str(), FileSize, NewMethod, Begin, End, AlsoWrite_); }
+    // Reads only the first HeaderSize bytes, without memory map (cheaper when only the header is needed, e.g. for editing it): Size() is the file size, Readable_End() the count of bytes read
+    int                         Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_ = false, uintmax_t FileSize = 0);
+    // Writes the bytes from Begin to End of Data() to the file (needed only if the file is not memory mapped)
+    int                         Write(size_t Begin, size_t End);
     bool                        IsOpen() { return Private == (decltype(Private))-1 ? false : true; }
     int                         Remap(size_t Begin = 0, size_t End = 0);
     int                         Close();
@@ -64,6 +69,9 @@ private:
     method                      Method = {};
     bool                        AlsoWrite = false;
     void*                       Map = nullptr; // Memory map, with the count of its users
+    size_t                      Header_Size = 0; // Count of bytes read in header mode
+    uint8_t*                    Header_Buffer = nullptr; // Buffer for header mode, kept for the next files
+    size_t                      Header_Buffer_Size = 0;
 };
 
 class file

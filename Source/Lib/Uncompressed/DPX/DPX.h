@@ -68,6 +68,9 @@ public:
         Altern,
     };
 
+    // Header (generic and industry specific)
+    size_t                      HeaderSize() { return 2048; }
+
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels

@@ -40,7 +40,7 @@ public:
     static int FileName_Compare(const string& Left, const string& Right);
 
     // I/O
-    static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false);
+    static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0); // Only the header is read if HeaderSize is not 0
 };
 
 #endif

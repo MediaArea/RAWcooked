@@ -29,6 +29,7 @@ static const char* MessageText[] =
     "version number of header format",
     "offset to data",
     "expected data size is bigger than real file size",
+    "file can not be written (edit)",
 };
 
 enum code : uint8_t
@@ -38,6 +39,7 @@ enum code : uint8_t
     VersionNumber,
     OffsetToData,
     DataSize,
+    Write,
     Max
 };
 
@@ -949,11 +951,24 @@ void dpx::ConformanceCheck()
 //---------------------------------------------------------------------------
 void dpx::Edit()
 {
+    size_t Changed_Begin = (size_t)-1;
+    size_t Changed_End = 0;
     for (const auto& Edit : Edits) {
+        auto Edit_End = Edit.first + Edit.second.Size();
+        if (Edit_End > Buffer.Size() || (FileMap && Edit_End > FileMap->Readable_End())) {
+            Undecodable(undecodable::BufferOverflow);
+            continue;
+        }
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
             memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
+            Changed_Begin = min(Changed_Begin, (size_t)Edit.first);
+            Changed_End = max(Changed_End, Edit_End);
         }
     }
+
+    // Only the header is in memory if the file is not memory mapped, one write for all edits
+    if (Changed_End && FileMap && FileMap->Write(Changed_Begin, Changed_End))
+        Undecodable(undecodable::Write);
 }
 
 //---------------------------------------------------------------------------

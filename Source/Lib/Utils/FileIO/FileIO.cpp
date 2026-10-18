@@ -290,12 +290,133 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             return 1;
         }
         FileSize = Fstat.st_size;
-        Private = fd;
     }
+    Private = fd;
 #endif
 
     AssignKeepDataBase(FileSize); // Intermediate, Remap() will set the data pointer
     return Remap();
+}
+
+//---------------------------------------------------------------------------
+int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_, uintmax_t FileSize)
+{
+    Close();
+
+    AlsoWrite = AlsoWrite_;
+    Method = method::header;
+
+    // Open
+#if defined(_WIN32) || defined(_WINDOWS)
+    static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
+    static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
+    auto NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (NewFile == INVALID_HANDLE_VALUE)
+    {
+        Close();
+        return 1;
+    }
+    Private = NewFile;
+    if (!FileSize)
+    {
+        LARGE_INTEGER FileSize_Temp;
+        if (!GetFileSizeEx(NewFile, &FileSize_Temp))
+        {
+            Close();
+            return 1;
+        }
+        FileSize = FileSize_Temp.QuadPart;
+    }
+#else
+    static const int oflag[2] = { O_RDONLY, O_RDWR };
+    auto fd = open(FileName.c_str(), oflag[AlsoWrite], 0);
+    if (fd == -1)
+    {
+        Close();
+        return 1;
+    }
+    Private = fd;
+    if (!FileSize)
+    {
+        struct stat Fstat;
+        if (fstat(fd, &Fstat))
+        {
+            Close();
+            return 1;
+        }
+        FileSize = Fstat.st_size;
+    }
+#endif
+    if (sizeof(size_t) < 8 && FileSize >> 32) // Files of 4+ GiB are not supported in 32-bit mode
+    {
+        Close();
+        return 1;
+    }
+
+    // Read
+    if (HeaderSize > FileSize)
+        HeaderSize = (size_t)FileSize;
+    if (!HeaderSize)
+        return 0; // Special case for 0-byte files
+    if (HeaderSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
+    {
+        delete[] Header_Buffer;
+        Header_Buffer = new uint8_t[HeaderSize];
+        Header_Buffer_Size = HeaderSize;
+    }
+    auto Header = Header_Buffer;
+    AssignBase(Header, (size_t)FileSize);
+#if defined(_WIN32) || defined(_WINDOWS)
+    DWORD BytesRead;
+    if (HeaderSize > (DWORD)-1 || !ReadFile(Private, Header, (DWORD)HeaderSize, &BytesRead, nullptr))
+    {
+        Close();
+        return 1;
+    }
+    Header_Size = BytesRead;
+#else
+    while (Header_Size < HeaderSize)
+    {
+        auto BytesRead = read(Private, Header + Header_Size, HeaderSize - Header_Size);
+        if (BytesRead <= 0)
+            break;
+        Header_Size += BytesRead;
+    }
+#endif
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int filemap::Write(size_t Begin, size_t End)
+{
+    // Memory map, data is already in the file
+    if (Method != method::header)
+        return AlsoWrite && Method == method::mmap ? 0 : 1;
+
+    if (!AlsoWrite || Begin > End || End > Header_Size)
+        return 1;
+    auto Size = End - Begin;
+#if defined(_WIN32) || defined(_WINDOWS)
+    // Memory map of the beginning of the file, quicker than WriteFile() when the file is closed just after (antivirus software
+    // e.g. Windows Defender scans the file when it is closed after a WriteFile(), not after a write in a memory map)
+    auto Mapping = CreateFileMapping(Private, 0, PAGE_READWRITE, 0, 0, 0);
+    if (!Mapping)
+        return 1;
+    auto View = (uint8_t*)MapViewOfFile(Mapping, FILE_MAP_WRITE, 0, 0, End);
+    if (!View)
+    {
+        CloseHandle(Mapping);
+        return 1;
+    }
+    memcpy(View + Begin, Data() + Begin, Size);
+    UnmapViewOfFile(View);
+    CloseHandle(Mapping);
+#else
+    if (pwrite(Private, Data() + Begin, Size, Begin) != (ssize_t)Size)
+        return 1;
+#endif
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -349,6 +470,8 @@ void filemap::Release(void* Map_)
 //---------------------------------------------------------------------------
 size_t filemap::Readable_End()
 {
+    if (Method == method::header)
+        return Header_Size;
     if (Method != method::mmap)
     {
         auto P = (private_buffered*)Private2;
@@ -361,6 +484,9 @@ int filemap::Remap(size_t Begin, size_t End)
     // Special case for 0-byte files
     if (Empty())
         return 0;
+
+    if (Method == method::header)
+        return 1; // Not supported
 
     if (Method != method::mmap)
     {
@@ -455,8 +581,16 @@ int filemap::Remap(size_t Begin, size_t End)
 //---------------------------------------------------------------------------
 int filemap::Close()
 {
+    // Close header copy, buffer kept for the next file
+    if (Method == method::header)
+    {
+        ClearBase();
+        Header_Size = 0;
+        Method = {};
+    }
+
     // Close map, kept by its users if any
-    if (Map)
+    else if (Map)
     {
         Release(Map);
         Map = nullptr;

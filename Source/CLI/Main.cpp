@@ -172,10 +172,10 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 }
 
 //---------------------------------------------------------------------------
-bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t i)
+bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, size_t i)
 {
     const auto& Name = RemovedFiles[i].FileName;
-    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled)) {
+    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize)) {
         return true;
     }
     if (Global.Actions[Action_Encode]) {
@@ -199,15 +199,23 @@ struct worker_data {
 };
 bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
 {
+    // Only the header is needed if the files are only edited, read and written without memory map (quicker on Linux and macOS, munmap() is costly)
+    // Not on Windows: with Windows Defender, the antivirus work is doubled with ReadFile() and WriteFile(), the memory map is quicker
+    #if defined(_WIN32) || defined(_WINDOWS)
+    size_t HeaderSize = 0;
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    size_t HeaderSize = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch] ? SingleFile.HeaderSize() : 0;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+
     if (Global.IoThreads > 1) {
         const size_t numFiles = RemovedFiles.size();
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
-        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, &AnyError](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
                 if (i >= numFiles) break;
-                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, i)) {
                     AnyError = true;
                 }
             }
@@ -244,7 +252,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     }
 
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
-        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, i)) {
             return true;
         }
     }
