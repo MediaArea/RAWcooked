@@ -743,8 +743,9 @@ int main(int argc, const char* argv[])
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
-    sort(Input.Files.begin(), Input.Files.end(),
-        [](const FileEntry& l, const FileEntry& r) {return input::FileName_Compare(l.FileName, r.FileName) < 0; });
+    const auto FileEntry_Less = [](const FileEntry& l, const FileEntry& r) {return input::FileName_Compare(l.FileName, r.FileName) < 0; };
+    if (!is_sorted(Input.Files.begin(), Input.Files.end(), FileEntry_Less)) // Often already in order (e.g. NTFS), a sort would compare the names again
+        sort(Input.Files.begin(), Input.Files.end(), FileEntry_Less);
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_FileName;
