@@ -80,6 +80,12 @@ void input_base::Hash_Batch_Flush(bool Begin)
 }
 
 //---------------------------------------------------------------------------
+size_t input_base::Hash_Batch_ThreadCount_Min()
+{
+    return MD5_Lanes_Batch_Min;
+}
+
+//---------------------------------------------------------------------------
 // Common
 #define TEST_BUFFEROVERFLOW(_SIZE) \
     if (Buffer_Offset + _SIZE - 1 >= Buffer.Size()) \

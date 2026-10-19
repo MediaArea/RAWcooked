@@ -340,7 +340,7 @@ namespace
 const size_t Lanes_Max = 8;
 const size_t Lanes_Min = 3; // Fewer jobs computed together are slower than scalar code in the threads of the callers (measured on AMD Zen 5: 1 lane 2x slower, 2 lanes using the same CPU and 2x slower in wall time; on Apple M1 with NEON: 1 lane 2x slower, 2 lanes using more CPU)
 const size_t Run_Max = 16384; // Max count of blocks per lane before new jobs can use free lanes
-const size_t Batch_Min = Lanes_Min; // Count of jobs computed together if jobs accept to wait for other jobs
+const size_t Batch_Min = MD5_Lanes_Batch_Min;
 const auto Batch_Wait_Max = std::chrono::seconds(1);
 
 struct md5_job

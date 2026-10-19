@@ -87,6 +87,7 @@ public:
     filemap::method             OpenStyle = {};
     bool                        Hash_Batch = false; // Hash may wait for the hash of files from other threads (lower CPU usage), Hash_Batch_Flush(true) is needed after the last file
     static void                 Hash_Batch_Flush(bool Begin); // No wait for the hash of other files from Hash_Batch_Flush(true) to Hash_Batch_Flush(false)
+    static size_t               Hash_Batch_ThreadCount_Min(); // Batch is useful only with at least this count of threads hashing files at the same time (else each file waits)
 
     // Parse
     bool                        Parse(const buffer_view& Buffer_Source, size_t FileSize_Source = (size_t)-1) { return Parse(nullptr, Buffer_Source, FileSize_Source); }

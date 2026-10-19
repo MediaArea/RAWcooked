@@ -246,7 +246,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         vector<worker_data> Pool;
         Pool.resize(Global.IoThreads);
         Pool[0].Parser = &SingleFile;
-        SingleFile.Hash_Batch = Global.Actions[Action_Hash]; // Hash of several files in parallel
+        SingleFile.Hash_Batch = Global.Actions[Action_Hash] && Global.IoThreads >= input_base::Hash_Batch_ThreadCount_Min(); // Hash of several files in parallel
         for (size_t w = 1; w < Global.IoThreads; ++w) {
             // Initialize each worker
             Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
