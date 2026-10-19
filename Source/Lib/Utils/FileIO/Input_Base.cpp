@@ -70,7 +70,7 @@ void input_base::Hash()
                 Size_Temp = (unsigned long)-1;
             else
                 Size_Temp = (unsigned long)(Buffer.Size() - Offset);
-            MD5_Update(&MD5, Buffer.Data(), Size_Temp);
+            MD5_Update(&MD5, Buffer.Data() + Offset, Size_Temp);
             Offset += Size_Temp;
         }
 
