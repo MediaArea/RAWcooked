@@ -9,9 +9,9 @@
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <new>
 #include <sstream>
 #include <fstream>
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -432,10 +432,10 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     // Header: random access, no read-ahead of the content after the header
     // Whole file: sequential access, without the file cache on Windows (memory map and file cache cost a lot of CPU when the whole file is read once)
     auto FileName_Relative = Dir && !IsWholeFile ? Dir->RelativeName(FileName.c_str()) : nullptr;
+    static const size_t SectorSize = 4096; // Alignment needed without the file cache, 4096 is a multiple of all usual sector sizes
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
-    static const DWORD SectorSize = 4096; // Alignment needed without the file cache, 4096 is a multiple of all usual sector sizes
     auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
     if (NewFile == INVALID_HANDLE_VALUE)
         NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | (IsWholeFile ? (FILE_FLAG_NO_BUFFERING | FILE_FLAG_SEQUENTIAL_SCAN) : FILE_FLAG_RANDOM_ACCESS), 0);
@@ -458,6 +458,10 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
 #else
     static const int oflag[2] = { O_RDONLY, O_RDWR };
     auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
+    #if defined(O_DIRECT)
+        if (fd == -1 && IsWholeFile)
+            fd = open(FileName.c_str(), oflag[AlsoWrite] | O_DIRECT, 0); // Linux and others, may be not supported by the file system
+    #endif
     if (fd == -1)
         fd = open(FileName.c_str(), oflag[AlsoWrite], 0);
     if (fd == -1)
@@ -468,8 +472,10 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     Private = fd;
     if (IsWholeFile)
     {
-        #if defined(POSIX_FADV_SEQUENTIAL)
-            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL); // Linux and others
+        #if defined(F_NOCACHE)
+            fcntl(fd, F_NOCACHE, 1); // macOS
+        #elif defined(POSIX_FADV_SEQUENTIAL)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL); // Without O_DIRECT
         #endif
     }
     else
@@ -510,17 +516,16 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     if (!HeaderSize)
         return 0; // Special case for 0-byte files
     auto ReadSize = HeaderSize;
-#if defined(_WIN32) || defined(_WINDOWS)
     if (IsWholeFile)
         ReadSize = (ReadSize + SectorSize - 1) / SectorSize * SectorSize; // Without the file cache, the size is a multiple of the sector size
-#endif
     if (ReadSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
     {
         Header_Buffer_Free();
         #if defined(_WIN32) || defined(_WINDOWS)
             Header_Buffer = (uint8_t*)_aligned_malloc(ReadSize, SectorSize);
         #else //defined(_WIN32) || defined(_WINDOWS)
-            Header_Buffer = new (std::nothrow) uint8_t[ReadSize];
+            void* Temp;
+            Header_Buffer = posix_memalign(&Temp, SectorSize, ReadSize) ? nullptr : (uint8_t*)Temp;
         #endif //defined(_WIN32) || defined(_WINDOWS)
         if (!Header_Buffer)
         {
@@ -547,6 +552,11 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
         if (BytesRead <= 0)
             break;
         Header_Size += BytesRead;
+    }
+    if (IsWholeFile && Header_Size < HeaderSize)
+    {
+        Close();
+        return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_); // E.g. file system not supporting reads without the file cache
     }
 #endif
     if (Header_Size > HeaderSize)
@@ -753,7 +763,7 @@ void filemap::Header_Buffer_Free()
     #if defined(_WIN32) || defined(_WINDOWS)
         _aligned_free(Header_Buffer);
     #else //defined(_WIN32) || defined(_WINDOWS)
-        delete[] Header_Buffer;
+        free(Header_Buffer);
     #endif //defined(_WIN32) || defined(_WINDOWS)
     Header_Buffer = nullptr;
     Header_Buffer_Size = 0;
