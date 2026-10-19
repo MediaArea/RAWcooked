@@ -605,9 +605,9 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     }
     Header_Size = BytesRead;
 #else
-    while (Header_Size < ReadSize)
+    while (Header_Size < HeaderSize) // Up to the needed bytes, no additional call for detecting the end of the file
     {
-        auto BytesRead = read(Private, Header + Header_Size, ReadSize - Header_Size);
+        auto BytesRead = read(Private, Header + Header_Size, ReadSize - Header_Size); // Size rounded up as needed without the file cache
         if (BytesRead <= 0)
             break;
         Header_Size += BytesRead;
