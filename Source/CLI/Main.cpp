@@ -199,7 +199,8 @@ struct worker_data {
 };
 bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
 {
-    auto EditOnly = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch];
+    // Edit only: only the beginning of the files is needed (hash and padding bits check read the whole files sequentially)
+    auto EditOnly = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch] && !Global.Actions[Action_CheckPadding] && !OverrideCheckPadding;
 
     // Only the header is needed if the files are only edited, read and written without memory map (quicker on Linux and macOS, munmap() is costly)
     // Not on Windows: with Windows Defender, the antivirus work is doubled with ReadFile() and WriteFile(), the memory map is quicker

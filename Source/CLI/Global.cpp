@@ -1032,7 +1032,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             IoThreads = 4;
 
         // Edit only: the threads mainly wait for the storage, more requests in parallel
-        if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch])
+        if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch] && !Actions[Action_CheckPadding])
             IoThreads *= 4;
     }
 
