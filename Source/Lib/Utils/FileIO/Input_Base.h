@@ -85,6 +85,8 @@ public:
     hashes*                     Hashes = nullptr;
     string                      FileName;
     filemap::method             OpenStyle = {};
+    bool                        Hash_Batch = false; // Hash may wait for the hash of files from other threads (lower CPU usage), Hash_Batch_Flush(true) is needed after the last file
+    static void                 Hash_Batch_Flush(bool Begin); // No wait for the hash of other files from Hash_Batch_Flush(true) to Hash_Batch_Flush(false)
 
     // Parse
     bool                        Parse(const buffer_view& Buffer_Source, size_t FileSize_Source = (size_t)-1) { return Parse(nullptr, Buffer_Source, FileSize_Source); }

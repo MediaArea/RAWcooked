@@ -225,10 +225,16 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         const size_t numFiles = RemovedFiles.size();
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
-        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, &AnyError](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+        atomic<bool> HashFlush{ false };
+        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
-                if (i >= numFiles) break;
+                if (i >= numFiles) {
+                    // No more files, hashes of the last files computed without waiting for other files
+                    if (Parser.Hash_Batch && !HashFlush.exchange(true))
+                        input_base::Hash_Batch_Flush(true);
+                    break;
+                }
                 if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i)) {
                     AnyError = true;
                 }
@@ -237,6 +243,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         vector<worker_data> Pool;
         Pool.resize(Global.IoThreads);
         Pool[0].Parser = &SingleFile;
+        SingleFile.Hash_Batch = Global.Actions[Action_Hash]; // Hash of several files in parallel
         for (size_t w = 1; w < Global.IoThreads; ++w) {
             // Initialize each worker
             Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
@@ -244,6 +251,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                 AnyError = true;
                 continue;
             }
+            Pool[w].Parser->Hash_Batch = SingleFile.Hash_Batch;
 
             // Launch each worker
             worker_data* p = &Pool[w];
@@ -261,6 +269,9 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
             if (w)
                 delete P.Parser;
         }
+        if (HashFlush)
+            input_base::Hash_Batch_Flush(false);
+        SingleFile.Hash_Batch = false;
 
         return AnyError.load();
     }

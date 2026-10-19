@@ -15,6 +15,7 @@ extern "C"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/Utils/FileIO/Input_Base.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
+#include "Lib/Utils/MD5/MD5_Lanes.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -57,28 +58,25 @@ void input_base::Hash()
     if (!Actions[Action_Hash] || HashComputed)
         return;
 
-    // MD5    
+    // MD5, in SIMD lanes with the files hashed by other threads at the same time
     {
         MD5_CTX MD5;
         MD5_Init(&MD5);
 
-        size_t Offset = 0;
-        while (Offset < Buffer.Size())
-        {
-            unsigned long Size_Temp;
-            if (Buffer.Size() - Offset >= (unsigned long)-1) // MD5_Update() accepts only unsigned longs
-                Size_Temp = (unsigned long)-1;
-            else
-                Size_Temp = (unsigned long)(Buffer.Size() - Offset);
-            MD5_Update(&MD5, Buffer.Data() + Offset, Size_Temp);
-            Offset += Size_Temp;
-        }
+        md5_part Part{ Buffer.Data(), Buffer.Size() };
+        MD5_Update_Lanes(&MD5, &Part, 1, Hash_Batch);
 
         MD5_Final(HashValue.data(), &MD5);
         if (Hashes && !FileName.empty())
             Hashes->FromFile(FileName, HashValue);
     }
     HashComputed = true;
+}
+
+//---------------------------------------------------------------------------
+void input_base::Hash_Batch_Flush(bool Begin)
+{
+    MD5_Lanes_Flush(Begin);
 }
 
 //---------------------------------------------------------------------------
