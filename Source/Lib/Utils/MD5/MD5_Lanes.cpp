@@ -401,13 +401,15 @@ struct md5_job
 };
 
 //---------------------------------------------------------------------------
-// Jobs from all threads computed in a single thread
+// Jobs from all threads computed in lanes by engines (threads), as many engines as needed by the count of jobs
 class md5_lanes
 {
 public:
-    md5_lanes() :
-        Thread(&md5_lanes::Run, this)
+    md5_lanes()
     {
+        Engines_Max = std::thread::hardware_concurrency();
+        if (!Engines_Max)
+            Engines_Max = 1;
     }
 
     ~md5_lanes()
@@ -417,15 +419,27 @@ public:
             Stop = true;
         }
         Condition.notify_all();
-        Thread.join();
+        for (auto& Engine : Engines)
+            Engine.join();
     }
 
     void Compute(md5_job* Job)
     {
         {
             std::unique_lock<std::mutex> Lock(Mutex);
-            if (Active_Count + Pending.size() >= Lanes_Max)
-                Job->Scalar = true; // All lanes are used, computed by the caller instead of waiting for a free lane (not slower than MD5_Update())
+
+            // Lanes which can take the pending jobs soon: free lanes of the engines computing other jobs, lanes of the idle engines
+            auto Available = Lanes_Free + Engines_Idle * Lanes_Max;
+            auto Needed = Pending.size() + 1;
+            if (Engines.empty() || (Needed >= Available + Lanes_Min && Engines.size() < Engines_Max))
+            {
+                // New engine, if enough jobs for being faster than scalar code
+                Engines_Idle++; // Counted as idle from now, for not creating several engines for the same jobs
+                Engines.emplace_back(&md5_lanes::Run, this);
+                Available += Lanes_Max;
+            }
+            if (Needed > Available && Engines.size() >= Engines_Max)
+                Job->Scalar = true; // All lanes are used and the max count of engines is reached, computed by the caller instead of waiting for a free lane (not slower than MD5_Update())
             else
             {
                 TRACE_SCOPE("MD5 lanes wait");
@@ -459,13 +473,16 @@ private:
     std::mutex                  Mutex;
     std::condition_variable     Condition;
     std::deque<md5_job*>        Pending;
-    size_t                      Active_Count = 0; // Count of jobs in lanes
+    std::vector<std::thread>    Engines;
+    size_t                      Engines_Max;
+    size_t                      Engines_Idle = 0; // Count of engines without job
+    size_t                      Lanes_Free = 0; // Count of free lanes in the engines computing jobs
     size_t                      Flush_Count = 0;
     bool                        Stop = false;
-    std::thread                 Thread;
 };
 
 //---------------------------------------------------------------------------
+// Engine, counted as idle when it is created
 void md5_lanes::Run()
 {
     #ifdef MD5_LANES_NEON
@@ -474,47 +491,69 @@ void md5_lanes::Run()
         auto Function = SimdLevel() >= 2 ? MD5_Lanes_AVX512VL : MD5_Lanes_AVX2;
     #endif
     std::vector<md5_job*> Active;
+    size_t Free = 0; // Contribution of this engine to Lanes_Free
+    auto Free_Set = [&](size_t New) { Lanes_Free = Lanes_Free - Free + New; Free = New; };
     trace::ThreadName("MD5 lanes");
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
     {
-        // New jobs in free lanes, waiting for more jobs if no job is in progress and jobs accept to wait (lower CPU usage)
-        Condition.wait(Lock, [&] { return !Pending.empty() || !Active.empty() || Stop; });
-        if (Active.empty() && !Pending.empty())
-        {
-            TRACE_SCOPE("MD5 batch wait");
-            auto Deadline = std::chrono::steady_clock::now() + Batch_Wait_Max;
-            Condition.wait_until(Lock, Deadline, [&]
-            {
-                if (Stop || Flush_Count || Pending.size() >= Batch_Min)
-                    return true;
-                for (auto Job : Pending)
-                    if (!Job->Batch)
-                        return true;
-                return false;
-            });
-        }
-        while (Active.size() < Lanes_Max && !Pending.empty())
-        {
-            Active.push_back(Pending.front());
-            Pending.pop_front();
-        }
-        Active_Count = Active.size();
         if (Active.empty())
-            return; // Stop
-        if (Active.size() < Lanes_Min)
         {
-            // Not enough jobs for being faster than scalar code, jobs are computed by their callers
-            for (auto Job : Active)
+            // Idle, waiting for more jobs than the free lanes of the engines computing jobs (filled first, lower CPU usage), and for more jobs if jobs accept to wait (lower CPU usage)
+            Condition.wait(Lock, [&] { return Pending.size() > Lanes_Free || Stop; });
+            if (Stop && Pending.empty())
             {
-                Job->Scalar = true;
-                Job->Done = true;
+                Engines_Idle--;
+                return; // Stop
             }
-            Active.clear();
-            Active_Count = 0;
-            Condition.notify_all();
-            continue;
+            if (Pending.size() <= Lanes_Free)
+                continue;
+            {
+                TRACE_SCOPE("MD5 batch wait");
+                auto Deadline = std::chrono::steady_clock::now() + Batch_Wait_Max;
+                Condition.wait_until(Lock, Deadline, [&]
+                {
+                    if (Stop || Flush_Count || Pending.size() >= Lanes_Free + Batch_Min)
+                        return true;
+                    for (auto Job : Pending)
+                        if (!Job->Batch)
+                            return true;
+                    return false;
+                });
+            }
+            auto Excess = Pending.size() > Lanes_Free ? Pending.size() - Lanes_Free : 0; // Jobs not taken by the engines computing jobs
+            while (Active.size() < Lanes_Max && Active.size() < Excess)
+            {
+                Active.push_back(Pending.front());
+                Pending.pop_front();
+            }
+            if (Active.empty())
+                continue; // Jobs taken by other engines
+            Engines_Idle--;
+            if (Active.size() < Lanes_Min)
+            {
+                // Not enough jobs for being faster than scalar code, jobs are computed by their callers
+                for (auto Job : Active)
+                {
+                    Job->Scalar = true;
+                    Job->Done = true;
+                }
+                Active.clear();
+                Engines_Idle++;
+                Condition.notify_all();
+                continue;
+            }
         }
+        else
+        {
+            // New jobs in free lanes
+            while (Active.size() < Lanes_Max && !Pending.empty())
+            {
+                Active.push_back(Pending.front());
+                Pending.pop_front();
+            }
+        }
+        Free_Set(Lanes_Max - Active.size());
         Lock.unlock();
 
         // Data before the next full block and count of full blocks
@@ -564,12 +603,16 @@ void md5_lanes::Run()
         }
 
         Lock.lock();
-        Active_Count = Active.size();
         if (!Done.empty())
         {
             for (auto Job : Done)
                 Job->Done = true;
             Condition.notify_all();
+        }
+        if (Active.empty())
+        {
+            Free_Set(0);
+            Engines_Idle++;
         }
     }
 }
