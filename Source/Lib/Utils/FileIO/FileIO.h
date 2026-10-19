@@ -23,6 +23,33 @@ inline wstring WideFileName(const string& FileName) { return WideFileName(FileNa
 string NarrowFileName(const wchar_t* FileName);
 #endif //defined(_WIN32) || defined(_WINDOWS)
 
+// Directory kept open for opening the files in it from their name (cheaper than from the full path, which is parsed again for each file)
+class directory
+{
+public:
+    // Constructor/Destructor
+                                ~directory() { Close(); }
+
+    // Actions
+    int                         Open(const string& Path); // Path of the directory, with the trailing path separator (or empty for the current directory)
+    int                         Open_FromFileName(const string& FileName); // Directory containing the file
+    bool                        IsOpen() const { return Private != (decltype(Private))-1; }
+    void                        Close();
+
+    // Name of the file relative to the directory (pointer in FileName), nullptr if the file is not directly in the directory
+    const char*                 RelativeName(const char* FileName) const;
+
+private:
+    #if defined(_WIN32) || defined(_WINDOWS)
+    void*                       Private = (void*)-1;
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    int                         Private = (int)-1;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    string                      Path;
+
+    friend class filemap;
+};
+
 class filemap : public buffer_view
 {
 public:
@@ -42,10 +69,12 @@ public:
         #endif //defined(_WIN32) || defined(_WINDOWS)
         header, // Internal, set by Open_HeaderMode()
     };
-    int                         Open_ReadMode(const char* FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWtite_ = false);
+    // Memory map: the file is opened relative to Dir if it is directly in it, with random access if Dir is provided
+    int                         Open_ReadMode(const char* FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWtite_ = false, const directory* Dir = nullptr);
     int                         Open_ReadMode(const string& FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWrite_ = false) { return Open_ReadMode(FileName.c_str(), FileSize, NewMethod, Begin, End, AlsoWrite_); }
     // Reads only the first HeaderSize bytes, without memory map (cheaper when only the header is needed, e.g. for editing it): Size() is the file size, Readable_End() the count of bytes read
-    int                         Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_ = false, uintmax_t FileSize = 0);
+    // The file is opened relative to Dir if it is directly in it
+    int                         Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_ = false, uintmax_t FileSize = 0, const directory* Dir = nullptr);
     // Writes the bytes from Begin to End of Data() to the file (needed only if the file is not memory mapped)
     int                         Write(size_t Begin, size_t End);
     bool                        IsOpen() { return Private == (decltype(Private))-1 ? false : true; }

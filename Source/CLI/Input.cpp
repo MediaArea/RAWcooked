@@ -557,9 +557,9 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
 }
 
 //---------------------------------------------------------------------------
-bool input::OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite, size_t HeaderSize)
+bool input::OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite, size_t HeaderSize, const directory* Dir)
 {
-    if (HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, AlsoWrite, FileSize) : FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, AlsoWrite))
+    if (HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, AlsoWrite, FileSize, Dir) : FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, AlsoWrite, Dir))
     {
         if (Errors)
         {

@@ -9,11 +9,13 @@
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
 #include <atomic>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
+    #include <winternl.h> // NtCreateFile
     #include <stdio.h>
     #include <fcntl.h>
     #include <io.h> // File existence
@@ -39,7 +41,7 @@
 
 //---------------------------------------------------------------------------
 #if defined(_WIN32) || defined(_WINDOWS)
-wstring WideFileName(const char* FileName)
+static wstring WideName(const char* FileName)
 {
     // Same code page as the ANSI API
     auto CodePage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
@@ -49,6 +51,15 @@ wstring WideFileName(const char* FileName)
     wstring Name(Size, L'\0');
     MultiByteToWideChar(CodePage, 0, FileName, -1, &Name[0], Size);
     Name.resize(Size - 1);
+    return Name;
+}
+
+//---------------------------------------------------------------------------
+wstring WideFileName(const char* FileName)
+{
+    auto Name = WideName(FileName);
+    if (Name.empty())
+        return {};
 
     // Already a Win32 file or device namespace name
     if (Name.size() >= 4 && Name[0] == L'\\' && Name[1] == L'\\' && (Name[2] == L'?' || Name[2] == L'.') && Name[3] == L'\\')
@@ -83,7 +94,100 @@ string NarrowFileName(const wchar_t* FileName)
     Name.resize(Size - 1);
     return Name;
 }
+
+//---------------------------------------------------------------------------
+// Opens a file from its name relative to a directory, with the same options as CreateFileW() with OPEN_EXISTING and FILE_FLAG_RANDOM_ACCESS
+static HANDLE CreateFile_Relative(HANDLE Dir, const char* FileName, DWORD DesiredAccess, DWORD ShareMode)
+{
+    typedef NTSTATUS (NTAPI* NtCreateFile_Type)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK, PLARGE_INTEGER, ULONG, ULONG, ULONG, ULONG, PVOID, ULONG);
+    static const auto NtCreateFile_Ptr = (NtCreateFile_Type)(void*)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtCreateFile"); // Loaded at run time, no need of ntdll.lib
+    if (!NtCreateFile_Ptr)
+        return INVALID_HANDLE_VALUE;
+
+    auto Name = WideName(FileName);
+    auto Name_Size = Name.size() * sizeof(wchar_t);
+    if (Name.empty() || Name_Size > 0xFFFE)
+        return INVALID_HANDLE_VALUE;
+    UNICODE_STRING Name_Unicode;
+    Name_Unicode.Length = (USHORT)Name_Size;
+    Name_Unicode.MaximumLength = (USHORT)Name_Size;
+    Name_Unicode.Buffer = &Name[0];
+    OBJECT_ATTRIBUTES Attributes;
+    InitializeObjectAttributes(&Attributes, &Name_Unicode, OBJ_CASE_INSENSITIVE, Dir, nullptr);
+    IO_STATUS_BLOCK IoStatus;
+    HANDLE NewFile;
+    const ULONG Disposition_Open = 0x00000001; // FILE_OPEN
+    const ULONG Options = 0x00000040 | 0x00000020 | 0x00000800; // FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT (as CreateFileW() without FILE_FLAG_OVERLAPPED) | FILE_RANDOM_ACCESS
+    if (NtCreateFile_Ptr(&NewFile, DesiredAccess | SYNCHRONIZE | FILE_READ_ATTRIBUTES, &Attributes, &IoStatus, nullptr, FILE_ATTRIBUTE_NORMAL, ShareMode, Disposition_Open, Options, nullptr, 0) < 0)
+        return INVALID_HANDLE_VALUE;
+    return NewFile;
+}
 #endif //defined(_WIN32) || defined(_WINDOWS)
+
+//---------------------------------------------------------------------------
+#if defined(_WIN32) || defined(_WINDOWS)
+static const char* const PathSeparators = "/\\";
+#else //defined(_WIN32) || defined(_WINDOWS)
+static const char* const PathSeparators = "/";
+#endif //defined(_WIN32) || defined(_WINDOWS)
+
+//---------------------------------------------------------------------------
+int directory::Open(const string& Path_)
+{
+    Close();
+
+    // Name of the directory without the trailing path separator, except for a root directory
+    auto Name = Path_;
+    if (Name.empty())
+        Name = '.';
+    else if (Name.size() > 1 && strchr(PathSeparators, Name.back()) && Name[Name.size() - 2] != ':')
+        Name.pop_back();
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    auto NewDir = CreateFileW(WideFileName(Name).c_str(), FILE_TRAVERSE | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+    if (NewDir == INVALID_HANDLE_VALUE)
+        return 1;
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    auto NewDir = open(Name.c_str(), O_RDONLY | O_DIRECTORY);
+    if (NewDir == -1)
+        return 1;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Private = NewDir;
+    Path = Path_;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int directory::Open_FromFileName(const string& FileName)
+{
+    auto Path_Size = FileName.find_last_of(PathSeparators);
+    return Open(Path_Size == string::npos ? string() : FileName.substr(0, Path_Size + 1));
+}
+
+//---------------------------------------------------------------------------
+void directory::Close()
+{
+    if (!IsOpen())
+        return;
+    #if defined(_WIN32) || defined(_WINDOWS)
+    CloseHandle(Private);
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    close(Private);
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Private = (decltype(Private))-1;
+    Path.clear();
+}
+
+//---------------------------------------------------------------------------
+const char* directory::RelativeName(const char* FileName) const
+{
+    if (!IsOpen() || strncmp(FileName, Path.c_str(), Path.size()))
+        return nullptr;
+    auto Name = FileName + Path.size();
+    if (!*Name || strpbrk(Name, PathSeparators))
+        return nullptr; // Not a file name or in a subdirectory
+    return Name;
+}
 
 //---------------------------------------------------------------------------
 struct private_buffered
@@ -103,7 +207,7 @@ struct private_buffered
 };
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
+int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_, const directory* Dir)
 {
     Close();
 
@@ -243,11 +347,16 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         return Remap(Begin, End);
     }
 
+    // Open, relative to the directory if possible
+    // Random access if a directory is provided (only the beginning of the files is needed): no read-ahead of the rest of the files
+    auto FileName_Relative = Dir ? Dir->RelativeName(FileName) : nullptr;
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
     static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, FILE_ATTRIBUTE_NORMAL };
-    auto NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
+    auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
+    if (NewFile == INVALID_HANDLE_VALUE)
+        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Dir ? (FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS) : Flags[AlsoWrite], 0);
     if (NewFile == INVALID_HANDLE_VALUE)
         return 1;
     if (!FileSize)
@@ -278,9 +387,19 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         Private = NewFile; // CreateFileMapping does not support 0-byte files, so we will map manually to nullptr
 #else 
     static const int oflag[2] = { O_RDONLY, O_RDWR };
-    auto fd = open(FileName, oflag[AlsoWrite], 0);
+    auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
+    if (fd == -1)
+        fd = open(FileName, oflag[AlsoWrite], 0);
     if (fd == -1)
         return 1;
+    if (Dir)
+    {
+        #if defined(POSIX_FADV_RANDOM)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
+        #elif defined(F_RDAHEAD)
+            fcntl(fd, F_RDAHEAD, 0); // macOS
+        #endif
+    }
     if (!FileSize)
     {
         struct stat Fstat;
@@ -299,18 +418,22 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
 }
 
 //---------------------------------------------------------------------------
-int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_, uintmax_t FileSize)
+int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_, uintmax_t FileSize, const directory* Dir)
 {
     Close();
 
     AlsoWrite = AlsoWrite_;
     Method = method::header;
 
-    // Open
+    // Open, relative to the directory if possible
+    // Random access: no read-ahead of the content after the header
+    auto FileName_Relative = Dir ? Dir->RelativeName(FileName.c_str()) : nullptr;
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
-    auto NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
+    if (NewFile == INVALID_HANDLE_VALUE)
+        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS, 0);
     if (NewFile == INVALID_HANDLE_VALUE)
     {
         Close();
@@ -329,13 +452,20 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     }
 #else
     static const int oflag[2] = { O_RDONLY, O_RDWR };
-    auto fd = open(FileName.c_str(), oflag[AlsoWrite], 0);
+    auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
+    if (fd == -1)
+        fd = open(FileName.c_str(), oflag[AlsoWrite], 0);
     if (fd == -1)
     {
         Close();
         return 1;
     }
     Private = fd;
+    #if defined(POSIX_FADV_RANDOM)
+        posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
+    #elif defined(F_RDAHEAD)
+        fcntl(fd, F_RDAHEAD, 0); // macOS
+    #endif
     if (!FileSize)
     {
         struct stat Fstat;
