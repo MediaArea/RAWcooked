@@ -422,12 +422,17 @@ public:
 
     void Compute(md5_job* Job)
     {
-        TRACE_SCOPE("MD5 lanes wait");
         {
             std::unique_lock<std::mutex> Lock(Mutex);
-            Pending.push_back(Job);
-            Condition.notify_all();
-            Condition.wait(Lock, [&] { return Job->Done; });
+            if (Active_Count + Pending.size() >= Lanes_Max)
+                Job->Scalar = true; // All lanes are used, computed by the caller instead of waiting for a free lane (not slower than MD5_Update())
+            else
+            {
+                TRACE_SCOPE("MD5 lanes wait");
+                Pending.push_back(Job);
+                Condition.notify_all();
+                Condition.wait(Lock, [&] { return Job->Done; });
+            }
         }
         if (Job->Scalar)
         {
@@ -454,6 +459,7 @@ private:
     std::mutex                  Mutex;
     std::condition_variable     Condition;
     std::deque<md5_job*>        Pending;
+    size_t                      Active_Count = 0; // Count of jobs in lanes
     size_t                      Flush_Count = 0;
     bool                        Stop = false;
     std::thread                 Thread;
@@ -493,6 +499,7 @@ void md5_lanes::Run()
             Active.push_back(Pending.front());
             Pending.pop_front();
         }
+        Active_Count = Active.size();
         if (Active.empty())
             return; // Stop
         if (Active.size() < Lanes_Min)
@@ -504,6 +511,7 @@ void md5_lanes::Run()
                 Job->Done = true;
             }
             Active.clear();
+            Active_Count = 0;
             Condition.notify_all();
             continue;
         }
@@ -556,6 +564,7 @@ void md5_lanes::Run()
         }
 
         Lock.lock();
+        Active_Count = Active.size();
         if (!Done.empty())
         {
             for (auto Job : Done)
