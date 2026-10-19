@@ -1034,6 +1034,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
         // Edit only: the threads mainly wait for the storage, more requests in parallel
         if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch] && !Actions[Action_CheckPadding])
             IoThreads *= 4;
+
+        // Hash without encoding: whole files read without the file cache (no read-ahead), more requests in parallel
+        else if (!Edits_Enabled && !Actions[Action_Encode] && Actions[Action_Hash])
+            IoThreads *= 2;
     }
 
     // GPU decoding (vulkan decoder, or auto decoder which uses it with a Vulkan GPU) needs the same license feature as GPU encoding
