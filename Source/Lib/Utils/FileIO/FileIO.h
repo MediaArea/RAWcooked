@@ -55,7 +55,7 @@ class filemap : public buffer_view
 public:
     // Constructor/Destructor
                                 filemap() : buffer_view(nullptr, 0) {}
-                                ~filemap() { Close(); delete[] Header_Buffer; }
+                                ~filemap() { Close(); Header_Buffer_Free(); }
 
     // Actions
     enum class method
@@ -74,6 +74,10 @@ public:
     int                         Open_ReadMode(const string& FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWrite_ = false) { return Open_ReadMode(FileName.c_str(), FileSize, NewMethod, Begin, End, AlsoWrite_); }
     // Reads only the first HeaderSize bytes, without memory map (cheaper when only the header is needed, e.g. for editing it): Size() is the file size, Readable_End() the count of bytes read
     // The file is opened relative to Dir if it is directly in it
+    // HeaderSize may be WholeFile: the whole file is read sequentially, without the file cache on Windows (cheaper when the whole file is read once, e.g. for hashing it), Size() is the count of bytes read
+    // Files bigger than WholeFile_Max are memory mapped
+    static const size_t         WholeFile = (size_t)-1;
+    static const size_t         WholeFile_Max = 256 * 1024 * 1024;
     int                         Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_ = false, uintmax_t FileSize = 0, const directory* Dir = nullptr);
     // Writes the bytes from Begin to End of Data() to the file (needed only if the file is not memory mapped)
     int                         Write(size_t Begin, size_t End);
@@ -99,8 +103,9 @@ private:
     bool                        AlsoWrite = false;
     void*                       Map = nullptr; // Memory map, with the count of its users
     size_t                      Header_Size = 0; // Count of bytes read in header mode
-    uint8_t*                    Header_Buffer = nullptr; // Buffer for header mode, kept for the next files
+    uint8_t*                    Header_Buffer = nullptr; // Buffer for header mode, kept for the next files, aligned for reads without the file cache
     size_t                      Header_Buffer_Size = 0;
+    void                        Header_Buffer_Free();
 };
 
 class file

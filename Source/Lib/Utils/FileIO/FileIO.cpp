@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstring>
 #include <iostream>
+#include <new>
 #include <sstream>
 #include <fstream>
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -20,6 +21,7 @@
     #include <fcntl.h>
     #include <io.h> // File existence
     #include <direct.h> // Directory creation
+    #include <malloc.h> // _aligned_malloc
     #define access(FileName, Mode) _waccess_s(WideFileName(FileName).c_str(), Mode)
     #define mkdir(FileName) _wmkdir(WideFileName(FileName).c_str())
     #define stat _stat
@@ -424,16 +426,19 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
 
     AlsoWrite = AlsoWrite_;
     Method = method::header;
+    auto IsWholeFile = HeaderSize == WholeFile;
 
     // Open, relative to the directory if possible
-    // Random access: no read-ahead of the content after the header
-    auto FileName_Relative = Dir ? Dir->RelativeName(FileName.c_str()) : nullptr;
+    // Header: random access, no read-ahead of the content after the header
+    // Whole file: sequential access, without the file cache on Windows (memory map and file cache cost a lot of CPU when the whole file is read once)
+    auto FileName_Relative = Dir && !IsWholeFile ? Dir->RelativeName(FileName.c_str()) : nullptr;
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
+    static const DWORD SectorSize = 4096; // Alignment needed without the file cache, 4096 is a multiple of all usual sector sizes
     auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
     if (NewFile == INVALID_HANDLE_VALUE)
-        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS, 0);
+        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | (IsWholeFile ? (FILE_FLAG_NO_BUFFERING | FILE_FLAG_SEQUENTIAL_SCAN) : FILE_FLAG_RANDOM_ACCESS), 0);
     if (NewFile == INVALID_HANDLE_VALUE)
     {
         Close();
@@ -461,11 +466,20 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
         return 1;
     }
     Private = fd;
-    #if defined(POSIX_FADV_RANDOM)
-        posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
-    #elif defined(F_RDAHEAD)
-        fcntl(fd, F_RDAHEAD, 0); // macOS
-    #endif
+    if (IsWholeFile)
+    {
+        #if defined(POSIX_FADV_SEQUENTIAL)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL); // Linux and others
+        #endif
+    }
+    else
+    {
+        #if defined(POSIX_FADV_RANDOM)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
+        #elif defined(F_RDAHEAD)
+            fcntl(fd, F_RDAHEAD, 0); // macOS
+        #endif
+    }
     if (!FileSize)
     {
         struct stat Fstat;
@@ -483,36 +497,61 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
         return 1;
     }
 
+    // Whole file: memory map if the file is big (memory usage)
+    if (IsWholeFile && FileSize > WholeFile_Max)
+    {
+        Close();
+        return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_);
+    }
+
     // Read
     if (HeaderSize > FileSize)
         HeaderSize = (size_t)FileSize;
     if (!HeaderSize)
         return 0; // Special case for 0-byte files
-    if (HeaderSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
+    auto ReadSize = HeaderSize;
+#if defined(_WIN32) || defined(_WINDOWS)
+    if (IsWholeFile)
+        ReadSize = (ReadSize + SectorSize - 1) / SectorSize * SectorSize; // Without the file cache, the size is a multiple of the sector size
+#endif
+    if (ReadSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
     {
-        delete[] Header_Buffer;
-        Header_Buffer = new uint8_t[HeaderSize];
-        Header_Buffer_Size = HeaderSize;
+        Header_Buffer_Free();
+        #if defined(_WIN32) || defined(_WINDOWS)
+            Header_Buffer = (uint8_t*)_aligned_malloc(ReadSize, SectorSize);
+        #else //defined(_WIN32) || defined(_WINDOWS)
+            Header_Buffer = new (std::nothrow) uint8_t[ReadSize];
+        #endif //defined(_WIN32) || defined(_WINDOWS)
+        if (!Header_Buffer)
+        {
+            Close();
+            return 1;
+        }
+        Header_Buffer_Size = ReadSize;
     }
     auto Header = Header_Buffer;
-    AssignBase(Header, (size_t)FileSize);
 #if defined(_WIN32) || defined(_WINDOWS)
     DWORD BytesRead;
-    if (HeaderSize > (DWORD)-1 || !ReadFile(Private, Header, (DWORD)HeaderSize, &BytesRead, nullptr))
+    if (ReadSize > (DWORD)-1 || !ReadFile(Private, Header, (DWORD)ReadSize, &BytesRead, nullptr))
     {
         Close();
+        if (IsWholeFile)
+            return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_); // E.g. file system not supporting reads without the file cache
         return 1;
     }
     Header_Size = BytesRead;
 #else
-    while (Header_Size < HeaderSize)
+    while (Header_Size < ReadSize)
     {
-        auto BytesRead = read(Private, Header + Header_Size, HeaderSize - Header_Size);
+        auto BytesRead = read(Private, Header + Header_Size, ReadSize - Header_Size);
         if (BytesRead <= 0)
             break;
         Header_Size += BytesRead;
     }
 #endif
+    if (Header_Size > HeaderSize)
+        Header_Size = HeaderSize;
+    AssignBase(Header, IsWholeFile ? Header_Size : (size_t)FileSize);
 
     return 0;
 }
@@ -706,6 +745,18 @@ int filemap::Remap(size_t Begin, size_t End)
     AssignKeepSizeBase((const uint8_t*)NewData);
     Map = new filemap_map{ (const uint8_t*)NewData, Size(), { 1 } };
     return 0;
+}
+
+//---------------------------------------------------------------------------
+void filemap::Header_Buffer_Free()
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        _aligned_free(Header_Buffer);
+    #else //defined(_WIN32) || defined(_WINDOWS)
+        delete[] Header_Buffer;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Header_Buffer = nullptr;
+    Header_Buffer_Size = 0;
 }
 
 //---------------------------------------------------------------------------
