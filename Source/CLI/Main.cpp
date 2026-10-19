@@ -210,9 +210,12 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     size_t HeaderSize = EditOnly ? SingleFile.HeaderSize() : 0;
     #endif //defined(_WIN32) || defined(_WINDOWS)
 
-    // Hash without encoding: the whole files are read once, read in a buffer without memory map (and without the file cache on Windows)
+    // Hash without encoding: the whole files are read once, read in a buffer without memory map (and without the file cache if possible)
     if (!Global.Actions[Action_Encode] && !Global.Edits_Enabled && Global.Actions[Action_Hash])
+    {
         HeaderSize = filemap::WholeFile;
+        filemap::WholeFile_Max_Set(Global.IoThreads); // Max size of the files read in a buffer, from the available memory
+    }
 
     // Edit only: files opened from their name relative to their directory (kept open), with random access
     // (no gain measured on local storage, less work expected on network storage)

@@ -32,6 +32,9 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
+    #if defined(__APPLE__)
+        #include <mach/mach.h> // Available memory
+    #endif
 #endif
 #include "Lib/Utils/FileIO/FileIO.h"
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -417,6 +420,62 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
 
     AssignKeepDataBase(FileSize); // Intermediate, Remap() will set the data pointer
     return Remap();
+}
+
+//---------------------------------------------------------------------------
+// Available physical memory, 0 if unknown
+static uint64_t AvailableMemory()
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        MEMORYSTATUSEX Status;
+        Status.dwLength = sizeof(Status);
+        if (GlobalMemoryStatusEx(&Status))
+            return Status.ullAvailPhys;
+    #elif defined(__APPLE__)
+        vm_statistics64_data_t Stats;
+        mach_msg_type_number_t Count = HOST_VM_INFO64_COUNT;
+        vm_size_t PageSize;
+        if (host_page_size(mach_host_self(), &PageSize) == KERN_SUCCESS && host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&Stats, &Count) == KERN_SUCCESS)
+            return ((uint64_t)Stats.free_count + Stats.inactive_count + Stats.purgeable_count) * PageSize; // Inactive and purgeable pages can be reused
+    #else
+        // MemAvailable includes the file cache which can be freed (Linux)
+        if (auto File = fopen("/proc/meminfo", "r"))
+        {
+            char Line[256];
+            unsigned long long Value = 0;
+            while (fgets(Line, sizeof(Line), File))
+                if (sscanf(Line, "MemAvailable: %llu kB", &Value) == 1)
+                    break;
+            fclose(File);
+            if (Value)
+                return (uint64_t)Value * 1024;
+        }
+        #if defined(_SC_AVPHYS_PAGES) && defined(_SC_PAGESIZE)
+            auto Pages = sysconf(_SC_AVPHYS_PAGES);
+            auto PageSize = sysconf(_SC_PAGESIZE);
+            if (Pages > 0 && PageSize > 0)
+                return (uint64_t)Pages * PageSize;
+        #endif
+    #endif
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+size_t filemap::WholeFile_Max = 128 * 1024 * 1024; // Default if the available memory is unknown
+
+//---------------------------------------------------------------------------
+void filemap::WholeFile_Max_Set(size_t ThreadCount)
+{
+    // Up to a quarter of the available memory for the buffers of all threads (bigger files are memory mapped, without committed memory)
+    // Up to 1 GiB per file (single read call)
+    auto Memory = AvailableMemory();
+    if (!Memory || !ThreadCount)
+        return;
+    auto Max = Memory / 4 / ThreadCount;
+    const uint64_t Max_Max = 1024 * 1024 * 1024;
+    if (Max > Max_Max)
+        Max = Max_Max;
+    WholeFile_Max = (size_t)Max;
 }
 
 //---------------------------------------------------------------------------

@@ -74,10 +74,11 @@ public:
     int                         Open_ReadMode(const string& FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWrite_ = false) { return Open_ReadMode(FileName.c_str(), FileSize, NewMethod, Begin, End, AlsoWrite_); }
     // Reads only the first HeaderSize bytes, without memory map (cheaper when only the header is needed, e.g. for editing it): Size() is the file size, Readable_End() the count of bytes read
     // The file is opened relative to Dir if it is directly in it
-    // HeaderSize may be WholeFile: the whole file is read sequentially, without the file cache on Windows (cheaper when the whole file is read once, e.g. for hashing it), Size() is the count of bytes read
-    // Files bigger than WholeFile_Max are memory mapped (memory usage: a buffer per thread)
+    // HeaderSize may be WholeFile: the whole file is read sequentially, without the file cache if possible (cheaper when the whole file is read once, e.g. for hashing it), Size() is the count of bytes read
+    // Files bigger than WholeFile_Max are memory mapped (memory usage: a buffer per thread), see WholeFile_Max_Set()
     static const size_t         WholeFile = (size_t)-1;
-    static const size_t         WholeFile_Max = 128 * 1024 * 1024;
+    static size_t               WholeFile_Max;
+    static void                 WholeFile_Max_Set(size_t ThreadCount); // From the available memory, for a buffer per thread, to be called before opening files in other threads
     int                         Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_ = false, uintmax_t FileSize = 0, const directory* Dir = nullptr);
     // Writes the bytes from Begin to End of Data() to the file (needed only if the file is not memory mapped)
     int                         Write(size_t Begin, size_t End);
