@@ -1031,12 +1031,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         if (!IoThreads)
             IoThreads = 4;
 
-        // Edit only: the threads mainly wait for the storage, more requests in parallel
+        // The threads also wait for the storage (files read without the file cache: no read-ahead), more requests in parallel
+        // Edit only: the threads mainly wait for the storage
         if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch] && !Actions[Action_CheckPadding])
             IoThreads *= 4;
-
-        // Hash without encoding: whole files read without the file cache (no read-ahead), more requests in parallel
-        else if (!Edits_Enabled && !Actions[Action_Encode] && Actions[Action_Hash])
+        else
             IoThreads *= 2;
     }
 
