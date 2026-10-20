@@ -69,7 +69,7 @@ clean() {
             fi
             files_path_checked=1
         fi
-        git clean -fdx >/dev/null 2>&1
+        git -c core.longpaths=true clean -fdx >/dev/null 2>&1 # Long paths on Windows (e.g. decoded packages in sub-directories)
     popd >/dev/null 2>&1
 }
 
