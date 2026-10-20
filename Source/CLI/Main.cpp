@@ -210,8 +210,9 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     size_t HeaderSize = EditOnly ? SingleFile.HeaderSize() : 0;
     #endif //defined(_WIN32) || defined(_WINDOWS)
 
-    // Hash without encoding: the whole files are read once, read in a buffer without memory map (and without the file cache if possible)
-    if (!Global.Actions[Action_Encode] && !Global.Edits_Enabled && Global.Actions[Action_Hash])
+    // Hash: the whole files are read once, read in a buffer without memory map (and without the file cache if possible)
+    // Also when encoding (the encoding is done in another phase), else page faults in the threads of the hash would be a bottleneck
+    if (!Global.Edits_Enabled && Global.Actions[Action_Hash])
     {
         HeaderSize = filemap::WholeFile;
         filemap::WholeFile_Max_Set(Global.IoThreads); // Max size of the files read in a buffer, from the available memory
