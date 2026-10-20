@@ -344,6 +344,7 @@ const size_t Batch_Min = MD5_Lanes_Batch_Min;
 const auto Batch_Wait_Max = std::chrono::seconds(1);
 const size_t Scalar_Chunk = Run_Max * 64; // Size computed with scalar code before checking if lanes can compute the remaining data
 const auto Rejoin_Wait_Max = std::chrono::milliseconds(2); // Max wait of jobs which do not accept to wait, for jobs computed with scalar code which can join the lanes (about the time for computing Scalar_Chunk)
+const auto Fill_Wait_Max = std::chrono::milliseconds(2); // Max wait for new jobs in free lanes, if all jobs accept to wait
 
 struct md5_job
 {
@@ -615,6 +616,17 @@ void md5_lanes::Run()
         }
         else
         {
+            // Free lanes with jobs accepting to wait: short wait for new jobs (the time of a run is the same with less lanes used, lower CPU usage)
+            if (Active.size() < Lanes_Max && Pending.empty() && !Flush_Count && !Stop)
+            {
+                auto AllBatch = true;
+                for (auto Job : Active)
+                    if (!Job->Batch)
+                        AllBatch = false;
+                if (AllBatch)
+                    Condition.wait_for(Lock, Fill_Wait_Max, [&] { return !Pending.empty() || Flush_Count || Stop; });
+            }
+
             // New jobs in free lanes
             while (Active.size() < Lanes_Max && !Pending.empty())
             {
