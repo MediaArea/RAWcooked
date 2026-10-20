@@ -12,3 +12,4 @@ When needed, the uncompressed source is retrieved **bit-by-bit**, in a manner fa
 - [BFI National Archive RAWcooked Case Study](Case_study.md)
 - [Structure of RAWcooked reversibility data](File_Structure.md)
 - [RAWcooked Compilation Instructions](Compilation.md)
+- [RAWcooked and antivirus software](Antivirus.md)
