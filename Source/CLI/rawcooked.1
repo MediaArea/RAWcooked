@@ -95,8 +95,17 @@ The default name is \fI${Input}.rawcooked_reversibility_data\fR.
 .br
 \fBNote:\fR Not yet implemented for decoding.
 .TP
-.B --io-threads value
-Force the number of IO threads to value.
+.B --decoder \fIvalue\fR
+Set the FFV1 decoder used for decoding and checking to \fIvalue\fR.
+.br
+Possible values are \fIinternal\fR (RAWcooked decoder), \fIffmpeg\fR (FFmpeg libavcodec decoder), \fIvulkan\fR (FFmpeg libavcodec decoder with Vulkan hardware decoding), a combination of them with \fI+\fR (\fIinternal+ffmpeg\fR, \fIinternal+vulkan\fR, \fIffmpeg+vulkan\fR or \fIinternal+ffmpeg+vulkan\fR: decoders in parallel, each frame is decoded by the first available decoder) and \fIauto\fR (\fIinternal+vulkan\fR if FFmpeg libraries and a Vulkan GPU are available, else \fIinternal\fR).
+.br
+Values with \fIvulkan\fR use any Vulkan device, including a CPU implementation (e.g. lavapipe), \fIauto\fR uses a CPU implementation only if the video encoder is ffv1_vulkan. Values with \fIffmpeg\fR or \fIvulkan\fR need FFmpeg libavcodec and libavutil libraries, searched in the directory of the executable, in its ffmpeg/bin subdirectory then in PATH on Windows, or in the directory of the executable, in its ffmpeg/lib and ffmpeg/bin subdirectories, then from the ffmpeg-ma package, then in the library paths of the system on Linux or in Homebrew and MacPorts library directories on macOS, only if available in this build.
+.br
+The default value is \fIauto\fR if the video encoder is ffv1_vulkan, else \fIinternal\fR.
+.TP
+.B --io-threads \fIvalue\fR
+Force the number of IO threads to \fIvalue\fR.
 .br
 Default value is found in the system hardware concurrency, if available, otherwise it will default to 4.
 .TP
