@@ -9,15 +9,19 @@
     #define _GNU_SOURCE // Needed for ftruncate on GNU compiler
 #endif
 #include <atomic>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #if defined(_WIN32) || defined(_WINDOWS)
     #include "windows.h"
+    #include <winternl.h> // NtCreateFile
     #include <stdio.h>
     #include <fcntl.h>
     #include <io.h> // File existence
     #include <direct.h> // Directory creation
+    #include <malloc.h> // _aligned_malloc
     #define access(FileName, Mode) _waccess_s(WideFileName(FileName).c_str(), Mode)
     #define mkdir(FileName) _wmkdir(WideFileName(FileName).c_str())
     #define stat _stat
@@ -28,6 +32,9 @@
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/mman.h>
+    #if defined(__APPLE__)
+        #include <mach/mach.h> // Available memory
+    #endif
 #endif
 #include "Lib/Utils/FileIO/FileIO.h"
 #if defined(_WIN32) || defined(_WINDOWS)
@@ -39,7 +46,7 @@
 
 //---------------------------------------------------------------------------
 #if defined(_WIN32) || defined(_WINDOWS)
-wstring WideFileName(const char* FileName)
+static wstring WideName(const char* FileName)
 {
     // Same code page as the ANSI API
     auto CodePage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
@@ -49,6 +56,15 @@ wstring WideFileName(const char* FileName)
     wstring Name(Size, L'\0');
     MultiByteToWideChar(CodePage, 0, FileName, -1, &Name[0], Size);
     Name.resize(Size - 1);
+    return Name;
+}
+
+//---------------------------------------------------------------------------
+wstring WideFileName(const char* FileName)
+{
+    auto Name = WideName(FileName);
+    if (Name.empty())
+        return {};
 
     // Already a Win32 file or device namespace name
     if (Name.size() >= 4 && Name[0] == L'\\' && Name[1] == L'\\' && (Name[2] == L'?' || Name[2] == L'.') && Name[3] == L'\\')
@@ -83,7 +99,100 @@ string NarrowFileName(const wchar_t* FileName)
     Name.resize(Size - 1);
     return Name;
 }
+
+//---------------------------------------------------------------------------
+// Opens a file from its name relative to a directory, with the same options as CreateFileW() with OPEN_EXISTING and FILE_FLAG_RANDOM_ACCESS
+static HANDLE CreateFile_Relative(HANDLE Dir, const char* FileName, DWORD DesiredAccess, DWORD ShareMode)
+{
+    typedef NTSTATUS (NTAPI* NtCreateFile_Type)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK, PLARGE_INTEGER, ULONG, ULONG, ULONG, ULONG, PVOID, ULONG);
+    static const auto NtCreateFile_Ptr = (NtCreateFile_Type)(void*)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtCreateFile"); // Loaded at run time, no need of ntdll.lib
+    if (!NtCreateFile_Ptr)
+        return INVALID_HANDLE_VALUE;
+
+    auto Name = WideName(FileName);
+    auto Name_Size = Name.size() * sizeof(wchar_t);
+    if (Name.empty() || Name_Size > 0xFFFE)
+        return INVALID_HANDLE_VALUE;
+    UNICODE_STRING Name_Unicode;
+    Name_Unicode.Length = (USHORT)Name_Size;
+    Name_Unicode.MaximumLength = (USHORT)Name_Size;
+    Name_Unicode.Buffer = &Name[0];
+    OBJECT_ATTRIBUTES Attributes;
+    InitializeObjectAttributes(&Attributes, &Name_Unicode, OBJ_CASE_INSENSITIVE, Dir, nullptr);
+    IO_STATUS_BLOCK IoStatus;
+    HANDLE NewFile;
+    const ULONG Disposition_Open = 0x00000001; // FILE_OPEN
+    const ULONG Options = 0x00000040 | 0x00000020 | 0x00000800; // FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT (as CreateFileW() without FILE_FLAG_OVERLAPPED) | FILE_RANDOM_ACCESS
+    if (NtCreateFile_Ptr(&NewFile, DesiredAccess | SYNCHRONIZE | FILE_READ_ATTRIBUTES, &Attributes, &IoStatus, nullptr, FILE_ATTRIBUTE_NORMAL, ShareMode, Disposition_Open, Options, nullptr, 0) < 0)
+        return INVALID_HANDLE_VALUE;
+    return NewFile;
+}
 #endif //defined(_WIN32) || defined(_WINDOWS)
+
+//---------------------------------------------------------------------------
+#if defined(_WIN32) || defined(_WINDOWS)
+static const char* const PathSeparators = "/\\";
+#else //defined(_WIN32) || defined(_WINDOWS)
+static const char* const PathSeparators = "/";
+#endif //defined(_WIN32) || defined(_WINDOWS)
+
+//---------------------------------------------------------------------------
+int directory::Open(const string& Path_)
+{
+    Close();
+
+    // Name of the directory without the trailing path separator, except for a root directory
+    auto Name = Path_;
+    if (Name.empty())
+        Name = '.';
+    else if (Name.size() > 1 && strchr(PathSeparators, Name.back()) && Name[Name.size() - 2] != ':')
+        Name.pop_back();
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    auto NewDir = CreateFileW(WideFileName(Name).c_str(), FILE_TRAVERSE | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+    if (NewDir == INVALID_HANDLE_VALUE)
+        return 1;
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    auto NewDir = open(Name.c_str(), O_RDONLY | O_DIRECTORY);
+    if (NewDir == -1)
+        return 1;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Private = NewDir;
+    Path = Path_;
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int directory::Open_FromFileName(const string& FileName)
+{
+    auto Path_Size = FileName.find_last_of(PathSeparators);
+    return Open(Path_Size == string::npos ? string() : FileName.substr(0, Path_Size + 1));
+}
+
+//---------------------------------------------------------------------------
+void directory::Close()
+{
+    if (!IsOpen())
+        return;
+    #if defined(_WIN32) || defined(_WINDOWS)
+    CloseHandle(Private);
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    close(Private);
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Private = (decltype(Private))-1;
+    Path.clear();
+}
+
+//---------------------------------------------------------------------------
+const char* directory::RelativeName(const char* FileName) const
+{
+    if (!IsOpen() || strncmp(FileName, Path.c_str(), Path.size()))
+        return nullptr;
+    auto Name = FileName + Path.size();
+    if (!*Name || strpbrk(Name, PathSeparators))
+        return nullptr; // Not a file name or in a subdirectory
+    return Name;
+}
 
 //---------------------------------------------------------------------------
 struct private_buffered
@@ -103,7 +212,7 @@ struct private_buffered
 };
 
 //---------------------------------------------------------------------------
-int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_)
+int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewStyle, size_t Begin, size_t End, bool AlsoWrite_, const directory* Dir)
 {
     Close();
 
@@ -243,11 +352,16 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         return Remap(Begin, End);
     }
 
+    // Open, relative to the directory if possible
+    // Random access if a directory is provided (only the beginning of the files is needed): no read-ahead of the rest of the files
+    auto FileName_Relative = Dir ? Dir->RelativeName(FileName) : nullptr;
 #if defined(_WIN32) || defined(_WINDOWS)
     static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
     static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
     static const DWORD Flags[2] = { FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, FILE_ATTRIBUTE_NORMAL };
-    auto NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Flags[AlsoWrite], 0);
+    auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
+    if (NewFile == INVALID_HANDLE_VALUE)
+        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Dir ? (FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS) : Flags[AlsoWrite], 0);
     if (NewFile == INVALID_HANDLE_VALUE)
         return 1;
     if (!FileSize)
@@ -278,9 +392,19 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         Private = NewFile; // CreateFileMapping does not support 0-byte files, so we will map manually to nullptr
 #else 
     static const int oflag[2] = { O_RDONLY, O_RDWR };
-    auto fd = open(FileName, oflag[AlsoWrite], 0);
+    auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
+    if (fd == -1)
+        fd = open(FileName, oflag[AlsoWrite], 0);
     if (fd == -1)
         return 1;
+    if (Dir)
+    {
+        #if defined(POSIX_FADV_RANDOM)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
+        #elif defined(F_RDAHEAD)
+            fcntl(fd, F_RDAHEAD, 0); // macOS
+        #endif
+    }
     if (!FileSize)
     {
         struct stat Fstat;
@@ -290,12 +414,247 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             return 1;
         }
         FileSize = Fstat.st_size;
-        Private = fd;
     }
+    Private = fd;
 #endif
 
     AssignKeepDataBase(FileSize); // Intermediate, Remap() will set the data pointer
     return Remap();
+}
+
+//---------------------------------------------------------------------------
+// Available physical memory, 0 if unknown
+static uint64_t AvailableMemory()
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        MEMORYSTATUSEX Status;
+        Status.dwLength = sizeof(Status);
+        if (GlobalMemoryStatusEx(&Status))
+            return Status.ullAvailPhys;
+    #elif defined(__APPLE__)
+        vm_statistics64_data_t Stats;
+        mach_msg_type_number_t Count = HOST_VM_INFO64_COUNT;
+        vm_size_t PageSize;
+        if (host_page_size(mach_host_self(), &PageSize) == KERN_SUCCESS && host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&Stats, &Count) == KERN_SUCCESS)
+            return ((uint64_t)Stats.free_count + Stats.inactive_count + Stats.purgeable_count) * PageSize; // Inactive and purgeable pages can be reused
+    #else
+        // MemAvailable includes the file cache which can be freed (Linux)
+        if (auto File = fopen("/proc/meminfo", "r"))
+        {
+            char Line[256];
+            unsigned long long Value = 0;
+            while (fgets(Line, sizeof(Line), File))
+                if (sscanf(Line, "MemAvailable: %llu kB", &Value) == 1)
+                    break;
+            fclose(File);
+            if (Value)
+                return (uint64_t)Value * 1024;
+        }
+        #if defined(_SC_AVPHYS_PAGES) && defined(_SC_PAGESIZE)
+            auto Pages = sysconf(_SC_AVPHYS_PAGES);
+            auto PageSize = sysconf(_SC_PAGESIZE);
+            if (Pages > 0 && PageSize > 0)
+                return (uint64_t)Pages * PageSize;
+        #endif
+    #endif
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+size_t filemap::WholeFile_Max = 128 * 1024 * 1024; // Default if the available memory is unknown
+
+//---------------------------------------------------------------------------
+void filemap::WholeFile_Max_Set(size_t ThreadCount)
+{
+    // Up to a quarter of the available memory for the buffers of all threads (bigger files are memory mapped, without committed memory)
+    // Up to 1 GiB per file (single read call)
+    auto Memory = AvailableMemory();
+    if (!Memory || !ThreadCount)
+        return;
+    auto Max = Memory / 4 / ThreadCount;
+    const uint64_t Max_Max = 1024 * 1024 * 1024;
+    if (Max > Max_Max)
+        Max = Max_Max;
+    WholeFile_Max = (size_t)Max;
+}
+
+//---------------------------------------------------------------------------
+int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool AlsoWrite_, uintmax_t FileSize, const directory* Dir)
+{
+    Close();
+
+    AlsoWrite = AlsoWrite_;
+    Method = method::header;
+    auto IsWholeFile = HeaderSize == WholeFile;
+
+    // Open, relative to the directory if possible
+    // Header: random access, no read-ahead of the content after the header
+    // Whole file: sequential access, without the file cache on Windows (memory map and file cache cost a lot of CPU when the whole file is read once)
+    auto FileName_Relative = Dir && !IsWholeFile ? Dir->RelativeName(FileName.c_str()) : nullptr;
+    static const size_t SectorSize = 4096; // Alignment needed without the file cache, 4096 is a multiple of all usual sector sizes
+#if defined(_WIN32) || defined(_WINDOWS)
+    static const DWORD DesiredAccess[2] = { GENERIC_READ, GENERIC_READ | GENERIC_WRITE };
+    static const DWORD ShareMode[2] = { FILE_SHARE_READ, FILE_SHARE_READ | FILE_SHARE_WRITE };
+    auto NewFile = FileName_Relative ? CreateFile_Relative(Dir->Private, FileName_Relative, DesiredAccess[AlsoWrite], ShareMode[AlsoWrite]) : INVALID_HANDLE_VALUE;
+    if (NewFile == INVALID_HANDLE_VALUE)
+        NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | (IsWholeFile ? (FILE_FLAG_NO_BUFFERING | FILE_FLAG_SEQUENTIAL_SCAN) : FILE_FLAG_RANDOM_ACCESS), 0);
+    if (NewFile == INVALID_HANDLE_VALUE)
+    {
+        Close();
+        return 1;
+    }
+    Private = NewFile;
+    if (!FileSize)
+    {
+        LARGE_INTEGER FileSize_Temp;
+        if (!GetFileSizeEx(NewFile, &FileSize_Temp))
+        {
+            Close();
+            return 1;
+        }
+        FileSize = FileSize_Temp.QuadPart;
+    }
+#else
+    static const int oflag[2] = { O_RDONLY, O_RDWR };
+    auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
+    #if defined(O_DIRECT)
+        if (fd == -1 && IsWholeFile)
+            fd = open(FileName.c_str(), oflag[AlsoWrite] | O_DIRECT, 0); // Linux and others, may be not supported by the file system
+    #endif
+    if (fd == -1)
+        fd = open(FileName.c_str(), oflag[AlsoWrite], 0);
+    if (fd == -1)
+    {
+        Close();
+        return 1;
+    }
+    Private = fd;
+    if (IsWholeFile)
+    {
+        #if defined(F_NOCACHE)
+            fcntl(fd, F_NOCACHE, 1); // macOS
+        #elif defined(POSIX_FADV_SEQUENTIAL)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL); // Without O_DIRECT
+        #endif
+    }
+    else
+    {
+        #if defined(POSIX_FADV_RANDOM)
+            posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM); // Linux and others
+        #elif defined(F_RDAHEAD)
+            fcntl(fd, F_RDAHEAD, 0); // macOS
+        #endif
+    }
+    if (!FileSize)
+    {
+        struct stat Fstat;
+        if (fstat(fd, &Fstat))
+        {
+            Close();
+            return 1;
+        }
+        FileSize = Fstat.st_size;
+    }
+#endif
+    if (sizeof(size_t) < 8 && FileSize >> 32) // Files of 4+ GiB are not supported in 32-bit mode
+    {
+        Close();
+        return 1;
+    }
+
+    // Whole file: memory map if the file is big (memory usage)
+    if (IsWholeFile && FileSize > WholeFile_Max)
+    {
+        Close();
+        return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_);
+    }
+
+    // Read
+    if (HeaderSize > FileSize)
+        HeaderSize = (size_t)FileSize;
+    if (!HeaderSize)
+        return 0; // Special case for 0-byte files
+    auto ReadSize = HeaderSize;
+    if (IsWholeFile)
+        ReadSize = (ReadSize + SectorSize - 1) / SectorSize * SectorSize; // Without the file cache, the size is a multiple of the sector size
+    if (ReadSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
+    {
+        Header_Buffer_Free();
+        #if defined(_WIN32) || defined(_WINDOWS)
+            Header_Buffer = (uint8_t*)_aligned_malloc(ReadSize, SectorSize);
+        #else //defined(_WIN32) || defined(_WINDOWS)
+            void* Temp;
+            Header_Buffer = posix_memalign(&Temp, SectorSize, ReadSize) ? nullptr : (uint8_t*)Temp;
+        #endif //defined(_WIN32) || defined(_WINDOWS)
+        if (!Header_Buffer)
+        {
+            Close();
+            return 1;
+        }
+        Header_Buffer_Size = ReadSize;
+    }
+    auto Header = Header_Buffer;
+#if defined(_WIN32) || defined(_WINDOWS)
+    DWORD BytesRead;
+    if (ReadSize > (DWORD)-1 || !ReadFile(Private, Header, (DWORD)ReadSize, &BytesRead, nullptr))
+    {
+        Close();
+        if (IsWholeFile)
+            return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_); // E.g. file system not supporting reads without the file cache
+        return 1;
+    }
+    Header_Size = BytesRead;
+#else
+    while (Header_Size < HeaderSize) // Up to the needed bytes, no additional call for detecting the end of the file
+    {
+        auto BytesRead = read(Private, Header + Header_Size, ReadSize - Header_Size); // Size rounded up as needed without the file cache
+        if (BytesRead <= 0)
+            break;
+        Header_Size += BytesRead;
+    }
+    if (IsWholeFile && Header_Size < HeaderSize)
+    {
+        Close();
+        return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_); // E.g. file system not supporting reads without the file cache
+    }
+#endif
+    if (Header_Size > HeaderSize)
+        Header_Size = HeaderSize;
+    AssignBase(Header, IsWholeFile ? Header_Size : (size_t)FileSize);
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int filemap::Write(size_t Begin, size_t End)
+{
+    // Memory map, data is already in the file
+    if (Method != method::header)
+        return AlsoWrite && Method == method::mmap ? 0 : 1;
+
+    if (!AlsoWrite || Begin > End || End > Header_Size)
+        return 1;
+    auto Size = End - Begin;
+#if defined(_WIN32) || defined(_WINDOWS)
+    // Memory map of the beginning of the file, quicker than WriteFile() when the file is closed just after (antivirus software
+    // e.g. Windows Defender scans the file when it is closed after a WriteFile(), not after a write in a memory map)
+    auto Mapping = CreateFileMapping(Private, 0, PAGE_READWRITE, 0, 0, 0);
+    if (!Mapping)
+        return 1;
+    auto View = (uint8_t*)MapViewOfFile(Mapping, FILE_MAP_WRITE, 0, 0, End);
+    if (!View)
+    {
+        CloseHandle(Mapping);
+        return 1;
+    }
+    memcpy(View + Begin, Data() + Begin, Size);
+    UnmapViewOfFile(View);
+    CloseHandle(Mapping);
+#else
+    if (pwrite(Private, Data() + Begin, Size, Begin) != (ssize_t)Size)
+        return 1;
+#endif
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -349,6 +708,8 @@ void filemap::Release(void* Map_)
 //---------------------------------------------------------------------------
 size_t filemap::Readable_End()
 {
+    if (Method == method::header)
+        return Header_Size;
     if (Method != method::mmap)
     {
         auto P = (private_buffered*)Private2;
@@ -361,6 +722,9 @@ int filemap::Remap(size_t Begin, size_t End)
     // Special case for 0-byte files
     if (Empty())
         return 0;
+
+    if (Method == method::header)
+        return 1; // Not supported
 
     if (Method != method::mmap)
     {
@@ -453,10 +817,30 @@ int filemap::Remap(size_t Begin, size_t End)
 }
 
 //---------------------------------------------------------------------------
+void filemap::Header_Buffer_Free()
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        _aligned_free(Header_Buffer);
+    #else //defined(_WIN32) || defined(_WINDOWS)
+        free(Header_Buffer);
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+    Header_Buffer = nullptr;
+    Header_Buffer_Size = 0;
+}
+
+//---------------------------------------------------------------------------
 int filemap::Close()
 {
+    // Close header copy, buffer kept for the next file
+    if (Method == method::header)
+    {
+        ClearBase();
+        Header_Size = 0;
+        Method = {};
+    }
+
     // Close map, kept by its users if any
-    if (Map)
+    else if (Map)
     {
         Release(Map);
         Map = nullptr;

@@ -1030,6 +1030,13 @@ int global::ManageCommandLine(const char* argv[], int argc)
         IoThreads = thread::hardware_concurrency();
         if (!IoThreads)
             IoThreads = 4;
+
+        // The threads also wait for the storage (files read without the file cache: no read-ahead), more requests in parallel
+        // Edit only: the threads mainly wait for the storage
+        if (Edits_Enabled && !Actions[Action_Encode] && !Actions[Action_Hash] && !Actions[Action_Conch] && !Actions[Action_CheckPadding])
+            IoThreads *= 4;
+        else
+            IoThreads *= 2;
     }
 
     // GPU decoding (vulkan decoder, or auto decoder which uses it with a Vulkan GPU) needs the same license feature as GPU encoding

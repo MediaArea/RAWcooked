@@ -85,6 +85,9 @@ public:
     hashes*                     Hashes = nullptr;
     string                      FileName;
     filemap::method             OpenStyle = {};
+    bool                        Hash_Batch = false; // Hash may wait for the hash of files from other threads (lower CPU usage), Hash_Batch_Flush(true) is needed after the last file
+    static void                 Hash_Batch_Flush(bool Begin); // No wait for the hash of other files from Hash_Batch_Flush(true) to Hash_Batch_Flush(false)
+    static size_t               Hash_Batch_ThreadCount_Min(); // Batch is useful only with at least this count of threads hashing files at the same time (else each file waits)
 
     // Parse
     bool                        Parse(const buffer_view& Buffer_Source, size_t FileSize_Source = (size_t)-1) { return Parse(nullptr, Buffer_Source, FileSize_Source); }
@@ -185,6 +188,7 @@ public:
     string                      UncompressedFileName;
 
     void                        CopyCommon(const input_base_uncompressed& Parser);
+    virtual size_t              HeaderSize() { return 0; } // Count of bytes needed for parsing and editing the header if no other action needs the content, 0 if unknown
     int                         AddEdits(map<string, string>& Edits);
     int                         ListEdits();
     void                        ParseRAWcooked(parse_params& Params);

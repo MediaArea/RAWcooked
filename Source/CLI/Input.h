@@ -31,7 +31,7 @@ public:
 
     // Commands
     int AnalyzeInputs(global& Global);
-    void DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<string>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors = nullptr);
+    void DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<FileEntry>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors = nullptr);
 
     // Checks
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);
@@ -40,7 +40,7 @@ public:
     static int FileName_Compare(const string& Left, const string& Right);
 
     // I/O
-    static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false);
+    static bool OpenInput(filemap& FileMap, const string& Name, size_t FileSize, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0, const directory* Dir = nullptr); // Only the header is read if HeaderSize is not 0, the file is opened relative to Dir if it is directly in it
 };
 
 #endif

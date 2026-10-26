@@ -113,7 +113,7 @@ struct parse_info
 {
     string* Name = {};
     filemap FileMap;
-    vector<string> RemovedFiles;
+    vector<FileEntry> RemovedFiles;
     string FileName_Template;
     string FileName_StartNumber;
     string FileName_EndNumber;
@@ -172,13 +172,13 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 }
 
 //---------------------------------------------------------------------------
-bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding, size_t i)
+bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i)
 {
-    const auto& Name = RemovedFiles[i];
-    if (input::OpenInput(FileMap, Name, 0, &Global.Errors, Global.Edits_Enabled)) {
+    const auto& Name = RemovedFiles[i].FileName;
+    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
         return true;
     }
-    if (Global.Actions[Action_Encode]) {
+    if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash]) { // Also needed for the hash, for its comparison with the hash files
         S.FileName = Name.substr(Global.Path_Pos_Global);
         FormatPath(S.FileName);
     }
@@ -197,15 +197,57 @@ struct worker_data {
     filemap FileMap;
     input_base_uncompressed* Parser;
 };
-bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<string>& RemovedFiles, bool OverrideCheckPadding)
+bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
 {
+    // Edit only: only the beginning of the files is needed (hash and padding bits check read the whole files sequentially)
+    auto EditOnly = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch] && !Global.Actions[Action_CheckPadding] && !OverrideCheckPadding;
+
+    // Only the header is needed if the files are only edited, read and written without memory map (quicker on Linux and macOS, munmap() is costly)
+    // Not on Windows: with Windows Defender, the antivirus work is doubled with ReadFile() and WriteFile(), the memory map is quicker
+    #if defined(_WIN32) || defined(_WINDOWS)
+    size_t HeaderSize = 0;
+    #else //defined(_WIN32) || defined(_WINDOWS)
+    size_t HeaderSize = EditOnly ? SingleFile.HeaderSize() : 0;
+    #endif //defined(_WIN32) || defined(_WINDOWS)
+
+    // Hash: the whole files are read once, read in a buffer without memory map (and without the file cache if possible)
+    // Also when encoding (the encoding is done in another phase), else page faults in the threads of the hash would be a bottleneck
+    if (!Global.Edits_Enabled && Global.Actions[Action_Hash])
+    {
+        HeaderSize = filemap::WholeFile;
+        filemap::WholeFile_Max_Set(Global.IoThreads); // Max size of the files read in a buffer, from the available memory
+    }
+
+    // Edit only: files opened from their name relative to their directory (kept open), with random access
+    // (no gain measured on local storage, less work expected on network storage)
+    directory Dir_Temp;
+    const directory* Dir = nullptr;
+    if (EditOnly && RemovedFiles.size() > 1 && !Dir_Temp.Open_FromFileName(RemovedFiles[1].FileName))
+        Dir = &Dir_Temp;
+
     if (Global.IoThreads > 1) {
         const size_t numFiles = RemovedFiles.size();
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
+        atomic<bool> HashFlush{ false };
+        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+            for (;;) {
+                auto i = nextIndex.fetch_add(1, memory_order_relaxed);
+                if (i >= numFiles) {
+                    // No more files, hashes of the last files computed without waiting for other files
+                    if (Parser.Hash_Batch && !HashFlush.exchange(true))
+                        input_base::Hash_Batch_Flush(true);
+                    break;
+                }
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i)) {
+                    AnyError = true;
+                }
+            }
+        };
         vector<worker_data> Pool;
         Pool.resize(Global.IoThreads);
         Pool[0].Parser = &SingleFile;
+        SingleFile.Hash_Batch = Global.Actions[Action_Hash] && Global.IoThreads >= input_base::Hash_Batch_ThreadCount_Min(); // Hash of several files in parallel
         for (size_t w = 1; w < Global.IoThreads; ++w) {
             // Initialize each worker
             Pool[w].Parser = CreateParser(SingleFile.ParserCode, &Global.Errors, &SingleFile);
@@ -213,19 +255,15 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                 AnyError = true;
                 continue;
             }
+            Pool[w].Parser->Hash_Batch = SingleFile.Hash_Batch;
 
             // Launch each worker
             worker_data* p = &Pool[w];
-            p->Thread = thread([p, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, &AnyError]() {
-                for (;;) {
-                    auto i = nextIndex.fetch_add(1, memory_order_relaxed);
-                    if (i >= numFiles) break;
-                    if (ParseFile_AdditionalInput(*p->Parser, p->FileMap, RemovedFiles, OverrideCheckPadding, i)) {
-                        AnyError = true;
-                    }
-                }
-            });
+            p->Thread = thread([p, &Work]() { Work(*p->Parser, p->FileMap); });
         }
+
+        // The current thread is also a worker, with the first parser
+        Work(SingleFile, FileMap);
 
         // Join threads and cleanup parsers
         for (size_t w = 0; w < Global.IoThreads; ++w) {
@@ -235,12 +273,15 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
             if (w)
                 delete P.Parser;
         }
+        if (HashFlush)
+            input_base::Hash_Batch_Flush(false);
+        SingleFile.Hash_Batch = false;
 
         return AnyError.load();
     }
 
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
-        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, i)) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i)) {
             return true;
         }
     }
@@ -345,7 +386,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     }
 
     if (RemovedFiles.empty())
-        RemovedFiles.push_back(*Name);
+        RemovedFiles.push_back(Input.Files[Files_Pos]);
     else
     {
         // OverrideCheckPadding info
@@ -356,7 +397,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             cerr << "Info: non-zero padding bits found in first file,\n"
                 << "      forcing the check of padding bits for all files.\n" << endl;
         }
-        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet]) // If --no-checking-padding is not present
+        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet] && !Global.Edits_Enabled) // If --no-checking-padding is not present, and padding bits are not relevant when editing
         {
             Global.ProgressIndicator_Stop();
             if (Global.Actions[Action_Check])
@@ -491,7 +532,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     {
         stream Stream;
 
-        Stream.FileName = ParseInfo.RemovedFiles[0];
+        Stream.FileName = ParseInfo.RemovedFiles[0].FileName;
         if (!ParseInfo.FileName_StartNumber.empty() && !ParseInfo.FileName_Template.empty())
         {
             Stream.FileName_Template = ParseInfo.FileName_Template;
@@ -739,8 +780,9 @@ int main(int argc, const char* argv[])
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
         return Value;
-    sort(Input.Files.begin(), Input.Files.end(),
-        [](const FileEntry& l, const FileEntry& r) {return input::FileName_Compare(l.FileName, r.FileName) < 0; });
+    const auto FileEntry_Less = [](const FileEntry& l, const FileEntry& r) {return input::FileName_Compare(l.FileName, r.FileName) < 0; };
+    if (!is_sorted(Input.Files.begin(), Input.Files.end(), FileEntry_Less)) // Often already in order (e.g. NTFS), a sort would compare the names again
+        sort(Input.Files.begin(), Input.Files.end(), FileEntry_Less);
 
     // Parse files
     RAWcooked.FileName = Global.rawcooked_reversibility_FileName;

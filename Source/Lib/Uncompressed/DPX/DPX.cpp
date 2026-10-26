@@ -29,6 +29,7 @@ static const char* MessageText[] =
     "version number of header format",
     "offset to data",
     "expected data size is bigger than real file size",
+    "file can not be written (edit)",
 };
 
 enum code : uint8_t
@@ -38,6 +39,7 @@ enum code : uint8_t
     VersionNumber,
     OffsetToData,
     DataSize,
+    Write,
     Max
 };
 
@@ -497,6 +499,61 @@ string dpx::ListEditsParser()
 }
 
 //---------------------------------------------------------------------------
+// Padding bits at the same position (Pos) in each group of Step bytes (Step dividing 8), tested and copied 8 bytes at a time
+// Offsets are relative to the start of the data (a group boundary), Begin is a multiple of Step
+// Pattern: mask of the padding bits of 8 bytes starting at a group boundary
+static uint64_t Padding_Pattern(size_t Step, size_t Pos, uint8_t Mask)
+{
+    uint8_t Bytes[8] = {};
+    for (auto b = Pos; b < 8; b += Step)
+        Bytes[b] = Mask;
+    uint64_t Pattern;
+    memcpy(&Pattern, Bytes, 8);
+    return Pattern;
+}
+
+// First byte from Begin to End having padding bits not zero, End if none
+static size_t Padding_Find(const uint8_t* Data, size_t Begin, size_t End, size_t Step, size_t Pos, uint8_t Mask)
+{
+    auto Pattern = Padding_Pattern(Step, Pos, Mask);
+    auto i = Begin;
+    const size_t Block = 256; // Bytes tested together before a check (fewer branches)
+    while (i + Block <= End)
+    {
+        uint64_t Acc = 0;
+        for (size_t j = 0; j < Block; j += 8)
+        {
+            uint64_t Value;
+            memcpy(&Value, Data + i + j, 8);
+            Acc |= Value & Pattern;
+        }
+        if (Acc)
+            break;
+        i += Block;
+    }
+    for (i += Pos; i < End; i += Step)
+        if (Data[i] & Mask)
+            return i;
+    return End;
+}
+
+// Padding bits from Begin to End copied to Out (other bits are zero)
+static void Padding_Copy(uint8_t* Out, const uint8_t* Data, size_t Begin, size_t End, size_t Step, size_t Pos, uint8_t Mask)
+{
+    auto Pattern = Padding_Pattern(Step, Pos, Mask);
+    auto i = Begin;
+    for (; i + 8 <= End; i += 8)
+    {
+        uint64_t Value;
+        memcpy(&Value, Data + i, 8);
+        Value &= Pattern;
+        memcpy(Out + i, &Value, 8);
+    }
+    for (; i < End; i++)
+        Out[i] = i % Step == Pos ? (Data[i] & Mask) : 0;
+}
+
+//---------------------------------------------------------------------------
 void dpx::ParseBuffer()
 {
     dpx_tested Info;
@@ -786,6 +843,28 @@ void dpx::ParseBuffer()
         }
 
         // Test
+        if (DPX_Tested[(uint8_t)Flavor].Test.Packing != packing::Packed && EOL_i >= OffsetAfterData)
+        {
+            // Padding bits at the same position in each group of Step bytes, tested and copied 8 bytes at a time
+            auto Data = Buffer.Data() + OffsetToData;
+            auto Size = OffsetAfterData - OffsetToData;
+            auto Pos = i - OffsetToData;
+            auto First = Padding_Find(Data, 0, Size, Step, Pos, (uint8_t)Mask);
+            if (First < Size)
+            {
+                // Non-zero padding bit found, storing data
+                HasPaddingBitsNotZero = true;
+                if (Size > In.Size())  // Reuse old buffer if any and big enough
+                {
+                    In.Create(Size);
+                    In_FirstNonZero = 0;
+                }
+                auto Begin = min(First, In_FirstNonZero) / Step * Step; // Bytes before In_FirstNonZero are zero
+                Padding_Copy(In.Data(), Data, Begin, Size, Step, Pos, (uint8_t)Mask);
+                In_FirstNonZero = First;
+            }
+            i = OffsetAfterData; // Done
+        }
         for (; i < OffsetAfterData; i += Step)
         {
             if (i >= EOL_i)
@@ -949,11 +1028,24 @@ void dpx::ConformanceCheck()
 //---------------------------------------------------------------------------
 void dpx::Edit()
 {
+    size_t Changed_Begin = (size_t)-1;
+    size_t Changed_End = 0;
     for (const auto& Edit : Edits) {
+        auto Edit_End = Edit.first + Edit.second.Size();
+        if (Edit_End > Buffer.Size() || (FileMap && Edit_End > FileMap->Readable_End())) {
+            Undecodable(undecodable::BufferOverflow);
+            continue;
+        }
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
             memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
+            Changed_Begin = min(Changed_Begin, (size_t)Edit.first);
+            Changed_End = max(Changed_End, Edit_End);
         }
     }
+
+    // Only the header is in memory if the file is not memory mapped, one write for all edits
+    if (Changed_End && FileMap && FileMap->Write(Changed_Begin, Changed_End))
+        Undecodable(undecodable::Write);
 }
 
 //---------------------------------------------------------------------------

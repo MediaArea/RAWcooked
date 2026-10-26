@@ -29,6 +29,7 @@ struct md5_part
 };
 void MD5_Update_Lanes(MD5_CTX* Ctx, const md5_part* Parts, size_t Count, bool Batch = false);
 void MD5_Lanes_Flush(bool Begin); // No wait for other parts from MD5_Lanes_Flush(true) to MD5_Lanes_Flush(false), e.g. when a caller can not give more parts before the end of pending computings
+const size_t MD5_Lanes_Batch_Min = 3; // Count of jobs computed together if jobs accept to wait for other jobs, batch is useful only with at least this count of threads (else each job waits)
 
 //---------------------------------------------------------------------------
 #endif
