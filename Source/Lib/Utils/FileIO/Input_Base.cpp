@@ -80,9 +80,12 @@ void input_base::Hash_Batch_Flush(bool Begin)
 }
 
 //---------------------------------------------------------------------------
-size_t input_base::Hash_Batch_ThreadCount_Min()
+size_t input_base::Hash_Batch_Count(size_t ThreadCount)
 {
-    return MD5_Lanes_Batch_Min;
+    if (ThreadCount < MD5_Lanes_Batch_Min)
+        return 0;
+    auto Count = MD5_Lanes_Count();
+    return ThreadCount < Count ? ThreadCount : Count;
 }
 
 //---------------------------------------------------------------------------

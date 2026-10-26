@@ -66,7 +66,7 @@ public:
     bitset<mode_Max>            Mode;
     string                      OutputFileName;
     input_base_uncompressed_compound* Compound = nullptr;
-    bool                        Hash_Batch = false; // Hash may wait for the hash of frames from other threads (lower CPU usage)
+    size_t                      Hash_Batch = 0; // Count of frames hashed at the same time by other threads, the hash may wait for them (lower CPU usage), 0 if no wait
 
 private:
     // Actions

@@ -53,6 +53,7 @@ struct output_pending : public raw_frame_ready
     std::vector<raw_frame*>     Frames_Free; // For reuse (memory pages)
     std::vector<std::thread>    Threads;
     size_t                      Count = 0; // Between the decoding and the end of the output
+    size_t                      Depth_More = 0; // Count of frames more than the depth of the decoder, waiting for the hash computing of several frames together
     size_t                      Order_Count = 0; // Count of frames to be output in order
     size_t                      Order_Next = 0; // Next frame to be output in order
     bool                        Order_Busy = false; // A frame to be output in order is being output
@@ -202,9 +203,17 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Ho
         Wrapper->FrameReady = Output_Pending;
         if (Pool)
         {
-            size_t Count = thread::hardware_concurrency();
-            if (!Count || Count > 4)
-                Count = 4; // Enough for the hash computing of several frames in parallel
+            // Enough output threads for the hash computing of the max count of frames computed together in SIMD lanes (frames waiting for other frames, more frames in flight),
+            // else for the hash computing of several frames in parallel
+            size_t Count = MD5_Lanes_Count();
+            if (Count > 1)
+                Output_Pending->Depth_More = Count;
+            else
+            {
+                Count = thread::hardware_concurrency();
+                if (!Count || Count > 4)
+                    Count = 4;
+            }
             for (size_t i = 0; i < Count; i++)
                 Output_Pending->Threads.emplace_back(&track_info::Output_Run, this);
         }
@@ -241,12 +250,13 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Ho
     // Frame for the decoding, with a limited count of frames between the decoding and the end of the output
     {
         std::unique_lock<std::mutex> Lock(P->Mutex);
-        if (P->Count >= Wrapper->Depth())
+        auto Depth = Wrapper->Depth() + (Item->Ordered ? 0 : P->Depth_More);
+        if (P->Count >= Depth)
         {
             // Pending hashes are computed now, else frames would wait for other frames which can not be decoded
             TRACE_SCOPE("Wait depth", P->Index);
             MD5_Lanes_Flush(true);
-            P->Condition.wait(Lock, [&] { return P->Count < Wrapper->Depth(); });
+            P->Condition.wait(Lock, [&] { return P->Count < Depth; });
             MD5_Lanes_Flush(false);
         }
         P->Count++;
@@ -319,7 +329,7 @@ void track_info::Output_Run()
         {
             delete Writer;
             Writer = new frame_writer(*FrameWriter);
-            Writer->Hash_Batch = true; // Hash of several frames in parallel
+            Writer->Hash_Batch = MD5_Lanes_Count(); // Hash of several frames in parallel (enough frames in flight)
             Writer_Generation = P->Writer_Generation;
         }
         Lock.unlock();
