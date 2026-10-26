@@ -10,9 +10,12 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Frame.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Frame_FFmpeg.cpp \
+    ../../../Source/Lib/CoDec/FFV1/FFV1_Frame_Hybrid.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Parameters.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Slice.cpp \
+    ../../../Source/Lib/CoDec/FFmpeg_Library.cpp \
     ../../../Source/Lib/CoDec/Wrapper.cpp \
     ../../../Source/Lib/Common/Common.cpp \
     ../../../Source/Lib/Compressed/Matroska/Matroska.cpp \
@@ -75,7 +78,7 @@ man1_MANS = ../../../Source/CLI/rawcooked.1
 
 AM_TESTS_FD_REDIRECT = 9>&2
 
-TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/vulkan.sh test/avi.sh test/pcm.sh test/reversibilityfile.sh test/paddingbits.sh test/check.sh test/legacy.sh test/multiple.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/gaps.sh test/longpath.sh test/slices.sh test/framerate.sh test/hash.sh test/notfound.sh test/version.sh
+TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/vulkan.sh test/decoders.sh test/avi.sh test/pcm.sh test/reversibilityfile.sh test/paddingbits.sh test/check.sh test/legacy.sh test/multiple.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/gaps.sh test/longpath.sh test/slices.sh test/framerate.sh test/hash.sh test/notfound.sh test/version.sh
 
 TESTING_DIR = test/TestingFiles
 

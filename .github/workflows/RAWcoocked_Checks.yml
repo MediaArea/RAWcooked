@@ -43,17 +43,43 @@ jobs:
           cd Project/GNU/CLI
           if [ "$RUNNER_OS" == "Linux" ]; then
             cp /usr/bin/ffmpeg-ma ffmpeg
+            # rawcooked loads the libraries of the ffmpeg-ma package installed above (same version), built with the headers of a development package of FFmpeg by MediaArea
+            # (configure --with-ffmpeg=DIR), from another platform as there is none for Linux (same headers)
+            if grep -qw avx512f /proc/cpuinfo; then
+              Base=https://mediaarea.net/download/snapshots/binary/ffmpeg/latest Version=Latest # Latest snapshot
+            else
+              Base=https://mediaarea.net/download/binary/ffmpeg/9.0.1 Version=9.0.1
+            fi
+            curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Windows_Shared_x64.zip
+            unzip -q FFmpeg_Dev.zip 'include/*' -d FFmpeg_Dev
+            rm FFmpeg_Dev.zip
+            ./ffmpeg -hide_banner -version | sed -n 1p
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             if [ "$(sysctl -n hw.optional.avx512f 2>/dev/null)" == "1" ]; then
-              curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Mac_Static_universal.zip # Latest snapshot
+              Base=https://mediaarea.net/download/snapshots/binary/ffmpeg/latest Version=Latest # Latest snapshot
             else
               # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512 (e.g. Apple silicon)
-              curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/binary/ffmpeg/9.0.1/FFmpeg_Bin_9.0.1_Mac_Static_universal.zip
+              Base=https://mediaarea.net/download/binary/ffmpeg/9.0.1 Version=9.0.1
             fi
-            7za e FFmpeg.zip bin/ffmpeg > /dev/null
-            rm FFmpeg.zip
-            ./ffmpeg -hide_banner -version | sed -n 1p
+            # Shared build in the ffmpeg directory next to rawcooked, which loads its libraries (ffmpeg/lib), its ffmpeg is used by the tests
+            curl -fsSL -o FFmpeg.zip ${Base}/FFmpeg_Bin_${Version}_Mac_Shared_universal.zip
+            7za x -y -offmpeg FFmpeg.zip > /dev/null
+            echo "${PWD}/ffmpeg/bin" >> "${GITHUB_PATH}"
+            # Headers of the FFmpeg libraries for the build (configure --with-ffmpeg=DIR)
+            curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Mac_Shared_universal.zip
+            7za x -y -oFFmpeg_Dev FFmpeg_Dev.zip > /dev/null
+            mv FFmpeg_Dev/include ffmpeg/include
+            rm -r FFmpeg.zip FFmpeg_Dev.zip FFmpeg_Dev
+            # Libraries refer to each other with @executable_path/../lib, which is their directory for ffmpeg/bin/ffmpeg but not for rawcooked:
+            # @loader_path/../lib instead, same directory for both (signed again after the change)
+            for Lib in ffmpeg/lib/*.dylib ; do
+              for Dep in $(otool -L "${Lib}" | sed -n 's|^[[:space:]]*@executable_path/\.\./lib/\([^ ]*\) .*|\1|p' | sort -u) ; do
+                install_name_tool -change "@executable_path/../lib/${Dep}" "@loader_path/../lib/${Dep}" "${Lib}"
+              done
+              codesign --force --sign - "${Lib}"
+            done
+            ffmpeg/bin/ffmpeg -hide_banner -version | sed -n 1p
           fi
       - name: Vulkan
         if: runner.os == 'macOS'
@@ -68,7 +94,11 @@ jobs:
         run: |
           cd Project/GNU/CLI
           sh autogen.sh
-          ./configure
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            ./configure --with-ffmpeg="${PWD}/ffmpeg" # FFmpeg libraries loaded at run time
+          else
+            ./configure --with-ffmpeg="${PWD}/FFmpeg_Dev" # Libraries of ffmpeg-ma loaded at run time
+          fi
       - name: Compile
         run: |
           cd Project/GNU/CLI
@@ -100,17 +130,24 @@ jobs:
         run: |
           cd Project/GNU/CLI
           if grep -qw avx512f /proc/cpuinfo; then
-            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/snapshots/binary/ffmpeg/latest/FFmpeg_Bin_Latest_Windows_Static_x64.zip # Latest snapshot
+            Base=https://mediaarea.net/download/snapshots/binary/ffmpeg/latest Version=Latest # Latest snapshot
           else
             # FFmpeg 9.0.1, the 20260927 and 20261004 snapshots crash in the ffv1_vulkan encoder with llvmpipe on CPUs without AVX-512
-            curl -fsSL -o FFmpeg.zip https://mediaarea.net/download/binary/ffmpeg/9.0.1/FFmpeg_Bin_9.0.1_Windows_Static_x64.zip
+            Base=https://mediaarea.net/download/binary/ffmpeg/9.0.1 Version=9.0.1
           fi
-          7z e -y FFmpeg.zip -r ffmpeg.exe > /dev/null
-          rm FFmpeg.zip
-          ./ffmpeg -hide_banner -version | sed -n 1p
+          # Shared build in the ffmpeg directory next to rawcooked, which loads its libraries (ffmpeg\bin), its ffmpeg is used by the tests
+          curl -fsSL -o FFmpeg.zip ${Base}/FFmpeg_Bin_${Version}_Windows_Shared_x64.zip
+          7z x -y -offmpeg FFmpeg.zip > /dev/null
+          cygpath -w "${PWD}/ffmpeg/bin" >> "${GITHUB_PATH}"
+          # Headers of the FFmpeg libraries for the build, in the include directory at the root of the tree
+          curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Windows_Shared_x64.zip
+          7z x -y -oFFmpeg_Dev FFmpeg_Dev.zip > /dev/null
+          mv FFmpeg_Dev/include ../../../include
+          rm -r FFmpeg.zip FFmpeg_Dev.zip FFmpeg_Dev
+          ffmpeg/bin/ffmpeg -hide_banner -version | sed -n 1p
       - name: Vulkan
         run: |
-          # Vulkan loader and vulkaninfo, next to FFmpeg
+          # Vulkan loader and vulkaninfo, next to rawcooked (also the loader next to ffmpeg)
           curl -fsSL -o VulkanRT.zip "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip?u="
           7z x -y -oVulkanRT VulkanRT.zip > /dev/null
           for File in vulkan-1.dll vulkaninfo.exe ; do
@@ -120,6 +157,7 @@ jobs:
             [ -z "${Path}" ] || cp "${Path}" Project/GNU/CLI/
           done
           test -f Project/GNU/CLI/vulkan-1.dll # vulkaninfo is optional
+          cp Project/GNU/CLI/vulkan-1.dll Project/GNU/CLI/ffmpeg/bin/
           # lavapipe, a CPU implementation of Vulkan (Mesa), registered because the Vulkan loader ignores VK_DRIVER_FILES in an elevated process (runner)
           curl -fsSL -o Mesa.7z https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
           7z x -y -oMesa Mesa.7z > /dev/null

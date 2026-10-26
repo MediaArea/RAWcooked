@@ -17,6 +17,7 @@
 #endif
 #include "CLI/Global.h"
 #include "CLI/Help.h"
+#include "Lib/CoDec/FFmpeg_Library.h"
 int Help_Edit();
 //---------------------------------------------------------------------------
 
@@ -304,14 +305,45 @@ int global::SetFileOpenMethod(const char* Value)
 //---------------------------------------------------------------------------
 int global::SetDecoder(const char* Value)
 {
-    if (strcmp(Value, "internal") == 0 || strcmp(Value, "auto") == 0)
+    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order
+    static const char* const Names[] = { "internal", "ffmpeg", "vulkan" };
+    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder, Action_VulkanDecoder };
+    bool Decoders[3] = {};
+    auto IsAuto = strcmp(Value, "auto") == 0;
+    if (IsAuto)
+        Decoders[0] = true;
+    else
+        for (auto Name = Value;;)
+        {
+            auto Name_End = strchr(Name, '+');
+            auto Name_Size = Name_End ? (size_t)(Name_End - Name) : strlen(Name);
+            size_t i = 0;
+            while (i < 3 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
+                i++;
+            if (i == 3)
+            {
+                cerr << "Error: unknown decoder value '" << Value << "'." << endl;
+                return 1;
+            }
+            Decoders[i] = true;
+            if (!Name_End)
+                break;
+            Name = Name_End + 1;
+        }
+    if (Decoders[1] || Decoders[2])
     {
-        Actions.set(Action_AutoDecoder, strcmp(Value, "auto") == 0); // Resolved when a decoder is needed
-        Decoder_IsProvided = true;
-        return 0;
+        string Error;
+        if (!FFmpeg_Library_Load(&Error))
+        {
+            cerr << "Error: decoder value '" << Value << "' is not available (" << Error << ")." << endl;
+            return 1;
+        }
     }
-    cerr << "Error: unknown decoder value '" << Value << "'." << endl;
-    return 1;
+    for (size_t i = 0; i < 3; i++)
+        Actions.set(Decoders_Actions[i], Decoders[i]);
+    Actions.set(Action_AutoDecoder, IsAuto);
+    Decoder_IsProvided = true;
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -985,7 +1017,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     if (BinName.empty())
         BinName = "ffmpeg";
 
-    // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided
+    // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided (Vulkan also if it is a CPU implementation)
     if (Actions[Action_VulkanEncoder] && !Decoder_IsProvided)
         Actions.set(Action_AutoDecoder);
 
@@ -1000,8 +1032,13 @@ int global::ManageCommandLine(const char* argv[], int argc)
             IoThreads = 4;
     }
 
+    // GPU decoding (vulkan decoder, or auto decoder which uses it with a Vulkan GPU) needs the same license feature as GPU encoding
+    auto HwAccelDecoder = Actions[Action_VulkanDecoder] || Actions[Action_AutoDecoder];
+    if (HwAccelDecoder)
+        License.Feature(feature::HwAccel);
+
     // License
-    if (Actions[Action_Encode]) {
+    if (Actions[Action_Encode] || HwAccelDecoder) {
         if (License.LoadLicense(LicenseKey, StoreLicenseKey))
             return true;
         if (!License.IsSupported())

@@ -6,6 +6,9 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/CoDec/Wrapper.h"
+#include "Lib/CoDec/FFmpeg_Library.h"
+#include "Lib/CoDec/FFV1/FFV1_Frame_FFmpeg.h"
+#include "Lib/CoDec/FFV1/FFV1_Frame_Hybrid.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
 #include "Lib/Uncompressed/EXR/EXR.h"
@@ -68,11 +71,13 @@ void audio_wrapper::SetConfig(uint8_t BitDepth, sign Sign, endianness Endianness
 }
 
 //---------------------------------------------------------------------------
+// Frame is ffv1_frame (our decoder) or ffv1_frame_hybrid (FFmpeg decoders, alone or in parallel with our decoder)
+template<typename frame>
 class ffv1_wrapper : public video_wrapper
 {
 public:
     //Constructor/Destructor
-    ffv1_wrapper(ThreadPool* Pool);
+    ffv1_wrapper(frame* Ffv1Frame);
     ~ffv1_wrapper();
 
     // Config
@@ -83,35 +88,40 @@ public:
     bool                        OutOfBand(const uint8_t* Data, size_t Size);
 
 protected:
-    ffv1_frame*                 Ffv1Frame;
+    frame*                      Ffv1Frame;
 };
 
 //---------------------------------------------------------------------------
-ffv1_wrapper::ffv1_wrapper(ThreadPool* Pool) :
-    Ffv1Frame(new ffv1_frame(Pool))
+template<typename frame>
+ffv1_wrapper<frame>::ffv1_wrapper(frame* Ffv1Frame_) :
+    Ffv1Frame(Ffv1Frame_)
 {
 }
 
 //---------------------------------------------------------------------------
-ffv1_wrapper::~ffv1_wrapper()
+template<typename frame>
+ffv1_wrapper<frame>::~ffv1_wrapper()
 {
     delete Ffv1Frame;
 }
 
 //---------------------------------------------------------------------------
-void ffv1_wrapper::SetWidth(uint32_t Width)
+template<typename frame>
+void ffv1_wrapper<frame>::SetWidth(uint32_t Width)
 {
     Ffv1Frame->SetWidth(Width);
 }
 
 //---------------------------------------------------------------------------
-void ffv1_wrapper::SetHeight(uint32_t Height)
+template<typename frame>
+void ffv1_wrapper<frame>::SetHeight(uint32_t Height)
 {
     Ffv1Frame->SetHeight(Height);
 }
 
 //---------------------------------------------------------------------------
-bool ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
+template<typename frame>
+bool ffv1_wrapper<frame>::OutOfBand(const uint8_t* Data, size_t Size)
 {
     Ffv1Frame->RawFrame = RawFrame;
     return Ffv1Frame->OutOfBand(Data, Size);
@@ -119,10 +129,10 @@ bool ffv1_wrapper::OutOfBand(const uint8_t* Data, size_t Size)
 
 //---------------------------------------------------------------------------
 // Our decoder in 2 steps: decoding to a frame given by the caller (the end of the decoding is during the decoding of the next frame), then output by the caller (maybe in another thread)
-class ffv1_split_wrapper : public ffv1_wrapper
+class ffv1_split_wrapper : public ffv1_wrapper<ffv1_frame>
 {
 public:
-    using ffv1_wrapper::ffv1_wrapper;
+    using ffv1_wrapper<ffv1_frame>::ffv1_wrapper;
 
     // Actions
     bool                        CanSplit() { return true; }
@@ -147,6 +157,26 @@ void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, data_holder* H
     if (!Holder)
         Ffv1Frame->Wait(); // Frame data is valid only during the call
 }
+
+#ifdef RAWCOOKED_FFMPEG
+//---------------------------------------------------------------------------
+// Our decoder and/or FFmpeg decoders, each decoder in its own thread
+class ffv1_hybrid_wrapper : public ffv1_wrapper<ffv1_frame_hybrid>
+{
+public:
+    using ffv1_wrapper<ffv1_frame_hybrid>::ffv1_wrapper;
+
+    // Config
+    void                        SetWidth(uint32_t Width) { Ffv1Frame->RawFrame = RawFrame; ffv1_wrapper<ffv1_frame_hybrid>::SetWidth(Width); } // Raw frame is set before the decoding threads use it
+
+    // Actions
+    bool                        CanSplit() { return true; }
+    void                        Decode(const uint8_t* Data, size_t Size, data_holder* Holder, raw_frame* Frame, void* Opaque) { Ffv1Frame->FrameReady = FrameReady; Ffv1Frame->Remaining = Remaining; Ffv1Frame->Decode(Data, Size, Holder, Frame, Opaque); }
+    size_t                      Padding() { return ffv1_frame_hybrid::Padding(); }
+    size_t                      Depth() { return Ffv1Frame->Depth(); }
+    void                        End() { Ffv1Frame->End(); }
+};
+#endif //RAWCOOKED_FFMPEG
 
 //---------------------------------------------------------------------------
 class flac_wrapper : public audio_wrapper
@@ -412,12 +442,31 @@ bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holde
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-#define CREATEWRAPPER_THREADED(_NAME, _FLAVOR, _THREAD) case format::_FLAVOR: return new _NAME##_wrapper(_THREAD);
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool)
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseAutoDecoder, bool AllowVulkanCPU)
 {
     switch (Format)
     {
-    CREATEWRAPPER_THREADED(ffv1_split, FFV1, Pool);
+    case format::FFV1:
+        if (UseAutoDecoder)
+        {
+            // Our decoder and FFmpeg Vulkan decoder in parallel if a GPU (or a CPU implementation if allowed) is available, else our decoder only
+            UseInternalDecoder = true;
+            UseFFmpegDecoder = false;
+            UseVulkanDecoder = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+        }
+        #ifdef RAWCOOKED_FFMPEG
+        if (UseFFmpegDecoder || UseVulkanDecoder)
+        {
+            if (!FFmpeg_Library_Load())
+                return nullptr; // Availability of FFmpeg libraries is checked when the decoder is selected
+            return new ffv1_hybrid_wrapper(new ffv1_frame_hybrid(Pool, UseInternalDecoder, UseFFmpegDecoder, UseVulkanDecoder)); // FFmpeg decoders, in parallel with our decoder if requested
+        }
+        #else
+        (void)UseInternalDecoder;
+        (void)UseFFmpegDecoder;
+        (void)UseVulkanDecoder;
+        #endif
+        return new ffv1_split_wrapper(new ffv1_frame(Pool)); // Our decoder only if no FFmpeg decoder is requested
     CREATEWRAPPER(flac, FLAC);
     CREATEWRAPPER(pcm, PCM);
     case format::None:
