@@ -48,7 +48,9 @@ int global::SetComputeOutputHash()
 //---------------------------------------------------------------------------
 int global::SetBinName(const char* FileName)
 {
-    BinName = FileName;
+    // FFmpeg binary, or libavcodec library for the FFmpeg decoders
+    if (!FFmpeg_Library_SetPath(FileName))
+        BinName = FileName;
     return 0;
 }
 

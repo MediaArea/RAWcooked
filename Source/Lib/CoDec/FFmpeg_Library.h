@@ -29,6 +29,9 @@ std::string FFmpeg_Binary();
 // Functions of the libraries are in FFmpeg_Functions.h
 //***************************************************************************
 
+// Use this libavcodec (and the libavutil it uses) instead of searching for the libraries, if FileName is the name of a libavcodec library (false if not), before the libraries are loaded
+bool FFmpeg_Library_SetPath(const std::string& FileName);
+
 // Load the libraries if not already done, false if they are not available (Error is set to the reason)
 bool FFmpeg_Library_Load(std::string* Error = nullptr);
 

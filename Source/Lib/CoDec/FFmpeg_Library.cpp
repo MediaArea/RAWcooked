@@ -199,6 +199,35 @@ string FFmpeg_Binary()
     return string();
 }
 
+//---------------------------------------------------------------------------
+static string Library_Path_Provided; // libavcodec provided by the user, used instead of the search
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_SetPath(const string& FileName)
+{
+    // File name of libavcodec, any version (an incompatible version is rejected when loaded)
+    #if defined(_WIN32)
+    auto Separator = FileName.find_last_of("\\/");
+    #else
+    auto Separator = FileName.rfind('/');
+    #endif
+    auto Name = FileName.substr(Separator == string::npos ? 0 : (Separator + 1));
+    #if defined(_WIN32)
+    for (auto& Char : Name)
+        if (Char >= 'A' && Char <= 'Z')
+            Char += 'a' - 'A';
+    auto IsLibrary = !Name.compare(0, 7, "avcodec") && Name.size() > 11 && !Name.compare(Name.size() - 4, 4, ".dll");
+    #elif defined(__APPLE__)
+    auto IsLibrary = !Name.compare(0, 10, "libavcodec") && Name.size() > 16 && !Name.compare(Name.size() - 6, 6, ".dylib");
+    #else
+    auto IsLibrary = !Name.compare(0, 10, "libavcodec") && Name.find(".so", 10) != string::npos;
+    #endif
+    if (!IsLibrary)
+        return false;
+    Library_Path_Provided = FileName;
+    return true;
+}
+
 #ifdef RAWCOOKED_FFMPEG
 //***************************************************************************
 // Functions
@@ -340,12 +369,22 @@ static bool Library_Load(string& Error)
     wstring Names[Library_Max];
     for (size_t i = 0; i < Library_Max; i++)
         Names[i].assign(Library_Names[i], Library_Names[i] + strlen(Library_Names[i]));
+    vector<path> Paths;
+    if (!Library_Path_Provided.empty())
+    {
+        auto Size = MultiByteToWideChar(CP_ACP, 0, Library_Path_Provided.c_str(), (int)Library_Path_Provided.size(), nullptr, 0); // Command line is in the ANSI code page
+        wstring Path(Size, L'\0');
+        MultiByteToWideChar(CP_ACP, 0, Library_Path_Provided.c_str(), (int)Library_Path_Provided.size(), &Path[0], Size);
+        Paths.push_back(Path);
+    }
+    else
+        for (const auto& Directory : Library_Directories())
+            Paths.push_back(Directory + L'\\' + Names[Library_avcodec]);
     DWORD ErrorMode;
     SetThreadErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX, &ErrorMode); // No message box from the system if a library is invalid
     auto Loaded = false;
-    for (const auto& Directory : Library_Directories())
+    for (const auto& Path : Paths)
     {
-        auto Path = Directory + L'\\' + Names[Library_avcodec];
         if (GetFileAttributesW(Path.c_str()) == INVALID_FILE_ATTRIBUTES)
             continue;
         library Libraries[Library_Max];
@@ -377,7 +416,8 @@ static bool Library_Load(string& Error)
     if (Loaded)
         return true;
     #else
-    for (const auto& Path : Library_Paths())
+    auto Paths = Library_Path_Provided.empty() ? Library_Paths() : vector<path>{ Library_Path_Provided };
+    for (const auto& Path : Paths)
     {
         auto HasDirectory = Path.find('/') != string::npos;
         if (HasDirectory && access(Path.c_str(), F_OK))
@@ -398,6 +438,8 @@ static bool Library_Load(string& Error)
     }
     #endif
 
+    if (Error.empty() && !Library_Path_Provided.empty())
+        Error = "FFmpeg library " + Library_Path_Provided + " is not found";
     if (Error.empty())
     {
         Error = string("FFmpeg libraries ") + Library_Names[Library_avcodec] + " and " + Library_Names[Library_avutil];
@@ -410,8 +452,13 @@ static bool Library_Load(string& Error)
 }
 #else //RAWCOOKED_FFMPEG_DYNAMIC
 //---------------------------------------------------------------------------
-static bool Library_Load(string&)
+static bool Library_Load(string& Error)
 {
+    if (!Library_Path_Provided.empty())
+    {
+        Error = "FFmpeg libraries are linked in this build, FFmpeg library " + Library_Path_Provided + " can not be used";
+        return false;
+    }
     return true; // Linked
 }
 #endif //RAWCOOKED_FFMPEG_DYNAMIC
