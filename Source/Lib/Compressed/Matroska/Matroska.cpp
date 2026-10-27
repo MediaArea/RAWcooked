@@ -84,18 +84,17 @@ using namespace matroska_issue;
 // Hash
 
 struct output_hash {
-    const uint8_t* Buffer;
     MD5_CTX MD5;
     uint64_t Offset = 0;
     bool Disabled = false;
 
-    output_hash(const uint8_t* Buffer_)
-        : Buffer (Buffer_)
+    output_hash()
     {
         MD5_Init(&MD5);
     }
 
-    void Update(size_t Size)
+    // Buffer is the current data of the file, its address changes after a remap
+    void Update(const uint8_t* Buffer, size_t Size)
     {
         do {
             unsigned long SizeLong = Size >= (unsigned long)-1 ? (unsigned long)-1 : (unsigned long)Size;
@@ -357,7 +356,7 @@ void matroska::ParseBuffer()
     Buffer_Offset = 0;
     Level = 0;
     if ((Actions[Action_Decode] || Actions[Action_Check]) && Actions[Action_ComputeOutputHash])
-        OutputHash = new output_hash(Buffer.Data());
+        OutputHash = new output_hash;
 
     // Progress indicator
     Cluster_Timestamp = 0;
@@ -420,7 +419,7 @@ void matroska::ParseBuffer()
             if (NeedRemap || Hash_Size >= 0x100000)
             {
                 TRACE_SCOPE("Hash file");
-                OutputHash->Update(Hash_Size);
+                OutputHash->Update(Buffer.Data(), Hash_Size);
             }
         }
 
@@ -497,7 +496,7 @@ void matroska::ParseBuffer()
     // Show MD5
     if (OutputHash && !OutputHash->Disabled)
     {
-        OutputHash->Update(Buffer_Offset - OutputHash->Offset);
+        OutputHash->Update(Buffer.Data(), Buffer_Offset - OutputHash->Offset);
         auto MD5_Result = OutputHash->MD5_Final();
         std::cout << "\nInfo: Output file MD5 is ";
         for (size_t i = 0; i < MD5_Result.size(); i++)
@@ -900,7 +899,7 @@ void matroska::Segment_Cluster()
         Cluster_Level = Level;
         Level--;
         if (OutputHash) {
-            OutputHash->Update(Buffer_Offset - OutputHash->Offset);
+            OutputHash->Update(Buffer.Data(), Buffer_Offset - OutputHash->Offset);
             OutputHash->Disabled = true;
         }
         return;
