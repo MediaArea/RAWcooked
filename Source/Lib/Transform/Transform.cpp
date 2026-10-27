@@ -12,6 +12,7 @@
 #include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/ThirdParty/endianness.h"
+#include <vector>
 //---------------------------------------------------------------------------
 
 //***************************************************************************
@@ -235,6 +236,61 @@ protected:
 };
 
 //---------------------------------------------------------------------------
+// DPX flavors with blocks of several pixels: a 32-bit word may have the data of pixels of 2 or more slices
+// The word is written by the slice with its last pixel, each slice before it puts its part in its slot, merged by transform_dpx_Finalize() when all slices are decoded
+
+// Slot of the slice beginning at x_offset, for line y_offset
+static uint8_t* transform_Slot(const raw_frame::plane* Plane, size_t x_offset, size_t y_offset, size_t Slot_Size = 4)
+{
+    auto Width = Plane->Width();
+    auto Line_SliceCount = Plane->Line_SliceCount(); // Count of slices in a line (num_h_slices), not more than Width
+    auto slice_x = (x_offset * Line_SliceCount + Width - 1) / Width; // Slice beginning is slice_x * Width / Line_SliceCount
+    return Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + slice_x) * Slot_Size;
+}
+
+static void transform_dpx_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
+{
+    const auto& Plane = RawFrame->Plane(0);
+    auto Slots = (const uint32_t*)Plane->Buffer_Extra().Data();
+    if (!Slots)
+        return;
+
+    const auto Width = Plane->Width();
+    const auto Height = Plane->Height();
+    const auto Line_SliceCount = Plane->Line_SliceCount();
+    const auto PixelsPerBlock = Plane->PixelsPerBlock();
+    const auto Altern = dpx::IsAltern(RawFrame->Flavor_Private);
+    if (Altern && (Width * Height) % PixelsPerBlock)
+    {
+        // Last frame block is never written by the transform, setting to 0
+        auto FrameBuffer = Plane->Buffer().Data() + Plane->Buffer().Size() - 4;
+        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+        *FrameBuffer_Temp_32 = 0;
+    }
+
+    // Slices ending inside a block, the last slice of a line writes its last word except if the data continues on the next line (Altern)
+    vector<size_t> Slices_x;
+    for (size_t slice_x = 0; slice_x < num_h_slices - (Altern ? 0 : 1); slice_x++)
+        if (Altern || ((slice_x + 1) * Width / num_h_slices) % PixelsPerBlock)
+            Slices_x.push_back(slice_x);
+    if (Slices_x.empty())
+        return;
+
+    for (size_t y = 0; y < Height; y++)
+    {
+        for (const auto slice_x : Slices_x)
+        {
+            auto x2 = (slice_x + 1) * Width / num_h_slices;
+            if (Altern && !((y * Width + x2) % PixelsPerBlock))
+                continue;
+            auto FrameBuffer_Temp_32 = (uint32_t*)Plane->Buffer_Data(x2, y, true);
+            *FrameBuffer_Temp_32 |= Slots[slice_x];
+        }
+        Slots += Line_SliceCount;
+    }
+}
+
+//---------------------------------------------------------------------------
 class transform_jpeg2000rct_dpx_Raw_RGB_8 : public transform_dpx
 {
 public:
@@ -304,38 +360,15 @@ public:
 };
 
 //---------------------------------------------------------------------------
-void transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
-{
-    const auto& Plane = RawFrame->Plane(0);
-    auto FrameBufferBefore = Plane->Buffer_Extra().Data();
-    auto Line_SliceCount = Plane->Line_SliceCount();
-
-    const auto Width = Plane->Width();
-    const auto Height = Plane->Height();
-    size_t Slices_w = Width / num_h_slices;
-    for (size_t y = 0; y < Height; y++)
-    {
-        for (size_t slice_x = 0; slice_x < num_h_slices - 1; slice_x++)
-        {
-            auto x = slice_x * Width / num_h_slices;
-            auto x2 = (slice_x + 1) * Width / num_h_slices;
-            if (!(x2 % 8))
-                continue;
-            auto FrameBuffer = Plane->Buffer_Data(x2, y, true);
-            auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
-            auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
-            *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
-        }
-        FrameBufferBefore += Line_SliceCount * 4;
-    }
-}
-
 class transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE : public transform_dpx
 {
 public:
     transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
         transform_dpx(RawFrame, x_offset, y_offset, w, h)
     {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_dpx_Finalize;
+
         const auto& Plane = RawFrame->Plane(0);
         auto Width = Plane->Width();
         auto PixelsPerBlock = dpx::PixelsPerBlock((dpx::flavor)RawFrame->Flavor_Private);
@@ -348,9 +381,6 @@ public:
             Data_Temp_Pos_Begin = 0;
             return;
         }
-
-        if (HasBlockSpan && !x_offset && !y_offset)
-            RawFrame->Finalize_Function = transform_jpeg2000rct_dpx_Raw_RGB_12_Packed_BE_Finalize;
 
         if (VFlip)
         {
@@ -375,12 +405,11 @@ public:
             NextLine_Offset += FullLineBlockCount;
         NextLine_Offset *= 4;
         Data_Temp_Pos_Begin = x_offset % 8;
-        
+
         if (HasBlockSpan && x_offset + w < Width)
         {
-            auto Line_SliceCount = Plane->Line_SliceCount();
-            FrameBufferBefore = Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + (x_offset + 1) * Line_SliceCount / Width) * 4;
-            FrameBufferBefore_Offset = (uint32_t)(Line_SliceCount * 4);
+            FrameBufferBefore = transform_Slot(Plane, x_offset, y_offset);
+            FrameBufferBefore_Offset = (uint32_t)(Plane->Line_SliceCount() * 4);
         }
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
@@ -618,111 +647,225 @@ public:
 };
 
 //---------------------------------------------------------------------------
-class transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_LE : public transform_dpx
+// 3 components per 32-bit word, 3 pixels in 4 words
+template<bool BE> class transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA : public transform_dpx
 {
 public:
-    transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_LE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
-        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
+    transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_dpx(RawFrame, x_offset, y_offset, w, h)
+    {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_dpx_Finalize;
+
+        const auto& Plane = RawFrame->Plane(0);
+        auto Width = Plane->Width();
+        auto FullLineBlockCount = Plane->BitsPerLine() / 32;
+        auto SliceBeginBlockCount = x_offset * 4 / 3;
+        auto SliceEndBlockCount = (x_offset + w) * 4 / 3;
+
+        FrameBuffer = Plane->Buffer_Data() + (y_offset * FullLineBlockCount + SliceBeginBlockCount) * 4;
+        NextLine_Offset = (FullLineBlockCount - (SliceEndBlockCount - SliceBeginBlockCount)) * 4;
+        Data_Temp_Pos_Begin = (uint32_t)(x_offset * 4 % 3);
+
+        if ((x_offset + w) % 3 && x_offset + w < Width)
+        {
+            FrameBufferBefore = transform_Slot(Plane, x_offset, y_offset);
+            FrameBufferBefore_Offset = (uint32_t)(Plane->Line_SliceCount() * 4);
+        }
+        else
+            FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
+    }
 
     void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t* a)
     {
+        uint32_t Data_Temp = 0;
+        auto Data_Temp_Pos = Data_Temp_Pos_Begin;
         auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+        size_t x = 0;
 
-        for (size_t x = 0; x < w; x++)
+        // Pixel by pixel when a block has pixels of 2 slices
+        auto Component = [&](uint32_t Value)
         {
-            uint32_t Data_Temp;
+            Data_Temp |= Value << (22 - Data_Temp_Pos * 10);
+            if (++Data_Temp_Pos == 3)
+            {
+                *(FrameBuffer_Temp_32++) = Swap(Data_Temp);
+                Data_Temp = 0;
+                Data_Temp_Pos = 0;
+            }
+        };
+        auto Pixel = [&]()
+        {
+            JPEG2000RCT(((pixel_t)1) << 10);
+            Component(r);
+            Component(g);
+            Component(b);
+            Component(a[x]);
+        };
+
+        // Beginning of the slice inside a block
+        for (; x < w && Data_Temp_Pos; x++)
+            Pixel();
+
+        // Complete blocks
+        for (; x + 3 <= w; x++)
+        {
+            uint32_t Data_Temp_32;
             {
                 JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htol((uint32_t)((r << 22) | (g << 12) | (b << 2)));
-                Data_Temp = (a[x] << 22);
+                *(FrameBuffer_Temp_32++) = Swap((uint32_t)((r << 22) | (g << 12) | (b << 2)));
+                Data_Temp_32 = (a[x] << 22);
             }
             x++;
             {
                 JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htol((uint32_t)(Data_Temp | (r << 12) | (g << 2)));
-                Data_Temp = (b << 22) | (a[x] << 12);
+                *(FrameBuffer_Temp_32++) = Swap((uint32_t)(Data_Temp_32 | (r << 12) | (g << 2)));
+                Data_Temp_32 = (b << 22) | (a[x] << 12);
             }
             x++;
             {
                 JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htol((uint32_t)(Data_Temp | (r << 2)));
-                *(FrameBuffer_Temp_32++) = htol((uint32_t)((g << 22) | (b << 12) | (a[x] << 2)));
+                *(FrameBuffer_Temp_32++) = Swap((uint32_t)(Data_Temp_32 | (r << 2)));
+                *(FrameBuffer_Temp_32++) = Swap((uint32_t)((g << 22) | (b << 12) | (a[x] << 2)));
+            }
+        }
+
+        // End of the slice inside a block
+        for (; x < w; x++)
+            Pixel();
+        if (Data_Temp_Pos)
+        {
+            if (FrameBufferBefore)
+            {
+                auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore;
+                *FrameBufferBefore_Temp_32 = Swap(Data_Temp);
+                FrameBufferBefore += FrameBufferBefore_Offset;
+            }
+            else
+            {
+                *FrameBuffer_Temp_32 = Swap(Data_Temp);
             }
         }
 
         FrameBuffer = (uint8_t*)FrameBuffer_Temp_32;
         Next();
     }
+
+protected:
+    uint8_t*    FrameBufferBefore;
+    uint32_t    Data_Temp_Pos_Begin;
+    uint32_t    FrameBufferBefore_Offset;
+
+    static uint32_t Swap(uint32_t Value) { return BE ? htob(Value) : htol(Value); }
 };
 
-//---------------------------------------------------------------------------
-class transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_BE : public transform_dpx
-{
-public:
-    transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
-        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
-
-    void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t* a)
-    {
-        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
-
-        for (size_t x = 0; x < w; x++)
-        {
-            uint32_t Data_Temp;
-            {
-                JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htob((uint32_t)((r << 22) | (g << 12) | (b << 2)));
-                Data_Temp = (a[x] << 22);
-            }
-            x++;
-            {
-                JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htob((uint32_t)(Data_Temp | (r << 12) | (g << 2)));
-                Data_Temp = (b << 22) | (a[x] << 12);
-            }
-            x++;
-            {
-                JPEG2000RCT(((pixel_t)1) << 10);
-                *(FrameBuffer_Temp_32++) = htob((uint32_t)(Data_Temp | (r << 2)));
-                *(FrameBuffer_Temp_32++) = htob((uint32_t)((g << 22) | (b << 12) | (a[x] << 2)));
-            }
-        }
-
-        FrameBuffer = (uint8_t*)FrameBuffer_Temp_32;
-        Next();
-    }
-};
+#define transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_LE transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA<false>
+#define transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA_BE transform_jpeg2000rct_dpx_Raw_RGBA_10_FilledA<true>
 
 //---------------------------------------------------------------------------
+// 12-bit components packed in 32-bit words, 2 pixels in 3 words
 class transform_jpeg2000rct_dpx_Raw_RGBA_12_Packed_BE : public transform_dpx
 {
 public:
     transform_jpeg2000rct_dpx_Raw_RGBA_12_Packed_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
-        transform_dpx(RawFrame, x_offset, y_offset, w, h) {};
+        transform_dpx(RawFrame, x_offset, y_offset, w, h)
+    {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_dpx_Finalize;
+
+        const auto& Plane = RawFrame->Plane(0);
+        auto Width = Plane->Width();
+        auto FullLineBlockCount = Plane->BitsPerLine() / 32;
+        auto SliceBeginBlockCount = x_offset * 3 / 2;
+        auto SliceEndBlockCount = (x_offset + w) * 3 / 2;
+
+        FrameBuffer = Plane->Buffer_Data() + (y_offset * FullLineBlockCount + SliceBeginBlockCount) * 4;
+        NextLine_Offset = (FullLineBlockCount - (SliceEndBlockCount - SliceBeginBlockCount)) * 4;
+        Data_Temp_Pos_Begin = (uint32_t)(x_offset % 2 * 16); // Bit position in the word
+
+        if ((x_offset + w) % 2 && x_offset + w < Width)
+        {
+            FrameBufferBefore = transform_Slot(Plane, x_offset, y_offset);
+            FrameBufferBefore_Offset = (uint32_t)(Plane->Line_SliceCount() * 4);
+        }
+        else
+            FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
+    }
 
     void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t* a)
     {
+        uint64_t Data_Temp = 0;
+        auto Data_Temp_Pos = Data_Temp_Pos_Begin;
         auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+        size_t x = 0;
 
-        for (size_t x = 0; x < w; x++)
+        // Pixel by pixel when a block has pixels of 2 slices
+        auto Component = [&](uint32_t Value)
         {
-            uint32_t Data_Temp;
+            Data_Temp |= ((uint64_t)Value) << Data_Temp_Pos;
+            Data_Temp_Pos += 12;
+            if (Data_Temp_Pos >= 32)
+            {
+                *(FrameBuffer_Temp_32++) = htob((uint32_t)Data_Temp);
+                Data_Temp >>= 32;
+                Data_Temp_Pos -= 32;
+            }
+        };
+        auto Pixel = [&]()
+        {
+            JPEG2000RCT(((pixel_t)1) << 12);
+            Component(r);
+            Component(g);
+            Component(b);
+            Component(a[x]);
+        };
+
+        // Beginning of the slice inside a block
+        for (; x < w && Data_Temp_Pos; x++)
+            Pixel();
+
+        // Complete blocks
+        for (; x + 2 <= w; x++)
+        {
+            uint32_t Data_Temp_32;
             {
                 JPEG2000RCT(((pixel_t)1) << 12);
                 *(FrameBuffer_Temp_32++) = htob((uint32_t)((b << 24) | (g << 12) | r));
-                Data_Temp = (a[x] << 4) | (b >> 8);
+                Data_Temp_32 = (a[x] << 4) | (b >> 8);
             }
             x++;
             {
                 JPEG2000RCT(((pixel_t)1) << 12);
-                *(FrameBuffer_Temp_32++) = htob((uint32_t)((g << 28) | (r << 16) | (Data_Temp)));
+                *(FrameBuffer_Temp_32++) = htob((uint32_t)((g << 28) | (r << 16) | (Data_Temp_32)));
                 *(FrameBuffer_Temp_32++) = htob((uint32_t)((a[x] << 20) | (b << 8) | (g >> 4)));
             }
         }
-    
+
+        // End of the slice inside a block
+        for (; x < w; x++)
+            Pixel();
+        if (Data_Temp_Pos)
+        {
+            if (FrameBufferBefore)
+            {
+                auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore;
+                *FrameBufferBefore_Temp_32 = htob((uint32_t)Data_Temp);
+                FrameBufferBefore += FrameBufferBefore_Offset;
+            }
+            else
+            {
+                *FrameBuffer_Temp_32 = htob((uint32_t)Data_Temp);
+            }
+        }
+
         FrameBuffer = (uint8_t*)FrameBuffer_Temp_32;
         Next();
     }
+
+protected:
+    uint8_t*    FrameBufferBefore;
+    uint32_t    Data_Temp_Pos_Begin;
+    uint32_t    FrameBufferBefore_Offset;
 };
 
 //---------------------------------------------------------------------------
@@ -844,50 +987,15 @@ public:
 };
 
 //---------------------------------------------------------------------------
-void transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
-{
-    const auto& Plane = RawFrame->Plane(0);
-    auto FrameBufferBefore = Plane->Buffer_Extra().Data();
-    if (!FrameBufferBefore)
-        return;
-
-    const auto Width = Plane->Width();
-    const auto Height = Plane->Height();
-    const auto Line_SliceCount = Plane->Line_SliceCount();
-    auto PixelCount = Width * Height;
-    auto Altern = dpx::IsAltern(RawFrame->Flavor_Private);
-    if (Altern && PixelCount % 3)
-    {
-        // Last frame block is never written by the transform, setting to 0
-        auto FrameBuffer = Plane->Buffer().Data() + Plane->Buffer().Size() - 4;
-        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
-        *FrameBuffer_Temp_32 = 0;
-    }
-
-    size_t Slices_w = Width / num_h_slices;
-    for (size_t y = 0; y < Height; y++)
-    {
-        for (size_t slice_x = 0; slice_x < num_h_slices - (Altern ? 0 : 1); slice_x++)
-        {
-            auto x = slice_x * Width / num_h_slices;
-            auto x2 = (slice_x + 1) * Width / num_h_slices;
-            if (Altern && !((y * Width + x2) % 3))
-                continue;
-            auto FrameBuffer = Plane->Buffer_Data(x2, y, true);
-            auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
-            auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
-            *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
-        }
-        FrameBufferBefore += Line_SliceCount * 4;
-    }
-}
-
 template <int Offset> class transform_passthrough_dpx_Raw_Y_10_FilledX_BE : public transform_dpx
 {
 public:
     transform_passthrough_dpx_Raw_Y_10_FilledX_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
         transform_dpx(RawFrame, x_offset, y_offset, w, h)
     {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_dpx_Finalize;
+
         const auto& Plane = RawFrame->Plane(0);
         Width = Plane->Width();
         auto PixelsPerBlock = dpx::PixelsPerBlock((dpx::flavor)RawFrame->Flavor_Private);
@@ -904,9 +1012,6 @@ public:
             Data_Temp_Pos_Begin = 0;
             return;
         }
-
-        if (!x_offset && !y_offset)
-            RawFrame->Finalize_Function = transform_passthrough_dpx_Raw_Y_10_FilledX_BE_Finalize;
 
         if (Altern)
         {
@@ -934,9 +1039,8 @@ public:
 
         if ((Altern || x_offset + w < Width))
         {
-            auto Line_SliceCount = Plane->Line_SliceCount();
-            FrameBufferBefore = Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + (x_offset + 1) * Line_SliceCount / Width) * 4;
-            FrameBufferBefore_Offset = (uint32_t)(Line_SliceCount * 4);
+            FrameBufferBefore = transform_Slot(Plane, x_offset, y_offset);
+            FrameBufferBefore_Offset = (uint32_t)(Plane->Line_SliceCount() * 4);
         }
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
@@ -997,39 +1101,15 @@ protected:
 #define transform_passthrough_dpx_Raw_Y_10_FilledB_BE transform_passthrough_dpx_Raw_Y_10_FilledX_BE<0>
 
 //---------------------------------------------------------------------------
-void transform_passthrough_dpx_Raw_Y_12_Packed_BE_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
-{
-    const auto& Plane = RawFrame->Plane(0);
-    auto FrameBufferBefore = Plane->Buffer_Extra().Data();
-    auto Line_SliceCount = Plane->Line_SliceCount();
-
-    const auto Width = Plane->Width();
-    const auto Height = Plane->Height();
-    size_t Slices_w = Width / num_h_slices;
-    for (size_t y = 0; y < Height; y++)
-    {
-        for (size_t slice_x = 0; slice_x < num_h_slices - 1; slice_x++)
-        {
-            auto x = slice_x * Width / num_h_slices;
-            auto x2 = (slice_x + 1) * Width / num_h_slices;
-            if (!(x2 % 8))
-                continue;
-            auto FrameBuffer = Plane->Buffer_Data(x2, y, true);
-            auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
-            auto FrameBufferBefore_Temp_32 = (uint32_t*)FrameBufferBefore + x / Slices_w;
-            *FrameBuffer_Temp_32 |= *FrameBufferBefore_Temp_32;
-            FrameBuffer_Temp_32++;
-        }
-        FrameBufferBefore += Line_SliceCount * 4;
-    }
-}
-
 class transform_passthrough_dpx_Raw_Y_12_Packed_BE : public transform_dpx
 {
 public:
     transform_passthrough_dpx_Raw_Y_12_Packed_BE(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
         transform_dpx(RawFrame, x_offset, y_offset, w, h)
     {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_dpx_Finalize;
+
         const auto& Plane = RawFrame->Plane(0);
         auto Width = Plane->Width();
         auto PixelsPerBlock = dpx::PixelsPerBlock((dpx::flavor)RawFrame->Flavor_Private);
@@ -1042,9 +1122,6 @@ public:
             Data_Temp_Pos_Begin = 0;
             return;
         }
-
-        if (HasBlockSpan && !x_offset && !y_offset)
-            RawFrame->Finalize_Function = transform_passthrough_dpx_Raw_Y_12_Packed_BE_Finalize;
 
         if (VFlip)
         {
@@ -1069,12 +1146,11 @@ public:
             NextLine_Offset += FullLineBlockCount;
         NextLine_Offset *= 4;
         Data_Temp_Pos_Begin = x_offset % 8;
-        
+
         if (HasBlockSpan && x_offset + w < Width)
         {
-            auto Line_SliceCount = Plane->Line_SliceCount();
-            FrameBufferBefore = Plane->Buffer_Extra().Data() + (Line_SliceCount * y_offset + (x_offset + 1) * Line_SliceCount / Width) * 4;
-            FrameBufferBefore_Offset = (uint32_t)(Line_SliceCount * 4);
+            FrameBufferBefore = transform_Slot(Plane, x_offset, y_offset);
+            FrameBufferBefore_Offset = (uint32_t)(Plane->Line_SliceCount() * 4);
         }
         else
             FrameBufferBefore = nullptr; // Last block in a line is padded so should be written immediately
@@ -1307,6 +1383,48 @@ public:
 //***************************************************************************
 
 //---------------------------------------------------------------------------
+// 6 pixels in 4 32-bit words, Cb Y Cr / Y Cb Y / Cr Y Cb / Y Cr Y
+// A slice beginning inside a block writes the words from its first component, the slice before it puts its components in these words (up to 2) in its slot,
+// merged by transform_v210_Finalize() when all slices are decoded
+// Chroma of a slice is from x_offset / 2, ceil(w / 2) samples, so a pair split by a slice boundary may be in both slices
+static const uint8_t transform_v210_FirstWord[6] = { 0, 0, 1, 1, 2, 2 }; // First word of a slice beginning at this pixel of a block (luma or chroma)
+static const size_t transform_v210_Slot_Size = 8; // 2 words
+
+static void transform_v210_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
+{
+    const auto& Plane = RawFrame->Plane(0);
+    auto Slots = Plane->Buffer_Extra().Data();
+    if (!Slots)
+        return;
+
+    const auto Width = Plane->Width();
+    const auto Height = Plane->Height();
+    const auto Line_SliceCount = Plane->Line_SliceCount();
+    const auto LineSize = Plane->BitsPerLine() / 8;
+
+    // Slices ending inside a block
+    vector<size_t> Slices_x;
+    for (size_t slice_x = 0; slice_x < num_h_slices - 1; slice_x++)
+        if (((slice_x + 1) * Width / num_h_slices) % 6)
+            Slices_x.push_back(slice_x);
+    if (Slices_x.empty())
+        return;
+
+    for (size_t y = 0; y < Height; y++)
+    {
+        auto FrameBuffer_Temp_32 = (uint32_t*)(Plane->Buffer().Data() + y * LineSize);
+        for (const auto slice_x : Slices_x)
+        {
+            auto x2 = (slice_x + 1) * Width / num_h_slices;
+            auto Word = x2 / 6 * 4 + transform_v210_FirstWord[x2 % 6];
+            auto Slot_Temp_32 = (const uint32_t*)(Slots + slice_x * transform_v210_Slot_Size);
+            FrameBuffer_Temp_32[Word] |= Slot_Temp_32[0];
+            FrameBuffer_Temp_32[Word + 1] |= Slot_Temp_32[1];
+        }
+        Slots += Line_SliceCount * transform_v210_Slot_Size;
+    }
+}
+
 class transform_v210 : public transform_base
 {
 public:
@@ -1314,22 +1432,112 @@ public:
         w(w),
         h(h)
     {
-        const auto& Plane = RawFrame->Plane(0);
-        FrameBuffer = Plane->Buffer().Data()
-            + y_offset * (Plane->BitsPerLine() / 8)
-            + x_offset * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock(); //TODO: check when not byte boundary
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_v210_Finalize;
 
+        const auto& Plane = RawFrame->Plane(0);
         NextLine_Offset = Plane->Width() * 8 / 3;
         Line = h;
         Pass = 0;
+
+        auto x_End = x_offset + w;
+        HasBlockSpan = (x_offset % 6) || (x_End % 6);
+        if (!HasBlockSpan)
+        {
+            FrameBuffer = Plane->Buffer().Data()
+                + y_offset * (Plane->BitsPerLine() / 8)
+                + x_offset * (Plane->BitsPerBlock() / 8) / Plane->PixelsPerBlock();
+            return;
+        }
+
+        // Words of the slice up to the first word of the next slice, components after them are in the slot
+        FrameBuffer = Plane->Buffer().Data() + y_offset * NextLine_Offset;
+        x_Begin = x_offset;
+        Word_Begin = x_offset / 6 * 4 + transform_v210_FirstWord[x_offset % 6];
+        Word_End = x_End / 6 * 4 + transform_v210_FirstWord[x_End % 6];
+        if (x_End % 6 && x_End < Plane->Width())
+        {
+            Slot = transform_Slot(Plane, x_offset, y_offset, transform_v210_Slot_Size);
+            Slot_Offset = Plane->Line_SliceCount() * transform_v210_Slot_Size;
+        }
+        else
+            Slot = nullptr;
     }
 
     inline void Next()
     {
         FrameBuffer += NextLine_Offset;
+        if (HasBlockSpan && Slot)
+            Slot += Slot_Offset;
     }
 
     void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        if (HasBlockSpan)
+            From_BlockSpan(y);
+        else
+            From_Blocks(y);
+
+        Next();
+        Line--;
+        if (!Line)
+        {
+            FrameBuffer -= h * NextLine_Offset;
+            if (HasBlockSpan && Slot)
+                Slot -= h * Slot_Offset;
+            Line = h;
+            if (!Pass)
+                w = (w + 1) / 2;
+            Pass++;
+        }
+    }
+
+private:
+    // Component by component, with the position of each component (word in the block, shift) per plane
+    void From_BlockSpan(pixel_t* y)
+    {
+        static const uint8_t Positions[3][6][2] =
+        {
+            { { 0, 10 }, { 1,  0 }, { 1, 20 }, { 2, 10 }, { 3,  0 }, { 3, 20 } }, // Y
+            { { 0,  0 }, { 1, 10 }, { 2, 20 }, { 0,  0 }, { 0,  0 }, { 0,  0 } }, // Cb
+            { { 0, 20 }, { 2,  0 }, { 3, 10 }, { 0,  0 }, { 0,  0 }, { 0,  0 } }, // Cr
+        };
+        auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
+        auto Slot_Temp_32 = (uint32_t*)Slot;
+        size_t PerBlock, x_Begin_Plane;
+        if (!Pass)
+        {
+            // Words of the slice are initialized with the luma, including words shared with the previous slice
+            for (auto i = Word_Begin; i < Word_End; i++)
+                FrameBuffer_Temp_32[i] = 0;
+            if (Slot_Temp_32)
+            {
+                Slot_Temp_32[0] = 0;
+                Slot_Temp_32[1] = 0;
+            }
+            PerBlock = 6;
+            x_Begin_Plane = x_Begin;
+        }
+        else
+        {
+            PerBlock = 3;
+            x_Begin_Plane = x_Begin / 2;
+        }
+        const auto& Plane_Positions = Positions[Pass];
+        for (size_t x = 0; x < w; x++)
+        {
+            auto x_Plane = x_Begin_Plane + x;
+            const auto& Position = Plane_Positions[x_Plane % PerBlock];
+            auto Word = x_Plane / PerBlock * 4 + Position[0];
+            auto Value = htol((uint32_t)y[x] << Position[1]);
+            if (Word < Word_End)
+                FrameBuffer_Temp_32[Word] |= Value;
+            else if (Slot_Temp_32 && Word - Word_End < transform_v210_Slot_Size / 4)
+                Slot_Temp_32[Word - Word_End] |= Value;
+        }
+    }
+
+    void From_Blocks(pixel_t* y)
     {
         auto FrameBuffer_Temp_32 = (uint32_t*)FrameBuffer;
 
@@ -1367,17 +1575,6 @@ public:
            }
             break;
         }
-
-        Next();
-        Line--;
-        if (!Line)
-        {
-            FrameBuffer -= h * NextLine_Offset;
-            Line = h;
-            if (!Pass)
-                w /= 2;
-            Pass++;
-        }
     }
 
 protected:
@@ -1387,6 +1584,12 @@ protected:
     size_t      NextLine_Offset;
     size_t      Line;
     size_t      Pass;
+    bool        HasBlockSpan;
+    size_t      x_Begin;
+    size_t      Word_Begin;
+    size_t      Word_End;
+    uint8_t*    Slot;
+    size_t      Slot_Offset;
 };
 
 //***************************************************************************

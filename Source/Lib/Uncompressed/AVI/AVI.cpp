@@ -63,7 +63,7 @@ static const char* MessageText[] =
     "video width",
     "video BitCount",
     "video SizeOfImage",
-    "pixels in slice not on a 4x32-bit boundary",
+    "line not ending on a 4x32-bit boundary",
     "track count",
     "video not first",
     "audio not second",
@@ -491,19 +491,9 @@ void avi::AVI__hdrl_strl_strf_vids()
     if (!slice_x)
         slice_x = 1;
 
-    // Computing which slice count is suitable
-    size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
-    if (Slice_Multiplier > 1)
-    {
-        // Temporary limitation because the decoder does not support yet the merge of data from 2 slices in one DPX block
-        for (; slice_x; slice_x--)
-        {
-            if (Width % (slice_x * Slice_Multiplier) == 0)
-                break;
-        }
-        if (slice_x == 0)
-            Unsupported(unsupported::vids_PixelBoundaries);
-    }
+    // Computing which slice count is suitable, any count as the decoder merges the data of a block in several slices
+    if (Width % PixelsPerBlock((flavor)Flavor))
+        Unsupported(unsupported::vids_PixelBoundaries);
     slice_y = slice_x;
 }
 

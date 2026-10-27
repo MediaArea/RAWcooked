@@ -61,7 +61,7 @@ static const char* MessageText[] =
     "\"Frame rate of original (frames/s)\" not same as \"Temporal sampling rate or frame rate (Hz)\"",
     "\"Frame rate of original (frames/s)\" or \"Temporal sampling rate or frame rate (Hz)\" not present",
     "flavor (Descriptor / BitDepth / Packing / Endianness combination)",
-    "pixels in slice not on a 32-bit boundary",
+    "line not ending on a block boundary",
     "internal error",
     "(non conforming) alternate end of line non padding",
 };
@@ -144,7 +144,7 @@ enum class packing : uint8_t
 enum flags : uint8_t
 {
     None = 0,
-    BlockSpan = 1 << 0,
+    IncompleteBlock = 1 << 0, // Line with an incomplete last block
     VFlip = 1 << 1,
     Altern = 1 << 2,
 };
@@ -190,7 +190,7 @@ struct dpx_tested_info DPX_Tested[] =
     { { colorspace::RGB     , 10, endianness::LE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::RGB     , 10, endianness::BE, packing::FilledA}, { 1,  4, None } },                                         // 1x3x10-bit in 1x32-bit including 1x2-bit padding
     { { colorspace::RGB     , 12, endianness::LE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
-    { { colorspace::RGB     , 12, endianness::BE, packing::Packed }, { 8, 36, BlockSpan | VFlip } },                            // 8x3x12-bit in 9x32-bit
+    { { colorspace::RGB     , 12, endianness::BE, packing::Packed }, { 8, 36, IncompleteBlock | VFlip } },                      // 8x3x12-bit in 9x32-bit
     { { colorspace::RGB     , 12, endianness::BE, packing::FilledA}, { 1,  6, None } },                                         // 1x3x12-bit in 3x16-bit including 3x4-bit padding
     { { colorspace::RGB     , 16, endianness::LE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
     { { colorspace::RGB     , 16, endianness::BE, packing::Packed }, { 1,  6, None } },                                         // 1x3x16-bit in 3x16-bit
@@ -203,9 +203,9 @@ struct dpx_tested_info DPX_Tested[] =
     { { colorspace::RGBA    , 16, endianness::LE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
     { { colorspace::RGBA    , 16, endianness::BE, packing::Packed }, { 1,  8, None } },                                         // 1x4x16-bit in 4x16-bit
     { { colorspace::Y       ,  8, endianness::LE, packing::Packed }, { 1,  1, None } },                                         // 1x1x 8-bit in 1x 8-bit
-    { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
-    { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, BlockSpan | Altern } },                           // 1x3x10-bit in 1x32-bit including 1x2-bit padding
-    { { colorspace::Y       , 12, endianness::BE, packing::Packed }, { 8, 12, BlockSpan | VFlip } },                            // 8x1x12-bit in 3x32-bit
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledA}, { 3,  4, IncompleteBlock | Altern } },                     // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 10, endianness::BE, packing::FilledB}, { 3,  4, IncompleteBlock | Altern } },                     // 1x3x10-bit in 1x32-bit including 1x2-bit padding
+    { { colorspace::Y       , 12, endianness::BE, packing::Packed }, { 8, 12, IncompleteBlock | VFlip } },                      // 8x1x12-bit in 3x32-bit
     { { colorspace::Y       , 16, endianness::LE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
     { { colorspace::Y       , 16, endianness::BE, packing::Packed }, { 1,  2, None } },                                         // 1x1x16-bit in 1x16-bit
 };
@@ -714,22 +714,10 @@ void dpx::ParseBuffer()
     if (!slice_x)
         slice_x = 1;
 
-    // Computing which slice count is suitable
+    // Computing which slice count is suitable, any count as the decoder merges the data of a DPX block in several slices
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
-
-    if (Slice_Multiplier > 1 && !(DPX_Tested[Flavor].Info.Flags & BlockSpan))
-    {
-        // Temporary limitation because the decoder does not support yet the merge of data from 2 slices in one DPX block
-        for (; slice_x; slice_x--)
-        {
-            if (Width % (slice_x * Slice_Multiplier) == 0)
-                break;
-        }
-        if (slice_x == 0)
-        {
-            Unsupported(unsupported::PixelBoundaries);
-        }
-    }
+    if (Width % Slice_Multiplier && !(DPX_Tested[Flavor].Info.Flags & IncompleteBlock))
+        Unsupported(unsupported::PixelBoundaries);
     slice_y = slice_x;
 
     // Computing OffsetAfterData

@@ -271,7 +271,7 @@ public:
     void DPX_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
     void TIFF_Create(size_t colorspace_type, size_t width, size_t height);
     void EXR_Create(size_t colorspace_type, size_t width, size_t height);
-    void AVI_Create(size_t colorspace_type, size_t width, size_t height);
+    void AVI_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
     void MergeIn();
 };
 
