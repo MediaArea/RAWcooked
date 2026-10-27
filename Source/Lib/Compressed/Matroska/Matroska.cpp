@@ -522,8 +522,10 @@ void matroska::Segment()
     SetDetected();
     IsList = true;
 
-    // In case of partial check
-    if (!Actions[Action_Decode] && !Actions[Action_Info] && Actions[Action_QuickCheckAfterEncode]) // Quick check after encoding
+    // In case of partial check, or if decoders are not available
+    if (Decoders_Check && !Decoders_Check())
+        Decoders_AreMissing = true;
+    if (Decoders_AreMissing || (!Actions[Action_Decode] && !Actions[Action_Info] && Actions[Action_QuickCheckAfterEncode])) // Quick check after encoding
     {
         Buffer_Offset = Buffer.Size();
         Shutdown();

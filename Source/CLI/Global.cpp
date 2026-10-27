@@ -12,6 +12,8 @@
 #if defined(_WIN32) || defined(_WINDOWS)
     #include <direct.h>
     #define getcwd _getcwd
+    #define popen _popen
+    #define pclose _pclose
 #else
     #include <unistd.h>
 #endif
@@ -48,6 +50,69 @@ int global::SetBinName(const char* FileName)
 {
     BinName = FileName;
     return 0;
+}
+
+//---------------------------------------------------------------------------
+const string& global::FFmpeg_Version()
+{
+    if (FFmpeg_Version_IsComputed)
+        return FFmpeg_Version_Value;
+    FFmpeg_Version_IsComputed = true;
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    auto Command = BinName + " -version 2>NUL";
+    if (Command.front() == '\"')
+        Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
+    #else
+    auto Command = BinName + " -version 2>/dev/null";
+    #endif
+    FILE* F = popen(Command.c_str(), "r");
+    if (!F)
+        return FFmpeg_Version_Value;
+    char Result[256] = { };
+    string Version;
+    if (fgets(Result, sizeof(Result), F))
+    {
+        // e.g. "ffmpeg version 8.0 Copyright..."
+        auto Result2 = strchr(Result, ' ');
+        if (Result2)
+        {
+            Result2++;
+            if (!strncmp(Result2, "version ", 8))
+                Result2 += 8;
+            Version.assign(Result2, strcspn(Result2, " \r\n"));
+        }
+    }
+    while (fgets(Result, sizeof(Result), F)) // Whole output, so the binary is not stopped by a closed pipe
+        ;
+    if (!pclose(F))
+        FFmpeg_Version_Value = Version;
+    return FFmpeg_Version_Value;
+}
+
+//---------------------------------------------------------------------------
+bool global::CheckFFmpeg(bool IsCompressed)
+{
+    // FFmpeg libraries are needed by the FFmpeg decoders for compressed input, or for the check after encoding
+    if ((Actions[Action_FFmpegDecoder] || Actions[Action_VulkanDecoder])
+     && (IsCompressed || ((Actions[Action_Encode] || Actions[Action_Check]) && !DisplayCommand && (!Actions[Action_CheckOptionIsSet] || Actions[Action_Check]))))
+    {
+        string Error;
+        if (!FFmpeg_Library_Load(&Error))
+        {
+            FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
+            return false;
+        }
+    }
+
+    // FFmpeg binary is needed for encoding
+    if (IsCompressed || !Actions[Action_Encode] || DisplayCommand || !FFmpeg_Version().empty())
+        return true;
+    FFmpeg_Error = "Error: FFmpeg binary " + BinName + " can not be run, it is needed for encoding";
+    if (!BinName_IsProvided)
+        FFmpeg_Error += " (ffmpeg-ma or ffmpeg is searched in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory or in PATH)";
+    FFmpeg_Error += '.';
+    return false;
 }
 
 //---------------------------------------------------------------------------
@@ -330,19 +395,11 @@ int global::SetDecoder(const char* Value)
                 break;
             Name = Name_End + 1;
         }
-    if (Decoders[1] || Decoders[2])
-    {
-        string Error;
-        if (!FFmpeg_Library_Load(&Error))
-        {
-            cerr << "Error: decoder value '" << Value << "' is not available (" << Error << ")." << endl;
-            return 1;
-        }
-    }
     for (size_t i = 0; i < 3; i++)
         Actions.set(Decoders_Actions[i], Decoders[i]);
     Actions.set(Action_AutoDecoder, IsAuto);
     Decoder_IsProvided = true;
+    Decoder_Value = Value; // Availability of FFmpeg libraries is checked after the command line, if decoding is requested
     return 0;
 }
 
@@ -1014,6 +1071,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
     }
 
+    BinName_IsProvided = !BinName.empty();
     if (BinName.empty())
     {
         // FFmpeg package next to the executable or ffmpeg-ma package, else ffmpeg in PATH

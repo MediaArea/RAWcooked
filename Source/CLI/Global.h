@@ -77,6 +77,11 @@ public:
     int ManageCommandLine(const char* argv[], int argc);
     int SetDefaults();
 
+    // FFmpeg
+    const string& FFmpeg_Version(); // Version of the FFmpeg binary, empty if it can not be run
+    bool CheckFFmpeg(bool IsCompressed); // False if the FFmpeg binary (encoding) or the FFmpeg libraries (FFmpeg decoders) are needed and not available, FFmpeg_Error is then set
+    string FFmpeg_Error;
+
     // Progress indicator
     void                        ProgressIndicator_Start(size_t Total);
     void                        ProgressIndicator_Increment() { ProgressIndicator_Current++; }
@@ -124,7 +129,13 @@ private:
     atomic<size_t>              ProgressIndicator_Current;
     size_t                      ProgressIndicator_Total;
 
+    // FFmpeg binary
+    string                      FFmpeg_Version_Value;
+    bool                        FFmpeg_Version_IsComputed = false;
+    bool                        BinName_IsProvided = false;
+
     // Temp
+    string                      Decoder_Value;
     bool                        NextFileNameIsOutput = false;
     bool                        OptionsForOtherFiles = false;
 };
