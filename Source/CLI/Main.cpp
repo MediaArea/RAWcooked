@@ -856,7 +856,12 @@ int main(int argc, const char* argv[])
             *Global.Log += GetLibraryVersion();
             if (Global.Actions[Action_Encode])
             {
-                FILE* FFmpeg_Version_F = popen((Global.BinName + " -version").c_str(), "r");
+                auto FFmpeg_Version_Command = Global.BinName + " -version";
+                #if defined(_WIN32) || defined(_WINDOWS)
+                if (FFmpeg_Version_Command.front() == '\"')
+                    FFmpeg_Version_Command = '\"' + FFmpeg_Version_Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
+                #endif
+                FILE* FFmpeg_Version_F = popen(FFmpeg_Version_Command.c_str(), "r");
                 if (FFmpeg_Version_F)
                 {
                     char Result[256] = { };

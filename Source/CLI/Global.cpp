@@ -1015,7 +1015,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
     }
 
     if (BinName.empty())
-        BinName = "ffmpeg";
+    {
+        // FFmpeg package next to the executable or ffmpeg-ma package, else ffmpeg in PATH
+        auto Binary = FFmpeg_Binary();
+        BinName = Binary.empty() ? string("ffmpeg") : ('\"' + Binary + '\"');
+    }
 
     // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided (Vulkan also if it is a CPU implementation)
     if (Actions[Action_VulkanEncoder] && !Decoder_IsProvided)
