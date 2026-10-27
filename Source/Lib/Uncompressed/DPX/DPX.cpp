@@ -718,6 +718,8 @@ void dpx::ParseBuffer()
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Width % Slice_Multiplier && !(DPX_Tested[Flavor].Info.Flags & IncompleteBlock))
         Unsupported(unsupported::PixelBoundaries);
+    if (Actions[Action_VulkanEncoder])
+        slice_x = 0; // Encoder default
     slice_y = slice_x;
 
     // Computing OffsetAfterData

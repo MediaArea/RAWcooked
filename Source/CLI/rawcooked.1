@@ -315,6 +315,8 @@ The default value is \fI1\fR.
 If the video encoding format is \fIffv1\fR, you can set the multithreaded encoding slices to \fIvalue\fR: any integer over 1 (it is recommended to use a figure divisible by your workstations CPU core processors such as 2, 4, 6, 9, 16, 24...).
 .br
 The default value is variable between \fI16\fR and \fI512\fR, depending on the video frame size and depth.
+.br
+If the video encoder is ffv1_vulkan, the default value is the FFmpeg default value.
 .SH EXAMPLE: Encoding using the --all action
 .B rawcooked --all /path_to_av_raw_data/
 This command comprises several commands into one '--all' (see above) that ensures safe image sequence encoding steps are taken. Please see individual flag differences to understand the differences between its use during encoding and decoding.
