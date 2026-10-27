@@ -124,7 +124,7 @@ bool slice::SliceHeader()
     }
 
     slice_y = E.u(States);
-    if (slice_y >= P->num_h_slices)
+    if (slice_y >= P->num_v_slices)
     {
         P->Error("FFV1-SLICE-slice_xywh:1");
 

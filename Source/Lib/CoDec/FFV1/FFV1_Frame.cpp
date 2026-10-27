@@ -239,13 +239,13 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
     size_t Slices_Size = 0;
     if (P.ConfigurationRecord_IsPresent)
     {
-        if (P.num_h_slices >= P.width)
+        if (P.num_h_slices > P.width) // Up to 1 pixel per slice, e.g. FFmpeg Vulkan encoder with small frames
         {
             P.Error("FFV1-HEADER-num_h_slices:1");
             Abort();
             return;
         }
-        if (P.num_v_slices >= P.height)
+        if (P.num_v_slices > P.height)
         {
             P.Error("FFV1-HEADER-num_v_slices:1");
             Abort();
