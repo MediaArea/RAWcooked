@@ -18,10 +18,10 @@ void raw_frame::Create(size_t width, size_t height, size_t info)
 {
     if (!Planes_.empty())
     {
-        // Reuse if same frame size and enough room for line slices (frames may be reused by decoders using different slice counts), other configuration items do not change during a stream
+        // Reuse if same frame size and same line slices (slots indexed by slice) or 1 line slice (frames may be reused by decoders using different slice counts), other configuration items do not change during a stream
         const auto Plane0 = Planes_[0];
         auto line_slice_count = ((info >> 24) & 0xFF) + 1;
-        if (Plane0 && Plane0->Width() == width && Plane0->Height() == height && (!Plane0->Line_SliceCount() || Plane0->Line_SliceCount() >= line_slice_count))
+        if (Plane0 && Plane0->Width() == width && Plane0->Height() == height && (!Plane0->Line_SliceCount() || Plane0->Line_SliceCount() == line_slice_count || line_slice_count == 1))
             return;
     }
 
@@ -58,7 +58,12 @@ void raw_frame::Create(size_t width, size_t height, size_t info)
             EXR_Create(colorspace_type, width, height); 
             break;
         }
-        case flavor::AVI: AVI_Create(colorspace_type, width, height); break;
+        case flavor::AVI:
+        {
+            auto line_slice_count       = ((info >> 24) & 0xFF) + 1;
+            AVI_Create(colorspace_type, width, height, line_slice_count);
+            break;
+        }
         case flavor::None:;
     }
 }
@@ -143,13 +148,13 @@ void raw_frame::EXR_Create(size_t colorspace_type, size_t width, size_t height)
 }
 
 //---------------------------------------------------------------------------
-void raw_frame::AVI_Create(size_t colorspace_type, size_t width, size_t height)
+void raw_frame::AVI_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count)
 {
     switch (colorspace_type)
     {
     case 0: // YUV
     case 1: // JPEG2000-RCT --> RGB
-        Planes_.push_back(new plane(width, height, avi::BytesPerBlock((avi::flavor)Flavor_Private) * 8, avi::PixelsPerBlock((avi::flavor)Flavor_Private)));
+        Planes_.push_back(new plane(width, height, avi::BytesPerBlock((avi::flavor)Flavor_Private) * 8, avi::PixelsPerBlock((avi::flavor)Flavor_Private), 0, 0, 64, line_slice_count)); // 64-bit alignment for slots of 2 32-bit words, lines are 128-bit blocks
     default:;
     }
 }
