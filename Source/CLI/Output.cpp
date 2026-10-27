@@ -40,7 +40,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         return Value;
     if (Global.OutputOptions.find("slices") == Global.OutputOptions.end())
     {
-        // Slice count depends on frame size
+        // Slice count depends on frame size, 0 for the encoder default
         string Slices;
         for (size_t i = 0; i < Streams.size(); i++)
         {
@@ -52,7 +52,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                 return 1;
             }
         }
-        if (!Slices.empty())
+        if (!Slices.empty() && Slices != "0")
             Global.OutputOptions["slices"] = Slices;
     }
     if ((Streams.size() != 1 || !Streams[0].IsContainer) && Global.VideoInputOptions.find("framerate") == Global.VideoInputOptions.end())

@@ -370,6 +370,8 @@ ReturnValue Help(const char* /*Name*/)
         "              CPU core processors such as 2, 4, 6, 9, 16, 24...).\n"
         "              The default value is variable between 16 and 512, depending on\n"
         "              the video frame size and depth.\n"
+        "              If the video encoder is ffv1_vulkan, the default value is the\n"
+        "              FFmpeg default value.\n"
         "\n"
         "EXAMPLE: Encoding using the --all action\n"
         "       rawcooked --all /path_to_av_raw_data/ This command comprises several\n"

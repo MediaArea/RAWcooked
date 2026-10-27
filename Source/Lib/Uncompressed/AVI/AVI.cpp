@@ -494,6 +494,8 @@ void avi::AVI__hdrl_strl_strf_vids()
     // Computing which slice count is suitable, any count as the decoder merges the data of a block in several slices
     if (Width % PixelsPerBlock((flavor)Flavor))
         Unsupported(unsupported::vids_PixelBoundaries);
+    if (Actions[Action_VulkanEncoder])
+        slice_x = 0; // Encoder default
     slice_y = slice_x;
 }
 

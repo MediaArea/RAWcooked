@@ -666,6 +666,8 @@ void tiff::ParseBuffer()
         slice_x = 1;
 
     // Computing which slice count is suitable
+    if (Actions[Action_VulkanEncoder])
+        slice_x = 0; // Encoder default
     slice_y = slice_x;
 
     // Computing EndOfImagePadding
