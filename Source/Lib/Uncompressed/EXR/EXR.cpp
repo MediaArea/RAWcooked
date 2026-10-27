@@ -447,6 +447,7 @@ void exr::ParseBuffer()
                     displayIsPresent = true;
             }
         }
+        CASE_S_STARTWITH("dpx/")
         CASE_S("expTime", item_type::Float)
         CASE_S("focalLength", item_type::Float)
         CASE_S("focus", item_type::Float)
