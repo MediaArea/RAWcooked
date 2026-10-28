@@ -42,17 +42,7 @@ jobs:
         run: |
           cd Project/GNU/CLI
           if [ "$RUNNER_OS" == "Linux" ]; then
-            cp /usr/bin/ffmpeg-ma ffmpeg
-            # rawcooked loads the libraries of the ffmpeg-ma package installed above (same version), built with the headers of a development package of FFmpeg by MediaArea
-            # (configure --with-ffmpeg=DIR), from another platform as there is none for Linux (same headers)
-            if grep -qw avx512f /proc/cpuinfo; then
-              Base=https://mediaarea.net/download/snapshots/binary/ffmpeg/latest Version=Latest # Latest snapshot
-            else
-              Base=https://mediaarea.net/download/binary/ffmpeg/9.0.1 Version=9.0.1
-            fi
-            curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Windows_Shared_x64.zip
-            unzip -q FFmpeg_Dev.zip 'include/*' -d FFmpeg_Dev
-            rm FFmpeg_Dev.zip
+            cp /usr/bin/ffmpeg-ma ffmpeg # rawcooked loads the libraries of the ffmpeg-ma package installed above
             ./ffmpeg -hide_banner -version | sed -n 1p
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
@@ -66,11 +56,7 @@ jobs:
             curl -fsSL -o FFmpeg.zip ${Base}/FFmpeg_Bin_${Version}_Mac_Shared_universal.zip
             7za x -y -offmpeg FFmpeg.zip > /dev/null
             echo "${PWD}/ffmpeg/bin" >> "${GITHUB_PATH}"
-            # Headers of the FFmpeg libraries for the build (configure --with-ffmpeg=DIR)
-            curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Mac_Shared_universal.zip
-            7za x -y -oFFmpeg_Dev FFmpeg_Dev.zip > /dev/null
-            mv FFmpeg_Dev/include ffmpeg/include
-            rm -r FFmpeg.zip FFmpeg_Dev.zip FFmpeg_Dev
+            rm FFmpeg.zip
             # Libraries refer to each other with @executable_path/../lib, which is their directory for ffmpeg/bin/ffmpeg but not for rawcooked:
             # @loader_path/../lib instead, same directory for both (signed again after the change)
             for Lib in ffmpeg/lib/*.dylib ; do
@@ -94,11 +80,7 @@ jobs:
         run: |
           cd Project/GNU/CLI
           sh autogen.sh
-          if [ "$RUNNER_OS" == "macOS" ]; then
-            ./configure --with-ffmpeg="${PWD}/ffmpeg" # FFmpeg libraries loaded at run time
-          else
-            ./configure --with-ffmpeg="${PWD}/FFmpeg_Dev" # Libraries of ffmpeg-ma loaded at run time
-          fi
+          ./configure # FFmpeg libraries loaded at run time (--with-ffmpeg=dynamic by default)
       - name: Compile
         run: |
           cd Project/GNU/CLI
@@ -139,11 +121,7 @@ jobs:
           curl -fsSL -o FFmpeg.zip ${Base}/FFmpeg_Bin_${Version}_Windows_Shared_x64.zip
           7z x -y -offmpeg FFmpeg.zip > /dev/null
           cygpath -w "${PWD}/ffmpeg/bin" >> "${GITHUB_PATH}"
-          # Headers of the FFmpeg libraries for the build, in the include directory at the root of the tree
-          curl -fsSL -o FFmpeg_Dev.zip ${Base}/FFmpeg_Dev_${Version}_Windows_Shared_x64.zip
-          7z x -y -oFFmpeg_Dev FFmpeg_Dev.zip > /dev/null
-          mv FFmpeg_Dev/include ../../../include
-          rm -r FFmpeg.zip FFmpeg_Dev.zip FFmpeg_Dev
+          rm FFmpeg.zip
           ffmpeg/bin/ffmpeg -hide_banner -version | sed -n 1p
       - name: Vulkan
         run: |
