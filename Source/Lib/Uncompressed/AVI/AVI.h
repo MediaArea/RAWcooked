@@ -39,6 +39,8 @@ public:
 
     // Info about formats
     size_t                      GetStreamCount();
+    size_t                      GetFrameCount() { return FrameCount; } // Video frames
+    double                      GetFrameRate() { return FrameRate; } // Of the video stream, 0 if unknown
 
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
@@ -69,6 +71,8 @@ private:
     uint8_t*                    In = nullptr;
     size_t                      In_Pos = 0;
     size_t                      Buffer_LastPos = 0;
+    size_t                      FrameCount = 0;
+    double                      FrameRate = 0;
     struct track
     {
         uint32_t                fccType = 0;
