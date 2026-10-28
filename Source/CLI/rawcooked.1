@@ -84,7 +84,9 @@ Other possible value is \fI2\fR. This is a preview release, this value should be
 .B --bin-name \fIvalue\fR | \fB-b \fIvalue
 Indicate the name of the encoder to use to \fIvalue\fR.
 .br
-The default value is \fIffmpeg\fR (using the default PATH).
+The default value is \fIffmpeg-ma\fR in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory or in PATH, else \fIffmpeg\fR in the same directories.
+.br
+If \fIvalue\fR is the name of a libavcodec library (e.g. libavcodec.62.dylib, libavcodec.so.62 or avcodec-62.dll), it is the library used by the \fIffmpeg\fR and \fIvulkan\fR decoders instead of the searched one, so the option may be used twice (encoder and library).
 .TP
 .B --rawcooked-file-name \fIvalue\fR | \fB-r \fIvalue
 Set during encoding, or retrieve by decoding, the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR.
@@ -100,7 +102,7 @@ Set the FFV1 decoder used for decoding and checking to \fIvalue\fR.
 .br
 Possible values are \fIinternal\fR (RAWcooked decoder), \fIffmpeg\fR (FFmpeg libavcodec decoder), \fIvulkan\fR (FFmpeg libavcodec decoder with Vulkan hardware decoding), a combination of them with \fI+\fR (\fIinternal+ffmpeg\fR, \fIinternal+vulkan\fR, \fIffmpeg+vulkan\fR or \fIinternal+ffmpeg+vulkan\fR: decoders in parallel, each frame is decoded by the first available decoder) and \fIauto\fR (\fIinternal+vulkan\fR if FFmpeg libraries and a Vulkan GPU are available, else \fIinternal\fR).
 .br
-Values with \fIvulkan\fR use any Vulkan device, including a CPU implementation (e.g. lavapipe), \fIauto\fR uses a CPU implementation only if the video encoder is ffv1_vulkan. Values with \fIffmpeg\fR or \fIvulkan\fR need FFmpeg libavcodec and libavutil libraries, searched in the directory of the executable, in its ffmpeg/bin subdirectory then in PATH on Windows, or in the directory of the executable, in its ffmpeg/lib and ffmpeg/bin subdirectories, then from the ffmpeg-ma package, then in the library paths of the system on Linux or in Homebrew and MacPorts library directories on macOS, only if available in this build.
+Values with \fIvulkan\fR use any Vulkan device, including a CPU implementation (e.g. lavapipe), \fIauto\fR uses a CPU implementation only if the video encoder is ffv1_vulkan. Values with \fIffmpeg\fR or \fIvulkan\fR need FFmpeg libavcodec and libavutil libraries, searched in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in PATH on Windows, or in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in the library paths of the system on Linux or in Homebrew and MacPorts library directories on macOS, libraries of the ffmpeg-ma package first, only if available in this build.
 .br
 The default value is \fIauto\fR if the video encoder is ffv1_vulkan, else \fIinternal\fR.
 .TP

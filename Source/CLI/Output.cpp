@@ -353,6 +353,10 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     }
     else
     {
+        #if defined(_WIN32) || defined(_WINDOWS)
+        if (Command.front() == '\"')
+            Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
+        #endif
         int Value = system(Command.c_str());
         #if !(defined(_WIN32) || defined(_WINDOWS))
         if (Value > 0xFF && !(Value & 0xFF))

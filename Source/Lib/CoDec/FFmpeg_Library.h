@@ -14,10 +14,23 @@
 //---------------------------------------------------------------------------
 
 //***************************************************************************
+// FFmpeg binary
+//***************************************************************************
+
+// Path of ffmpeg-ma binary (ffmpeg-ma package) in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory
+// (FFmpeg package next to the executable, same directories as the first ones for the libraries) or in PATH,
+// else of ffmpeg binary in the directory of the executable or in its subdirectories
+// Empty if not found (ffmpeg in PATH is used)
+std::string FFmpeg_Binary();
+
+//***************************************************************************
 // FFmpeg libraries (libavcodec and libavutil), available if RAWCOOKED_FFMPEG is defined
 // Loaded at run time on Windows and macOS (or if RAWCOOKED_FFMPEG_DYNAMIC is defined) so they are optional, linked on other platforms
 // Functions of the libraries are in FFmpeg_Functions.h
 //***************************************************************************
+
+// Use this libavcodec (and the libavutil it uses) instead of searching for the libraries, if FileName is the name of a libavcodec library (false if not), before the libraries are loaded
+bool FFmpeg_Library_SetPath(const std::string& FileName);
 
 // Load the libraries if not already done, false if they are not available (Error is set to the reason)
 bool FFmpeg_Library_Load(std::string* Error = nullptr);

@@ -52,6 +52,8 @@ public:
 
     bool                        Quiet = false;
     bool                        NoOutputCheck = false;
+    bool                        (*Decoders_Check)() = nullptr; // Called when the format is detected, before any decoding, parsing is stopped if it returns false
+    bool                        Decoders_AreMissing = false;
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
     output_hash*                OutputHash = nullptr;

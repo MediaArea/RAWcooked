@@ -10,31 +10,225 @@
 #include "Lib/CoDec/FFmpeg_Functions.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
-#include <cstring>
-#include <vector>
 #if (defined(_WIN32) || defined(__APPLE__)) && !defined(RAWCOOKED_FFMPEG_DYNAMIC)
     #define RAWCOOKED_FFMPEG_DYNAMIC
 #endif
-#ifdef RAWCOOKED_FFMPEG_DYNAMIC
-    #if defined(_WIN32)
-        #define WIN32_LEAN_AND_MEAN
-        #ifndef NOMINMAX
-            #define NOMINMAX
-        #endif
-        #include <windows.h>
-    #else
-        #include <climits>
-        #include <cstdlib>
+#endif //RAWCOOKED_FFMPEG
+#include <cstring>
+#include <vector>
+#if defined(_WIN32)
+    #define WIN32_LEAN_AND_MEAN
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <windows.h>
+#else
+    #include <climits>
+    #include <cstdlib>
+    #include <sys/stat.h>
+    #include <unistd.h>
+    #if defined(__APPLE__)
+        #include <mach-o/dyld.h>
+    #endif
+    #ifdef RAWCOOKED_FFMPEG_DYNAMIC
         #include <dlfcn.h>
-        #include <unistd.h>
-        #if defined(__APPLE__)
-            #include <mach-o/dyld.h>
-        #endif
     #endif
 #endif
 using namespace std;
 //---------------------------------------------------------------------------
 
+//***************************************************************************
+// FFmpeg package next to the executable
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+#if defined(_WIN32)
+typedef wstring path;
+static const wchar_t* const Package_Subdirectories[] = { L"", L"\\ffmpeg", L"\\ffmpeg\\lib", L"\\ffmpeg\\bin" };
+#else
+typedef string path;
+static const char* const Package_Subdirectories[] = { "", "/ffmpeg", "/ffmpeg/lib", "/ffmpeg/bin" };
+#endif
+
+//---------------------------------------------------------------------------
+// Directories where the binary and the libraries of FFmpeg are searched first, in priority order:
+// directory of the executable and its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories (FFmpeg package next to the executable)
+// Real directory of the executable if it is called through a link, except on Windows
+static vector<path> Package_Directories()
+{
+    vector<path> Directories;
+
+    // Path of the executable
+    #if defined(_WIN32)
+    wstring Path(MAX_PATH, L'\0');
+    for (;;)
+    {
+        auto Size = GetModuleFileNameW(nullptr, &Path[0], (DWORD)Path.size());
+        if (!Size)
+            return Directories;
+        if (Size < Path.size())
+        {
+            Path.resize(Size);
+            break;
+        }
+        Path.resize(Path.size() * 2);
+    }
+    auto Separator = Path.find_last_of(L"\\/");
+    #else
+    string Path;
+    #if defined(__APPLE__)
+    uint32_t Size = 0;
+    _NSGetExecutablePath(nullptr, &Size);
+    Path.resize(Size);
+    if (_NSGetExecutablePath(&Path[0], &Size))
+        Path.clear();
+    Path.resize(strlen(Path.c_str()));
+    #else
+    char Link[PATH_MAX];
+    auto Size = readlink("/proc/self/exe", Link, sizeof(Link) - 1);
+    if (Size > 0)
+        Path.assign(Link, (size_t)Size);
+    #endif
+    char Real[PATH_MAX];
+    if (!Path.empty() && realpath(Path.c_str(), Real))
+        Path = Real;
+    auto Separator = Path.rfind('/');
+    #endif
+    if (Separator == path::npos)
+        return Directories;
+
+    Path.resize(Separator); // Empty for the root directory on Unix-like systems
+    for (const auto& Subdirectory : Package_Subdirectories)
+        Directories.push_back(Path + Subdirectory);
+    return Directories;
+}
+
+//---------------------------------------------------------------------------
+// Absolute directories in PATH, in priority order
+static vector<path> Path_Directories()
+{
+    vector<path> Directories;
+
+    #if defined(_WIN32)
+    auto Env_Size = GetEnvironmentVariableW(L"PATH", nullptr, 0);
+    wstring Env(Env_Size, L'\0');
+    if (!Env_Size || (Env_Size = GetEnvironmentVariableW(L"PATH", &Env[0], Env_Size)) >= Env.size())
+        return Directories;
+    Env.resize(Env_Size);
+    const auto Separator = L';';
+    #else
+    auto Env_Value = getenv("PATH");
+    if (!Env_Value)
+        return Directories;
+    string Env(Env_Value);
+    const auto Separator = ':';
+    #endif
+    for (size_t Begin = 0; Begin < Env.size();)
+    {
+        auto End = Env.find(Separator, Begin);
+        if (End == path::npos)
+            End = Env.size();
+        auto Directory = Env.substr(Begin, End - Begin);
+        Begin = End + 1;
+        #if defined(_WIN32)
+        if (Directory.size() >= 2 && Directory.front() == L'"' && Directory.back() == L'"')
+            Directory = Directory.substr(1, Directory.size() - 2);
+        if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
+            continue;
+        while (Directory.back() == L'\\' || Directory.back() == L'/')
+            Directory.pop_back();
+        #else
+        if (Directory.empty() || Directory.front() != '/')
+            continue;
+        while (Directory.size() > 1 && Directory.back() == '/')
+            Directory.pop_back();
+        if (Directory == "/")
+            Directory.clear(); // Root directory
+        #endif
+        Directories.push_back(Directory);
+    }
+
+    return Directories;
+}
+
+//---------------------------------------------------------------------------
+// Path of the binary if it is an executable file, as a string usable in a command line
+static bool Binary_Path(const path& Directory, const char* Name, string& Result)
+{
+    #if defined(_WIN32)
+    auto Path = Directory + L'\\' + wstring(Name, Name + strlen(Name)) + L".exe";
+    auto Attributes = GetFileAttributesW(Path.c_str());
+    if (Attributes == INVALID_FILE_ATTRIBUTES || (Attributes & FILE_ATTRIBUTE_DIRECTORY))
+        return false;
+
+    // Command lines are in the ANSI code page, the path is ignored if it can not be represented in it
+    BOOL UsedDefaultChar = FALSE;
+    auto Size = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Path.c_str(), (int)Path.size(), nullptr, 0, nullptr, &UsedDefaultChar);
+    if (!Size || UsedDefaultChar)
+        return false;
+    Result.assign(Size, '\0');
+    WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Path.c_str(), (int)Path.size(), &Result[0], Size, nullptr, nullptr);
+    #else
+    auto Path = Directory + '/' + Name;
+    struct stat Stat;
+    if (stat(Path.c_str(), &Stat) || !S_ISREG(Stat.st_mode) || access(Path.c_str(), X_OK))
+        return false;
+    Result = Path;
+    #endif
+    return true;
+}
+
+//---------------------------------------------------------------------------
+string FFmpeg_Binary()
+{
+    string Result;
+
+    // ffmpeg-ma (FFmpeg build of MediaArea, with -ma suffix) next to the executable then in PATH,
+    // then ffmpeg next to the executable (ffmpeg in PATH is found by the system)
+    auto Directories = Package_Directories();
+    auto Package_Count = Directories.size();
+    for (auto& Directory : Path_Directories())
+        Directories.push_back(move(Directory));
+    for (const auto& Directory : Directories)
+        if (Binary_Path(Directory, "ffmpeg-ma", Result))
+            return Result;
+    for (size_t i = 0; i < Package_Count; i++)
+        if (Binary_Path(Directories[i], "ffmpeg", Result))
+            return Result;
+
+    return string();
+}
+
+//---------------------------------------------------------------------------
+static string Library_Path_Provided; // libavcodec provided by the user, used instead of the search
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_SetPath(const string& FileName)
+{
+    // File name of libavcodec, any version (an incompatible version is rejected when loaded)
+    #if defined(_WIN32)
+    auto Separator = FileName.find_last_of("\\/");
+    #else
+    auto Separator = FileName.rfind('/');
+    #endif
+    auto Name = FileName.substr(Separator == string::npos ? 0 : (Separator + 1));
+    #if defined(_WIN32)
+    for (auto& Char : Name)
+        if (Char >= 'A' && Char <= 'Z')
+            Char += 'a' - 'A';
+    auto IsLibrary = !Name.compare(0, 7, "avcodec") && Name.size() > 11 && !Name.compare(Name.size() - 4, 4, ".dll");
+    #elif defined(__APPLE__)
+    auto IsLibrary = !Name.compare(0, 10, "libavcodec") && Name.size() > 16 && !Name.compare(Name.size() - 6, 6, ".dylib");
+    #else
+    auto IsLibrary = !Name.compare(0, 10, "libavcodec") && Name.find(".so", 10) != string::npos;
+    #endif
+    if (!IsLibrary)
+        return false;
+    Library_Path_Provided = FileName;
+    return true;
+}
+
+#ifdef RAWCOOKED_FFMPEG
 //***************************************************************************
 // Functions
 //***************************************************************************
@@ -66,23 +260,21 @@ enum library_id
 };
 #if defined(_WIN32)
 static const char* const Library_Names[Library_Max] = { "avutil-" AV_STRINGIFY(LIBAVUTIL_VERSION_MAJOR) ".dll", "avcodec-" AV_STRINGIFY(LIBAVCODEC_VERSION_MAJOR) ".dll" };
-static const char* const Library_Locations = "the directory of the executable, in its ffmpeg\\bin subdirectory or in PATH";
+static const char* const Library_Locations = "the directory of the executable, in its ffmpeg, ffmpeg\\lib or ffmpeg\\bin subdirectory or in PATH";
 typedef HMODULE library;
-typedef wstring path;
 #define FFMPEG_SYMBOL(_LIBRARY, _NAME) GetProcAddress(_LIBRARY, _NAME)
 #else
 #if defined(__APPLE__)
 #define LIBRARY_NAME(_NAME, _SUFFIX, _MAJOR) "lib" _NAME _SUFFIX "." AV_STRINGIFY(_MAJOR) ".dylib"
-static const char* const Library_Locations = "the directory of the executable, in its ffmpeg/lib or ffmpeg/bin subdirectory, in /opt/homebrew/lib, /usr/local/lib or /opt/local/lib";
+static const char* const Library_Locations = "the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory, in /opt/homebrew/lib, /usr/local/lib or /opt/local/lib";
 #else
 #define LIBRARY_NAME(_NAME, _SUFFIX, _MAJOR) "lib" _NAME _SUFFIX ".so." AV_STRINGIFY(_MAJOR)
-static const char* const Library_Locations = "the directory of the executable, in its ffmpeg/lib or ffmpeg/bin subdirectory or in the library paths of the system";
+static const char* const Library_Locations = "the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory or in the library paths of the system";
 #endif
 static const char* const Library_Names[Library_Max] = { LIBRARY_NAME("avutil", "", LIBAVUTIL_VERSION_MAJOR), LIBRARY_NAME("avcodec", "", LIBAVCODEC_VERSION_MAJOR) };
 static const char* const Library_Names_MA[Library_Max] = { LIBRARY_NAME("avutil", "-ma", LIBAVUTIL_VERSION_MAJOR), LIBRARY_NAME("avcodec", "-ma", LIBAVCODEC_VERSION_MAJOR) }; // ffmpeg-ma package (FFmpeg build of MediaArea, with -ma suffix)
 #undef LIBRARY_NAME
 typedef void* library;
-typedef string path;
 #define FFMPEG_SYMBOL(_LIBRARY, _NAME) dlsym(_LIBRARY, _NAME)
 #endif
 
@@ -107,93 +299,27 @@ static const string& Path_ToString(const string& Path)
 // Directories where the libraries are searched, the current directory is not used
 static vector<path> Library_Directories()
 {
-    vector<path> Directories;
-
-    // Directory of the executable
-    wstring Path(MAX_PATH, L'\0');
-    for (;;)
-    {
-        auto Size = GetModuleFileNameW(nullptr, &Path[0], (DWORD)Path.size());
-        if (!Size)
-            break;
-        if (Size < Path.size())
-        {
-            Path.resize(Size);
-            auto Separator = Path.find_last_of(L"\\/");
-            if (Separator != wstring::npos)
-            {
-                Directories.push_back(Path.substr(0, Separator));
-                Directories.push_back(Path.substr(0, Separator) + L"\\ffmpeg\\bin"); // FFmpeg package next to the executable
-            }
-            break;
-        }
-        Path.resize(Path.size() * 2);
-    }
-
-    // Absolute directories in PATH
-    auto Env_Size = GetEnvironmentVariableW(L"PATH", nullptr, 0);
-    wstring Env(Env_Size, L'\0');
-    if (Env_Size && (Env_Size = GetEnvironmentVariableW(L"PATH", &Env[0], Env_Size)) < Env.size())
-    {
-        Env.resize(Env_Size);
-        for (size_t Begin = 0; Begin < Env.size();)
-        {
-            auto End = Env.find(L';', Begin);
-            if (End == wstring::npos)
-                End = Env.size();
-            auto Directory = Env.substr(Begin, End - Begin);
-            Begin = End + 1;
-            if (Directory.size() >= 2 && Directory.front() == L'"' && Directory.back() == L'"')
-                Directory = Directory.substr(1, Directory.size() - 2);
-            if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
-                continue;
-            while (Directory.back() == L'\\' || Directory.back() == L'/')
-                Directory.pop_back();
-            Directories.push_back(Directory);
-        }
-    }
-
+    // FFmpeg package next to the executable, then absolute directories in PATH
+    auto Directories = Package_Directories();
+    for (auto& Directory : Path_Directories())
+        Directories.push_back(move(Directory));
     return Directories;
 }
 #else
 // Paths of libavcodec, in priority order, the current directory is not used:
-// directory of the executable and its ffmpeg/lib and ffmpeg/bin subdirectories (FFmpeg package next to the executable),
-// then libraries of the ffmpeg-ma package, then other FFmpeg libraries
+// libraries of the ffmpeg-ma package, then other FFmpeg libraries, each in the directory of the executable
+// and its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories (FFmpeg package next to the executable) then in the system
 // A file name without directory means the default search of the system
 static vector<path> Library_Paths()
 {
     vector<path> Paths;
 
-    // Directory of the executable
-    string Path;
-    #if defined(__APPLE__)
-    uint32_t Size = 0;
-    _NSGetExecutablePath(nullptr, &Size);
-    Path.resize(Size);
-    if (_NSGetExecutablePath(&Path[0], &Size))
-        Path.clear();
-    Path.resize(strlen(Path.c_str()));
-    #else
-    char Link[PATH_MAX];
-    auto Size = readlink("/proc/self/exe", Link, sizeof(Link) - 1);
-    if (Size > 0)
-        Path.assign(Link, (size_t)Size);
-    #endif
-    char Real[PATH_MAX];
-    if (!Path.empty() && realpath(Path.c_str(), Real))
-        Path = Real; // Real directory of the executable if it is called through a link
-    auto Separator = Path.rfind('/');
-    if (Separator != string::npos)
-    {
-        Path.resize(Separator); // Empty for the root directory
-        for (const auto& Subdirectory : { "", "/ffmpeg/lib", "/ffmpeg/bin" })
-            for (const auto& Names : { Library_Names_MA, Library_Names })
-                Paths.push_back(Path + Subdirectory + '/' + Names[Library_avcodec]);
-    }
-
-    // ffmpeg-ma package, then other FFmpeg libraries
+    // ffmpeg-ma package, then other FFmpeg libraries, next to the executable then in the system
+    auto Directories = Package_Directories();
     for (const auto& Names : { Library_Names_MA, Library_Names })
     {
+        for (const auto& Directory : Directories)
+            Paths.push_back(Directory + '/' + Names[Library_avcodec]);
         #if defined(__APPLE__)
         // Usual locations (Homebrew Apple silicon, ffmpeg-ma package and Homebrew Intel, MacPorts)
         for (const auto& Directory : { "/opt/homebrew/lib", "/usr/local/lib", "/opt/local/lib" })
@@ -243,12 +369,22 @@ static bool Library_Load(string& Error)
     wstring Names[Library_Max];
     for (size_t i = 0; i < Library_Max; i++)
         Names[i].assign(Library_Names[i], Library_Names[i] + strlen(Library_Names[i]));
+    vector<path> Paths;
+    if (!Library_Path_Provided.empty())
+    {
+        auto Size = MultiByteToWideChar(CP_ACP, 0, Library_Path_Provided.c_str(), (int)Library_Path_Provided.size(), nullptr, 0); // Command line is in the ANSI code page
+        wstring Path(Size, L'\0');
+        MultiByteToWideChar(CP_ACP, 0, Library_Path_Provided.c_str(), (int)Library_Path_Provided.size(), &Path[0], Size);
+        Paths.push_back(Path);
+    }
+    else
+        for (const auto& Directory : Library_Directories())
+            Paths.push_back(Directory + L'\\' + Names[Library_avcodec]);
     DWORD ErrorMode;
     SetThreadErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX, &ErrorMode); // No message box from the system if a library is invalid
     auto Loaded = false;
-    for (const auto& Directory : Library_Directories())
+    for (const auto& Path : Paths)
     {
-        auto Path = Directory + L'\\' + Names[Library_avcodec];
         if (GetFileAttributesW(Path.c_str()) == INVALID_FILE_ATTRIBUTES)
             continue;
         library Libraries[Library_Max];
@@ -280,7 +416,8 @@ static bool Library_Load(string& Error)
     if (Loaded)
         return true;
     #else
-    for (const auto& Path : Library_Paths())
+    auto Paths = Library_Path_Provided.empty() ? Library_Paths() : vector<path>{ Library_Path_Provided };
+    for (const auto& Path : Paths)
     {
         auto HasDirectory = Path.find('/') != string::npos;
         if (HasDirectory && access(Path.c_str(), F_OK))
@@ -301,6 +438,8 @@ static bool Library_Load(string& Error)
     }
     #endif
 
+    if (Error.empty() && !Library_Path_Provided.empty())
+        Error = "FFmpeg library " + Library_Path_Provided + " is not found";
     if (Error.empty())
     {
         Error = string("FFmpeg libraries ") + Library_Names[Library_avcodec] + " and " + Library_Names[Library_avutil];
@@ -313,8 +452,13 @@ static bool Library_Load(string& Error)
 }
 #else //RAWCOOKED_FFMPEG_DYNAMIC
 //---------------------------------------------------------------------------
-static bool Library_Load(string&)
+static bool Library_Load(string& Error)
 {
+    if (!Library_Path_Provided.empty())
+    {
+        Error = "FFmpeg libraries are linked in this build, FFmpeg library " + Library_Path_Provided + " can not be used";
+        return false;
+    }
     return true; // Linked
 }
 #endif //RAWCOOKED_FFMPEG_DYNAMIC

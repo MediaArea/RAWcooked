@@ -27,10 +27,6 @@
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
-#if defined(_WIN32) || defined(_WINDOWS)
-    #define popen _popen
-    #define pclose _pclose
-#endif
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -311,6 +307,14 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         return true;
     if (!SingleFile.IsDetected() || SingleFile.ParserCode >= Uncompressed_Max)
         return false;
+
+    // FFmpeg binary for encoding and FFmpeg libraries for the check after encoding, before the analysis of the other files
+    if (!Global.CheckFFmpeg(false))
+    {
+        Global.ProgressIndicator_Stop();
+        cerr << Global.FFmpeg_Error << endl;
+        return true;
+    }
 
     // Management
     Flavor = SingleFile.Flavor_String();
@@ -631,11 +635,19 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
         M->NoOutputCheck = NoOutputCheck;
+        M->Decoders_Check = [] { return Global.CheckFFmpeg(true); }; // FFmpeg libraries for the FFmpeg decoders, before the decoding
         if (FileOpenName)
             M->FileName = *FileOpenName;
         M->OpenStyle = Global.FileOpenMethod;
         if (ParseFile_Input(*M, ParseInfo.FileMap, &ParseInfo.InputInfo))
         {
+            ReturnValue = 1;
+        }
+        else if (M->Decoders_AreMissing)
+        {
+            cerr << '\n' << Global.FFmpeg_Error << endl;
+            ParseInfo.IsDetected = true;
+            DoesNotHaveReversibility = true; // No more info
             ReturnValue = 1;
         }
         else if (M->IsDetected())
@@ -854,33 +866,10 @@ int main(int argc, const char* argv[])
             *Global.Log += GetLibraryName();
             *Global.Log += ' ';
             *Global.Log += GetLibraryVersion();
-            if (Global.Actions[Action_Encode])
+            if (Global.Actions[Action_Encode] && !Global.FFmpeg_Version().empty())
             {
-                FILE* FFmpeg_Version_F = popen((Global.BinName + " -version").c_str(), "r");
-                if (FFmpeg_Version_F)
-                {
-                    char Result[256] = { };
-                    if (fgets(Result, sizeof(Result), FFmpeg_Version_F))
-                    {
-                        auto Result2 = strchr(Result, ' ');
-                        if (Result2)
-                        {
-                            Result2++;
-                            if (!strncmp(Result2, "version ", 8))
-                                Result2 += 8;
-                            auto Result3 = strchr(Result2, ' ');
-                            if (!Result3)
-                                Result3 = strchr(Result2, '\0');
-                            if (Result3)
-                            {
-                                *Global.Log += ", FFmpeg ";
-                                Global.Log->append(Result2, Result3 - Result2);
-                            }
-
-                        }
-                    }
-                    pclose(FFmpeg_Version_F);
-                }
+                *Global.Log += ", FFmpeg ";
+                *Global.Log += Global.FFmpeg_Version();
             }
             *Global.Log += "\nParameters used:";
             for (int i = 1; i < argc; i++)
