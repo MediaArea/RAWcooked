@@ -42,10 +42,10 @@ extern const state_transitions_struct default_state_transitions;
 // Decoders, the last available one is preferred for a keyframe
 enum decoder_index : size_t
 {
-    Decoder_Ours,
-    Decoder_FFmpeg,
-    Decoder_Vulkan, // FFmpeg decoder with Vulkan hardware decoding
-    Decoder_Max
+    Decoder_Ours = decoders_stats::Ours,
+    Decoder_FFmpeg = decoders_stats::FFmpeg,
+    Decoder_Vulkan = decoders_stats::Vulkan, // FFmpeg decoder with Vulkan hardware decoding
+    Decoder_Max = decoders_stats::Max
 };
 
 //---------------------------------------------------------------------------
@@ -244,6 +244,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             {
                 ffmpeg::av_buffer_unref(&Job->Packet);
                 Job->FrameReady->Ready(Job->Opaque, Error);
+                DecodersStats.Frames[decoders_stats::Ours]++;
                 auto Job_Duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - Start).count();
                 std::lock_guard<std::mutex> Lock_(Mutex);
                 Duration[Decoder_Ours] = Duration[Decoder_Ours] ? (Duration[Decoder_Ours] * 3 + Job_Duration) / 4 : Job_Duration;
@@ -357,6 +358,7 @@ void ffv1_frame_hybrid_private::Transfer(size_t i)
         TRACE_SCOPE(Names[i].Transfer, Job->Frame->Index);
         auto Error = Decoder->Output() || Job->Error;
         Job->FrameReady->Ready(Job->Opaque, Error);
+        DecodersStats.Frames[i]++;
 
         Lock.lock();
         Job_Free(Job);

@@ -21,6 +21,43 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+decoders_stats DecodersStats;
+
+//---------------------------------------------------------------------------
+string decoders_stats::Shares(const size_t* Frames) const
+{
+    size_t Total = 0;
+    size_t Decoders = 0;
+    for (size_t i = 0; i < Max; i++)
+    {
+        Total += Frames[i];
+        if (Frames[i])
+            Decoders++;
+    }
+    if (Decoders < 2)
+        return string();
+
+    static const char* const Names[Max] = { "CPU", "FFmpeg CPU", "GPU" };
+    string Result;
+    size_t Percent_Remaining = 100; // Last decoder has the remaining percentage, so the total is 100%
+    for (size_t i = Max; i-- > 0;) // GPU first
+    {
+        if (!Frames[i])
+            continue;
+        Decoders--;
+        auto Percent = Decoders ? min((Frames[i] * 100 + Total / 2) / Total, Percent_Remaining) : Percent_Remaining;
+        Percent_Remaining -= Percent;
+        if (!Result.empty())
+            Result += " / ";
+        Result += (i == Vulkan && !Vulkan_IsGPU) ? "Vulkan CPU" : Names[i];
+        Result += ' ';
+        Result += to_string(Percent);
+        Result += '%';
+    }
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 static format_kind FormatKind_[] =
 {
     format_kind::unknown,
@@ -153,6 +190,7 @@ void ffv1_split_wrapper::Decode(const uint8_t* Data, size_t Size, data_holder* H
         if (Holder)
             Holder->Release();
         Ready->Ready(Opaque, Error);
+        DecodersStats.Frames[decoders_stats::Ours]++;
     });
     if (!Holder)
         Ffv1Frame->Wait(); // Frame data is valid only during the call
@@ -453,6 +491,13 @@ base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDec
             UseInternalDecoder = true;
             UseFFmpegDecoder = false;
             UseVulkanDecoder = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+        }
+        if (UseVulkanDecoder && DecodersStats.Vulkan_Selected)
+        {
+            bool IsGPU;
+            auto DeviceName = FFmpeg_Library_VulkanName(&IsGPU);
+            DecodersStats.Vulkan_IsGPU = IsGPU;
+            DecodersStats.Vulkan_Selected(DeviceName, IsGPU);
         }
         #ifdef RAWCOOKED_FFMPEG
         if (UseFFmpegDecoder || UseVulkanDecoder)

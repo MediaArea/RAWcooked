@@ -39,5 +39,9 @@ bool FFmpeg_Library_Load(std::string* Error = nullptr);
 // Not needed if Vulkan is explicitly requested, any Vulkan device is used in that case
 bool FFmpeg_Library_Vulkan(bool AllowCPU = false);
 
+// Name of the Vulkan device used by default by FFmpeg (detected if not already done, the device is then kept for the decoder), empty if not available
+// IsGPU: set to true if the device is a GPU, false if it is a CPU implementation (e.g. lavapipe) or if not available
+std::string FFmpeg_Library_VulkanName(bool* IsGPU = nullptr);
+
 //---------------------------------------------------------------------------
 #endif

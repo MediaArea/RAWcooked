@@ -14,8 +14,18 @@
     #define getcwd _getcwd
     #define popen _popen
     #define pclose _pclose
+    #define WIN32_LEAN_AND_MEAN
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <windows.h>
 #else
     #include <unistd.h>
+    #if defined(__APPLE__)
+        #include <sys/sysctl.h>
+    #else
+        #include <fstream>
+    #endif
 #endif
 #include "CLI/Global.h"
 #include "CLI/Help.h"
@@ -115,6 +125,47 @@ bool global::CheckFFmpeg(bool IsCompressed)
         FFmpeg_Error += " (ffmpeg-ma or ffmpeg is searched in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory or in PATH)";
     FFmpeg_Error += '.';
     return false;
+}
+
+//---------------------------------------------------------------------------
+string global::CPU_Name()
+{
+    string Name;
+    #if defined(_WIN32) || defined(_WINDOWS)
+        char Value[256];
+        DWORD Value_Size = sizeof(Value);
+        if (RegGetValueA(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", "ProcessorNameString", RRF_RT_REG_SZ, nullptr, Value, &Value_Size) == ERROR_SUCCESS)
+            Name = Value;
+    #elif defined(__APPLE__)
+        char Value[256];
+        size_t Value_Size = sizeof(Value);
+        if (!sysctlbyname("machdep.cpu.brand_string", Value, &Value_Size, nullptr, 0))
+            Name.assign(Value, strnlen(Value, Value_Size));
+    #else
+        ifstream CpuInfo("/proc/cpuinfo");
+        string Line;
+        while (getline(CpuInfo, Line))
+        {
+            if (Line.compare(0, 10, "model name") && Line.compare(0, 8, "Hardware"))
+                continue;
+            auto Pos = Line.find(':');
+            if (Pos != string::npos)
+            {
+                Name = Line.substr(Pos + 1);
+                break;
+            }
+        }
+    #endif
+
+    // Clean up of the spaces
+    auto Begin = Name.find_first_not_of(' ');
+    auto End = Name.find_last_not_of(' ');
+    Name = Begin == string::npos ? string() : Name.substr(Begin, End - Begin + 1);
+    if (Name.empty())
+        Name = "unknown CPU";
+    if (auto Threads = thread::hardware_concurrency())
+        Name += " (" + to_string(Threads) + " threads)";
+    return Name;
 }
 
 //---------------------------------------------------------------------------
@@ -629,6 +680,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     OutputFileName_IsProvided = false;
     Decoder_IsProvided = false;
     Quiet = false;
+    ShowStats = false;
     Actions.set(Action_Encode);
     Actions.set(Action_Decode);
     Actions.set(Action_Coherency);
@@ -938,6 +990,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--show-license") == 0 || strcmp(argv[i], "--show-licence") == 0)
         {
             ShowLicenseKey = true;
+        }
+        else if (strcmp(argv[i], "--show-stats") == 0)
+        {
+            ShowStats = true;
         }
         else if (strcmp(argv[i], "--sublicense") == 0 || strcmp(argv[i], "--sublicence") == 0)
         {

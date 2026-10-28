@@ -511,6 +511,13 @@ void avi::AVI__hdrl_strl_strh()
 
     Track.fccType = Get_B4();
     Track.fccHandler = Get_B4();
+    Get_L4(); // dwFlags
+    Get_L4(); // wPriority, wLanguage
+    Get_L4(); // dwInitialFrames
+    auto Scale = Get_L4();
+    auto Rate = Get_L4();
+    if (Track.fccType == 0x76696473 && !FrameRate && Scale) // vids
+        FrameRate = ((double)Rate) / Scale;
 }
 
 //---------------------------------------------------------------------------
@@ -542,6 +549,8 @@ void avi::AVI__movi_00db()
 //---------------------------------------------------------------------------
 void avi::AVI__movi_00dc()
 {
+    FrameCount++;
+
     if (Actions[Action_AcceptTruncated])
     {
         if (Input.Empty())
