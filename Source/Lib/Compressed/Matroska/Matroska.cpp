@@ -1231,7 +1231,7 @@ static void ShowByteRate(float ByteRate)
 }
 static void ShowRealTime(float RealTime)
 {
-    cerr << setprecision(2) << RealTime << "x realtime";
+    cerr << setprecision(RealTime < 0.1 ? 3 : 2) << RealTime << "x realtime";
 }
 
 //---------------------------------------------------------------------------

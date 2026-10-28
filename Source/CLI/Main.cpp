@@ -70,7 +70,10 @@ static string Stats_Speed(size_t Frames, double Content_Seconds, double Seconds)
     ostringstream Result;
     Result.setf(ios::fixed, ios::floatfield);
     if (Content_Seconds > 0 && Seconds > 0)
-        Result << setprecision(2) << Content_Seconds / Seconds << "x realtime";
+    {
+        auto RealTime = Content_Seconds / Seconds;
+        Result << setprecision(RealTime < 0.1 ? 3 : 2) << RealTime << "x realtime";
+    }
     else if (Frames && Seconds > 0)
         Result << setprecision(1) << Frames / Seconds << " fps";
     else
