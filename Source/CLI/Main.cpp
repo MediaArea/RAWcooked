@@ -6,9 +6,12 @@
 
 //---------------------------------------------------------------------------
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <thread>
 #include "CLI/Global.h"
@@ -24,6 +27,8 @@
 #include "Lib/Uncompressed/AVI/AVI.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
+#include "Lib/CoDec/FFmpeg_Library.h"
+#include "Lib/CoDec/Wrapper.h"
 #include "Lib/ThirdParty/thread-pool/include/ThreadPool.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
@@ -36,6 +41,48 @@ input Input;
 output Output;
 rawcooked RAWcooked;
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// Stats (--show-stats)
+static mutex Stats_Mutex;
+static bool Stats_Vulkan_IsSelected = false;
+static bool Stats_Vulkan_IsGPU = false;
+static string Stats_Vulkan_Name; // Vulkan device used by the decoder
+
+//---------------------------------------------------------------------------
+// FFmpeg decoder with Vulkan selected, the device is shown once
+static void Stats_VulkanSelected(const string& DeviceName, bool IsGPU)
+{
+    lock_guard<mutex> Lock(Stats_Mutex);
+    if (Stats_Vulkan_IsSelected)
+        return;
+    Stats_Vulkan_IsSelected = true;
+    Stats_Vulkan_IsGPU = IsGPU;
+    Stats_Vulkan_Name = DeviceName.empty() ? string("unknown device") : DeviceName;
+    cerr << "                                                            \r"; // Clean up the progress indicator
+    cerr << "Info: " << (IsGPU ? "GPU" : "Vulkan CPU implementation") << " detected and selected for decoding: " << Stats_Vulkan_Name << ".\n" << endl;
+}
+
+//---------------------------------------------------------------------------
+// Speed compared to the duration of the content, else frames per second if the duration of the content is unknown, else duration
+static string Stats_Speed(size_t Frames, double Content_Seconds, double Seconds)
+{
+    ostringstream Result;
+    Result.setf(ios::fixed, ios::floatfield);
+    if (Content_Seconds > 0 && Seconds > 0)
+        Result << setprecision(2) << Content_Seconds / Seconds << "x realtime";
+    else if (Frames && Seconds > 0)
+        Result << setprecision(1) << Frames / Seconds << " fps";
+    else
+        Result << setprecision(2) << Seconds << " s";
+    return Result.str();
+}
+
+//---------------------------------------------------------------------------
+static string Stats_CPU()
+{
+    return "\n      CPU: " + global::CPU_Name() + '.';
+}
 
 //---------------------------------------------------------------------------
 // Ask user about overwriting files
@@ -118,6 +165,8 @@ struct parse_info
     string Slices;
     input_info InputInfo;
     size_t StreamCountMinus1 = 0;
+    size_t FrameCount = 0; // Video frames in a container
+    double FrameRate = 0; // Of the video in a container, 0 if unknown
     bool   IsDetected = false;
     bool   IsContainer = false;
     bool   Problem = false;
@@ -479,6 +528,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
                 Global.SetAcceptFiles();
                 ParseInfo.IsContainer = true;
                 ParseInfo.StreamCountMinus1 = ((avi*)Parser)->GetStreamCount() - 1;
+                ParseInfo.FrameCount = ((avi*)Parser)->GetFrameCount();
+                ParseInfo.FrameRate = ((avi*)Parser)->GetFrameRate();
                 // fallthrough
             case Parser_DPX:
             case Parser_TIFF:
@@ -550,6 +601,10 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         Stream.StreamCountMinus1 = ParseInfo.StreamCountMinus1;
         Stream.IsContainer = ParseInfo.IsContainer;
         Stream.Slices = ParseInfo.Slices;
+        if (ParseInfo.IsContainer)
+            Stream.FrameCount = ParseInfo.FrameCount;
+        else if (!ParseInfo.Slices.empty()) // Video, a frame per file
+            Stream.FrameCount = ParseInfo.RemovedFiles.size();
         map<string, string>::iterator FrameRateFromOptions = Global.VideoInputOptions.find("framerate");
         if (FrameRateFromOptions != Global.VideoInputOptions.end())
         {
@@ -570,16 +625,18 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
                 Global.OutputOptions["frame_size"] = "16";
         }
 
+        // Duration
+        double Duration;
+        if (ParseInfo.InputInfo.SampleCount && ParseInfo.InputInfo.SampleRate)
+            Duration = ParseInfo.InputInfo.SampleCount / ParseInfo.InputInfo.SampleRate;
+        else if (ParseInfo.InputInfo.FrameCount && ParseInfo.InputInfo.FrameRate)
+            Duration = ParseInfo.InputInfo.FrameCount / ParseInfo.InputInfo.FrameRate;
+        else
+            Duration = 0;
+        Output.Streams.back().Duration = (!Duration && ParseInfo.FrameCount && ParseInfo.FrameRate) ? ParseInfo.FrameCount / ParseInfo.FrameRate : Duration; // Also from the container (not for the coherency check)
+
         if (Global.Actions[Action_Coherency])
         {
-            // Duration
-            double Duration;
-            if (ParseInfo.InputInfo.SampleCount && ParseInfo.InputInfo.SampleRate)
-                Duration = ParseInfo.InputInfo.SampleCount / ParseInfo.InputInfo.SampleRate;
-            else if (ParseInfo.InputInfo.FrameCount && ParseInfo.InputInfo.FrameRate)
-                Duration = ParseInfo.InputInfo.FrameCount / ParseInfo.InputInfo.FrameRate;
-            else
-                Duration = 0;
             if (Duration)
             {
                 Global.Durations.push_back(Duration);
@@ -612,6 +669,9 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     bool NoOutputCheck = !Global.Actions[Action_Decode] && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     auto DoesNotHaveReversibility = false;
+    size_t Decoding_Frames[decoders_stats::Max] = {};
+    double Decoding_Seconds = 0;
+    double Decoding_Content_Seconds = 0;
     if (!ParseInfo.IsDetected)
     {
         // Threads
@@ -634,12 +694,22 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
 
         matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
+        M->ProgressIndicator_Summary = !Global.ShowStats; // Speed in the stats
+        M->ProgressIndicator_Shares = Global.ShowStats;
         M->NoOutputCheck = NoOutputCheck;
         M->Decoders_Check = [] { return Global.CheckFFmpeg(true); }; // FFmpeg libraries for the FFmpeg decoders, before the decoding
         if (FileOpenName)
             M->FileName = *FileOpenName;
         M->OpenStyle = Global.FileOpenMethod;
-        if (ParseFile_Input(*M, ParseInfo.FileMap, &ParseInfo.InputInfo))
+        for (size_t i = 0; i < decoders_stats::Max; i++)
+            Decoding_Frames[i] = DecodersStats.Frames[i];
+        auto Decoding_Start = chrono::steady_clock::now();
+        auto Decoding_NOK = ParseFile_Input(*M, ParseInfo.FileMap, &ParseInfo.InputInfo);
+        Decoding_Seconds = chrono::duration<double>(chrono::steady_clock::now() - Decoding_Start).count();
+        Decoding_Content_Seconds = M->Timestamp_Get() / 1000.0;
+        for (size_t i = 0; i < decoders_stats::Max; i++)
+            Decoding_Frames[i] = DecodersStats.Frames[i] - Decoding_Frames[i];
+        if (Decoding_NOK)
         {
             ReturnValue = 1;
         }
@@ -729,6 +799,46 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         Info += (HasCheckedReversibility ? "Reversibility" : "Decoding");
         Info += " was checked, issues detected, see below.";
     }
+    if (Global.ShowStats && ParseInfo.IsDetected && !DoesNotHaveReversibility)
+    {
+        size_t Frames = 0;
+        for (auto Decoder_Frames : Decoding_Frames)
+            Frames += Decoder_Frames;
+        if (Frames)
+        {
+            Info += "\nInfo: Decoding: ";
+            Info += Stats_Speed(Frames, Decoding_Content_Seconds, Decoding_Seconds);
+
+            // Share of each decoder if several decoders are used in parallel, else the decoder
+            auto Shares = DecodersStats.Shares(Decoding_Frames);
+            if (!Shares.empty())
+            {
+                Info += " (";
+                Info += Shares;
+                Info += ')';
+            }
+            else
+            {
+                static const char* const Names[decoders_stats::Max] = { "internal ffv1", "FFmpeg ffv1", "FFmpeg ffv1_vulkan" };
+                for (size_t i = 0; i < decoders_stats::Max; i++)
+                    if (Decoding_Frames[i])
+                    {
+                        Info += ", ";
+                        Info += Names[i];
+                    }
+            }
+            Info += '.';
+            if (Decoding_Frames[decoders_stats::Vulkan])
+            {
+                Info += Stats_Vulkan_IsGPU ? "\n      GPU: " : "\n      Vulkan CPU implementation: ";
+                Info += Stats_Vulkan_Name;
+                Info += '.';
+            }
+            if (Decoding_Frames[decoders_stats::Ours] || Decoding_Frames[decoders_stats::FFmpeg])
+                Info += Stats_CPU();
+            Info += '\n';
+        }
+    }
     if (!Info.empty() && Info.back() != '\n')
         Info += '\n';
     cout << Info;
@@ -788,6 +898,8 @@ int main(int argc, const char* argv[])
     // Manage command line
     if (int Value = Global.ManageCommandLine(argv, argc))
         return Value;
+    if (Global.ShowStats)
+        DecodersStats.Vulkan_Selected = Stats_VulkanSelected;
 
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
@@ -996,7 +1108,63 @@ int main(int argc, const char* argv[])
 
     // FFmpeg
     if (!Value && Global.Actions[Action_Encode])
+    {
+        auto Encoding_Start = chrono::steady_clock::now();
         Value = Output.Process(Global, RAWcooked.Version == rawcooked::version::v2);
+        auto Encoding_Seconds = chrono::duration<double>(chrono::steady_clock::now() - Encoding_Start).count();
+        if (!Value && Global.ShowStats && !Global.DisplayCommand && !Output.Streams.empty())
+        {
+            // Duration of the content, with the frame rate given to FFmpeg if the input files have none
+            double FrameRate = 0;
+            auto FrameRate_Option = Global.VideoInputOptions.find("framerate");
+            if (FrameRate_Option != Global.VideoInputOptions.end())
+            {
+                FrameRate = atof(FrameRate_Option->second.c_str());
+                auto Slash = FrameRate_Option->second.find('/');
+                if (Slash != string::npos)
+                {
+                    auto Denominator = atof(FrameRate_Option->second.c_str() + Slash + 1);
+                    FrameRate = Denominator ? FrameRate / Denominator : 0;
+                }
+            }
+            size_t Frames = 0;
+            double Content_Seconds = 0;
+            for (const auto& Stream : Output.Streams)
+            {
+                Frames += Stream.FrameCount;
+                auto Duration = Stream.Duration;
+                if (!Duration && Stream.FrameCount && !Stream.IsContainer && FrameRate > 0)
+                    Duration = Stream.FrameCount / FrameRate;
+                Content_Seconds = max(Content_Seconds, Duration);
+            }
+            string Info = "\nInfo: Encoding: " + Stats_Speed(Frames, Content_Seconds, Encoding_Seconds);
+            const auto c_v = Global.OutputOptions.find("c:v");
+            Info += ", FFmpeg ";
+            Info += c_v == Global.OutputOptions.end() ? string("ffv1") : c_v->second;
+            Info += '.';
+            if (Global.Actions[Action_VulkanEncoder])
+            {
+                // Name of the device if it is the first one (default device of FFmpeg), from FFmpeg libraries
+                const auto Device = Global.OutputOptions.find("init_hw_device");
+                bool IsGPU = false;
+                string Name;
+                if (Device != Global.OutputOptions.end() && Device->second.find("vulkan=vk:0") != string::npos)
+                    Name = FFmpeg_Library_VulkanName(&IsGPU);
+                if (!Name.empty())
+                {
+                    Info += IsGPU ? "\n      GPU: " : "\n      Vulkan CPU implementation: ";
+                    Info += Name;
+                    Info += '.';
+                }
+            }
+            else
+                Info += Stats_CPU();
+            Info += '\n';
+            cout << Info << endl; // Empty line before the check
+            if (Global.Log)
+                *Global.Log += Info;
+        }
+    }
 
     // Handling of big reversibility files
     if (!Value && Global.Actions[Action_Encode] && RAWcooked.Version == rawcooked::version::v2 && !Output.Streams.empty())

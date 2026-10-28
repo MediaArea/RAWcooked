@@ -1250,6 +1250,9 @@ void matroska::ProgressIndicator_Show()
     steady_clock::time_point Clock_Previous = Clock_Init;
     uint64_t Buffer_Offset_Previous = 0;
     uint64_t Timestamp_Previous = 0;
+    size_t Frames_Init[decoders_stats::Max];
+    for (size_t i = 0; i < decoders_stats::Max; i++)
+        Frames_Init[i] = DecodersStats.Frames[i];
 
     // Show progress indicator at a specific frequency
     const chrono::seconds Frequency = chrono::seconds(1);
@@ -1307,6 +1310,15 @@ void matroska::ProgressIndicator_Show()
                 cerr << ", ";
                 ShowRealTime(RealTime);
             }
+            if (ProgressIndicator_Shares)
+            {
+                size_t Frames[decoders_stats::Max];
+                for (size_t i = 0; i < decoders_stats::Max; i++)
+                    Frames[i] = DecodersStats.Frames[i] - Frames_Init[i];
+                auto Shares = DecodersStats.Shares(Frames);
+                if (!Shares.empty())
+                    cerr << " (" << Shares << ')';
+            }
             cerr << "    "; // Clean up in case there is less content outputted than the previous time
 
             ProgressIndicator_Value = ProgressIndicator_New;
@@ -1315,6 +1327,11 @@ void matroska::ProgressIndicator_Show()
     while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && ProgressIndicator_Offset.load(std::memory_order_relaxed) != ProgressIndicator_Total);
 
     // Show summary
+    if (!ProgressIndicator_Summary)
+    {
+        cerr << "\r                                                                                                    \r"; // Clean up
+        return;
+    }
     steady_clock::time_point Clock_Current = steady_clock::now();
     steady_clock::duration Duration = Clock_Current - Clock_Init;
     float ByteRate = (float)(ProgressIndicator_Total) * 1000 / duration_cast<milliseconds>(Duration).count();

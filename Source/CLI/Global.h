@@ -56,6 +56,7 @@ public:
     bool                        OutputFileName_IsProvided;
     bool                        Decoder_IsProvided;
     bool                        Quiet;
+    bool                        ShowStats;
     bitset<Action_Max>          Actions;
 
     // Intermediate info
@@ -81,6 +82,9 @@ public:
     const string& FFmpeg_Version(); // Version of the FFmpeg binary, empty if it can not be run
     bool CheckFFmpeg(bool IsCompressed); // False if the FFmpeg binary (encoding) or the FFmpeg libraries (FFmpeg decoders) are needed and not available, FFmpeg_Error is then set
     string FFmpeg_Error;
+
+    // Stats
+    static string CPU_Name(); // Name of the CPU with its count of threads
 
     // Progress indicator
     void                        ProgressIndicator_Start(size_t Total);

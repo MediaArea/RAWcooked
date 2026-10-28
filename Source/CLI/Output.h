@@ -28,6 +28,8 @@ struct stream
     string                      Flavor;
     string                      Slices;
     string                      FrameRate;
+    size_t                      FrameCount = 0; // Video frames, 0 if unknown
+    double                      Duration = 0; // Duration of the content in seconds, 0 if unknown
     size_t                      StreamCountMinus1 = 0;
     bool                        IsContainer = false;
     bool                        Problem = false;

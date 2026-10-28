@@ -62,6 +62,8 @@ public:
     void                        ProgressIndicator_Show();
     condition_variable          ProgressIndicator_IsEnd;
     bool                        ProgressIndicator_IsPaused = false;
+    bool                        ProgressIndicator_Summary = true; // Speed shown at the end, else the progress indicator is erased
+    bool                        ProgressIndicator_Shares = false; // Share of each decoder shown, if several decoders are used in parallel
 
     // Enums
     enum class type
@@ -75,6 +77,7 @@ public:
 
     // Info
     string                      RAWcooked_LibraryNameVersion_Get() { if (RAWcooked_LibraryName.empty()) return string(); return RAWcooked_LibraryName + ' ' + RAWcooked_LibraryVersion; }
+    uint64_t                    Timestamp_Get() { return ProgressIndicator_Timestamp.load(std::memory_order_relaxed); } // Timestamp of the last parsed block, in ms
 
 private:
     void                        ParseBuffer();
