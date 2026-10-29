@@ -203,11 +203,14 @@ bool track_info::Process_Split(const uint8_t* Data, size_t Size, data_holder* Ho
         Wrapper->FrameReady = Output_Pending;
         if (Pool)
         {
-            // Enough output threads for the hash computing of the max count of frames computed together in SIMD lanes (frames waiting for other frames, more frames in flight),
-            // else for the hash computing of several frames in parallel
+            // Enough output threads for the hash computing of the max count of frames computed together in SIMD lanes by 2 threads (frames waiting for other frames, more frames in flight),
+            // 1 thread may be slower than the decoders, else for the hash computing of several frames in parallel
             size_t Count = MD5_Lanes_Count();
             if (Count > 1)
+            {
+                Count *= 2;
                 Output_Pending->Depth_More = Count;
+            }
             else
             {
                 Count = thread::hardware_concurrency();
