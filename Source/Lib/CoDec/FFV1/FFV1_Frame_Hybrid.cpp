@@ -142,7 +142,8 @@ struct ffv1_frame_hybrid_private
     size_t                      First_Pending = 0; // Count of first frames for FFmpeg decoders not decoded, the fallback decoder may have to decode them
 
     bool                        Vulkan2_Waiting = false; // Second FFmpeg decoder with Vulkan not available until the first one decoded a frame
-    bool                        Vulkan2_Useful = false; // Second FFmpeg decoder with Vulkan used after the first one decoded a frame
+    bool                        Vulkan2_BigGPU = false; // Second FFmpeg decoder with Vulkan used only with a big GPU
+    bool                        Vulkan2_Useful = true; // Second FFmpeg decoder with Vulkan used after the first one decoded a frame
     unsigned                    Vulkan2_Pool = 0; // Count of threads of the pool of the second FFmpeg decoder with Vulkan, created with the decoder
 
     // Jobs
@@ -157,12 +158,13 @@ struct ffv1_frame_hybrid_private
     // Keyframe detection
     rangecoder                  E;
 
-    ffv1_frame_hybrid_private(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder)
+    ffv1_frame_hybrid_private(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU_) :
+        Vulkan2_BigGPU(Vulkan2_BigGPU_)
     {
         Used[Decoder_Ours] = UseOurDecoder;
         Used[Decoder_FFmpeg] = UseFFmpegDecoder;
-        Used[Decoder_Vulkan] = UseVulkanDecoder;
-        Used[Decoder_Vulkan2] = UseVulkanDecoder;
+        Used[Decoder_Vulkan] = VulkanDecoders >= 1;
+        Used[Decoder_Vulkan2] = VulkanDecoders >= 2;
         auto Count = std::thread::hardware_concurrency();
         if (!Count)
             Count = 4;
@@ -240,7 +242,7 @@ ffv1_frame_ffmpeg* ffv1_frame_hybrid_private::Decoder_New(size_t i)
 
     // Second FFmpeg decoder with Vulkan only with a big GPU, measured with 6464x4852 RGB 16-bit frames: 8% faster with NVIDIA RTX 5070 Ti (70 streaming multiprocessors),
     // not faster with NVIDIA RTX 3050 (20 streaming multiprocessors) where frames wait for the GPU instead of being decoded by our decoder at the end
-    if (i == Decoder_Vulkan && Vulkan2_Waiting)
+    if (i == Decoder_Vulkan && Vulkan2_Waiting && Vulkan2_BigGPU)
     {
         uint32_t SMCount = 0;
         Device = Decoder->VulkanDevice();
@@ -482,11 +484,11 @@ static AVBufferRef* Packet_New(size_t Buffer_Size, data_holder* Holder, bool All
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-ffv1_frame_hybrid::ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder) :
+ffv1_frame_hybrid::ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU) :
     RawFrame(nullptr),
     FrameReady(nullptr),
     Remaining((size_t)-1),
-    P(new ffv1_frame_hybrid_private(Pool, UseOurDecoder, UseFFmpegDecoder, UseVulkanDecoder))
+    P(new ffv1_frame_hybrid_private(Pool, UseOurDecoder, UseFFmpegDecoder, VulkanDecoders, Vulkan2_BigGPU))
 {
     for (size_t i = 0; i < Decoder_Max; i++)
         if (P->Used[i])

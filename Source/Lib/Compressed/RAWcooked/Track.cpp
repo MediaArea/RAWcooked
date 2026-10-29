@@ -106,7 +106,7 @@ bool track_info::Init(const uint8_t* BaseData)
 
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
+        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_VulkanDecoder2], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
         if (!Wrapper)
             return true;
     }
@@ -480,7 +480,7 @@ bool track_info::OutOfBand(const uint8_t* Data, size_t Size)
     // Parse
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
+        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_VulkanDecoder2], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
         if (!Wrapper)
             return true;
     }

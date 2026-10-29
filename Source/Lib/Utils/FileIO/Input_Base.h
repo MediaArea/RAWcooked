@@ -46,7 +46,8 @@ enum action : uint8_t
     Action_InternalDecoder, // Use our decoder for FFV1 in parallel with the FFmpeg decoders, if any (our decoder is used if no FFmpeg decoder is used)
     Action_FFmpegDecoder, // Use FFmpeg libavcodec decoder for FFV1
     Action_VulkanDecoder, // Use FFmpeg libavcodec decoder with Vulkan hardware decoding for FFV1
-    Action_AutoDecoder, // Use Action_VulkanDecoder (in parallel with our decoder) if FFmpeg libraries and a Vulkan GPU are available
+    Action_VulkanDecoder2, // Use a second FFmpeg libavcodec decoder with Vulkan hardware decoding on the same device (more frames decoded in parallel by the GPU)
+    Action_AutoDecoder, // Use Action_VulkanDecoder (in parallel with our decoder) if FFmpeg libraries and a Vulkan GPU are available, and Action_VulkanDecoder2 with a big GPU
     Action_VulkanEncoder, // FFmpeg Vulkan encoder is used, so Vulkan is wanted: Action_AutoDecoder by default, using Vulkan also if it is a CPU implementation (e.g. lavapipe)
     Action_Max
 };

@@ -480,17 +480,18 @@ bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holde
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseAutoDecoder, bool AllowVulkanCPU)
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseVulkanDecoder2, bool UseAutoDecoder, bool AllowVulkanCPU)
 {
     switch (Format)
     {
     case format::FFV1:
         if (UseAutoDecoder)
         {
-            // Our decoder and FFmpeg Vulkan decoder in parallel if a GPU (or a CPU implementation if allowed) is available, else our decoder only
+            // Our decoder and FFmpeg Vulkan decoder in parallel if a GPU (or a CPU implementation if allowed) is available, with a second FFmpeg Vulkan decoder if the GPU is big, else our decoder only
             UseInternalDecoder = true;
             UseFFmpegDecoder = false;
             UseVulkanDecoder = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+            UseVulkanDecoder2 = UseVulkanDecoder;
         }
         if (UseVulkanDecoder && DecodersStats.Vulkan_Selected)
         {
@@ -504,12 +505,13 @@ base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDec
         {
             if (!FFmpeg_Library_Load())
                 return nullptr; // Availability of FFmpeg libraries is checked when the decoder is selected
-            return new ffv1_hybrid_wrapper(new ffv1_frame_hybrid(Pool, UseInternalDecoder, UseFFmpegDecoder, UseVulkanDecoder)); // FFmpeg decoders, in parallel with our decoder if requested
+            return new ffv1_hybrid_wrapper(new ffv1_frame_hybrid(Pool, UseInternalDecoder, UseFFmpegDecoder, UseVulkanDecoder + UseVulkanDecoder2, UseAutoDecoder)); // FFmpeg decoders, in parallel with our decoder if requested
         }
         #else
         (void)UseInternalDecoder;
         (void)UseFFmpegDecoder;
         (void)UseVulkanDecoder;
+        (void)UseVulkanDecoder2;
         #endif
         return new ffv1_split_wrapper(new ffv1_frame(Pool)); // Our decoder only if no FFmpeg decoder is requested
     CREATEWRAPPER(flac, FLAC);
