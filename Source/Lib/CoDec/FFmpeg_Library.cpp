@@ -9,11 +9,11 @@
 #ifdef RAWCOOKED_FFMPEG
 #include "Lib/CoDec/FFmpeg_Functions.h"
 #include "Lib/Utils/Trace/Trace.h"
-#include <atomic>
 #if (defined(_WIN32) || defined(__APPLE__)) && !defined(RAWCOOKED_FFMPEG_DYNAMIC)
     #define RAWCOOKED_FFMPEG_DYNAMIC
 #endif
 #endif //RAWCOOKED_FFMPEG
+#include <atomic>
 #include <cstring>
 #include <vector>
 #if defined(_WIN32)
@@ -488,6 +488,7 @@ typedef void (VULKAN_CALL* vulkan_void_function)();
 typedef vulkan_void_function (VULKAN_CALL* vulkan_get_instance_proc_addr)(void* Instance, const char* Name);
 typedef void (VULKAN_CALL* vulkan_get_physical_device_properties)(void* PhysicalDevice, void* Properties);
 typedef int32_t (VULKAN_CALL* vulkan_enumerate_device_extension_properties)(void* PhysicalDevice, const char* LayerName, uint32_t* Count, void* Properties);
+typedef int32_t (VULKAN_CALL* vulkan_enumerate_physical_devices)(void* Instance, uint32_t* Count, void** PhysicalDevices);
 struct vulkan_device_context
 {
     const void*                     alloc;
@@ -505,6 +506,7 @@ struct vulkan_physical_device_properties
     char                            deviceName[256];
     uint64_t                        Others[128]; // pipelineCacheUUID, limits, sparseProperties (548 bytes)
 };
+static const uint32_t Vulkan_PhysicalDeviceType_DiscreteGpu = 2; // VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
 static const uint32_t Vulkan_PhysicalDeviceType_Cpu = 4; // VK_PHYSICAL_DEVICE_TYPE_CPU
 struct vulkan_physical_device_properties2 // Vulkan 1.1
 {
@@ -565,56 +567,79 @@ static bool Vulkan_IsGPU(AVBufferRef* Device, string& Name)
 }
 
 //---------------------------------------------------------------------------
-static atomic<AVBufferRef*> Vulkan_Device(nullptr); // Device created by FFmpeg_Library_Vulkan(), until a decoder uses it
+static atomic<AVBufferRef*> Vulkan_Device(nullptr); // Default device created by Vulkan_Detect(), until a decoder uses it
 
 //---------------------------------------------------------------------------
-// Default Vulkan device of FFmpeg, with imports of host memory for the downloads of decoded frames (no copy from an intermediate buffer):
+// Vulkan device of FFmpeg (Index: index of the device in the list of devices, 0 for the default device), with imports of host memory for the downloads of decoded frames (no copy from an intermediate buffer):
 // FFmpeg avoids them by default with the NVIDIA driver as they are slow in some environments, but with frames reused by the decoder they are faster
 // (measured with NVIDIA RTX 3050 on Windows, 6464x4852 RGB 16-bit: GPU time per frame 266 ms instead of 284 ms, no CPU copy)
-static AVBufferRef* Vulkan_Device_Create()
+static AVBufferRef* Vulkan_Device_Create(size_t Index)
 {
     TRACE_SCOPE("Vulkan device creation");
     AVBufferRef* Device = nullptr;
     AVDictionary* Options = nullptr;
     ffmpeg::av_dict_set(&Options, "avoid_host_import", "0", 0);
-    if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, nullptr, Options, 0) < 0)
+    auto Index_String = to_string(Index);
+    if (ffmpeg::av_hwdevice_ctx_create(&Device, AV_HWDEVICE_TYPE_VULKAN, Index ? Index_String.c_str() : nullptr, Options, 0) < 0)
         Device = nullptr;
     ffmpeg::av_dict_free(&Options);
     return Device;
 }
 
 //---------------------------------------------------------------------------
-enum class vulkan_device
+struct vulkan_device_info
 {
-    none,
-    cpu,
-    gpu,
+    string                          Name;
+    uint32_t                        Type; // VkPhysicalDeviceType
 };
 
 //---------------------------------------------------------------------------
-static string Vulkan_Name; // Name of the device detected by Vulkan_Detect()
-
-//---------------------------------------------------------------------------
-// Kind of the Vulkan device used by default by FFmpeg, the device is kept for the decoder (device creation is long)
-static vulkan_device Vulkan_Detect()
+static vulkan_device_info Vulkan_Info(vulkan_get_physical_device_properties GetPhysicalDeviceProperties, void* PhysicalDevice)
 {
-    static const vulkan_device Device_Kind = []() -> vulkan_device // Once, thread safe
-    {
-        if (!FFmpeg_Library_Load())
-            return vulkan_device::none;
-
-        // Same device as the one created by the decoder
-        auto Device = Vulkan_Device_Create();
-        if (!Device)
-            return vulkan_device::none;
-        Vulkan_Device = Device;
-        return Vulkan_IsGPU(Device, Vulkan_Name) ? vulkan_device::gpu : vulkan_device::cpu;
-    }();
-    return Device_Kind;
+    vulkan_physical_device_properties Properties;
+    GetPhysicalDeviceProperties(PhysicalDevice, &Properties);
+    return { string(Properties.deviceName, strnlen(Properties.deviceName, sizeof(Properties.deviceName))), Properties.deviceType };
 }
 
 //---------------------------------------------------------------------------
-bool FFmpeg_Library_Vulkan(bool AllowCPU)
+// Vulkan devices, in the order of their index for FFmpeg, listed with the instance of the default device (empty if Vulkan is not available), this device is kept for the decoder (device creation is long)
+static const vector<vulkan_device_info>& Vulkan_Detect()
+{
+    static const vector<vulkan_device_info> Devices = []() -> vector<vulkan_device_info> // Once, thread safe
+    {
+        vector<vulkan_device_info> Result;
+        if (!FFmpeg_Library_Load())
+            return Result;
+
+        // Default device, same as the one created by the decoder
+        auto Device = Vulkan_Device_Create(0);
+        if (!Device)
+            return Result;
+        Vulkan_Device = Device;
+        auto Vulkan = (const vulkan_device_context*)((AVHWDeviceContext*)Device->data)->hwctx;
+        auto GetPhysicalDeviceProperties = Vulkan->get_proc_addr ? (vulkan_get_physical_device_properties)Vulkan->get_proc_addr(Vulkan->inst, "vkGetPhysicalDeviceProperties") : nullptr;
+        if (!GetPhysicalDeviceProperties)
+            return Result;
+
+        // All devices
+        auto EnumeratePhysicalDevices = (vulkan_enumerate_physical_devices)Vulkan->get_proc_addr(Vulkan->inst, "vkEnumeratePhysicalDevices");
+        uint32_t Count = 0;
+        if (EnumeratePhysicalDevices && EnumeratePhysicalDevices(Vulkan->inst, &Count, nullptr) >= 0 && Count)
+        {
+            vector<void*> PhysicalDevices(Count);
+            if (EnumeratePhysicalDevices(Vulkan->inst, &Count, PhysicalDevices.data()) >= 0)
+                for (uint32_t i = 0; i < Count; i++)
+                    Result.push_back(Vulkan_Info(GetPhysicalDeviceProperties, PhysicalDevices[i]));
+        }
+        if (Result.empty())
+            Result.push_back(Vulkan_Info(GetPhysicalDeviceProperties, Vulkan->phys_dev)); // Default device only
+        return Result;
+    }();
+    return Devices;
+}
+
+//---------------------------------------------------------------------------
+vector<size_t> FFmpeg_Library_Vulkan(bool AllowCPU)
 {
     static const bool Quiet = [] // Once, before the detection
     {
@@ -623,42 +648,72 @@ bool FFmpeg_Library_Vulkan(bool AllowCPU)
         return true;
     }();
     (void)Quiet;
-    auto Device_Kind = Vulkan_Detect();
-    if (Device_Kind == vulkan_device::gpu || (Device_Kind == vulkan_device::cpu && AllowCPU))
-        return true;
-    if (auto Device = Vulkan_Device.exchange(nullptr))
-        ffmpeg::av_buffer_unref(&Device); // Not used
-    return false;
+
+    // All discrete GPUs, else the first GPU (e.g. an integrated GPU, sharing the memory and the power with the CPU), else the default device if a CPU implementation is allowed
+    const auto& Devices = Vulkan_Detect();
+    vector<size_t> Result;
+    for (size_t i = 0; i < Devices.size(); i++)
+        if (Devices[i].Type == Vulkan_PhysicalDeviceType_DiscreteGpu)
+            Result.push_back(i);
+    for (size_t i = 0; Result.empty() && i < Devices.size(); i++)
+        if (Devices[i].Type != Vulkan_PhysicalDeviceType_Cpu)
+            Result.push_back(i);
+    if (Result.empty() && !Devices.empty() && AllowCPU)
+        Result.push_back(0);
+    if (Result.empty() || Result[0])
+        if (auto Device = Vulkan_Device.exchange(nullptr))
+            ffmpeg::av_buffer_unref(&Device); // Not used
+    return Result;
 }
 
 //---------------------------------------------------------------------------
 string FFmpeg_Library_VulkanName(bool* IsGPU)
 {
-    auto Device_Kind = Vulkan_Detect();
+    const auto& Devices = Vulkan_Detect();
     if (IsGPU)
-        *IsGPU = Device_Kind == vulkan_device::gpu;
-    return Vulkan_Name;
+        *IsGPU = !Devices.empty() && Devices[0].Type != Vulkan_PhysicalDeviceType_Cpu;
+    return Devices.empty() ? string() : Devices[0].Name;
 }
 
 //---------------------------------------------------------------------------
-AVBufferRef* FFmpeg_Library_VulkanDevice()
+AVBufferRef* FFmpeg_Library_VulkanDevice(size_t Index)
 {
-    if (auto Device = Vulkan_Device.exchange(nullptr))
-        return Device;
-    return Vulkan_Device_Create();
+    if (!Index)
+        if (auto Device = Vulkan_Device.exchange(nullptr))
+            return Device;
+    return Vulkan_Device_Create(Index);
 }
 
 //---------------------------------------------------------------------------
-bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount)
+bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount, string* Name)
 {
-    string Name;
-    auto IsGPU = Vulkan_IsGPU(Device, Name);
+    string Name_;
+    auto IsGPU = Vulkan_IsGPU(Device, Name_);
     if (SMCount)
         *SMCount = IsGPU ? Vulkan_SMCount((const vulkan_device_context*)((AVHWDeviceContext*)Device->data)->hwctx) : 0;
+    if (Name)
+        *Name = Name_;
     return IsGPU;
 }
 
-#else //RAWCOOKED_FFMPEG
+#endif //RAWCOOKED_FFMPEG
+
+//---------------------------------------------------------------------------
+static atomic<size_t> Vulkan_Missing((size_t)-1);
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_SetVulkanMissing(size_t Device)
+{
+    Vulkan_Missing = Device;
+}
+
+//---------------------------------------------------------------------------
+size_t FFmpeg_Library_VulkanMissing()
+{
+    return Vulkan_Missing;
+}
+
+#ifndef RAWCOOKED_FFMPEG
 
 //---------------------------------------------------------------------------
 bool FFmpeg_Library_Load(std::string* Error)
@@ -669,9 +724,9 @@ bool FFmpeg_Library_Load(std::string* Error)
 }
 
 //---------------------------------------------------------------------------
-bool FFmpeg_Library_Vulkan(bool)
+vector<size_t> FFmpeg_Library_Vulkan(bool)
 {
-    return false;
+    return vector<size_t>();
 }
 
 //---------------------------------------------------------------------------

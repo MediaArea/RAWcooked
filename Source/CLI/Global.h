@@ -58,6 +58,7 @@ public:
     bool                        Quiet;
     bool                        ShowStats;
     bitset<Action_Max>          Actions;
+    vector<size_t>              VulkanDecoders; // Index of the Vulkan device of each vulkan decoder
 
     // Intermediate info
     size_t                      Path_Pos_Global;

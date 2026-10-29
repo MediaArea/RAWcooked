@@ -22,6 +22,7 @@
 
 //---------------------------------------------------------------------------
 decoders_stats DecodersStats;
+vector<size_t> VulkanDecoders_Devices;
 
 //---------------------------------------------------------------------------
 string decoders_stats::Shares(const size_t* Frames) const
@@ -480,40 +481,44 @@ bool pcm_wrapper::Process(const uint8_t* Data, size_t Size, data_holder* /*Holde
 
 //---------------------------------------------------------------------------
 #define CREATEWRAPPER(_NAME, _FLAVOR) case format::_FLAVOR: return new _NAME##_wrapper();
-base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseVulkanDecoder2, bool UseAutoDecoder, bool AllowVulkanCPU)
+base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder, bool UseAutoDecoder, bool AllowVulkanCPU)
 {
     switch (Format)
     {
     case format::FFV1:
+    {
+        vector<ffv1_frame_hybrid_vulkan> VulkanDecoders;
         if (UseAutoDecoder)
         {
-            // Our decoder and FFmpeg Vulkan decoder in parallel if a GPU (or a CPU implementation if allowed) is available, with a second FFmpeg Vulkan decoder if the GPU is big, else our decoder only
+            // Our decoder and FFmpeg Vulkan decoders in parallel if GPUs (or a CPU implementation if allowed) are available, with a second FFmpeg Vulkan decoder on big GPUs, else our decoder only
             UseInternalDecoder = true;
             UseFFmpegDecoder = false;
-            UseVulkanDecoder = FFmpeg_Library_Vulkan(AllowVulkanCPU);
-            UseVulkanDecoder2 = UseVulkanDecoder;
+            auto Devices = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+            for (auto Device : Devices)
+                VulkanDecoders.push_back({ Device, false, false });
+            for (auto Device : Devices)
+                VulkanDecoders.push_back({ Device, true, false });
         }
-        if (UseVulkanDecoder && DecodersStats.Vulkan_Selected)
+        else if (UseVulkanDecoder)
         {
-            bool IsGPU;
-            auto DeviceName = FFmpeg_Library_VulkanName(&IsGPU);
-            DecodersStats.Vulkan_IsGPU = IsGPU;
-            DecodersStats.Vulkan_Selected(DeviceName, IsGPU);
+            for (auto Device : VulkanDecoders_Devices)
+                VulkanDecoders.push_back({ Device, false, true });
+            if (VulkanDecoders.empty())
+                VulkanDecoders.push_back({ 0, false, true }); // Default device
         }
         #ifdef RAWCOOKED_FFMPEG
-        if (UseFFmpegDecoder || UseVulkanDecoder)
+        if (UseFFmpegDecoder || !VulkanDecoders.empty())
         {
             if (!FFmpeg_Library_Load())
                 return nullptr; // Availability of FFmpeg libraries is checked when the decoder is selected
-            return new ffv1_hybrid_wrapper(new ffv1_frame_hybrid(Pool, UseInternalDecoder, UseFFmpegDecoder, UseVulkanDecoder + UseVulkanDecoder2, UseAutoDecoder)); // FFmpeg decoders, in parallel with our decoder if requested
+            return new ffv1_hybrid_wrapper(new ffv1_frame_hybrid(Pool, UseInternalDecoder, UseFFmpegDecoder, VulkanDecoders)); // FFmpeg decoders, in parallel with our decoder if requested
         }
         #else
         (void)UseInternalDecoder;
         (void)UseFFmpegDecoder;
-        (void)UseVulkanDecoder;
-        (void)UseVulkanDecoder2;
         #endif
         return new ffv1_split_wrapper(new ffv1_frame(Pool)); // Our decoder only if no FFmpeg decoder is requested
+    }
     CREATEWRAPPER(flac, FLAC);
     CREATEWRAPPER(pcm, PCM);
     case format::None:

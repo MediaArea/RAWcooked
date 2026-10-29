@@ -30,7 +30,7 @@ class ffv1_frame_ffmpeg
 {
 public:
     // Constructor/Destructor
-    ffv1_frame_ffmpeg(ThreadPool* Pool, bool Vulkan, AVBufferRef* VulkanDevice = nullptr); // Vulkan: hardware decoding with Vulkan, on VulkanDevice if set (the decoder has its own reference)
+    ffv1_frame_ffmpeg(ThreadPool* Pool, bool Vulkan, AVBufferRef* VulkanDevice = nullptr); // Vulkan: hardware decoding with Vulkan on VulkanDevice (the decoder has its own reference, decoding fails if nullptr)
     ~ffv1_frame_ffmpeg();
     AVBufferRef* VulkanDevice(); // New reference to the Vulkan device, nullptr if none
 

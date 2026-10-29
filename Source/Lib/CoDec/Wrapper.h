@@ -104,13 +104,17 @@ struct decoders_stats
     };
     std::atomic<size_t>         Frames[Max] = {}; // Count of frames decoded by each decoder
 
-    // Called (if set) when the FFmpeg decoder with Vulkan hardware decoding is selected, with the name of the Vulkan device and if it is a GPU (not a CPU implementation)
-    void                        (*Vulkan_Selected)(const std::string& DeviceName, bool IsGPU) = nullptr;
-    std::atomic<bool>           Vulkan_IsGPU{ true }; // Set before the call of Vulkan_Selected
+    // Called (if set) when the device of an FFmpeg decoder with Vulkan hardware decoding is selected (maybe from another thread, maybe several devices), with the index and the name of the Vulkan device and if it is a GPU (not a CPU implementation)
+    void                        (*Vulkan_Selected)(size_t Device, const std::string& DeviceName, bool IsGPU) = nullptr;
+    std::atomic<bool>           Vulkan_IsGPU{ true }; // False if the Vulkan devices are CPU implementations, set by the function called by Vulkan_Selected
 
     // Share of each decoder (e.g. "GPU 57% / CPU 43%") from counts of frames, empty if less than 2 decoders decoded frames
     std::string                 Shares(const size_t* Frames) const;
 };
 extern decoders_stats DecodersStats;
+
+//---------------------------------------------------------------------------
+// Vulkan devices of the FFmpeg decoders with Vulkan hardware decoding if Action_VulkanDecoder (index of the device of each decoder, 2 decoders on the same device decode more frames in parallel), for all tracks
+extern std::vector<size_t> VulkanDecoders_Devices;
 
 #endif

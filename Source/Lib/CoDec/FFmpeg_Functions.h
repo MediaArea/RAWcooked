@@ -387,11 +387,11 @@ namespace ffmpeg
     #undef FFMPEG_FUNCTION_DECLARE
 }
 
-// Vulkan device created by FFmpeg_Library_Vulkan() if it returned true, given to the first caller (who owns the reference) so it is not created twice, else a new device (nullptr if not available)
-AVBufferRef* FFmpeg_Library_VulkanDevice();
+// Vulkan device with this index in the list of devices (0 for the default device), the default device detected by FFmpeg_Library_Vulkan() is given to the first caller (who owns the reference) so it is not created twice, else a new device (nullptr if not available)
+AVBufferRef* FFmpeg_Library_VulkanDevice(size_t Index);
 
-// Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe), SMCount is set to its count of streaming multiprocessors if it is an NVIDIA GPU, else 0
-bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount);
+// Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe), SMCount is set to its count of streaming multiprocessors if it is an NVIDIA GPU (else 0), Name to its name
+bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount, std::string* Name = nullptr);
 
 //---------------------------------------------------------------------------
 #endif
