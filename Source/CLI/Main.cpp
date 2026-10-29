@@ -45,22 +45,29 @@ rawcooked RAWcooked;
 //---------------------------------------------------------------------------
 // Stats (--show-stats)
 static mutex Stats_Mutex;
-static bool Stats_Vulkan_IsSelected = false;
-static bool Stats_Vulkan_IsGPU = false;
-static string Stats_Vulkan_Name; // Vulkan device used by the decoder
+struct stats_vulkan_device
+{
+    size_t                      Index;
+    string                      Name;
+    bool                        IsGPU;
+};
+static vector<stats_vulkan_device> Stats_Vulkan_Devices; // Vulkan devices used by the decoders
 
 //---------------------------------------------------------------------------
-// FFmpeg decoder with Vulkan selected, the device is shown once
-static void Stats_VulkanSelected(const string& DeviceName, bool IsGPU)
+// Device of FFmpeg decoders with Vulkan selected, each device is shown once
+static void Stats_VulkanSelected(size_t Device, const string& DeviceName, bool IsGPU)
 {
     lock_guard<mutex> Lock(Stats_Mutex);
-    if (Stats_Vulkan_IsSelected)
-        return;
-    Stats_Vulkan_IsSelected = true;
-    Stats_Vulkan_IsGPU = IsGPU;
-    Stats_Vulkan_Name = DeviceName.empty() ? string("unknown device") : DeviceName;
+    for (const auto& Device2 : Stats_Vulkan_Devices)
+        if (Device2.Index == Device)
+            return;
+    Stats_Vulkan_Devices.push_back({ Device, DeviceName.empty() ? string("unknown device") : DeviceName, IsGPU });
+    auto HasGPU = false;
+    for (const auto& Device2 : Stats_Vulkan_Devices)
+        HasGPU |= Device2.IsGPU;
+    DecodersStats.Vulkan_IsGPU = HasGPU;
     cerr << "                                                            \r"; // Clean up the progress indicator
-    cerr << "Info: " << (IsGPU ? "GPU" : "Vulkan CPU implementation") << " detected and selected for decoding: " << Stats_Vulkan_Name << ".\n" << endl;
+    cerr << "Info: " << (IsGPU ? "GPU" : "Vulkan CPU implementation") << " detected and selected for decoding: " << Stats_Vulkan_Devices.back().Name << ".\n" << endl;
 }
 
 //---------------------------------------------------------------------------
@@ -833,9 +840,13 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
             Info += '.';
             if (Decoding_Frames[decoders_stats::Vulkan])
             {
-                Info += Stats_Vulkan_IsGPU ? "\n      GPU: " : "\n      Vulkan CPU implementation: ";
-                Info += Stats_Vulkan_Name;
-                Info += '.';
+                lock_guard<mutex> Lock(Stats_Mutex);
+                for (const auto& Device : Stats_Vulkan_Devices)
+                {
+                    Info += Device.IsGPU ? "\n      GPU: " : "\n      Vulkan CPU implementation: ";
+                    Info += Device.Name;
+                    Info += '.';
+                }
             }
             if (Decoding_Frames[decoders_stats::Ours] || Decoding_Frames[decoders_stats::FFmpeg])
                 Info += Stats_CPU();
@@ -901,6 +912,7 @@ int main(int argc, const char* argv[])
     // Manage command line
     if (int Value = Global.ManageCommandLine(argv, argc))
         return Value;
+    VulkanDecoders_Devices = Global.VulkanDecoders;
     if (Global.ShowStats)
         DecodersStats.Vulkan_Selected = Stats_VulkanSelected;
 

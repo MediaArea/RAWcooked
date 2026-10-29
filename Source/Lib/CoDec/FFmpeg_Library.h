@@ -11,6 +11,7 @@
 
 //---------------------------------------------------------------------------
 #include <string>
+#include <vector>
 //---------------------------------------------------------------------------
 
 //***************************************************************************
@@ -35,9 +36,13 @@ bool FFmpeg_Library_SetPath(const std::string& FileName);
 // Load the libraries if not already done, false if they are not available (Error is set to the reason)
 bool FFmpeg_Library_Load(std::string* Error = nullptr);
 
-// Libraries are available and the Vulkan device used by default by FFmpeg is a GPU, or any device if AllowCPU (also a CPU implementation e.g. lavapipe), FFmpeg log is quiet after this call
+// Indexes of the Vulkan devices to use if libraries are available: all discrete GPUs, else the first GPU, else the device used by default by FFmpeg if AllowCPU (a CPU implementation e.g. lavapipe), FFmpeg log is quiet after this call
 // Not needed if Vulkan is explicitly requested, any Vulkan device is used in that case
-bool FFmpeg_Library_Vulkan(bool AllowCPU = false);
+std::vector<size_t> FFmpeg_Library_Vulkan(bool AllowCPU = false);
+
+// Vulkan device explicitly requested and not available (e.g. no device with this index), known when the decoder which needs it creates it, (size_t)-1 if none
+void FFmpeg_Library_SetVulkanMissing(size_t Device);
+size_t FFmpeg_Library_VulkanMissing();
 
 // Name of the Vulkan device used by default by FFmpeg (detected if not already done, the device is then kept for the decoder), empty if not available
 // IsGPU: set to true if the device is a GPU, false if it is a CPU implementation (e.g. lavapipe) or if not available

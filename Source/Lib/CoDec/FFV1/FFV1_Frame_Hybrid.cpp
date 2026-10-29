@@ -44,21 +44,21 @@ enum decoder_index : size_t
 {
     Decoder_Ours = decoders_stats::Ours,
     Decoder_FFmpeg = decoders_stats::FFmpeg,
-    Decoder_Vulkan = decoders_stats::Vulkan, // FFmpeg decoder with Vulkan hardware decoding
-    Decoder_Vulkan2 = decoders_stats::Max, // Second FFmpeg decoder with Vulkan hardware decoding on the same device, more frames decoded in parallel by the GPU
-    Decoder_Max
+    Decoder_Vulkan = decoders_stats::Vulkan, // FFmpeg decoders with Vulkan hardware decoding, up to 8 (e.g. 2 decoders on each of 4 GPUs)
+    Decoder_Max = Decoder_Vulkan + 8
 };
 
 //---------------------------------------------------------------------------
 // Decoder in the stats
 static size_t Stats_Index(size_t i)
 {
-    return i == Decoder_Vulkan2 ? Decoder_Vulkan : i;
+    return i > Decoder_Vulkan ? Decoder_Vulkan : i;
 }
 
 //---------------------------------------------------------------------------
 // Names of the threads, stages, counters and events of each decoder, for the trace
 // Stages and events of FFmpeg decoders with Vulkan have the same names (counted together), threads and counters have their own names
+#define VULKAN_NAMES(_NUMBER) { "Vulkan " _NUMBER "decoder", "Vulkan " _NUMBER "pool", "Vulkan decode", "Vulkan warm-up", "Vulkan " _NUMBER "transfer", "Vulkan transfer", "Vulkan " _NUMBER "transfer queue", "Vulkan " _NUMBER "duration (ms)", "To Vulkan" }
 struct decoder_names
 {
     const char*                 Thread;
@@ -75,9 +75,9 @@ static const decoder_names Names[Decoder_Max] =
 {
     { "Ours decoder",     "Ours slices",   nullptr,         nullptr,          nullptr,             nullptr,           nullptr,                   "Ours duration (ms)",     "To ours"   },
     { "FFmpeg decoder",   "FFmpeg pool",   "FFmpeg decode", "FFmpeg warm-up", "FFmpeg transfer",   "FFmpeg transfer", "FFmpeg transfer queue",   "FFmpeg duration (ms)",   "To FFmpeg" },
-    { "Vulkan decoder",   "Vulkan pool",   "Vulkan decode", "Vulkan warm-up", "Vulkan transfer",   "Vulkan transfer", "Vulkan transfer queue",   "Vulkan duration (ms)",   "To Vulkan" },
-    { "Vulkan 2 decoder", "Vulkan 2 pool", "Vulkan decode", "Vulkan warm-up", "Vulkan 2 transfer", "Vulkan transfer", "Vulkan 2 transfer queue", "Vulkan 2 duration (ms)", "To Vulkan" },
+    VULKAN_NAMES(""), VULKAN_NAMES("2 "), VULKAN_NAMES("3 "), VULKAN_NAMES("4 "), VULKAN_NAMES("5 "), VULKAN_NAMES("6 "), VULKAN_NAMES("7 "), VULKAN_NAMES("8 "),
 };
+#undef VULKAN_NAMES
 
 //---------------------------------------------------------------------------
 // Lower priority for the threads of our decoder, so the threads feeding FFmpeg decoders and the output threads are not delayed by our decoder
@@ -100,7 +100,8 @@ static void Pool_Start()
 {
     trace::ThreadName(Names[i].Pool);
 }
-static void (* const Pool_Starts[Decoder_Max])() = { LowPriority, Pool_Start<Decoder_FFmpeg>, Pool_Start<Decoder_Vulkan>, Pool_Start<Decoder_Vulkan2> };
+static void (* const Pool_Starts[Decoder_Max])() = { LowPriority, Pool_Start<Decoder_FFmpeg>, Pool_Start<Decoder_Vulkan>, Pool_Start<Decoder_Vulkan + 1>, Pool_Start<Decoder_Vulkan + 2>, Pool_Start<Decoder_Vulkan + 3>,
+                                                      Pool_Start<Decoder_Vulkan + 4>, Pool_Start<Decoder_Vulkan + 5>, Pool_Start<Decoder_Vulkan + 6>, Pool_Start<Decoder_Vulkan + 7> };
 
 //---------------------------------------------------------------------------
 struct hybrid_job
@@ -141,10 +142,17 @@ struct ffv1_frame_hybrid_private
     std::deque<hybrid_job*>     Redo; // First frames for FFmpeg decoders which failed, to be decoded by the fallback decoder
     size_t                      First_Pending = 0; // Count of first frames for FFmpeg decoders not decoded, the fallback decoder may have to decode them
 
-    bool                        Vulkan2_Waiting = false; // Second FFmpeg decoder with Vulkan not available until the first one decoded a frame
-    bool                        Vulkan2_BigGPU = false; // Second FFmpeg decoder with Vulkan used only with a big GPU
-    bool                        Vulkan2_Useful = true; // Second FFmpeg decoder with Vulkan used after the first one decoded a frame
-    unsigned                    Vulkan2_Pool = 0; // Count of threads of the pool of the second FFmpeg decoder with Vulkan, created with the decoder
+    unsigned                    Pool_Count = 0; // Count of threads of the pool of each FFmpeg decoder, created with the decoder
+
+    // FFmpeg decoders with Vulkan: the first one on a device creates the device, the other one uses the same device (frames decoded in parallel by the GPU, the GPU would switch between devices) after the first one decoded a frame
+    // (initializations on the same device at the same time may lose the device, seen with NVIDIA RTX 3050 on Windows)
+    bool                        Vulkan_Used = false;
+    size_t                      Vulkan_Device[Decoder_Max] = {}; // Index of the Vulkan device
+    size_t                      Vulkan_First[Decoder_Max] = {}; // First FFmpeg decoder with Vulkan on the same device, itself if it is the first one
+    bool                        Vulkan_BigGPU[Decoder_Max] = {}; // Used only if the device is a big GPU
+    bool                        Vulkan_Required[Decoder_Max] = {}; // The device must be available
+    bool                        Vulkan_Waiting[Decoder_Max] = {}; // Not available until the first decoder on the same device decoded a frame
+    bool                        Vulkan_Useful[Decoder_Max] = {}; // Available after the first decoder on the same device decoded a frame
 
     // Jobs
     std::deque<hybrid_job*>     Transfer_Jobs[Decoder_Max]; // Decoded by FFmpeg decoders, in decoding order
@@ -158,19 +166,32 @@ struct ffv1_frame_hybrid_private
     // Keyframe detection
     rangecoder                  E;
 
-    ffv1_frame_hybrid_private(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU_) :
-        Vulkan2_BigGPU(Vulkan2_BigGPU_)
+    ffv1_frame_hybrid_private(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, const std::vector<ffv1_frame_hybrid_vulkan>& VulkanDecoders)
     {
         Used[Decoder_Ours] = UseOurDecoder;
         Used[Decoder_FFmpeg] = UseFFmpegDecoder;
-        Used[Decoder_Vulkan] = VulkanDecoders >= 1;
-        Used[Decoder_Vulkan2] = VulkanDecoders >= 2;
+        for (size_t i = Decoder_Vulkan; i < Decoder_Max && i - Decoder_Vulkan < VulkanDecoders.size(); i++)
+        {
+            Used[i] = true;
+            Vulkan_Used = true;
+            Vulkan_Device[i] = VulkanDecoders[i - Decoder_Vulkan].Device;
+            Vulkan_BigGPU[i] = VulkanDecoders[i - Decoder_Vulkan].BigGPU;
+            Vulkan_Required[i] = VulkanDecoders[i - Decoder_Vulkan].Required;
+            Vulkan_First[i] = i;
+            for (size_t j = Decoder_Vulkan; j < i; j++)
+                if (Vulkan_Device[j] == Vulkan_Device[i])
+                {
+                    Vulkan_First[i] = Vulkan_First[j];
+                    Vulkan_Waiting[i] = true;
+                    break;
+                }
+        }
         auto Count = std::thread::hardware_concurrency();
         if (!Count)
             Count = 4;
         for (size_t i = 0; i < Decoder_Max; i++)
         {
-            if (!Used[i])
+            if (!Used[i] || Vulkan_Waiting[i])
             {
                 Busy[i] = true;
                 continue;
@@ -179,20 +200,15 @@ struct ffv1_frame_hybrid_private
                 Fallback = i;
             else
                 Pending[i] = true;
-            if (Pool && i == Decoder_Vulkan2)
-                Vulkan2_Pool = Count;
-            else if (Pool)
-            {
-                Pools[i] = new ThreadPool(Count, Pool_Starts[i]);
-                Pools[i]->init();
-            }
         }
-        if (Used[Decoder_Vulkan2])
+        if (Pool)
         {
-            // Initializations of FFmpeg decoders with Vulkan on the same device at the same time may lose the device (seen with NVIDIA RTX 3050 on Windows)
-            Busy[Decoder_Vulkan2] = true;
-            Pending[Decoder_Vulkan2] = false;
-            Vulkan2_Waiting = true;
+            Pool_Count = Count;
+            if (UseOurDecoder)
+            {
+                Pools[Decoder_Ours] = new ThreadPool(Count, Pool_Starts[Decoder_Ours]);
+                Pools[Decoder_Ours]->init();
+            }
         }
         if (UseOurDecoder)
             Ours = new ffv1_frame(Pools[Decoder_Ours]);
@@ -222,34 +238,45 @@ struct ffv1_frame_hybrid_private
 
 //---------------------------------------------------------------------------
 // FFmpeg decoder, in the thread of the decoder
-// FFmpeg decoders with Vulkan use the same device (frames decoded in parallel by the GPU, the GPU would switch between devices), the second one is created after the first one decoded a frame
 ffv1_frame_ffmpeg* ffv1_frame_hybrid_private::Decoder_New(size_t i)
 {
+    if (Pool_Count)
+    {
+        Pools[i] = new ThreadPool(Pool_Count, Pool_Starts[i]);
+        Pools[i]->init();
+    }
+    if (i < Decoder_Vulkan)
+        return new ffv1_frame_ffmpeg(Pools[i], false);
+
+    // Vulkan device, of the first decoder on this device if any
     AVBufferRef* Device = nullptr;
-    if (i == Decoder_Vulkan2)
+    auto First = Vulkan_First[i];
+    if (First != i)
     {
-        if (Vulkan2_Pool)
-        {
-            Pools[i] = new ThreadPool(Vulkan2_Pool, Pool_Starts[i]);
-            Pools[i]->init();
-        }
         std::lock_guard<std::mutex> Lock(Mutex); // The first decoder is released after the end of its frames
-        if (FFmpeg[Decoder_Vulkan])
-            Device = FFmpeg[Decoder_Vulkan]->VulkanDevice();
+        if (FFmpeg[First])
+            Device = FFmpeg[First]->VulkanDevice();
     }
-    auto Decoder = new ffv1_frame_ffmpeg(Pools[i], i >= Decoder_Vulkan, Device);
-    ffmpeg::av_buffer_unref(&Device);
+    if (!Device)
+        Device = FFmpeg_Library_VulkanDevice(Vulkan_Device[i]);
+    if (!Device && Vulkan_Required[i])
+        FFmpeg_Library_SetVulkanMissing(Vulkan_Device[i]); // The caller stops
+    auto Decoder = new ffv1_frame_ffmpeg(Pools[i], true, Device);
 
-    // Second FFmpeg decoder with Vulkan only with a big GPU, measured with 6464x4852 RGB 16-bit frames: 8% faster with NVIDIA RTX 5070 Ti (70 streaming multiprocessors),
-    // not faster with NVIDIA RTX 3050 (20 streaming multiprocessors) where frames wait for the GPU instead of being decoded by our decoder at the end
-    if (i == Decoder_Vulkan && Vulkan2_Waiting && Vulkan2_BigGPU)
+    // Device selected, the other decoder on this device is used only with a big GPU if requested (not faster with small GPUs, frames wait for the GPU instead of being decoded by our decoder at the end)
+    if (First == i && Device)
     {
-        uint32_t SMCount = 0;
-        Device = Decoder->VulkanDevice();
-        Vulkan2_Useful = Device && FFmpeg_Library_VulkanIsGPU(Device, &SMCount) && SMCount >= 64;
-        ffmpeg::av_buffer_unref(&Device);
+        uint32_t SMCount;
+        std::string Name;
+        auto IsGPU = FFmpeg_Library_VulkanIsGPU(Device, &SMCount, &Name);
+        for (size_t j = i + 1; j < Decoder_Max; j++)
+            if (Vulkan_First[j] == i)
+                Vulkan_Useful[j] = !Vulkan_BigGPU[j] || (IsGPU && SMCount >= 64);
+        if (DecodersStats.Vulkan_Selected)
+            DecodersStats.Vulkan_Selected(Vulkan_Device[i], Name, IsGPU);
     }
 
+    ffmpeg::av_buffer_unref(&Device);
     return Decoder;
 }
 
@@ -324,6 +351,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         // FFmpeg decoder
         auto& Decoder = FFmpeg[i];
         bool Error;
+        bool Missing; // Vulkan device requested and not available, the frame is not decoded again and the caller stops
         {
             TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
             if (!Decoder)
@@ -336,9 +364,10 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             }
             Decoder->RawFrame_Index = Job->Frame ? Job->Frame->Index : (size_t)-1;
             Error = Decoder->Decode(Job->Packet, Job->Packet_Size);
+            Missing = Error && FFmpeg_Library_VulkanMissing() != (size_t)-1;
             if (Job->WarmUp || (Job->First && Error))
                 Decoder->Discard(); // Not output
-            if (!Job->First || !Error)
+            if (!Job->First || !Error || Missing)
                 ffmpeg::av_buffer_unref(&Job->Packet); // FFmpeg has its own reference if needed, else the packet is kept for the fallback decoder
         }
         auto Job_Duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - Start).count();
@@ -352,19 +381,21 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             Duration[i] = Duration[i] ? (Duration[i] * 3 + Job_Duration) / 4 : Job_Duration; // Duration of the first frame includes the initialization
             trace::Counter(Names[i].Duration, (int64_t)(Duration[i] * 1000));
         }
-        if (i == Decoder_Vulkan && Vulkan2_Waiting && !Error)
-        {
-            // First FFmpeg decoder with Vulkan initialized, the second one can initialize
-            Vulkan2_Waiting = false;
-            if (Vulkan2_Useful)
-            {
-                Busy[Decoder_Vulkan2] = false;
-                Pending[Decoder_Vulkan2] = true;
-            }
-            else
-                Disabled[Decoder_Vulkan2] = true; // Stays busy
-        }
-        if (Job->First && Error)
+        if (i >= Decoder_Vulkan && Vulkan_First[i] == i && !Error)
+            for (size_t j = i + 1; j < Decoder_Max; j++)
+                if (Vulkan_Waiting[j] && Vulkan_First[j] == i)
+                {
+                    // First FFmpeg decoder with Vulkan on this device initialized, the other one can initialize
+                    Vulkan_Waiting[j] = false;
+                    if (Vulkan_Useful[j])
+                    {
+                        Busy[j] = false;
+                        Pending[j] = true;
+                    }
+                    else
+                        Disabled[j] = true; // Stays busy
+                }
+        if (Job->First && Error && !Missing)
         {
             // FFmpeg decoder can not decode the stream, the frame is decoded by the fallback decoder
             Disabled[i] = true; // FFmpeg decoder stays busy
@@ -385,7 +416,9 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             Job->Error = Error;
             Transfer_Jobs[i].push_back(Job);
             trace::Counter(Names[i].Queue, (int64_t)Transfer_Jobs[i].size());
-            Busy[i] = i == Fallback && !Redo.empty(); // Fallback decoder is not available for a new frame until the first frames for other FFmpeg decoders which failed are decoded
+            if (Missing)
+                Disabled[i] = true; // FFmpeg decoder stays busy
+            Busy[i] = Missing || (i == Fallback && !Redo.empty()); // Fallback decoder is not available for a new frame until the first frames for other FFmpeg decoders which failed are decoded
         }
         Condition.notify_all();
     }
@@ -484,11 +517,11 @@ static AVBufferRef* Packet_New(size_t Buffer_Size, data_holder* Holder, bool All
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-ffv1_frame_hybrid::ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU) :
+ffv1_frame_hybrid::ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, const std::vector<ffv1_frame_hybrid_vulkan>& VulkanDecoders) :
     RawFrame(nullptr),
     FrameReady(nullptr),
     Remaining((size_t)-1),
-    P(new ffv1_frame_hybrid_private(Pool, UseOurDecoder, UseFFmpegDecoder, VulkanDecoders, Vulkan2_BigGPU))
+    P(new ffv1_frame_hybrid_private(Pool, UseOurDecoder, UseFFmpegDecoder, VulkanDecoders))
 {
     for (size_t i = 0; i < Decoder_Max; i++)
         if (P->Used[i])
@@ -578,7 +611,7 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
     auto KeyFrame = P->E.b(State);
 
     // Job, with the frame data
-    auto Packet = Packet_New(Buffer_Size, Holder, P->Used[Decoder_Vulkan]);
+    auto Packet = Packet_New(Buffer_Size, Holder, P->Vulkan_Used);
     if (!Packet)
     {
         FrameReady->Ready(Opaque, true);
@@ -629,6 +662,11 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
     size_t i = Decoder_Max;
     P->Condition.wait(Lock, [&]
     {
+        if (FFmpeg_Library_VulkanMissing() != (size_t)-1)
+        {
+            i = Decoder_Max; // Vulkan device requested and not available, the caller stops
+            return true;
+        }
         if (WarmUp)
         {
             for (size_t j = 0; j < Decoder_Max; j++)
@@ -650,6 +688,21 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
         }
         return !P->Busy[i];
     });
+    if (i == Decoder_Max)
+    {
+        // Frame not decoded
+        for (auto WarmUp_Job : WarmUp_Jobs)
+            if (WarmUp_Job)
+            {
+                ffmpeg::av_buffer_unref(&WarmUp_Job->Packet);
+                P->Job_Free(WarmUp_Job);
+            }
+        ffmpeg::av_buffer_unref(&Job->Packet);
+        P->Job_Free(Job);
+        Lock.unlock();
+        FrameReady->Ready(Opaque, true);
+        return;
+    }
     if (P->Pending[i])
     {
         // First frame for this FFmpeg decoder (all frames are keyframes)

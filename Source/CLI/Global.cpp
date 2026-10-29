@@ -115,6 +115,14 @@ bool global::CheckFFmpeg(bool IsCompressed)
             FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
             return false;
         }
+
+        // Vulkan device of a vulkan decoder not available (known when the decoder creates the device)
+        auto Vulkan_Missing = FFmpeg_Library_VulkanMissing();
+        if (Vulkan_Missing != (size_t)-1)
+        {
+            FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (unable to find Vulkan device with index " + to_string(Vulkan_Missing) + ").";
+            return false;
+        }
     }
 
     // FFmpeg binary is needed for encoding
@@ -423,10 +431,12 @@ int global::SetFileOpenMethod(const char* Value)
 //---------------------------------------------------------------------------
 int global::SetDecoder(const char* Value)
 {
-    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order, vulkan twice for 2 vulkan decoders
-    static const char* const Names[] = { "internal", "ffmpeg", "vulkan", "vulkan" };
-    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder, Action_VulkanDecoder, Action_VulkanDecoder2 };
-    bool Decoders[4] = {};
+    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order,
+    // vulkan on the default Vulkan device or vulkanN on the Vulkan device N, up to 2 vulkan decoders on a device (e.g. vulkan+vulkan) and up to 8 vulkan decoders
+    static const char* const Names[] = { "internal", "ffmpeg" };
+    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder };
+    bool Decoders[2] = {};
+    vector<size_t> Vulkan_Devices;
     auto IsAuto = strcmp(Value, "auto") == 0;
     if (IsAuto)
         Decoders[0] = true;
@@ -436,20 +446,40 @@ int global::SetDecoder(const char* Value)
             auto Name_End = strchr(Name, '+');
             auto Name_Size = Name_End ? (size_t)(Name_End - Name) : strlen(Name);
             size_t i = 0;
-            while (i < 4 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
+            while (i < 2 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
                 i++;
-            if (i == 4)
+            if (i < 2)
+                Decoders[i] = true;
+            else
             {
-                cerr << "Error: unknown decoder value '" << Value << "'." << endl;
-                return 1;
+                // vulkan or vulkanN
+                auto IsVulkan = Name_Size >= 6 && !strncmp(Name, "vulkan", 6) && Name_Size <= 6 + 3; // Up to 3 digits
+                size_t Device = 0;
+                for (size_t j = 6; IsVulkan && j < Name_Size; j++)
+                {
+                    if (Name[j] < '0' || Name[j] > '9')
+                        IsVulkan = false;
+                    Device = Device * 10 + (Name[j] - '0');
+                }
+                size_t Device_Count = 0;
+                for (auto Device2 : Vulkan_Devices)
+                    if (Device2 == Device)
+                        Device_Count++;
+                if (!IsVulkan || Device_Count >= 2 || Vulkan_Devices.size() >= 8)
+                {
+                    cerr << "Error: unknown decoder value '" << Value << "'." << endl;
+                    return 1;
+                }
+                Vulkan_Devices.push_back(Device);
             }
-            Decoders[i] = true;
             if (!Name_End)
                 break;
             Name = Name_End + 1;
         }
-    for (size_t i = 0; i < 4; i++)
+    for (size_t i = 0; i < 2; i++)
         Actions.set(Decoders_Actions[i], Decoders[i]);
+    Actions.set(Action_VulkanDecoder, !Vulkan_Devices.empty());
+    VulkanDecoders = Vulkan_Devices;
     Actions.set(Action_AutoDecoder, IsAuto);
     Decoder_IsProvided = true;
     Decoder_Value = Value; // Availability of FFmpeg libraries is checked after the command line, if decoding is requested

@@ -12,6 +12,7 @@
 //---------------------------------------------------------------------------
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 struct ffv1_frame_hybrid_private;
 //---------------------------------------------------------------------------
 
@@ -27,11 +28,19 @@ class data_holder;
 class raw_frame;
 class raw_frame_ready;
 
+// FFmpeg decoder with Vulkan hardware decoding
+struct ffv1_frame_hybrid_vulkan
+{
+    size_t                      Device; // Index of the Vulkan device, 2 decoders on the same device decode more frames in parallel
+    bool                        BigGPU; // Used only if the device is a big GPU (second decoder on a device)
+    bool                        Required; // The device must be available (explicitly requested), else FFmpeg_Library_VulkanMissing() is set
+};
+
 class ffv1_frame_hybrid
 {
 public:
     // Constructor/Destructor
-    ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU = false); // At least one FFmpeg decoder (VulkanDecoders: count of FFmpeg decoders with Vulkan hardware decoding on the same device, up to 2, the second one only with a big GPU if Vulkan2_BigGPU)
+    ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, const std::vector<ffv1_frame_hybrid_vulkan>& VulkanDecoders); // At least one FFmpeg decoder (VulkanDecoders: FFmpeg decoders with Vulkan hardware decoding, up to 8)
     ~ffv1_frame_hybrid();
 
     // External metadata

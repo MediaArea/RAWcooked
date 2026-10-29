@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------
 #include "Lib/Compressed/RAWcooked/Track.h"
 #include "Lib/CoDec/Wrapper.h"
+#include "Lib/CoDec/FFmpeg_Library.h"
 #include "Lib/Utils/FileIO/FileWriter.h"
 #include "Lib/Utils/FileIO/FileChecker.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
@@ -106,7 +107,7 @@ bool track_info::Init(const uint8_t* BaseData)
 
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_VulkanDecoder2], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
+        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
         if (!Wrapper)
             return true;
     }
@@ -369,6 +370,8 @@ void track_info::Output_Run()
 void track_info::Output(output_item* Item, frame_writer* Writer)
 {
     TRACE_SCOPE("Output", Item->Frame->Index);
+    if (FFmpeg_Library_VulkanMissing() != (size_t)-1)
+        return; // Vulkan device of a vulkan decoder not available, parsing is stopped and frames are not checked
     raw_frame* Frame;
     if (Item->Ordered)
     {
@@ -480,7 +483,7 @@ bool track_info::OutOfBand(const uint8_t* Data, size_t Size)
     // Parse
     if (!Wrapper)
     {
-        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_VulkanDecoder2], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
+        Wrapper = CreateWrapper(Format, Pool, Actions[Action_InternalDecoder], Actions[Action_FFmpegDecoder], Actions[Action_VulkanDecoder], Actions[Action_AutoDecoder], Actions[Action_VulkanEncoder]);
         if (!Wrapper)
             return true;
     }

@@ -261,20 +261,27 @@ void matroska::Shutdown()
     for (size_t i = 0; i < TrackInfo.size(); i++)
     {
         track_info* TrackInfo_Current = TrackInfo[i];
-        TrackInfo_Current->End(i);
+        if (Decoders_AreMissing)
+        {
+            // Parsing stopped, no check of the frames
+            TrackInfo_Current->Output_End();
+            TrackInfo_Current->Output_Wait();
+        }
+        else
+            TrackInfo_Current->End(i);
         delete TrackInfo_Current;
     }
     TrackInfo.clear();
     End();
 
-    // Hashes
-    if ((Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) && Hashes_FromRAWcooked)
+    // Hashes, not checked if parsing is stopped
+    if ((Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) && Hashes_FromRAWcooked && !Decoders_AreMissing)
     {
         if (ReversibilityCompat > Compat_18_10_1)
             Hashes_FromRAWcooked->RemoveEmptyFiles();
         Hashes_FromRAWcooked->Finish();
     }
-    if (Actions[Action_Conch] && Hashes_FromAttachments)
+    if (Actions[Action_Conch] && Hashes_FromAttachments && !Decoders_AreMissing)
     {
         Hashes_FromAttachments->RemoveEmptyFiles(); // Attachments don't have files with a size of 0
         Hashes_FromAttachments->Finish();
@@ -1097,6 +1104,14 @@ private:
 //---------------------------------------------------------------------------
 void matroska::ProcessBlock()
 {
+    if (Decoders_Check && !Decoders_Check())
+    {
+        Decoders_AreMissing = true;
+        IsList = true;
+        Buffer_Offset = Buffer.Size();
+        return;
+    }
+
     if (Levels[Level].Offset_End - Buffer_Offset > 4)
     {
         uint8_t TrackID = Buffer[Buffer_Offset] & 0x7F;
