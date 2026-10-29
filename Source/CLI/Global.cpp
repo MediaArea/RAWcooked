@@ -423,10 +423,10 @@ int global::SetFileOpenMethod(const char* Value)
 //---------------------------------------------------------------------------
 int global::SetDecoder(const char* Value)
 {
-    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order
-    static const char* const Names[] = { "internal", "ffmpeg", "vulkan" };
-    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder, Action_VulkanDecoder };
-    bool Decoders[3] = {};
+    // auto (resolved when a decoder is needed), or decoders in parallel: internal, ffmpeg, vulkan or a combination of them with + (e.g. internal+vulkan), in any order, vulkan twice for 2 vulkan decoders
+    static const char* const Names[] = { "internal", "ffmpeg", "vulkan", "vulkan" };
+    static const action Decoders_Actions[] = { Action_InternalDecoder, Action_FFmpegDecoder, Action_VulkanDecoder, Action_VulkanDecoder2 };
+    bool Decoders[4] = {};
     auto IsAuto = strcmp(Value, "auto") == 0;
     if (IsAuto)
         Decoders[0] = true;
@@ -436,9 +436,9 @@ int global::SetDecoder(const char* Value)
             auto Name_End = strchr(Name, '+');
             auto Name_Size = Name_End ? (size_t)(Name_End - Name) : strlen(Name);
             size_t i = 0;
-            while (i < 3 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
+            while (i < 4 && (Decoders[i] || strlen(Names[i]) != Name_Size || strncmp(Name, Names[i], Name_Size)))
                 i++;
-            if (i == 3)
+            if (i == 4)
             {
                 cerr << "Error: unknown decoder value '" << Value << "'." << endl;
                 return 1;
@@ -448,7 +448,7 @@ int global::SetDecoder(const char* Value)
                 break;
             Name = Name_End + 1;
         }
-    for (size_t i = 0; i < 3; i++)
+    for (size_t i = 0; i < 4; i++)
         Actions.set(Decoders_Actions[i], Decoders[i]);
     Actions.set(Action_AutoDecoder, IsAuto);
     Decoder_IsProvided = true;

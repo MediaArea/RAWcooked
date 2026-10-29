@@ -390,5 +390,8 @@ namespace ffmpeg
 // Vulkan device created by FFmpeg_Library_Vulkan() if it returned true, given to the first caller (who owns the reference) so it is not created twice, else a new device (nullptr if not available)
 AVBufferRef* FFmpeg_Library_VulkanDevice();
 
+// Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe), SMCount is set to its count of streaming multiprocessors if it is an NVIDIA GPU, else 0
+bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount);
+
 //---------------------------------------------------------------------------
 #endif

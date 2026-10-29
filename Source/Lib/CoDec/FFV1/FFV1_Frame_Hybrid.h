@@ -31,7 +31,7 @@ class ffv1_frame_hybrid
 {
 public:
     // Constructor/Destructor
-    ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, bool UseVulkanDecoder); // At least one FFmpeg decoder (UseVulkanDecoder: FFmpeg decoder with Vulkan hardware decoding)
+    ffv1_frame_hybrid(ThreadPool* Pool, bool UseOurDecoder, bool UseFFmpegDecoder, size_t VulkanDecoders, bool Vulkan2_BigGPU = false); // At least one FFmpeg decoder (VulkanDecoders: count of FFmpeg decoders with Vulkan hardware decoding on the same device, up to 2, the second one only with a big GPU if Vulkan2_BigGPU)
     ~ffv1_frame_hybrid();
 
     // External metadata

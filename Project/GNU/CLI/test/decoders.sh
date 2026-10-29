@@ -60,11 +60,11 @@ pushd "${files_path}" >/dev/null 2>&1
 
     internal_us=0 # Duration of a frame with our decoder alone, in microseconds
     vulkan_ms=0 # Duration with the vulkan decoder alone, including its initialization
-    for decoder in internal ffmpeg vulkan internal+vulkan internal+ffmpeg ffmpeg+vulkan internal+ffmpeg+vulkan auto ; do
+    for decoder in internal ffmpeg vulkan vulkan+vulkan internal+vulkan internal+vulkan+vulkan internal+ffmpeg ffmpeg+vulkan internal+ffmpeg+vulkan auto ; do
         test="decoders (${decoder})"
         input="${file}"
         count="${frames}"
-        if [ "${decoder}" == "ffmpeg" ] || [ "${decoder}" == "vulkan" ] ; then
+        if [ "${decoder}" == "ffmpeg" ] || [ "${decoder}" == "vulkan" ] || [ "${decoder}" == "vulkan+vulkan" ] ; then
             input="${alone_file}"
             count="${alone_frames}"
         fi
@@ -74,17 +74,22 @@ pushd "${files_path}" >/dev/null 2>&1
         read_duration "${temp_path}/time"
 
         # maximum duration: less than 3 ms per frame with our decoder alone (less than the timeout), other decoders less than 5 times our decoder alone per frame plus 5 s (one-time costs, slower FFmpeg decoder),
-        # plus with the vulkan decoder in parallel with other decoders the duration of the vulkan decoder alone (the end waits for the first frame given to the vulkan decoder during its initialization, long e.g. with lavapipe)
-        # except the vulkan decoder alone, its duration with small frames is not representative
+        # plus with the vulkan decoder in parallel with other decoders the duration of the vulkan decoder alone for each vulkan decoder (the end waits for the first frame given to a vulkan decoder during its initialization, long e.g. with lavapipe)
+        # except the vulkan decoders alone, their duration with small frames is not representative
         if [ "${decoder}" == "internal" ] ; then
             internal_us=$((duration_ms * 1000 / count))
             max_ms=$((count * 3))
         elif [ "${decoder}" == "vulkan" ] ; then
             vulkan_ms="${duration_ms}"
             max_ms=
+        elif [ "${decoder}" == "vulkan+vulkan" ] ; then
+            max_ms=
         else
             max_ms=$((count * internal_us * 5 / 1000 + 5000))
             if contains "vulkan" "${decoder}" || [ "${decoder}" == "auto" ] ; then
+                max_ms=$((max_ms + vulkan_ms))
+            fi
+            if contains "vulkan+vulkan" "${decoder}" || [ "${decoder}" == "auto" ] ; then
                 max_ms=$((max_ms + vulkan_ms))
             fi
         fi
