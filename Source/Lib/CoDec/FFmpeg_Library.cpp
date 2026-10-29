@@ -487,6 +487,7 @@ bool FFmpeg_Library_Load(string* Error)
 typedef void (VULKAN_CALL* vulkan_void_function)();
 typedef vulkan_void_function (VULKAN_CALL* vulkan_get_instance_proc_addr)(void* Instance, const char* Name);
 typedef void (VULKAN_CALL* vulkan_get_physical_device_properties)(void* PhysicalDevice, void* Properties);
+typedef int32_t (VULKAN_CALL* vulkan_enumerate_device_extension_properties)(void* PhysicalDevice, const char* LayerName, uint32_t* Count, void* Properties);
 struct vulkan_device_context
 {
     const void*                     alloc;
@@ -505,6 +506,49 @@ struct vulkan_physical_device_properties
     uint64_t                        Others[128]; // pipelineCacheUUID, limits, sparseProperties (548 bytes)
 };
 static const uint32_t Vulkan_PhysicalDeviceType_Cpu = 4; // VK_PHYSICAL_DEVICE_TYPE_CPU
+struct vulkan_physical_device_properties2 // Vulkan 1.1
+{
+    uint32_t                        sType;
+    void*                           pNext;
+    vulkan_physical_device_properties properties;
+};
+static const uint32_t Vulkan_StructureType_PhysicalDeviceProperties2 = 1000059001; // VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+struct vulkan_physical_device_shader_sm_builtins_properties // VK_NV_shader_sm_builtins
+{
+    uint32_t                        sType;
+    void*                           pNext;
+    uint32_t                        shaderSMCount;
+    uint32_t                        shaderWarpsPerSM;
+};
+static const uint32_t Vulkan_StructureType_PhysicalDeviceShaderSMBuiltinsProperties = 1000154001; // VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_PROPERTIES_NV
+struct vulkan_extension_properties
+{
+    char                            extensionName[256];
+    uint32_t                        specVersion;
+};
+
+//---------------------------------------------------------------------------
+// Count of streaming multiprocessors of an NVIDIA GPU, 0 if unknown
+static uint32_t Vulkan_SMCount(const vulkan_device_context* Vulkan)
+{
+    auto EnumerateDeviceExtensionProperties = (vulkan_enumerate_device_extension_properties)Vulkan->get_proc_addr(Vulkan->inst, "vkEnumerateDeviceExtensionProperties");
+    auto GetPhysicalDeviceProperties2 = (vulkan_get_physical_device_properties)Vulkan->get_proc_addr(Vulkan->inst, "vkGetPhysicalDeviceProperties2");
+    uint32_t Count = 0;
+    if (!EnumerateDeviceExtensionProperties || !GetPhysicalDeviceProperties2 || EnumerateDeviceExtensionProperties(Vulkan->phys_dev, nullptr, &Count, nullptr) < 0)
+        return 0;
+    vector<vulkan_extension_properties> Extensions(Count);
+    if (!Count || EnumerateDeviceExtensionProperties(Vulkan->phys_dev, nullptr, &Count, Extensions.data()) < 0)
+        return 0;
+    for (uint32_t i = 0; i < Count; i++)
+        if (!strcmp(Extensions[i].extensionName, "VK_NV_shader_sm_builtins"))
+        {
+            vulkan_physical_device_shader_sm_builtins_properties SM = { Vulkan_StructureType_PhysicalDeviceShaderSMBuiltinsProperties, nullptr, 0, 0 };
+            vulkan_physical_device_properties2 Properties = { Vulkan_StructureType_PhysicalDeviceProperties2, &SM, {} };
+            GetPhysicalDeviceProperties2(Vulkan->phys_dev, &Properties);
+            return SM.shaderSMCount;
+        }
+    return 0;
+}
 
 //---------------------------------------------------------------------------
 // Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe), and its name
@@ -602,6 +646,16 @@ AVBufferRef* FFmpeg_Library_VulkanDevice()
     if (auto Device = Vulkan_Device.exchange(nullptr))
         return Device;
     return Vulkan_Device_Create();
+}
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount)
+{
+    string Name;
+    auto IsGPU = Vulkan_IsGPU(Device, Name);
+    if (SMCount)
+        *SMCount = IsGPU ? Vulkan_SMCount((const vulkan_device_context*)((AVHWDeviceContext*)Device->data)->hwctx) : 0;
+    return IsGPU;
 }
 
 #else //RAWCOOKED_FFMPEG

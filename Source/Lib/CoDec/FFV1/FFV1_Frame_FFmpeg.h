@@ -30,8 +30,9 @@ class ffv1_frame_ffmpeg
 {
 public:
     // Constructor/Destructor
-    ffv1_frame_ffmpeg(ThreadPool* Pool, bool Vulkan); // Vulkan: hardware decoding with Vulkan
+    ffv1_frame_ffmpeg(ThreadPool* Pool, bool Vulkan, AVBufferRef* VulkanDevice = nullptr); // Vulkan: hardware decoding with Vulkan, on VulkanDevice if set (the decoder has its own reference)
     ~ffv1_frame_ffmpeg();
+    AVBufferRef* VulkanDevice(); // New reference to the Vulkan device, nullptr if none
 
     // External metadata
     void SetWidth(uint32_t width);

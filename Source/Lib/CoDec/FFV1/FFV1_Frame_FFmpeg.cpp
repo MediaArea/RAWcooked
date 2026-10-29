@@ -50,7 +50,7 @@ static AVPixelFormat Vulkan_Format(AVCodecContext*, const AVPixelFormat* Formats
 }
 
 //---------------------------------------------------------------------------
-ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
+ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan, AVBufferRef* VulkanDevice) :
     RawFrame(nullptr),
     Pool(Pool_),
     Context(ffmpeg::avcodec_alloc_context3(ffmpeg::avcodec_find_decoder(AV_CODEC_ID_FFV1))),
@@ -63,7 +63,7 @@ ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan) :
     Context->thread_count = Pool ? 0 : 1;
     if (Vulkan)
     {
-        Context->hw_device_ctx = FFmpeg_Library_VulkanDevice(); // Maybe already created if the decoder was selected automatically
+        Context->hw_device_ctx = VulkanDevice ? ffmpeg::av_buffer_ref(VulkanDevice) : FFmpeg_Library_VulkanDevice(); // Maybe already created if the decoder was selected automatically
         Context->get_format = Vulkan_Format;
     }
 }
@@ -75,6 +75,12 @@ ffv1_frame_ffmpeg::~ffv1_frame_ffmpeg()
     delete Frames;
     ffmpeg::av_packet_free(&Packet);
     ffmpeg::avcodec_free_context(&Context);
+}
+
+//---------------------------------------------------------------------------
+AVBufferRef* ffv1_frame_ffmpeg::VulkanDevice()
+{
+    return Context->hw_device_ctx ? ffmpeg::av_buffer_ref(Context->hw_device_ctx) : nullptr;
 }
 
 //***************************************************************************
