@@ -440,13 +440,17 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         bool ForceCheck = false;
         switch ((tiff::flavor)SingleFile.Flavor)
         {
-        case tiff::flavor::Raw_RGB_12_U: // TODO: remove when we are confident enough
-        case tiff::flavor::Raw_Y_12_U:
-        case tiff::flavor::Raw_Y_10_U:
-        case tiff::flavor::Raw_RGB_10_U:
-            ForceCheck = true;
+        case tiff::flavor::Raw_RGB_8_U:
+        case tiff::flavor::Raw_RGB_16_U_LE:
+        case tiff::flavor::Raw_RGB_16_U_BE:
+        case tiff::flavor::Raw_RGBA_8_U:
+        case tiff::flavor::Raw_RGBA_16_U_LE:
+        case tiff::flavor::Raw_Y_8_U:
+        case tiff::flavor::Raw_Y_16_U_LE:
+        case tiff::flavor::Raw_Y_16_U_BE:
             break;
-        default:;
+        default: // TODO: remove when we are confident enough
+            ForceCheck = true;
         }
         if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
         {

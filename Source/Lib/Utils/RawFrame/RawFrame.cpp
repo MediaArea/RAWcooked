@@ -21,7 +21,8 @@ void raw_frame::Create(size_t width, size_t height, size_t info)
         // Reuse if same frame size and same line slices (slots indexed by slice) or 1 line slice (frames may be reused by decoders using different slice counts), other configuration items do not change during a stream
         const auto Plane0 = Planes_[0];
         auto line_slice_count = ((info >> 24) & 0xFF) + 1;
-        if (Plane0 && Plane0->Width() == width && Plane0->Height() == height && (!Plane0->Line_SliceCount() || Plane0->Line_SliceCount() == line_slice_count || line_slice_count == 1))
+        auto Plane0_Height = Flavor == flavor::TIFF ? height * tiff::PlaneCount((tiff::flavor)Flavor_Private) : height; // TIFF planes are after each other in plane 0
+        if (Plane0 && Plane0->Width() == width && Plane0->Height() == Plane0_Height && (!Plane0->Line_SliceCount() || Plane0->Line_SliceCount() == line_slice_count || line_slice_count == 1))
             return;
     }
 
@@ -133,7 +134,7 @@ void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height,
         case 1: // JPEG2000-RCT --> RGB
                 if (tiff::PixelsPerBlock((tiff::flavor)Flavor_Private) == 1)
                     line_slice_count = 0;
-                Planes_.push_back(new plane(width, height, tiff::BytesPerBlock((tiff::flavor)Flavor_Private) * 8, tiff::PixelsPerBlock((tiff::flavor)Flavor_Private), 0, 0, 8, line_slice_count)); // Lines begin on a byte boundary, 1-byte slots
+                Planes_.push_back(new plane(width, height * tiff::PlaneCount((tiff::flavor)Flavor_Private), tiff::BytesPerBlock((tiff::flavor)Flavor_Private) * 8, tiff::PixelsPerBlock((tiff::flavor)Flavor_Private), 0, 0, 8, line_slice_count)); // Lines begin on a byte boundary, 1-byte slots, lines of the planes after each other if planar
         default: ;
     }
 }

@@ -46,11 +46,29 @@ public:
         Raw_Y_12_U,
         Raw_Y_10_U,
         Raw_RGB_10_U,
+        Raw_Y_14_U,
+        Raw_RGB_14_U,
+        Raw_Y_2_U,
+        Raw_Y_4_U,
+        Raw_Y_6_U,
+        Raw_RGB_2_U,
+        Raw_RGB_4_U,
+        Raw_RGB_6_U,
+        Raw_RGB_8_U_Planar,
+        Raw_RGB_16_U_LE_Planar,
+        Raw_RGB_16_U_BE_Planar,
+        Raw_RGB_10_U_Planar,
+        Raw_RGB_12_U_Planar,
+        Raw_RGB_14_U_Planar,
+        Raw_RGB_2_U_Planar,
+        Raw_RGB_4_U_Planar,
+        Raw_RGB_6_U_Planar,
     ENUM_END(flavor)
 
     // Info about flavors
-    static size_t               BytesPerBlock(flavor Flavor);
+    static size_t               BytesPerBlock(flavor Flavor); // Of a line of a plane if planar
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
+    static size_t               PlaneCount(flavor Flavor); // Planes after each other, 1 if not planar
 
 private:
     void                        ParseBuffer();

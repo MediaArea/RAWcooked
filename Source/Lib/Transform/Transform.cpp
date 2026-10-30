@@ -1309,7 +1309,7 @@ SAMEAS(passthrough, tiff_Raw_Y_16_U_BE     , dpx_Raw_Y_16_BE)
 //---------------------------------------------------------------------------
 // Packed samples: 12-bit RGB or Y (2 pixels in 9 or 3 bytes), 10-bit RGB or Y (4 pixels in 15 or 5 bytes), samples packed from the MSB, lines begin on a byte boundary
 // A pixel may begin inside a byte, the byte is written by the slice beginning in it, the slice before it puts its part in its slot,
-// merged by transform_tiff_packed_Finalize() when all slices are decoded
+// merged by transform_tiff_packed_Finalize() when all slices are decoded (lines of all planes if planar)
 static void transform_tiff_packed_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
 {
     const auto& Plane = RawFrame->Plane(0);
@@ -1627,6 +1627,172 @@ private:
         Pack_Bits(Dest, Bits, Bits_Count, b, 10);
     }
 };
+
+//---------------------------------------------------------------------------
+// Other flavors: samples of a line computed first, then written packed from the MSB with any bit depth (or 16-bit little endian),
+// with the components of a pixel after each other or in planes after each other (lines of all planes in the plane of the raw frame)
+class transform_tiff_generic : public transform_base
+{
+public:
+    transform_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t Components, size_t Bits, bool Planar, bool LE) :
+        w(w),
+        Components_(Components),
+        Bits_(Bits),
+        LE_(LE),
+        Lines_(Planar ? Components : 1)
+    {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_tiff_packed_Finalize;
+
+        const auto& Plane = RawFrame->Plane(0);
+        const auto BitsPerPixel = Plane->BitsPerBlock() / Plane->PixelsPerBlock(); // Of a line
+        const auto Height = Plane->Height() / Lines_;
+        NextLine_Offset = Plane->BitsPerLine() / 8;
+        Begin_Bits = x_offset * BitsPerPixel % 8;
+        auto x_End = x_offset + w;
+        auto HasSlot = x_End * BitsPerPixel % 8 && x_End < Plane->Width();
+        Slot_Offset = Plane->Line_SliceCount();
+        for (size_t l = 0; l < Lines_; l++)
+        {
+            FrameBuffer[l] = Plane->Buffer().Data() + (l * Height + y_offset) * NextLine_Offset + x_offset * BitsPerPixel / 8;
+            Slot[l] = HasSlot ? transform_Slot(Plane, x_offset, l * Height + y_offset, 1) : nullptr;
+        }
+        Samples.resize(Components_ * w);
+    }
+
+    void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t* a)
+    {
+        Get(y, u, v, a);
+        if (Lines_ == 1)
+            Write(0, Samples.data(), Components_);
+        else
+            for (size_t l = 0; l < Lines_; l++)
+                Write(l, Samples.data() + l * w, 1);
+    }
+
+protected:
+    // Sample of component c of pixel x in Samples[c * w + x]
+    virtual void Get(const pixel_t* y, const pixel_t* u, const pixel_t* v, const pixel_t* a) = 0;
+
+    vector<uint32_t> Samples;
+    size_t      w;
+
+private:
+    // Count components of a pixel after each other, component c of pixel x in Src[c * w + x]
+    void Write(size_t l, const uint32_t* Src, size_t Count)
+    {
+        auto Dest = FrameBuffer[l];
+        if (LE_)
+        {
+            for (size_t x = 0; x < w; x++)
+                for (size_t c = 0; c < Count; c++)
+                {
+                    auto Value = Src[c * w + x];
+                    *(Dest++) = (uint8_t)Value;
+                    *(Dest++) = (uint8_t)(Value >> 8);
+                }
+        }
+        else
+        {
+            uint32_t Value = 0; // High bits of the first byte are 0 here, from the slice before
+            size_t Value_Count = Begin_Bits;
+            for (size_t x = 0; x < w; x++)
+                for (size_t c = 0; c < Count; c++)
+                    Pack_Bits(Dest, Value, Value_Count, Src[c * w + x], Bits_);
+            if (Value_Count)
+            {
+                // Byte with the end of the last pixel in its high bits
+                if (Slot[l])
+                {
+                    *Slot[l] = (uint8_t)(Value << (8 - Value_Count));
+                    Slot[l] += Slot_Offset;
+                }
+                else
+                    *Dest = (uint8_t)(Value << (8 - Value_Count)); // End of line, the low bits are padding
+            }
+        }
+        FrameBuffer[l] += NextLine_Offset;
+    }
+
+    static const size_t Lines_Max = 3;
+    size_t      Components_;
+    size_t      Bits_;
+    bool        LE_;
+    size_t      Lines_;
+    uint8_t*    FrameBuffer[Lines_Max];
+    uint8_t*    Slot[Lines_Max];
+    size_t      Slot_Offset;
+    size_t      NextLine_Offset;
+    size_t      Begin_Bits; // High bits of the first byte, from the slice before
+};
+
+// From JPEG2000-RCT with Coded bits, samples with Bits bits (less bits are from samples scaled to 8 bits)
+// 1 component is gray coded as RGB (e.g. from FFmpeg palette)
+template<size_t Coded, size_t Bits, size_t Components, bool Planar = false, bool LE = false>
+class transform_jpeg2000rct_tiff_generic : public transform_tiff_generic
+{
+public:
+    transform_jpeg2000rct_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t) :
+        transform_tiff_generic(RawFrame, x_offset, y_offset, w, Components, Bits, Planar, LE) {};
+
+private:
+    void Get(const pixel_t* y, const pixel_t* u, const pixel_t* v, const pixel_t* a)
+    {
+        const size_t Shift = Coded - Bits;
+        const bool Inverted = Coded > 8 && Coded < 16; // Exception indicated in specs, g and b are inverted if 9-15 bits
+        auto S = Samples.data();
+        for (size_t x = 0; x < w; x++)
+        {
+            JPEG2000RCT(((pixel_t)1) << Coded);
+            if (Inverted)
+                swap(g, b);
+            if (Components == 1)
+            {
+                S[x] = (uint32_t)g >> Shift;
+                continue;
+            }
+            S[x] = (uint32_t)r >> Shift;
+            S[w + x] = (uint32_t)g >> Shift;
+            S[2 * w + x] = (uint32_t)b >> Shift;
+        }
+    }
+};
+
+// From Y with Coded bits, samples with Bits bits (less bits are from samples scaled to 8 bits)
+template<size_t Coded, size_t Bits>
+class transform_passthrough_tiff_generic : public transform_tiff_generic
+{
+public:
+    transform_passthrough_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t) :
+        transform_tiff_generic(RawFrame, x_offset, y_offset, w, 1, Bits, false, false) {};
+
+private:
+    void Get(const pixel_t* y, const pixel_t*, const pixel_t*, const pixel_t*)
+    {
+        const size_t Shift = Coded - Bits;
+        auto S = Samples.data();
+        for (size_t x = 0; x < w; x++)
+            S[x] = (uint32_t)y[x] >> Shift;
+    }
+};
+
+#define transform_passthrough_tiff_Raw_Y_14_U               transform_passthrough_tiff_generic<14, 14>
+#define transform_passthrough_tiff_Raw_Y_6_U                transform_passthrough_tiff_generic< 8,  6>
+#define transform_jpeg2000rct_tiff_Raw_Y_2_U                transform_jpeg2000rct_tiff_generic< 8,  2, 1>
+#define transform_jpeg2000rct_tiff_Raw_Y_4_U                transform_jpeg2000rct_tiff_generic< 8,  4, 1>
+#define transform_jpeg2000rct_tiff_Raw_RGB_14_U             transform_jpeg2000rct_tiff_generic<14, 14, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_2_U              transform_jpeg2000rct_tiff_generic< 8,  2, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_4_U              transform_jpeg2000rct_tiff_generic< 8,  4, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_6_U              transform_jpeg2000rct_tiff_generic< 8,  6, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_8_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  8, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_16_U_LE_Planar   transform_jpeg2000rct_tiff_generic<16, 16, 3, true, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_16_U_BE_Planar   transform_jpeg2000rct_tiff_generic<16, 16, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_10_U_Planar      transform_jpeg2000rct_tiff_generic<10, 10, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_12_U_Planar      transform_jpeg2000rct_tiff_generic<12, 12, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_14_U_Planar      transform_jpeg2000rct_tiff_generic<14, 14, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_2_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  2, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_4_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  4, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_6_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  6, 3, true>
 
 //***************************************************************************
 // EXR
@@ -1987,6 +2153,21 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGBA_16_U_LE)
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_12_U)
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_10_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_Y_2_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_Y_4_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_14_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_2_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_4_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_6_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_8_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_16_U_LE_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_16_U_BE_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_10_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_12_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_14_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_2_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_4_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_6_U_Planar)
         TRANSFORM_FLAVOR_END()
         TRANSFORM_FLAVOR_BEGIN(exr, EXR)
             TRANSFORM_CASE(jpeg2000rct, exr, Raw_RGB_16)
@@ -2007,6 +2188,8 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_BE)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_12_U)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_10_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_14_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_6_U)
         TRANSFORM_FLAVOR_END()
         TRANSFORM_FLAVOR_BEGIN(avi, AVI)
             TRANSFORM_CASE(passthrough, avi, v210)
