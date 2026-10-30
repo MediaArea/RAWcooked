@@ -42,6 +42,10 @@ public:
         Raw_Y_8_U,
         Raw_Y_16_U_LE,
         Raw_Y_16_U_BE,
+        Raw_RGB_12_U,
+        Raw_Y_12_U,
+        Raw_Y_10_U,
+        Raw_RGB_10_U,
     ENUM_END(flavor)
 
     // Info about flavors
@@ -68,6 +72,9 @@ private:
         }
     };
     std::set<data_content>      DataContents;
+
+    // Temp
+    buffer                      In;
 };
 
 string TIFF_Flavor_String(uint8_t Flavor);

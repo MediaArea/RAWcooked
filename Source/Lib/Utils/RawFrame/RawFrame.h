@@ -269,7 +269,7 @@ public:
     buffer_or_view              In_;
     void FFmpeg_Create(size_t colorspace_type, size_t width, size_t height, size_t bits_per_raw_sample, bool chroma_planes, bool alpha_plane, size_t h_chroma_subsample, size_t v_chroma_subsample);
     void DPX_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
-    void TIFF_Create(size_t colorspace_type, size_t width, size_t height);
+    void TIFF_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
     void EXR_Create(size_t colorspace_type, size_t width, size_t height);
     void AVI_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count);
     void MergeIn();

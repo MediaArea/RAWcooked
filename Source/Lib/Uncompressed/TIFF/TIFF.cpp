@@ -138,6 +138,7 @@ struct tiff_tested
 
     // Additional info not for comparison
     uint8_t                     BytesPerBlock;
+    uint8_t                     PixelsPerBlock;
 
     bool operator == (const tiff_tested &Value) const
     {
@@ -156,20 +157,28 @@ struct dpx_also
 
 struct tiff_tested TIFF_Tested[] =
 {
-    { colorspace::RGB     ,  8, endianness::LE, 3 }, // 1x3x 8-bit in 3x 8-bit
-    { colorspace::RGB     , 16, endianness::LE, 6 }, // 1x3x16-bit in 3x16-bit
-    { colorspace::RGB     , 16, endianness::BE, 6 }, // 1x3x16-bit in 3x16-bit
-    { colorspace::RGBA    ,  8, endianness::LE, 4 }, // 1x4x 8-bit in 4x 8-bit
-    { colorspace::RGBA    , 16, endianness::LE, 8 }, // 1x4x16-bit in 4x16-bit
-    { colorspace::Y       ,  8, endianness::LE, 1 }, // 1x4x 8-bit in 1x 8-bit
-    { colorspace::Y       , 16, endianness::LE, 2 }, // 1x1x16-bit in 1x16-bit
-    { colorspace::Y       , 16, endianness::BE, 2 }, // 1x1x16-bit in 1x16-bit
+    { colorspace::RGB     ,  8, endianness::LE, 3, 1 }, // 1x3x 8-bit in 3x 8-bit
+    { colorspace::RGB     , 16, endianness::LE, 6, 1 }, // 1x3x16-bit in 3x16-bit
+    { colorspace::RGB     , 16, endianness::BE, 6, 1 }, // 1x3x16-bit in 3x16-bit
+    { colorspace::RGBA    ,  8, endianness::LE, 4, 1 }, // 1x4x 8-bit in 4x 8-bit
+    { colorspace::RGBA    , 16, endianness::LE, 8, 1 }, // 1x4x16-bit in 4x16-bit
+    { colorspace::Y       ,  8, endianness::LE, 1, 1 }, // 1x4x 8-bit in 1x 8-bit
+    { colorspace::Y       , 16, endianness::LE, 2, 1 }, // 1x1x16-bit in 1x16-bit
+    { colorspace::Y       , 16, endianness::BE, 2, 1 }, // 1x1x16-bit in 1x16-bit
+    { colorspace::RGB     , 12, endianness::LE, 9, 2 }, // 2x3x12-bit in 9x 8-bit, packed from the MSB
+    { colorspace::Y       , 12, endianness::LE, 3, 2 }, // 2x1x12-bit in 3x 8-bit, packed from the MSB
+    { colorspace::Y       , 10, endianness::LE, 5, 4 }, // 4x1x10-bit in 5x 8-bit, packed from the MSB
+    { colorspace::RGB     , 10, endianness::LE,15, 4 }, // 4x3x10-bit in 15x 8-bit, packed from the MSB
 };
 static_assert(tiff::flavor_Max == sizeof(TIFF_Tested) / sizeof(tiff_tested), IncoherencyMessage);
 
 struct dpx_also TIFF_Also[] =
 {
     { { colorspace::Y        ,  8, endianness::BE, 1 }, tiff::flavor::Raw_Y_8_U              },
+    { { colorspace::RGB      , 12, endianness::BE, 9 }, tiff::flavor::Raw_RGB_12_U           }, // Packed samples are a bit stream, not byte swapped
+    { { colorspace::Y        , 12, endianness::BE, 3 }, tiff::flavor::Raw_Y_12_U             },
+    { { colorspace::Y        , 10, endianness::BE, 5 }, tiff::flavor::Raw_Y_10_U             },
+    { { colorspace::RGB      , 10, endianness::BE,15 }, tiff::flavor::Raw_RGB_10_U           },
 };
 
 //***************************************************************************
@@ -671,8 +680,9 @@ void tiff::ParseBuffer()
     slice_y = slice_x;
 
     // Computing EndOfImagePadding
-    size_t ContentSize_Multiplier = BytesPerBlock((flavor)Flavor);
-    size_t OffsetAfterImage = StripOffsets[0] + Width * Height * ContentSize_Multiplier;
+    size_t BitsPerLine = Width * BytesPerBlock((flavor)Flavor) * 8 / PixelsPerBlock((flavor)Flavor);
+    size_t BytesPerLine = (BitsPerLine + 7) / 8; // Lines begin on a byte boundary
+    size_t OffsetAfterImage = StripOffsets[0] + BytesPerLine * Height;
     if (OffsetAfterImage != StripOffsets_Last)
         Unsupported(unsupported::StripOffsets_Incoherent);
     size_t EndOfImagePadding;
@@ -692,6 +702,29 @@ void tiff::ParseBuffer()
     if (!HasErrors())
         SetSupported();
 
+    // Testing padding bits (end of lines not on a byte boundary)
+    In.Clear();
+    if (IsSupported() && !Actions[Action_AcceptTruncated] && Actions[Action_CheckPadding] && RAWcooked && BitsPerLine % 8)
+    {
+        auto Data = Buffer.Data() + StripOffsets[0];
+        auto Mask = (uint8_t)(0xFF >> (BitsPerLine % 8));
+        size_t y = 0;
+        for (; y < Height; y++)
+            if (Data[(y + 1) * BytesPerLine - 1] & Mask)
+                break;
+        if (y < Height)
+        {
+            // Non-zero padding bits found, storing them
+            In.Create(BytesPerLine * Height);
+            In.SetZero();
+            for (; y < Height; y++)
+            {
+                auto i = (y + 1) * BytesPerLine - 1;
+                In[i] = Data[i] & Mask;
+            }
+        }
+    }
+
     // Write RAWcooked file
     if (RAWcooked)
     {
@@ -702,6 +735,8 @@ void tiff::ParseBuffer()
             Params.BeforeData_Size = StripOffsets[0];
             Params.AfterData = Buffer.Data() + Buffer.Size() - EndOfImagePadding;
             Params.AfterData_Size = EndOfImagePadding;
+            Params.InData = In.Data();
+            Params.InData_Size = In.Size();
             Params.InputFile_Size = Buffer.Size();
         }
         ParseRAWcooked(Params);
@@ -727,9 +762,9 @@ size_t tiff::BytesPerBlock(tiff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
-size_t tiff::PixelsPerBlock(tiff::flavor /*Flavor*/)
+size_t tiff::PixelsPerBlock(tiff::flavor Flavor)
 {
-    return 1;
+    return TIFF_Tested[(size_t)Flavor].PixelsPerBlock;
 }
 
 //---------------------------------------------------------------------------

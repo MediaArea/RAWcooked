@@ -435,6 +435,29 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
+    if (SingleFile.ParserCode == Parser_TIFF)
+    {
+        bool ForceCheck = false;
+        switch ((tiff::flavor)SingleFile.Flavor)
+        {
+        case tiff::flavor::Raw_RGB_12_U: // TODO: remove when we are confident enough
+        case tiff::flavor::Raw_Y_12_U:
+        case tiff::flavor::Raw_Y_10_U:
+        case tiff::flavor::Raw_RGB_10_U:
+            ForceCheck = true;
+            break;
+        default:;
+        }
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
+        {
+            cerr << "Info: this is a preview release,\n"
+                << "      --check is set in order to verify the reversibility.\n"
+                << endl;
+
+            Global.SetCheck(true);
+        }
+    }
+
     if (SingleFile.ParserCode == Parser_AVI)
     {
         bool ForceCheck = true; // TODO: remove when we are confident enough

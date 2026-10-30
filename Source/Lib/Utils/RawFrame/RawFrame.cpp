@@ -50,7 +50,8 @@ void raw_frame::Create(size_t width, size_t height, size_t info)
         }
         case flavor::TIFF:
         {
-            TIFF_Create(colorspace_type, width, height); 
+            auto line_slice_count       = ((info >> 24) & 0xFF) + 1;
+            TIFF_Create(colorspace_type, width, height, line_slice_count);
             break;
         }
         case flavor::EXR:
@@ -124,13 +125,15 @@ void raw_frame::DPX_Create(size_t colorspace_type, size_t width, size_t height, 
 }
 
 //---------------------------------------------------------------------------
-void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height)
+void raw_frame::TIFF_Create(size_t colorspace_type, size_t width, size_t height, size_t line_slice_count)
 {
     switch (colorspace_type)
     {
         case 0: // YUV
         case 1: // JPEG2000-RCT --> RGB
-                Planes_.push_back(new plane(width, height, tiff::BytesPerBlock((tiff::flavor)Flavor_Private) * 8, tiff::PixelsPerBlock((tiff::flavor)Flavor_Private)));
+                if (tiff::PixelsPerBlock((tiff::flavor)Flavor_Private) == 1)
+                    line_slice_count = 0;
+                Planes_.push_back(new plane(width, height, tiff::BytesPerBlock((tiff::flavor)Flavor_Private) * 8, tiff::PixelsPerBlock((tiff::flavor)Flavor_Private), 0, 0, 8, line_slice_count)); // Lines begin on a byte boundary, 1-byte slots
         default: ;
     }
 }

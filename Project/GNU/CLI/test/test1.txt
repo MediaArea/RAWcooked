@@ -237,9 +237,9 @@ Formats/TIFF/Flavors/Raw_RGB_8_U/flower-palette-08.tif fail
 Formats/TIFF/Flavors/Raw_RGB_8_U/flower-rgb-contig-08.tif fail
 Formats/TIFF/Flavors/Raw_RGB_8_U/flower-rgb-planar-08.tif fail
 Formats/TIFF/Flavors/Raw_RGB_8_U/testsrc_Raw_RGB_8.tiff pass
-Formats/TIFF/Flavors/Raw_RGB_10_U/flower-rgb-contig-10.tif fail
+Formats/TIFF/Flavors/Raw_RGB_10_U/flower-rgb-contig-10.tif pass
 Formats/TIFF/Flavors/Raw_RGB_10_U/flower-rgb-planar-10.tif fail
-Formats/TIFF/Flavors/Raw_RGB_12_U/flower-rgb-contig-12.tif fail
+Formats/TIFF/Flavors/Raw_RGB_12_U/flower-rgb-contig-12.tif pass
 Formats/TIFF/Flavors/Raw_RGB_12_U/flower-rgb-planar-12.tif fail
 Formats/TIFF/Flavors/Raw_RGB_14_U/flower-rgb-contig-14.tif fail
 Formats/TIFF/Flavors/Raw_RGB_14_U/flower-rgb-planar-14.tif fail
@@ -256,8 +256,8 @@ Formats/TIFF/Flavors/Raw_Y_4_U/flower-minisblack-04.tif fail
 Formats/TIFF/Flavors/Raw_Y_6_U/flower-minisblack-06.tif fail
 Formats/TIFF/Flavors/Raw_Y_8_U/flower-minisblack-08.tif pass
 Formats/TIFF/Flavors/Raw_Y_8_U/Raw_Y_8_U_LE.tif pass
-Formats/TIFF/Flavors/Raw_Y_10_U/flower-minisblack-10.tif fail
-Formats/TIFF/Flavors/Raw_Y_12_U/flower-minisblack-12.tif fail
+Formats/TIFF/Flavors/Raw_Y_10_U/flower-minisblack-10.tif pass
+Formats/TIFF/Flavors/Raw_Y_12_U/flower-minisblack-12.tif pass
 Formats/TIFF/Flavors/Raw_Y_14_U/flower-minisblack-14.tif fail
 Formats/TIFF/Flavors/Raw_Y_16_U_BE/flower-minisblack-16.tif pass
 Formats/TIFF/Flavors/Raw_Y_16_U_LE/flower-minisblack-16-converted-LE.tif pass
