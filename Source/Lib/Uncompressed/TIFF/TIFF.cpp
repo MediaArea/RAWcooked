@@ -438,6 +438,7 @@ void tiff::ParseBuffer()
     bool     BitsPerSample_IsPresent = false;
     uint32_t PhotometricInterpretation;
     bool     PhotometricInterpretation_IsPresent = false;
+    uint32_t Compression;
     bool     Compression_IsPresent = false;
     uint32_t FillOrder = 1;
     vector<uint32_t> StripOffsets;
@@ -459,7 +460,7 @@ void tiff::ParseBuffer()
             CASE_3 (e::ImageHeight                  , Height, Height_IsPresent);
             CASE_3 (e::BitsPerSample                , BitsPerSample, BitsPerSample_IsPresent);
             CASE_3 (e::PhotometricInterpretation    , PhotometricInterpretation, PhotometricInterpretation_IsPresent);
-            CASE_P (e::Compression                  , Compression_IsPresent);
+            CASE_3 (e::Compression                  , Compression, Compression_IsPresent);
             CASE_2 (e::FillOrder                    , FillOrder);
             CASE_V (e::StripOffsets                 , StripOffsets);
             CASE_2 (e::Orientation                  , Orientation);
@@ -551,7 +552,7 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::BitsPerSample);
     if (!PhotometricInterpretation_IsPresent)
         Unsupported(unsupported::PhotometricInterpretation);
-    if (!Compression_IsPresent)
+    if (!Compression_IsPresent || Compression != 1)
         Unsupported(unsupported::Compression);
     if (FillOrder != 1)
         Unsupported(unsupported::FillOrder);
