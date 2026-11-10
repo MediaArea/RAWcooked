@@ -261,7 +261,14 @@ namespace e
         YCbCrSubSampling = 530,
         YCbCrPositioning = 531,
         ReferenceBlackWhite = 532,
+        XMP = 700,
         Copyright = 33432,
+        IPTC = 33723,
+        Photoshop = 34377,
+        ExifIFD = 34665,
+        ICCProfile = 34675,
+        GPSIFD = 34853,
+        PrintIM = 50341,
     };
 };
 
@@ -349,7 +356,7 @@ uint32_t tiff::Get_Element(std::vector<uint32_t>* List)
     if (!Count)
     {
         Undecodable(undecodable::IfdTagCount);
-        Buffer_Offset += 8;
+        Buffer_Offset += 4;
         return 0;
     }
 
@@ -504,8 +511,23 @@ void tiff::ParseBuffer()
             case    e::YCbCrSubSampling             :
             case    e::YCbCrPositioning             :
             case    e::ReferenceBlackWhite          :
+            case    e::XMP                          :
             case    e::Copyright                    :
+            case    e::IPTC                         :
+            case    e::Photoshop                    :
+            case    e::ExifIFD                      :
+            case    e::GPSIFD                       :
+            case    e::PrintIM                      :
                                                         Buffer_Offset += 10;
+                                                        break;
+            case    e::ICCProfile                   :
+                                                        {
+                                                        Buffer_Offset += 2; // Type
+                                                        uint32_t Count = Get_X4();
+                                                        uint32_t Offset = Get_X4();
+                                                        if (Count > 4 && (Offset > Buffer.Size() || Count > Buffer.Size() - Offset))
+                                                            Undecodable(undecodable::BufferOverflow); // FFmpeg rejects a profile outside the file
+                                                        }
                                                         break;
             case    e::FreeOffsets                  :
             case    e::FreeByteCounts               :
@@ -531,9 +553,11 @@ void tiff::ParseBuffer()
             case    e::JPEGQTables                  :
             case    e::JPEGDCTTables                :
             case    e::JPEGACTTables                :
+                                                        Buffer_Offset += 10;
                                                         UnsupportedKnownIFD = true;
                                                         break;
             default:
+                                                        Buffer_Offset += 10;
                                                         UnsupportedUnknownIFD = true;
                                                         break;
         }
@@ -631,6 +655,8 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
+    if (Flavor == (decltype(Flavor))-1 || StripOffsets.empty() || StripOffsets.size() != StripBytesCounts.size())
+        return; // Not reported as unsupported if not encoding (e.g. --info)
 
     // StripOffsets / StripBytesCounts / RowsPerStrip
     uint32_t StripOffsets_Last = StripOffsets[0] + StripBytesCounts[0];
