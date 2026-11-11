@@ -126,7 +126,12 @@ jobs:
       - name: Vulkan
         run: |
           # Vulkan loader and vulkaninfo, next to rawcooked (also the loader next to ffmpeg)
-          curl -fsSL -o VulkanRT.zip "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip?u="
+          # From the most recent SDK version with runtime components, some SDK updates have none
+          for Version in $(curl -fsSL https://vulkan.lunarg.com/sdk/versions/windows.json | tr -d '[]" ' | tr ',' ' ') ; do
+            curl -fsSL -o VulkanRT.zip "https://sdk.lunarg.com/sdk/download/${Version}/windows/vulkan-runtime-components.zip?u=" && break
+            rm -f VulkanRT.zip
+          done
+          echo "Vulkan runtime: ${Version}"
           7z x -y -oVulkanRT VulkanRT.zip > /dev/null
           for File in vulkan-1.dll vulkaninfo.exe ; do
             Path=$(find VulkanRT -ipath "*x64*/${File}" -print -quit)
