@@ -81,6 +81,7 @@ static const char* MessageText[] =
     "Compression",
     "RowsPerStrip",
     "RowsPerStrip / StripBytesCounts coherency",
+    "missing RowsPerStrip",
 };
 
 enum code : uint8_t
@@ -111,6 +112,7 @@ enum code : uint8_t
     Compression,
     RowsPerStrip,
     RowsPerStrip_StripBytesCounts,
+    RowsPerStrip_Missing,
     Max
 };
 
@@ -502,6 +504,7 @@ void tiff::ParseBuffer()
     uint32_t Orientation = 1;
     uint32_t SamplesPerPixel = 1;
     uint32_t RowsPerStrip = (uint32_t)-1; // Default is 2^32-1, one strip
+    bool     RowsPerStrip_IsPresent = false;
     vector<uint32_t> StripBytesCounts;
     uint32_t PlanarConfiguration = 1;
     uint32_t ExtraSamples;
@@ -531,6 +534,7 @@ void tiff::ParseBuffer()
                                                         {
                                                         auto Type = Get_X2();
                                                         auto Count = Get_X4();
+                                                        RowsPerStrip_IsPresent = true;
                                                         if (Count == 1 && (Type == Byte || Type == Short || Type == Long))
                                                         {
                                                             RowsPerStrip = Get_ElementValue(Count, TagType_Size[Type], nullptr);
@@ -652,6 +656,11 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::Orientation);
     if (!RowsPerStrip)
         Unsupported(unsupported::RowsPerStrip);
+    // Without RowsPerStrip, FFmpeg uses the one strip default only if there is one strip (< 6.0) or one strip per sample (6.0+),
+    // else it keeps the RowsPerStrip of the previous frame and may decode the file wrong without error,
+    // so chunky files fail with FFmpeg 6.0+ and planar files with older versions
+    if (!RowsPerStrip_IsPresent && SamplesPerPixel != 1)
+        Unsupported(unsupported::RowsPerStrip_Missing);
     if (StripBytesCounts.empty())
         Unsupported(unsupported::StripBytesCounts_Empty);
     if (StripOffsets.size() != StripBytesCounts.size())
