@@ -115,6 +115,17 @@ pushd "${files_path}" >/dev/null 2>&1
     run_rawcooked -n --check "${file}"
     check_failure "check failed on unsupported file names e.g. 09 and 9 in the list" "check succeded on unsupported file names e.g. 09 and 9 in the list"
 
+    file=sequence7
+    mkdir -p "${file}/d1" "${file}/d2"
+    ffmpeg -nostdin -f lavfi -i testsrc=size=16x16 -frames:v 1 -update 1 "${file}/d1/x.dpx" >/dev/null 2>&1|| fatal "internal" "ffmpeg command failed"
+    cp "${file}/d1/x.dpx" "${file}/d2/x.dpx"
+    run_rawcooked --file -d "${file}/d1/x.dpx"
+    check_success "single file with digits only in the folder name rejected" "single file with digits only in the folder name accepted"
+    if ! contains " -i \"${file}/d1/x.dpx\" " "${cmd_stdout}" ; then
+        echo "NOK: ${test}/${file}, digits in the folder name used as frame number: ${cmd_stdout}" >&${fd}
+        status=1
+    fi
+
     clean
 popd >/dev/null 2>&1
 

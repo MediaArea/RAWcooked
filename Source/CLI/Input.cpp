@@ -185,20 +185,24 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<F
     string After;
     string Before;
 
+    // Only digits in the file name part are a frame number, not digits in the folder names
+    size_t Name_Pos = FN.find_last_of("/\\") + 1; // 0 if no folder
     size_t After_Pos = FN.find_last_of("0123456789");
-    if (After_Pos != (size_t)-1)
+    if (After_Pos == (size_t)-1 || After_Pos < Name_Pos)
+        FN.clear(); // No frame number, single file
+    else
     {
         After = FN.substr(After_Pos + 1);
         FN.resize(After_Pos + 1);
-    }
 
-    size_t Before_Pos = FN.find_last_not_of("0123456789");
-    if (Before_Pos + 9 < After_Pos)
-        Before_Pos = After_Pos - 9;
-    if (Before_Pos != (size_t)-1)
-    {
-        Before = FN.substr(0, Before_Pos + 1);
-        FN.erase(0, Before_Pos + 1);
+        size_t Before_Pos = FN.find_last_not_of("0123456789");
+        if (Before_Pos + 9 < After_Pos)
+            Before_Pos = After_Pos - 9;
+        if (Before_Pos != (size_t)-1)
+        {
+            Before = FN.substr(0, Before_Pos + 1);
+            FN.erase(0, Before_Pos + 1);
+        }
     }
 
     size_t AllFiles_PosToDelete = AllFiles_Pos + 1;
