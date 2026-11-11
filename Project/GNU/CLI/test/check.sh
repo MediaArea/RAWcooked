@@ -97,6 +97,12 @@ pushd "${files_path}" >/dev/null 2>&1
     run_rawcooked -y -level 3 -slices 4 "${directory}"
     check_success "options rejected" "options accepted"
 
+    # check after encoding of a file with a directory in its name
+    run_rawcooked -y --check --file "${directory}/sd.dpx"
+    check_success "test failed on file with relative path" "test succeeded on file with relative path"
+    run_rawcooked -y --check --file "${files_path}/${directory}/sd.dpx"
+    check_success "test failed on file with absolute path" "test succeeded on file with absolute path"
+
     rm -r "${directory}"|| fatal "internal" "rm command failed"
 
     mkdir "${directory}"|| fatal "internal" "mkdir command failed"
