@@ -60,7 +60,11 @@ int global::SetBinName(const char* FileName)
 {
     // FFmpeg binary, or libavcodec library for the FFmpeg decoders
     if (!FFmpeg_Library_SetPath(FileName))
+    {
         BinName = FileName;
+        if (BinName.find_first_of(" \t") != string::npos && BinName.front() != '\"')
+            BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary
+    }
     return 0;
 }
 
