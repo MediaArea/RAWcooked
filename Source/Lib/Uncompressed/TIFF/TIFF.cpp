@@ -79,6 +79,9 @@ static const char* MessageText[] =
     "flavor (PhotometricInterpretation / SamplesPerPixel / BitsPerSample / Endianness combination)",
     "pixels in slice not on a 32-bit boundary",
     "Compression",
+    "RowsPerStrip",
+    "RowsPerStrip / StripBytesCounts coherency",
+    "missing RowsPerStrip",
 };
 
 enum code : uint8_t
@@ -107,6 +110,9 @@ enum code : uint8_t
     Flavor,
     PixelBoundaries,
     Compression,
+    RowsPerStrip,
+    RowsPerStrip_StripBytesCounts,
+    RowsPerStrip_Missing,
     Max
 };
 
@@ -497,6 +503,8 @@ void tiff::ParseBuffer()
     vector<uint32_t> StripOffsets;
     uint32_t Orientation = 1;
     uint32_t SamplesPerPixel = 1;
+    uint32_t RowsPerStrip = (uint32_t)-1; // Default is 2^32-1, one strip
+    bool     RowsPerStrip_IsPresent = false;
     vector<uint32_t> StripBytesCounts;
     uint32_t PlanarConfiguration = 1;
     uint32_t ExtraSamples;
@@ -523,6 +531,22 @@ void tiff::ParseBuffer()
             CASE_3 (e::ExtraSamples                 , ExtraSamples, ExtraSamples_IsPresent);
             CASE_2 (e::SampleFormat                 , SampleFormat);
             case    e::RowsPerStrip                 :
+                                                        {
+                                                        auto Type = Get_X2();
+                                                        auto Count = Get_X4();
+                                                        RowsPerStrip_IsPresent = true;
+                                                        if (Count == 1 && (Type == Byte || Type == Short || Type == Long))
+                                                        {
+                                                            RowsPerStrip = Get_ElementValue(Count, TagType_Size[Type], nullptr);
+                                                            Buffer_Offset += 4 - TagType_Size[Type];
+                                                        }
+                                                        else
+                                                        {
+                                                            RowsPerStrip = 0; // Other forms are read differently by FFmpeg
+                                                            Buffer_Offset += 4;
+                                                        }
+                                                        }
+                                                        break;
             case    e::Threshholding                :
             case    e::CellWidth                    :
             case    e::CellLength                   :
@@ -630,6 +654,13 @@ void tiff::ParseBuffer()
         Unsupported(unsupported::StripOffsets_Empty);
     if (Orientation != 1)
         Unsupported(unsupported::Orientation);
+    if (!RowsPerStrip)
+        Unsupported(unsupported::RowsPerStrip);
+    // Without RowsPerStrip, FFmpeg uses the one strip default only if there is one strip (< 6.0) or one strip per sample (6.0+),
+    // else it keeps the RowsPerStrip of the previous frame and may decode the file wrong without error,
+    // so chunky files fail with FFmpeg 6.0+ and planar files with older versions
+    if (!RowsPerStrip_IsPresent && SamplesPerPixel != 1)
+        Unsupported(unsupported::RowsPerStrip_Missing);
     if (StripBytesCounts.empty())
         Unsupported(unsupported::StripBytesCounts_Empty);
     if (StripOffsets.size() != StripBytesCounts.size())
@@ -714,6 +745,30 @@ void tiff::ParseBuffer()
             Unsupported(unsupported::StripOffsets_NonContinuous);
         StripOffsets_Last += StripBytesCounts[i];
     }
+
+    // FFmpeg reads RowsPerStrip lines from each strip of a plane and the remaining lines from the last one
+    uint32_t StripHeight = RowsPerStrip < Height ? RowsPerStrip : Height;
+    if (StripHeight)
+    {
+        size_t Planes = PlaneCount((flavor)Flavor);
+        size_t StripsPerPlane = (Height - 1) / StripHeight + 1;
+        uint64_t BytesPerLine = ((uint64_t)Width * BytesPerBlock((flavor)Flavor) * 8 / PixelsPerBlock((flavor)Flavor) + 7) / 8; // Line of a plane, on a byte boundary
+        uint64_t StripSize = StripHeight * BytesPerLine;
+        uint64_t LastStripSize = (Height - (StripsPerPlane - 1) * StripHeight) * BytesPerLine;
+        if (StripBytesCount_Size != StripsPerPlane * Planes)
+            Unsupported(unsupported::RowsPerStrip_StripBytesCounts);
+        else
+        {
+            for (size_t i = 0; i < StripBytesCount_Size; i++)
+                if (StripBytesCounts[i] != ((i + 1) % StripsPerPlane ? StripSize : LastStripSize))
+                {
+                    Unsupported(unsupported::RowsPerStrip_StripBytesCounts);
+                    break;
+                }
+        }
+    }
+    else
+        Unsupported(unsupported::RowsPerStrip_StripBytesCounts);
 
     // Slices count
     // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
