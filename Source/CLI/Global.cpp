@@ -112,8 +112,22 @@ bool global::CheckFFmpeg(bool IsCompressed)
         string Error;
         if (!FFmpeg_Library_Load(&Error))
         {
-            FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
-            return false;
+            if (IsCompressed)
+            {
+                FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
+                return false;
+            }
+
+            // Check after encoding: our decoder instead of the FFmpeg decoders, the FFmpeg binary may be available without the FFmpeg libraries
+            Actions.reset(Action_FFmpegDecoder);
+            Actions.reset(Action_VulkanDecoder);
+            Actions.set(Action_InternalDecoder);
+            if (!Quiet)
+            {
+                ProgressIndicator_Stop();
+                cerr << "Info: decoder value '" << Decoder_Value << "' is not available (" << Error << "),\n"
+                        "      internal decoder is used for the check after encoding.\n" << endl;
+            }
         }
 
         // Vulkan device of a vulkan decoder not available (known when the decoder creates the device)
