@@ -1306,6 +1306,494 @@ SAMEAS(passthrough, tiff_Raw_Y_8_U         , dpx_Raw_Y_8)
 SAMEAS(passthrough, tiff_Raw_Y_16_U_LE     , dpx_Raw_Y_16_LE)
 SAMEAS(passthrough, tiff_Raw_Y_16_U_BE     , dpx_Raw_Y_16_BE)
 
+//---------------------------------------------------------------------------
+// Packed samples: 12-bit RGB or Y (2 pixels in 9 or 3 bytes), 10-bit RGB or Y (4 pixels in 15 or 5 bytes), samples packed from the MSB, lines begin on a byte boundary
+// A pixel may begin inside a byte, the byte is written by the slice beginning in it, the slice before it puts its part in its slot,
+// merged by transform_tiff_packed_Finalize() when all slices are decoded (lines of all planes if planar)
+static void transform_tiff_packed_Finalize(raw_frame* RawFrame, size_t num_h_slices, size_t /*num_v_slices*/)
+{
+    const auto& Plane = RawFrame->Plane(0);
+    auto Slots = Plane->Buffer_Extra().Data();
+    if (!Slots)
+        return;
+
+    const auto Width = Plane->Width();
+    const auto Height = Plane->Height();
+    const auto Line_SliceCount = Plane->Line_SliceCount();
+    const auto LineSize = Plane->BitsPerLine() / 8;
+    const auto BitsPerPixel = Plane->BitsPerBlock() / Plane->PixelsPerBlock();
+
+    // Slices ending inside a byte
+    vector<size_t> Slices_x;
+    for (size_t slice_x = 0; slice_x < num_h_slices - 1; slice_x++)
+        if (((slice_x + 1) * Width / num_h_slices) * BitsPerPixel % 8)
+            Slices_x.push_back(slice_x);
+    if (Slices_x.empty())
+        return;
+
+    auto FrameBuffer = Plane->Buffer().Data();
+    for (size_t y = 0; y < Height; y++)
+    {
+        for (const auto slice_x : Slices_x)
+        {
+            auto x2 = (slice_x + 1) * Width / num_h_slices;
+            FrameBuffer[x2 * BitsPerPixel / 8] |= Slots[slice_x];
+        }
+        FrameBuffer += LineSize;
+        Slots += Line_SliceCount;
+    }
+}
+
+// 2 pixels
+static inline void Pack_12_RGB(uint8_t* Dest, uint32_t r0, uint32_t g0, uint32_t b0, uint32_t r1, uint32_t g1, uint32_t b1)
+{
+    auto Value = htob((uint64_t)
+        ( ((uint64_t)(r0 & 0xFFF) << 52)
+        | ((uint64_t)(g0 & 0xFFF) << 40)
+        | ((uint64_t)(b0 & 0xFFF) << 28)
+        | ((uint64_t)(r1 & 0xFFF) << 16)
+        | ((uint64_t)(g1 & 0xFFF) <<  4)
+        | ((uint64_t)(b1 & 0xFFF) >>  8)));
+    memcpy(Dest, &Value, 8);
+    Dest[8] = (uint8_t)b1;
+}
+
+// 1 pixel at an even x, returns the last byte (its low half is not from this pixel)
+static inline uint8_t Pack_12_RGB_First(uint8_t* Dest, uint32_t r, uint32_t g, uint32_t b)
+{
+    r &= 0xFFF;
+    g &= 0xFFF;
+    b &= 0xFFF;
+    Dest[0] = (uint8_t)(r >> 4);
+    Dest[1] = (uint8_t)((r << 4) | (g >> 8));
+    Dest[2] = (uint8_t)g;
+    Dest[3] = (uint8_t)(b >> 4);
+    return (uint8_t)(b << 4);
+}
+
+// 1 pixel at an odd x, the high half of the first byte is not from this pixel
+static inline void Pack_12_RGB_Second(uint8_t* Dest, uint32_t r, uint32_t g, uint32_t b)
+{
+    r &= 0xFFF;
+    g &= 0xFFF;
+    b &= 0xFFF;
+    Dest[0] = (uint8_t)(r >> 8);
+    Dest[1] = (uint8_t)r;
+    Dest[2] = (uint8_t)(g >> 4);
+    Dest[3] = (uint8_t)((g << 4) | (b >> 8));
+    Dest[4] = (uint8_t)b;
+}
+
+// 2 pixels of 10-bit RGB in the low 60 bits
+static inline uint64_t Bits_10_RGB(uint32_t r0, uint32_t g0, uint32_t b0, uint32_t r1, uint32_t g1, uint32_t b1)
+{
+    return ((uint64_t)(r0 & 0x3FF) << 50)
+         | ((uint64_t)(g0 & 0x3FF) << 40)
+         | ((uint64_t)(b0 & 0x3FF) << 30)
+         | ((uint64_t)(r1 & 0x3FF) << 20)
+         | ((uint64_t)(g1 & 0x3FF) << 10)
+         |  (uint64_t)(b1 & 0x3FF);
+}
+
+// 4 pixels of 10-bit RGB in 15 bytes
+static inline void Pack_10_RGB(uint8_t* Dest, uint64_t Bits01, uint64_t Bits23)
+{
+    auto Value = htob((Bits01 << 4) | (Bits23 >> 56));
+    memcpy(Dest, &Value, 8);
+    Value = htob(Bits23 << 8);
+    memcpy(Dest + 8, &Value, 7);
+}
+
+// 1 sample, writes the complete bytes
+static inline void Pack_Bits(uint8_t*& Dest, uint32_t& Bits, size_t& Bits_Count, uint32_t Value, size_t Value_Bits)
+{
+    Bits = (Bits << Value_Bits) | (Value & ((1 << Value_Bits) - 1));
+    Bits_Count += Value_Bits;
+    while (Bits_Count >= 8)
+    {
+        Bits_Count -= 8;
+        *(Dest++) = (uint8_t)(Bits >> Bits_Count);
+    }
+}
+
+// JPEG2000-RCT to RGB, 10-bit or 12-bit
+template<int Bits>
+static inline void RCT_Packed(const pixel_t* y, const pixel_t* u, const pixel_t* v, size_t x, uint32_t& R, uint32_t& G, uint32_t& B)
+{
+    JPEG2000RCT(((pixel_t)1) << Bits);
+    R = (uint32_t)r;
+    G = (uint32_t)b; // Exception indicated in specs, g and b are inverted
+    B = (uint32_t)g;
+}
+
+class transform_tiff_packed : public transform_base
+{
+public:
+    transform_tiff_packed(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t) :
+        w(w)
+    {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_tiff_packed_Finalize;
+
+        const auto& Plane = RawFrame->Plane(0);
+        const auto BitsPerPixel = Plane->BitsPerBlock() / Plane->PixelsPerBlock();
+        NextLine_Offset = Plane->BitsPerLine() / 8;
+        FrameBuffer = Plane->Buffer().Data() + y_offset * NextLine_Offset + x_offset * BitsPerPixel / 8;
+        Begin_Bits = x_offset * BitsPerPixel % 8;
+        auto x_End = x_offset + w;
+        if (x_End * BitsPerPixel % 8 && x_End < Plane->Width())
+        {
+            Slot = transform_Slot(Plane, x_offset, y_offset, 1);
+            Slot_Offset = Plane->Line_SliceCount();
+        }
+        else
+            Slot = nullptr;
+    }
+
+protected:
+    // Byte with the end of the last pixel in its high bits
+    inline void Last(uint8_t* Dest, uint8_t Value)
+    {
+        if (Slot)
+        {
+            *Slot = Value;
+            Slot += Slot_Offset;
+        }
+        else
+            *Dest = Value; // End of line, the low bits are padding
+    }
+
+    inline void Next()
+    {
+        FrameBuffer += NextLine_Offset;
+    }
+
+    uint8_t*    FrameBuffer;
+    size_t      w;
+    size_t      NextLine_Offset;
+    size_t      Begin_Bits; // High bits of the first byte, from the slice before
+    uint8_t*    Slot;
+    size_t      Slot_Offset;
+};
+
+class transform_jpeg2000rct_tiff_Raw_RGB_12_U : public transform_tiff_packed
+{
+public:
+    transform_jpeg2000rct_tiff_Raw_RGB_12_U(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_tiff_packed(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t*)
+    {
+        auto Dest = FrameBuffer;
+        uint32_t r0, g0, b0, r1, g1, b1;
+        size_t x = 0;
+        if (Begin_Bits)
+        {
+            RCT_Packed<12>(y, u, v, x, r0, g0, b0);
+            Pack_12_RGB_Second(Dest, r0, g0, b0);
+            Dest += 5;
+            x++;
+        }
+        for (; x + 2 <= w; x += 2)
+        {
+            RCT_Packed<12>(y, u, v, x, r0, g0, b0);
+            RCT_Packed<12>(y, u, v, x + 1, r1, g1, b1);
+            Pack_12_RGB(Dest, r0, g0, b0, r1, g1, b1);
+            Dest += 9;
+        }
+        if (x < w)
+        {
+            RCT_Packed<12>(y, u, v, x, r0, g0, b0);
+            Last(Dest + 4, Pack_12_RGB_First(Dest, r0, g0, b0));
+        }
+
+        Next();
+    }
+};
+
+class transform_passthrough_tiff_Raw_Y_12_U : public transform_tiff_packed
+{
+public:
+    transform_passthrough_tiff_Raw_Y_12_U(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_tiff_packed(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        auto Dest = FrameBuffer;
+        size_t x = 0;
+        if (Begin_Bits)
+        {
+            auto y0 = (uint32_t)y[0] & 0xFFF;
+            Dest[0] = (uint8_t)(y0 >> 8);
+            Dest[1] = (uint8_t)y0;
+            Dest += 2;
+            x++;
+        }
+        for (; x + 2 <= w; x += 2)
+        {
+            auto y0 = (uint32_t)y[x] & 0xFFF;
+            auto y1 = (uint32_t)y[x + 1] & 0xFFF;
+            Dest[0] = (uint8_t)(y0 >> 4);
+            Dest[1] = (uint8_t)((y0 << 4) | (y1 >> 8));
+            Dest[2] = (uint8_t)y1;
+            Dest += 3;
+        }
+        if (x < w)
+        {
+            auto y0 = (uint32_t)y[x] & 0xFFF;
+            Dest[0] = (uint8_t)(y0 >> 4);
+            Last(Dest + 1, (uint8_t)(y0 << 4));
+        }
+
+        Next();
+    }
+};
+
+class transform_passthrough_tiff_Raw_Y_10_U : public transform_tiff_packed
+{
+public:
+    transform_passthrough_tiff_Raw_Y_10_U(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_tiff_packed(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t*, pixel_t*, pixel_t*)
+    {
+        auto Dest = FrameBuffer;
+        size_t x = 0;
+        uint32_t Bits = 0; // High bits of the first byte are 0 here, from the slice before
+        size_t Bits_Count = Begin_Bits;
+        for (; Bits_Count && x < w; x++)
+            Pack_Bits(Dest, Bits, Bits_Count, (uint32_t)y[x], 10);
+        for (; x + 4 <= w; x += 4)
+        {
+            auto y0 = (uint32_t)y[x] & 0x3FF;
+            auto y1 = (uint32_t)y[x + 1] & 0x3FF;
+            auto y2 = (uint32_t)y[x + 2] & 0x3FF;
+            auto y3 = (uint32_t)y[x + 3] & 0x3FF;
+            Dest[0] = (uint8_t)(y0 >> 2);
+            Dest[1] = (uint8_t)((y0 << 6) | (y1 >> 4));
+            Dest[2] = (uint8_t)((y1 << 4) | (y2 >> 6));
+            Dest[3] = (uint8_t)((y2 << 2) | (y3 >> 8));
+            Dest[4] = (uint8_t)y3;
+            Dest += 5;
+        }
+        for (; x < w; x++)
+            Pack_Bits(Dest, Bits, Bits_Count, (uint32_t)y[x], 10);
+        if (Bits_Count)
+            Last(Dest, (uint8_t)(Bits << (8 - Bits_Count)));
+
+        Next();
+    }
+};
+
+class transform_jpeg2000rct_tiff_Raw_RGB_10_U : public transform_tiff_packed
+{
+public:
+    transform_jpeg2000rct_tiff_Raw_RGB_10_U(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t h) :
+        transform_tiff_packed(RawFrame, x_offset, y_offset, w, h) {};
+
+    void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t*)
+    {
+        auto Dest = FrameBuffer;
+        uint32_t r0, g0, b0, r1, g1, b1, r2, g2, b2, r3, g3, b3;
+        size_t x = 0;
+        uint32_t Bits = 0; // High bits of the first byte are 0 here, from the slice before
+        size_t Bits_Count = Begin_Bits;
+        for (; Bits_Count && x < w; x++)
+            Pixel(Dest, Bits, Bits_Count, y, u, v, x);
+        for (; x + 4 <= w; x += 4)
+        {
+            RCT_Packed<10>(y, u, v, x, r0, g0, b0);
+            RCT_Packed<10>(y, u, v, x + 1, r1, g1, b1);
+            RCT_Packed<10>(y, u, v, x + 2, r2, g2, b2);
+            RCT_Packed<10>(y, u, v, x + 3, r3, g3, b3);
+            Pack_10_RGB(Dest, Bits_10_RGB(r0, g0, b0, r1, g1, b1), Bits_10_RGB(r2, g2, b2, r3, g3, b3));
+            Dest += 15;
+        }
+        for (; x < w; x++)
+            Pixel(Dest, Bits, Bits_Count, y, u, v, x);
+        if (Bits_Count)
+            Last(Dest, (uint8_t)(Bits << (8 - Bits_Count)));
+
+        Next();
+    }
+
+private:
+    static inline void Pixel(uint8_t*& Dest, uint32_t& Bits, size_t& Bits_Count, const pixel_t* y, const pixel_t* u, const pixel_t* v, size_t x)
+    {
+        uint32_t r, g, b;
+        RCT_Packed<10>(y, u, v, x, r, g, b);
+        Pack_Bits(Dest, Bits, Bits_Count, r, 10);
+        Pack_Bits(Dest, Bits, Bits_Count, g, 10);
+        Pack_Bits(Dest, Bits, Bits_Count, b, 10);
+    }
+};
+
+//---------------------------------------------------------------------------
+// Other flavors: samples of a line computed first, then written packed from the MSB with any bit depth (or 16-bit little endian),
+// with the components of a pixel after each other or in planes after each other (lines of all planes in the plane of the raw frame)
+class transform_tiff_generic : public transform_base
+{
+public:
+    transform_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t Components, size_t Bits, bool Planar, bool LE) :
+        w(w),
+        Components_(Components),
+        Bits_(Bits),
+        LE_(LE),
+        Lines_(Planar ? Components : 1)
+    {
+        if (!x_offset && !y_offset)
+            RawFrame->Finalize_Function = transform_tiff_packed_Finalize;
+
+        const auto& Plane = RawFrame->Plane(0);
+        const auto BitsPerPixel = Plane->BitsPerBlock() / Plane->PixelsPerBlock(); // Of a line
+        const auto Height = Plane->Height() / Lines_;
+        NextLine_Offset = Plane->BitsPerLine() / 8;
+        Begin_Bits = x_offset * BitsPerPixel % 8;
+        auto x_End = x_offset + w;
+        auto HasSlot = x_End * BitsPerPixel % 8 && x_End < Plane->Width();
+        Slot_Offset = Plane->Line_SliceCount();
+        for (size_t l = 0; l < Lines_; l++)
+        {
+            FrameBuffer[l] = Plane->Buffer().Data() + (l * Height + y_offset) * NextLine_Offset + x_offset * BitsPerPixel / 8;
+            Slot[l] = HasSlot ? transform_Slot(Plane, x_offset, l * Height + y_offset, 1) : nullptr;
+        }
+        Samples.resize(Components_ * w);
+    }
+
+    void From(pixel_t* y, pixel_t* u, pixel_t* v, pixel_t* a)
+    {
+        Get(y, u, v, a);
+        if (Lines_ == 1)
+            Write(0, Samples.data(), Components_);
+        else
+            for (size_t l = 0; l < Lines_; l++)
+                Write(l, Samples.data() + l * w, 1);
+    }
+
+protected:
+    // Sample of component c of pixel x in Samples[c * w + x]
+    virtual void Get(const pixel_t* y, const pixel_t* u, const pixel_t* v, const pixel_t* a) = 0;
+
+    vector<uint32_t> Samples;
+    size_t      w;
+
+private:
+    // Count components of a pixel after each other, component c of pixel x in Src[c * w + x]
+    void Write(size_t l, const uint32_t* Src, size_t Count)
+    {
+        auto Dest = FrameBuffer[l];
+        if (LE_)
+        {
+            for (size_t x = 0; x < w; x++)
+                for (size_t c = 0; c < Count; c++)
+                {
+                    auto Value = Src[c * w + x];
+                    *(Dest++) = (uint8_t)Value;
+                    *(Dest++) = (uint8_t)(Value >> 8);
+                }
+        }
+        else
+        {
+            uint32_t Value = 0; // High bits of the first byte are 0 here, from the slice before
+            size_t Value_Count = Begin_Bits;
+            for (size_t x = 0; x < w; x++)
+                for (size_t c = 0; c < Count; c++)
+                    Pack_Bits(Dest, Value, Value_Count, Src[c * w + x], Bits_);
+            if (Value_Count)
+            {
+                // Byte with the end of the last pixel in its high bits
+                if (Slot[l])
+                {
+                    *Slot[l] = (uint8_t)(Value << (8 - Value_Count));
+                    Slot[l] += Slot_Offset;
+                }
+                else
+                    *Dest = (uint8_t)(Value << (8 - Value_Count)); // End of line, the low bits are padding
+            }
+        }
+        FrameBuffer[l] += NextLine_Offset;
+    }
+
+    static const size_t Lines_Max = 3;
+    size_t      Components_;
+    size_t      Bits_;
+    bool        LE_;
+    size_t      Lines_;
+    uint8_t*    FrameBuffer[Lines_Max];
+    uint8_t*    Slot[Lines_Max];
+    size_t      Slot_Offset;
+    size_t      NextLine_Offset;
+    size_t      Begin_Bits; // High bits of the first byte, from the slice before
+};
+
+// From JPEG2000-RCT with Coded bits, samples with Bits bits (less bits are from samples scaled to 8 bits)
+// 1 component is gray coded as RGB (e.g. from FFmpeg palette)
+template<size_t Coded, size_t Bits, size_t Components, bool Planar = false, bool LE = false>
+class transform_jpeg2000rct_tiff_generic : public transform_tiff_generic
+{
+public:
+    transform_jpeg2000rct_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t) :
+        transform_tiff_generic(RawFrame, x_offset, y_offset, w, Components, Bits, Planar, LE) {};
+
+private:
+    void Get(const pixel_t* y, const pixel_t* u, const pixel_t* v, const pixel_t* a)
+    {
+        const size_t Shift = Coded - Bits;
+        const bool Inverted = Coded > 8 && Coded < 16; // Exception indicated in specs, g and b are inverted if 9-15 bits
+        auto S = Samples.data();
+        for (size_t x = 0; x < w; x++)
+        {
+            JPEG2000RCT(((pixel_t)1) << Coded);
+            if (Inverted)
+                swap(g, b);
+            if (Components == 1)
+            {
+                S[x] = (uint32_t)g >> Shift;
+                continue;
+            }
+            S[x] = (uint32_t)r >> Shift;
+            S[w + x] = (uint32_t)g >> Shift;
+            S[2 * w + x] = (uint32_t)b >> Shift;
+        }
+    }
+};
+
+// From Y with Coded bits, samples with Bits bits (less bits are from samples scaled to 8 bits)
+template<size_t Coded, size_t Bits>
+class transform_passthrough_tiff_generic : public transform_tiff_generic
+{
+public:
+    transform_passthrough_tiff_generic(raw_frame* RawFrame, size_t x_offset, size_t y_offset, size_t w, size_t) :
+        transform_tiff_generic(RawFrame, x_offset, y_offset, w, 1, Bits, false, false) {};
+
+private:
+    void Get(const pixel_t* y, const pixel_t*, const pixel_t*, const pixel_t*)
+    {
+        const size_t Shift = Coded - Bits;
+        auto S = Samples.data();
+        for (size_t x = 0; x < w; x++)
+            S[x] = (uint32_t)y[x] >> Shift;
+    }
+};
+
+#define transform_passthrough_tiff_Raw_Y_14_U               transform_passthrough_tiff_generic<14, 14>
+#define transform_passthrough_tiff_Raw_Y_6_U                transform_passthrough_tiff_generic< 8,  6>
+#define transform_jpeg2000rct_tiff_Raw_Y_2_U                transform_jpeg2000rct_tiff_generic< 8,  2, 1>
+#define transform_jpeg2000rct_tiff_Raw_Y_4_U                transform_jpeg2000rct_tiff_generic< 8,  4, 1>
+#define transform_jpeg2000rct_tiff_Raw_RGB_14_U             transform_jpeg2000rct_tiff_generic<14, 14, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_2_U              transform_jpeg2000rct_tiff_generic< 8,  2, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_4_U              transform_jpeg2000rct_tiff_generic< 8,  4, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_6_U              transform_jpeg2000rct_tiff_generic< 8,  6, 3>
+#define transform_jpeg2000rct_tiff_Raw_RGB_8_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  8, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_16_U_LE_Planar   transform_jpeg2000rct_tiff_generic<16, 16, 3, true, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_16_U_BE_Planar   transform_jpeg2000rct_tiff_generic<16, 16, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_10_U_Planar      transform_jpeg2000rct_tiff_generic<10, 10, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_12_U_Planar      transform_jpeg2000rct_tiff_generic<12, 12, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_14_U_Planar      transform_jpeg2000rct_tiff_generic<14, 14, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_2_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  2, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_4_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  4, 3, true>
+#define transform_jpeg2000rct_tiff_Raw_RGB_6_U_Planar       transform_jpeg2000rct_tiff_generic< 8,  6, 3, true>
+
 //***************************************************************************
 // EXR
 //***************************************************************************
@@ -1663,6 +2151,23 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_16_U_BE)
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGBA_8_U)
             TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGBA_16_U_LE)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_12_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_10_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_Y_2_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_Y_4_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_14_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_2_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_4_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_6_U)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_8_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_16_U_LE_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_16_U_BE_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_10_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_12_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_14_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_2_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_4_U_Planar)
+            TRANSFORM_CASE(jpeg2000rct, tiff, Raw_RGB_6_U_Planar)
         TRANSFORM_FLAVOR_END()
         TRANSFORM_FLAVOR_BEGIN(exr, EXR)
             TRANSFORM_CASE(jpeg2000rct, exr, Raw_RGB_16)
@@ -1681,6 +2186,10 @@ transform_base* Transform_Init(raw_frame* RawFrame, pix_style PixStyle, size_t /
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_8_U)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_LE)
             TRANSFORM_CASE(passthrough, tiff, Raw_Y_16_U_BE)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_12_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_10_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_14_U)
+            TRANSFORM_CASE(passthrough, tiff, Raw_Y_6_U)
         TRANSFORM_FLAVOR_END()
         TRANSFORM_FLAVOR_BEGIN(avi, AVI)
             TRANSFORM_CASE(passthrough, avi, v210)
@@ -1734,6 +2243,48 @@ static void Direct_10_FilledA(uint8_t* Dest, const uint8_t* const* Src, size_t w
         auto Value = ((uint32_t)(R[x] & 0x3FF) << 22) | ((uint32_t)(G[x] & 0x3FF) << 12) | ((uint32_t)(B[x] & 0x3FF) << 2);
         D[x] = BE ? htob(Value) : htol(Value);
     }
+}
+
+//---------------------------------------------------------------------------
+// 12-bit RGB, 2 pixels in 9 bytes, samples packed from the MSB
+static void Direct_12_Packed_RGB(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    auto R = (const uint16_t*)Src[0];
+    auto G = (const uint16_t*)Src[1];
+    auto B = (const uint16_t*)Src[2];
+    size_t x = 0;
+    for (; x + 2 <= w; x += 2)
+    {
+        Pack_12_RGB(Dest, R[x], G[x], B[x], R[x + 1], G[x + 1], B[x + 1]);
+        Dest += 9;
+    }
+    if (x < w)
+        Dest[4] = Pack_12_RGB_First(Dest, R[x], G[x], B[x]); // The low half of the last byte is padding
+}
+
+//---------------------------------------------------------------------------
+// 10-bit RGB, 4 pixels in 15 bytes, samples packed from the MSB
+static void Direct_10_Packed_RGB(uint8_t* Dest, const uint8_t* const* Src, size_t w)
+{
+    auto R = (const uint16_t*)Src[0];
+    auto G = (const uint16_t*)Src[1];
+    auto B = (const uint16_t*)Src[2];
+    size_t x = 0;
+    for (; x + 4 <= w; x += 4)
+    {
+        Pack_10_RGB(Dest, Bits_10_RGB(R[x], G[x], B[x], R[x + 1], G[x + 1], B[x + 1]), Bits_10_RGB(R[x + 2], G[x + 2], B[x + 2], R[x + 3], G[x + 3], B[x + 3]));
+        Dest += 15;
+    }
+    uint32_t Bits = 0;
+    size_t Bits_Count = 0;
+    for (; x < w; x++)
+    {
+        Pack_Bits(Dest, Bits, Bits_Count, R[x], 10);
+        Pack_Bits(Dest, Bits, Bits_Count, G[x], 10);
+        Pack_Bits(Dest, Bits, Bits_Count, B[x], 10);
+    }
+    if (Bits_Count)
+        *Dest = (uint8_t)(Bits << (8 - Bits_Count)); // The low bits of the last byte are padding
 }
 
 #ifdef TRANSFORM_SIMD
@@ -1904,6 +2455,8 @@ transform_direct Transform_Direct_Init(const raw_frame* RawFrame, size_t Bits, b
         DIRECT_CASE(tiff::flavor::Raw_RGB_16_U_BE,        16, false, (Direct_16_RGB<16, 0, true>(Stream)));
         DIRECT_CASE(tiff::flavor::Raw_RGBA_8_U,            8, true , Direct_8<4>);
         DIRECT_CASE(tiff::flavor::Raw_RGBA_16_U_LE,       16, true , (Direct_16_Line<4, 16, 0, false>));
+        DIRECT_CASE(tiff::flavor::Raw_RGB_12_U,           12, false, Direct_12_Packed_RGB);
+        DIRECT_CASE(tiff::flavor::Raw_RGB_10_U,           10, false, Direct_10_Packed_RGB);
         default: return nullptr;
         }
     default: return nullptr;

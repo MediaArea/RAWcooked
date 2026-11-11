@@ -42,6 +42,13 @@ while read line ; do
         # check result file generation
         run_ffmpeg "${cmd_stdout}"
 
+        # Flavor supported by recent FFmpeg versions only
+        if [ "${ffmpeg_status:-0}" -ne "0" ] && grep -q "This format is not supported" "${temp_path}/ffmpeg" ; then
+            echo "SKIP: ${test}/${file}, not supported by this FFmpeg" >&${fd}
+            clean
+            continue
+        fi
+
         if [ ! -e "${file}.mkv" ] ; then
             echo "NOK: ${test}/${file}, mkv not generated" >&${fd}
             status=1
