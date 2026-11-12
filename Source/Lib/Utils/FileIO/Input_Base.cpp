@@ -314,7 +314,7 @@ void input_base_uncompressed::CopyCommon(const input_base_uncompressed& Parser)
 }
 
 //---------------------------------------------------------------------------
-size_t input_base_uncompressed::SliceCount()
+size_t input_base_uncompressed::SliceCount(bool LimitedSlices)
 {
     if (Actions[Action_VulkanEncoder])
         return 0; // Encoder default
@@ -324,23 +324,55 @@ size_t input_base_uncompressed::SliceCount()
     // - have some SIMD compatible slice count (e.g. AVX-512 has 16 32-bit blocks, let's take multiples of 16)
     // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 512 KiB in the example)
     // This leads to:
-    // SD: 16 slices (10-bit) or 24 slices (16-bit)
+    // SD: 16 slices (10-bit) or 32 slices (16-bit)
+    // HDReady: 32 slices (10-bit) or 64 slices (16-bit)
+    // HD/2K: 128 slices (10-bit) or 256 slices (16-bit)
+    // UHD/4K: 512 slices (10-bit) or 1024 slices (16-bit)
+    // FFmpeg encoder before 8.0 (2x more slices per line than per column and 32 slices per column are not accepted):
+    // SD/HDReady: 16 slices (10-bit) or 24 slices (16-bit)
     // HD/2K: 64 slices (10-bit) or 96 slices (16-bit)
     // UHD/4K: 256 slices (10-bit) or 384 slices (16-bit)
-    size_t slice_x = 4;
-    if (FrameWidth >= 1440) // more than 2/3 of 1920, so e.g. DV100 is included
-        slice_x <<= 1;
+    enum { SD, HDReady, HD, UHD } Size;
     if (FrameWidth >= 2880) // more than 3/2 of 1920, oversampled HD is not included
-        slice_x <<= 1;
-    if (FrameBitDepth > 10)
-        slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
-    if (slice_x > FrameWidth / 2)
-        slice_x = FrameWidth / 2;
-    if (slice_x > FrameHeight / 2)
-        slice_x = FrameHeight / 2;
-    if (!slice_x)
-        slice_x = 1;
-    return slice_x * slice_x;
+        Size = UHD;
+    else if (FrameWidth >= 1440) // more than 2/3 of 1920, so e.g. DV100 is included
+        Size = HD;
+    else if (FrameWidth >= 960) // more than 4/3 of 720, so e.g. DVCPRO HD 720p is included
+        Size = HDReady;
+    else
+        Size = SD;
+    auto Is16Bit = FrameBitDepth > 10;
+    size_t num_h_slices, num_v_slices;
+    if (LimitedSlices)
+    {
+        num_v_slices = Size == UHD ? 16 : Size == HD ? 8 : 4;
+        num_h_slices = Is16Bit ? num_v_slices * 3 / 2 : num_v_slices; // 1.5x more slices if 16-bit
+    }
+    else
+    {
+        int Count_Log2 = Size == UHD ? 9 : Size == HD ? 7 : Size == HDReady ? 5 : 4;
+        if (Is16Bit)
+            Count_Log2++; // 2x more slices if 16-bit
+        num_v_slices = (size_t)1 << (Count_Log2 / 2);
+        num_h_slices = (size_t)1 << ((Count_Log2 + 1) / 2);
+    }
+
+    // At least 2 pixels per slice in each direction
+    if (num_h_slices > FrameWidth / 2)
+        num_h_slices = FrameWidth / 2;
+    if (num_v_slices > FrameHeight / 2)
+        num_v_slices = FrameHeight / 2;
+
+    // Layout accepted by the FFmpeg encoder: num_v_slices <= num_h_slices <= 2 * num_v_slices and num_v_slices <= 32 (num_h_slices < 2 * num_v_slices and num_v_slices < 32 before FFmpeg 8.0)
+    if (num_v_slices > num_h_slices)
+        num_v_slices = num_h_slices;
+    if (!num_v_slices)
+        return 1;
+    auto num_h_slices_Max = 2 * num_v_slices - (LimitedSlices ? 1 : 0);
+    if (num_h_slices > num_h_slices_Max)
+        num_h_slices = num_h_slices_Max;
+
+    return num_h_slices * num_v_slices;
 }
 
 int input_base_uncompressed::AddEdits(map<string, string>& Edits)

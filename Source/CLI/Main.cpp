@@ -582,7 +582,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             case Parser_DPX:
             case Parser_TIFF:
             case Parser_EXR:
-                ParseInfo.Slices = std::to_string(Parser->SliceCount());
+                ParseInfo.Slices = std::to_string(Parser->SliceCount(Global.Actions[Action_Encode] && Global.FFmpeg_LimitedSlices())); // Slice layouts accepted by the FFmpeg encoder depend on its version
             }
             ParseInfo.IsDetected = true;
             delete Parser;

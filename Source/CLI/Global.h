@@ -81,6 +81,7 @@ public:
 
     // FFmpeg
     const string& FFmpeg_Version(); // Version of the FFmpeg binary, empty if it can not be run
+    bool FFmpeg_LimitedSlices(); // True if the FFmpeg binary is older than FFmpeg 8.0 (its FFV1 encoder does not accept 2x more slices per line than per column or 32 slices per column), false if unknown
     bool CheckFFmpeg(bool IsCompressed); // False if the FFmpeg binary (encoding) or the FFmpeg libraries (FFmpeg decoders) are needed and not available, FFmpeg_Error is then set
     string FFmpeg_Error;
 
@@ -136,6 +137,7 @@ private:
 
     // FFmpeg binary
     string                      FFmpeg_Version_Value;
+    uint32_t                    FFmpeg_Libavcodec_Version = 0; // As AV_VERSION_INT, 0 if unknown
     bool                        FFmpeg_Version_IsComputed = false;
     bool                        BinName_IsProvided = false;
 
