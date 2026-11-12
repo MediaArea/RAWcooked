@@ -408,6 +408,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Core\Config.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Core\Core.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Core\Global.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
@@ -592,6 +595,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.cpp">
       <Filter>Source Files\Uncompressed\AVI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Core\Core.cpp">
+      <Filter>Source Files\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Core\Global.cpp">
       <Filter>Source Files\Core</Filter>

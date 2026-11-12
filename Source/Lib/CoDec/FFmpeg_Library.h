@@ -36,6 +36,9 @@ bool FFmpeg_Library_SetPath(const std::string& FileName);
 // Load the libraries if not already done, false if they are not available (Error is set to the reason)
 bool FFmpeg_Library_Load(std::string* Error = nullptr);
 
+// Before another run in the same process: the library of FFmpeg_Library_SetPath() and a failed load are forgotten (the libraries are searched again when needed), loaded libraries are kept (another library provided later is not used)
+void FFmpeg_Library_Reset();
+
 // Indexes of the Vulkan devices to use if libraries are available: all discrete GPUs, else the first GPU, else the device used by default by FFmpeg if AllowCPU (a CPU implementation e.g. lavapipe), FFmpeg log is quiet after this call
 // Not needed if Vulkan is explicitly requested, any Vulkan device is used in that case
 std::vector<size_t> FFmpeg_Library_Vulkan(bool AllowCPU = false);

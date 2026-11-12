@@ -32,6 +32,7 @@ enum user_mode
     AlwaysYes,
 };
 typedef user_mode(*ask_callback)(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool* ProgressIndicator_IsPaused, condition_variable* ProgressIndicator_IsEnd);
+typedef bool(*question_callback)(const string& Question); // Question to the user with a yes or no answer, true if yes
 
 
 //---------------------------------------------------------------------------

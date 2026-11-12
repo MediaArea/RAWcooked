@@ -10,7 +10,7 @@ AC_INIT([rawcooked], [0])
 dnl -------------------------------------------------------------------------
 dnl Test if we are at the good place
 dnl
-AC_CONFIG_SRCDIR([../../../Source/CLI/Main.cpp])
+AC_CONFIG_SRCDIR([../../../Source/CLI/CLI_Main.cpp])
 
 dnl -------------------------------------------------------------------------
 dnl sets build, host, target variables and the same with _alias

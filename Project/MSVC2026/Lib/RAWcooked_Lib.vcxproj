@@ -172,6 +172,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Config.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Core.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Global.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Help.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Input.h" />
@@ -252,6 +253,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Common\Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Core.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Global.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Help.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Input.cpp" />

@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Source\CLI\Main.cpp" />
+    <ClCompile Include="..\..\..\Source\CLI\CLI_Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RAWcooked.rc" />

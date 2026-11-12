@@ -31,9 +31,9 @@
     #endif
 #endif
 #include "Lib/Core/Global.h"
+#include "Lib/Core/Core.h"
 #include "Lib/Core/Help.h"
 #include "Lib/CoDec/FFmpeg_Library.h"
-int Help_Edit();
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -41,6 +41,14 @@ int Help_Edit();
 void global_ProgressIndicator_Show(global* G)
 {
     G->ProgressIndicator_Show();
+}
+
+//---------------------------------------------------------------------------
+global::~global()
+{
+    ProgressIndicator_Stop(); // Its thread uses this object
+    delete Hashes;
+    delete Log;
 }
 
 //---------------------------------------------------------------------------
