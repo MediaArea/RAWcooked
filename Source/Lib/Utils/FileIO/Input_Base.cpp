@@ -45,6 +45,7 @@ bool input_base::Parse(filemap* FileMap_Source, const buffer_view& Buffer_Source
     Buffer = Buffer_Source;
     HashComputed = false;
 
+    ParseBuffer_Init();
     ParseBuffer();
     if (IsDetected())
         Hash();
@@ -289,6 +290,13 @@ void unknown::ParseBuffer()
     SetDetected();
     SetSupported();
     RegisterAsAttachment();
+}
+
+//---------------------------------------------------------------------------
+void input_base_uncompressed::ParseBuffer_Init()
+{
+    // Nothing from the previous file, e.g. its flavor if this one is not supported
+    Flavor = (decltype(Flavor))-1;
 }
 
 //---------------------------------------------------------------------------

@@ -103,6 +103,7 @@ public:
     parser                      ParserCode;
 
 protected:
+    virtual void                ParseBuffer_Init() {} // Before each ParseBuffer(), a parser is reused for the files of a sequence
     virtual void                ParseBuffer() = 0;
     virtual void                BufferOverflow() = 0;
     filemap*                    FileMap;
@@ -194,6 +195,7 @@ public:
     void                        ParseRAWcooked(parse_params& Params);
 
 protected:
+    void                        ParseBuffer_Init();
     virtual void                CopyCommonParser(const input_base_uncompressed& /*Parser*/) {}
     virtual void                AddEditsParser(map<string, string>& /*Edits*/) {}
     virtual void                Edit() {};

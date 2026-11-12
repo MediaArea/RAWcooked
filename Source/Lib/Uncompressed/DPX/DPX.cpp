@@ -683,10 +683,13 @@ void dpx::ParseBuffer()
     }
     if (Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::Flavor);
-    if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
-        Unsupported(unsupported::Orientation);
-    if (IsAltern && !(DPX_Tested[Flavor].Info.Flags & Altern))
-        Unsupported(unsupported::Altern);
+    else
+    {
+        if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
+            Unsupported(unsupported::Orientation);
+        if (IsAltern && !(DPX_Tested[Flavor].Info.Flags & Altern))
+            Unsupported(unsupported::Altern);
+    }
     if (HasErrors())
         return;
 
