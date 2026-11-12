@@ -596,7 +596,9 @@ int global::SetOption(const char* argv[], int& i, int argc)
             OutputOptions["vf"] = "hwupload";
             Actions.set(Action_VulkanEncoder, true);
             License.Encoder(encoder::FFV1);
+            #if !defined(__APPLE__) // Support of GPU on macOS is sponsored
             License.Feature(feature::HwAccel);
+            #endif
             return 0;
         }
         return Error_NotTested(argv[i - 1], argv[i]);
@@ -1209,8 +1211,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     // GPU decoding (vulkan decoder, or auto decoder which uses it with a Vulkan GPU) needs the same license feature as GPU encoding
     auto HwAccelDecoder = Actions[Action_VulkanDecoder] || Actions[Action_AutoDecoder];
+    #if !defined(__APPLE__) // Support of GPU on macOS is sponsored
     if (HwAccelDecoder)
         License.Feature(feature::HwAccel);
+    #endif
 
     // License
     if (Actions[Action_Encode] || HwAccelDecoder) {
@@ -1227,6 +1231,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         if (License.ShowLicense(ShowLicenseKey, SubLicenseId, SubLicenseDur))
             return 1;
+        #if defined(__APPLE__)
+        // Sponsor message if the license (the default one if outdated) does not include GPU
+        if ((Actions[Action_VulkanEncoder] || HwAccelDecoder) && !License.IsSupported(feature::HwAccel))
+            cerr << "Support of GPU on macOS is sponsored by Centre national de l'audiovisuel (CNA) Luxembourg.\n" << endl;
+        #endif
     }
     if (Inputs.empty() && (ShowLicenseKey || SubLicenseId))
         return 0;
