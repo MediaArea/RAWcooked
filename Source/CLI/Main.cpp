@@ -555,6 +555,14 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             return true;
         }
     }
+    if (SingleFile.ParserCode == Parser_AVI && Global.Actions[Action_Encode] && Global.Actions[Action_VulkanEncoder] && ((avi*)&SingleFile)->GetWidth() % 128)
+    {
+        // FFmpeg Vulkan encoder with FFV1 version 3 and chroma subsampling: width must be a multiple of 64 << chroma_h_shift
+        Global.ProgressIndicator_Stop();
+        cerr << "Error: ffv1_vulkan encoding of 4:2:2 video (v210) needs a width multiple\n"
+                "       of 128 (width is " << ((avi*)&SingleFile)->GetWidth() << "), use -c:v ffv1.\n" << endl;
+        return true;
+    }
 
     return false;
 }
