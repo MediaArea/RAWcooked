@@ -468,6 +468,7 @@ void exr::ParseBuffer()
                     InputInfo->FrameRate = ((decltype(InputInfo->FrameRate))FrameRate_N) / FrameRate_D;
             }
         }
+        CASE_S("gamma", item_type::Float)
         CASE_S("imageCounter", item_type::Int)
         CASE_F("imageRotation", item_type::Float)
         {
@@ -539,6 +540,7 @@ void exr::ParseBuffer()
         CASE_S("storageMediaSerialNumber", item_type::String)
         CASE_S("timeCode", item_type::timecode)
         CASE_S("timecodeRate", item_type::Int)
+        CASE_S("writer", item_type::String)
         else
         {
             if (strncmp(name, "uk.ltd.filmlight.", 17))
