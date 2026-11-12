@@ -409,7 +409,7 @@ bool license::LoadLicense(string LicenseKey, bool StoreLicenseKey)
 }
 
 //---------------------------------------------------------------------------
-bool license::ShowLicense(bool Verbose, uint64_t NewSublicenseId, uint64_t NewSubLicenseDur)
+void license::ShowStatus(bool Verbose)
 {
     license_internal* License = (license_internal*)Internal;
 
@@ -442,13 +442,20 @@ bool license::ShowLicense(bool Verbose, uint64_t NewSublicenseId, uint64_t NewSu
         if (Time > License->Date)
         {
             cerr << "Outdated license, using default license.\n";
-            auto SubLicenseeID_Sav = License->SubLicenseeID;
-            *License = license_internal();
-            License->SubLicenseeID = SubLicenseeID_Sav;
+            license_internal Default; // Same sub-licensee ID and requested features
+            Default.SubLicenseeID = License->SubLicenseeID;
+            memcpy(Default.Input_Flags, License->Input_Flags, sizeof(Default.Input_Flags));
+            *License = Default;
         }
 
         cerr << endl;
     }
+}
+
+//---------------------------------------------------------------------------
+bool license::ShowLicense(bool Verbose, uint64_t NewSublicenseId, uint64_t NewSubLicenseDur)
+{
+    license_internal* License = (license_internal*)Internal;
 
     if (NewSublicenseId)
     {
