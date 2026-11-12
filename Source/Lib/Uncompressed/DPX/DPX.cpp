@@ -601,10 +601,13 @@ void dpx::ParseBuffer()
         Unsupported(unsupported::Encryption);
     Buffer_Offset = 768;
     uint16_t Orientation = Get_X2();
+    FrameOrientation = Orientation;
     if (Get_X2() != 1)
         Unsupported(unsupported::NumberOfElements);
     uint32_t Width = Get_X4();
     uint32_t Height = Get_X4();
+    FrameWidth = Width;
+    FrameHeight = Height;
     Buffer_Offset = 780;
     if (Get_X4() != 0)
         Unsupported(unsupported::DataSign);
@@ -683,10 +686,13 @@ void dpx::ParseBuffer()
     }
     if (Flavor == (decltype(Flavor))-1)
         Unsupported(unsupported::Flavor);
-    if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
-        Unsupported(unsupported::Orientation);
-    if (IsAltern && !(DPX_Tested[Flavor].Info.Flags & Altern))
-        Unsupported(unsupported::Altern);
+    else
+    {
+        if (Orientation == 2 && !(DPX_Tested[Flavor].Info.Flags & VFlip))
+            Unsupported(unsupported::Orientation);
+        if (IsAltern && !(DPX_Tested[Flavor].Info.Flags & Altern))
+            Unsupported(unsupported::Altern);
+    }
     if (HasErrors())
         return;
 

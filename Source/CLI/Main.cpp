@@ -227,7 +227,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 }
 
 //---------------------------------------------------------------------------
-bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i)
+bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First)
 {
     const auto& Name = RemovedFiles[i].FileName;
     if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
@@ -240,6 +240,9 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
 
     S.Index = i;
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
+        return true;
+    }
+    if (First && input::CheckFormat(*First, S, &Global.Errors)) {
         return true;
     }
 
@@ -280,12 +283,20 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     if (EditOnly && RemovedFiles.size() > 1 && !Dir_Temp.Open_FromFileName(RemovedFiles[1].FileName))
         Dir = &Dir_Temp;
 
+    // Encoding: the other files must have the flavor, the frame size and the orientation of the first file
+    sequence_format First_Format;
+    const sequence_format* First = nullptr;
+    if (Global.Actions[Action_Encode]) {
+        First_Format = { SingleFile.Flavor, SingleFile.Flavor_String(), SingleFile.FrameWidth, SingleFile.FrameHeight, SingleFile.FrameOrientation };
+        First = &First_Format;
+    }
+
     if (Global.IoThreads > 1) {
         const size_t numFiles = RemovedFiles.size();
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
         atomic<bool> HashFlush{ false };
-        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
                 if (i >= numFiles) {
@@ -294,7 +305,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                         input_base::Hash_Batch_Flush(true);
                     break;
                 }
-                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i)) {
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
                     AnyError = true;
                 }
             }
@@ -336,7 +347,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     }
 
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
-        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i)) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
             return true;
         }
     }

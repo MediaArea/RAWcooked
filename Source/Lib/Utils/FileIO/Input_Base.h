@@ -103,6 +103,7 @@ public:
     parser                      ParserCode;
 
 protected:
+    virtual void                ParseBuffer_Init() {} // Before each ParseBuffer(), a parser is reused for the files of a sequence
     virtual void                ParseBuffer() = 0;
     virtual void                BufferOverflow() = 0;
     filemap*                    FileMap;
@@ -164,6 +165,9 @@ public:
     // Info
     uint64_t                    Flavor = (uint64_t)-1;
     virtual string              Flavor_String() = 0;
+    uint32_t                    FrameWidth = 0; // Video only
+    uint32_t                    FrameHeight = 0;
+    uint16_t                    FrameOrientation = 0; // Value of the format
 
     // Common info
     bool                        IsSequence;
@@ -194,6 +198,7 @@ public:
     void                        ParseRAWcooked(parse_params& Params);
 
 protected:
+    void                        ParseBuffer_Init();
     virtual void                CopyCommonParser(const input_base_uncompressed& /*Parser*/) {}
     virtual void                AddEditsParser(map<string, string>& /*Edits*/) {}
     virtual void                Edit() {};

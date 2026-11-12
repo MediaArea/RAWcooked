@@ -24,6 +24,16 @@ struct FileEntry
     uintmax_t FileSize;
 };
 
+// Flavor, frame size and orientation of the first file of a sequence, the other files must have the same ones (FFmpeg would convert their frames)
+struct sequence_format
+{
+    uint64_t Flavor;
+    string Flavor_String;
+    uint32_t FrameWidth;
+    uint32_t FrameHeight;
+    uint16_t FrameOrientation;
+};
+
 class input
 {
 public:
@@ -35,6 +45,7 @@ public:
 
     // Checks
     static void CheckDurations(vector<double> const& Durations, vector<string> const& Durations_FileName, errors* Errors = nullptr);
+    static bool CheckFormat(const sequence_format& First, input_base_uncompressed& File, errors* Errors = nullptr); // true if the flavor, the frame size or the orientation is not the one of the first file
 
     // Order of file names, negative if Left is before Right, positive if Left is after Right, 0 if same
     static int FileName_Compare(const string& Left, const string& Right);
