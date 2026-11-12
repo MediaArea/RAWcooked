@@ -56,6 +56,7 @@ public:
 
     // License management
     bool LoadLicense(string LicenseKey, bool StoreLicenseKey);
+    void ShowStatus(bool Verbose = false);
     bool ShowLicense(bool Verbose = false, uint64_t NewSublicenseId = 0, uint64_t NewSubLicenseDur = 0);
 
     // Checks

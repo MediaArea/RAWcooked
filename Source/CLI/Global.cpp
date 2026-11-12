@@ -1216,9 +1216,10 @@ int global::ManageCommandLine(const char* argv[], int argc)
     if (Actions[Action_Encode] || HwAccelDecoder) {
         if (License.LoadLicense(LicenseKey, StoreLicenseKey))
             return true;
+        License.ShowStatus(ShowLicenseKey); // Before the checks, as an outdated license is replaced by the default one
         if (!License.IsSupported())
         {
-            cerr << "\nOne or more requested features are not supported with the current license key.\n";
+            cerr << "One or more requested features are not supported with the current license key.\n";
             cerr << "****** Please contact info@mediaarea.net for a quote or a temporary key." << endl;
             if (!IgnoreLicenseKey)
                 return 1;
