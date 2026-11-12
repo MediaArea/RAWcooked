@@ -99,11 +99,33 @@ const string& global::FFmpeg_Version()
             Version.assign(Result2, strcspn(Result2, " \r\n"));
         }
     }
+    uint32_t Libavcodec_Version = 0;
+    auto LineBegin = strchr(Result, '\n') != nullptr;
     while (fgets(Result, sizeof(Result), F)) // Whole output, so the binary is not stopped by a closed pipe
-        ;
+    {
+        // e.g. "libavcodec     62. 11.100 / 62. 11.100", the version of the loaded library is after the slash
+        unsigned Major, Minor, Micro, Major_Loaded, Minor_Loaded, Micro_Loaded;
+        auto Count = LineBegin ? sscanf(Result, "libavcodec %u.%u.%u / %u.%u.%u", &Major, &Minor, &Micro, &Major_Loaded, &Minor_Loaded, &Micro_Loaded) : 0;
+        if (Count == 6)
+            Libavcodec_Version = (Major_Loaded << 16) | (Minor_Loaded << 8) | Micro_Loaded;
+        else if (Count >= 3)
+            Libavcodec_Version = (Major << 16) | (Minor << 8) | Micro;
+        LineBegin = strchr(Result, '\n') != nullptr;
+    }
     if (!pclose(F))
+    {
         FFmpeg_Version_Value = Version;
+        FFmpeg_Libavcodec_Version = Libavcodec_Version;
+    }
     return FFmpeg_Version_Value;
+}
+
+//---------------------------------------------------------------------------
+bool global::FFmpeg_LimitedSlices()
+{
+    // The FFV1 encoder accepts 2x more slices per line than per column and 32 slices per column since libavcodec 62.1.100 (FFmpeg 8.0)
+    FFmpeg_Version();
+    return FFmpeg_Libavcodec_Version && FFmpeg_Libavcodec_Version < ((62 << 16) | (1 << 8) | 100);
 }
 
 //---------------------------------------------------------------------------

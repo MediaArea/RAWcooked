@@ -622,6 +622,7 @@ void dpx::ParseBuffer()
     }
     Buffer_Offset = 803;
     Info.BitDepth = Get_X1();
+    FrameBitDepth = Info.BitDepth;
     Info.Packing = (packing)Get_X2();
     uint16_t Encoding = Get_X2();
     if (Encoding)
@@ -696,37 +697,10 @@ void dpx::ParseBuffer()
     if (HasErrors())
         return;
 
-    // Slices count
-    // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
-    // Current idea:
-    // - have some SIMD compatible slice count (e.g. AVX-512 has 16 32-bit blocks, let's take multiples of 16)
-    // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 512 KiB in the example)
-    // This leads to:
-    // SD: 16 slices (10-bit) or 24 slices (16-bit)
-    // HD/2K: 64 slices (10-bit) or 96 slices (16-bit)
-    // UHD/4K: 256 slices (10-bit) or 384 slices (16-bit)
-    // 
-    slice_x = 4;
-    if (Width >= 1440) // more than 2/3 of 1920, so e.g. DV100 is included
-        slice_x <<= 1;
-    if (Width >= 2880) // more than 3/2 of 1920, oversampled HD is not included
-        slice_x <<= 1;
-    if (Info.BitDepth > 10)
-        slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
-    if (slice_x > Width / 2)
-        slice_x = Width / 2;
-    if (slice_x > Height / 2)
-        slice_x = Height / 2;
-    if (!slice_x)
-        slice_x = 1;
-
-    // Computing which slice count is suitable, any count as the decoder merges the data of a DPX block in several slices
+    // Line ending inside a block, any slice count is suitable as the decoder merges the data of a DPX block in several slices
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
     if (Width % Slice_Multiplier && !(DPX_Tested[Flavor].Info.Flags & IncompleteBlock))
         Unsupported(unsupported::PixelBoundaries);
-    if (Actions[Action_VulkanEncoder])
-        slice_x = 0; // Encoder default
-    slice_y = slice_x;
 
     // Computing OffsetAfterData
     size_t OffsetAfterData = OffsetToData;

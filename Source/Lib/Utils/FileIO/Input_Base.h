@@ -168,6 +168,7 @@ public:
     uint32_t                    FrameWidth = 0; // Video only
     uint32_t                    FrameHeight = 0;
     uint16_t                    FrameOrientation = 0; // Value of the format
+    uint8_t                     FrameBitDepth = 0; // Bits per sample
 
     // Common info
     bool                        IsSequence;
@@ -186,8 +187,7 @@ public:
     input_base_uncompressed(errors* Errors, parser ParserCode, bool IsSequence = false) : input_base(Errors, ParserCode), uncompressed(IsSequence) {}
     virtual ~input_base_uncompressed() {}
 
-    size_t                      slice_x = 0; // 0 for the encoder default
-    size_t                      slice_y = 0;
+    size_t                      SliceCount(bool LimitedSlices); // Slice count of the video encoder, from the frame size and bit depth, LimitedSlices for the encoder of FFmpeg before 8.0, 0 for the encoder default
 
     string                      UncompressedFileName;
 
