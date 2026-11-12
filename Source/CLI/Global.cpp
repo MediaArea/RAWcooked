@@ -116,22 +116,8 @@ bool global::CheckFFmpeg(bool IsCompressed)
         string Error;
         if (!FFmpeg_Library_Load(&Error))
         {
-            if (IsCompressed)
-            {
-                FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
-                return false;
-            }
-
-            // Check after encoding: our decoder instead of the FFmpeg decoders, the FFmpeg binary may be available without the FFmpeg libraries
-            Actions.reset(Action_FFmpegDecoder);
-            Actions.reset(Action_VulkanDecoder);
-            Actions.set(Action_InternalDecoder);
-            if (!Quiet)
-            {
-                ProgressIndicator_Stop();
-                cerr << "Info: decoder value '" << Decoder_Value << "' is not available (" << Error << "),\n"
-                        "      internal decoder is used for the check after encoding.\n" << endl;
-            }
+            FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
+            return false;
         }
 
         // Vulkan device of a vulkan decoder not available (known when the decoder creates the device)
@@ -140,6 +126,24 @@ bool global::CheckFFmpeg(bool IsCompressed)
         {
             FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (unable to find Vulkan device with index " + to_string(Vulkan_Missing) + ").";
             return false;
+        }
+    }
+
+    // Auto decoder because the video encoder is ffv1_vulkan, for the check after encoding: our decoder if the FFmpeg libraries are not available (the FFmpeg binary may be available without them)
+    if (Actions[Action_AutoDecoder] && Actions[Action_VulkanEncoder] && !Decoder_IsProvided
+     && !IsCompressed && (Actions[Action_Encode] || Actions[Action_Check]) && !DisplayCommand && (!Actions[Action_CheckOptionIsSet] || Actions[Action_Check]))
+    {
+        string Error;
+        if (!FFmpeg_Library_Load(&Error))
+        {
+            Actions.reset(Action_AutoDecoder);
+            Actions.set(Action_InternalDecoder);
+            if (!Quiet)
+            {
+                ProgressIndicator_Stop();
+                cerr << "Info: FFmpeg Vulkan decoder is not available (" << Error << "),\n"
+                        "      internal decoder is used for the check after encoding.\n" << endl;
+            }
         }
     }
 
