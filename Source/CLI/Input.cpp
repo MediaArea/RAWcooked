@@ -58,12 +58,14 @@ static const char* MessageText[] =
 {
     "flavor (not same as the first file of the sequence)",
     "frame size (not same as the first file of the sequence)",
+    "orientation (not same as the first file of the sequence)",
 };
 
 enum code : uint8_t
 {
     Flavor,
     FrameSize,
+    Orientation,
     Max
 };
 
@@ -583,7 +585,7 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
 //---------------------------------------------------------------------------
 bool input::CheckFormat(const sequence_format& First, input_base_uncompressed& File, errors* Errors)
 {
-    // A video track has one flavor and one frame size, FFmpeg would convert the frame and the file could not be rebuilt
+    // A video track has one flavor, one frame size and one orientation, FFmpeg would convert or flip the frame as the first one and the file could not be rebuilt
     auto NotSame = false;
     if (File.Flavor != First.Flavor)
     {
@@ -595,6 +597,12 @@ bool input::CheckFormat(const sequence_format& First, input_base_uncompressed& F
     {
         if (Errors)
             Errors->Error(IO_FileInput, error::type::Unsupported, (error::generic::code)fileinput_issue::unsupported::FrameSize, File.FileName + " (" + to_string(File.FrameWidth) + 'x' + to_string(File.FrameHeight) + " instead of " + to_string(First.FrameWidth) + 'x' + to_string(First.FrameHeight) + ')');
+        NotSame = true;
+    }
+    if (File.FrameOrientation != First.FrameOrientation)
+    {
+        if (Errors)
+            Errors->Error(IO_FileInput, error::type::Unsupported, (error::generic::code)fileinput_issue::unsupported::Orientation, File.FileName + " (" + to_string(File.FrameOrientation) + " instead of " + to_string(First.FrameOrientation) + ')');
         NotSame = true;
     }
     return NotSame;

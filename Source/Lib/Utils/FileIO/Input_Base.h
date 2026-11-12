@@ -167,6 +167,7 @@ public:
     virtual string              Flavor_String() = 0;
     uint32_t                    FrameWidth = 0; // Video only
     uint32_t                    FrameHeight = 0;
+    uint16_t                    FrameOrientation = 0; // Value of the format
 
     // Common info
     bool                        IsSequence;

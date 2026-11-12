@@ -283,11 +283,11 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
     if (EditOnly && RemovedFiles.size() > 1 && !Dir_Temp.Open_FromFileName(RemovedFiles[1].FileName))
         Dir = &Dir_Temp;
 
-    // Encoding: the other files must have the flavor and the frame size of the first file
+    // Encoding: the other files must have the flavor, the frame size and the orientation of the first file
     sequence_format First_Format;
     const sequence_format* First = nullptr;
     if (Global.Actions[Action_Encode]) {
-        First_Format = { SingleFile.Flavor, SingleFile.Flavor_String(), SingleFile.FrameWidth, SingleFile.FrameHeight };
+        First_Format = { SingleFile.Flavor, SingleFile.Flavor_String(), SingleFile.FrameWidth, SingleFile.FrameHeight, SingleFile.FrameOrientation };
         First = &First_Format;
     }
 

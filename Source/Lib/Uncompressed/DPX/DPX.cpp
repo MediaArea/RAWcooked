@@ -601,6 +601,7 @@ void dpx::ParseBuffer()
         Unsupported(unsupported::Encryption);
     Buffer_Offset = 768;
     uint16_t Orientation = Get_X2();
+    FrameOrientation = Orientation;
     if (Get_X2() != 1)
         Unsupported(unsupported::NumberOfElements);
     uint32_t Width = Get_X4();

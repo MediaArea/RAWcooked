@@ -5,7 +5,7 @@ script_path="${PWD}/test"
 
 test="sequenceformat"
 
-# the files of a sequence must have the flavor and the frame size of the first file, else FFmpeg converts their frames
+# the files of a sequence must have the flavor, the frame size and the orientation of the first file, else FFmpeg converts their frames
 
 # file of a sequence, ${1}: file name, ${2}: frame size, other arguments: ffmpeg options
 make_file() {
@@ -84,6 +84,14 @@ pushd "${files_path}" >/dev/null 2>&1
     make_file "${file}/0001.tif" 16x16
     make_file "${file}/0002.tif" 16x16 -pix_fmt rgb48le
     check_rejected "flavor (not same as the first file of the sequence)"
+
+    # orientation not same as the first file, 1 is right to left (flavor of 8-bit RGB DPX without vertical flip)
+    file=orientation_dpx
+    mkdir "${file}"
+    make_file "${file}/0001.dpx" 16x16
+    make_file "${file}/0002.dpx" 16x16
+    perl -0777 -pi -e 'substr($_, 768, 1, "\x01")' "${file}/0002.dpx" || fatal "internal" "perl command failed" # Little endian orientation
+    check_rejected "0002.dpx (1 instead of 0)"
 
     # unsupported flavor after a supported one (the flavor of the previous file must not be kept)
     file=unsupported_tif

@@ -737,6 +737,7 @@ void tiff::ParseBuffer()
         return; // Not reported as unsupported if not encoding (e.g. --info)
     FrameWidth = Width;
     FrameHeight = Height;
+    FrameOrientation = (uint16_t)Orientation;
 
     // StripOffsets / StripBytesCounts / RowsPerStrip
     uint32_t StripOffsets_Last = StripOffsets[0] + StripBytesCounts[0];

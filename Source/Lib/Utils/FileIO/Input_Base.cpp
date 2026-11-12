@@ -299,6 +299,7 @@ void input_base_uncompressed::ParseBuffer_Init()
     Flavor = (decltype(Flavor))-1;
     FrameWidth = 0;
     FrameHeight = 0;
+    FrameOrientation = 0;
 }
 
 //---------------------------------------------------------------------------
