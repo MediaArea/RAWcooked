@@ -536,7 +536,7 @@ void exr::ParseBuffer()
             }
         }
         CASE_S("shoot_scene_clip_number", item_type::String)
-        CASE_F("shutterAngle", item_type::Float) {}
+        CASE_S("shutterAngle", item_type::Float)
         CASE_S("storageMediaSerialNumber", item_type::String)
         CASE_S("timeCode", item_type::timecode)
         CASE_S("timecodeRate", item_type::Int)
