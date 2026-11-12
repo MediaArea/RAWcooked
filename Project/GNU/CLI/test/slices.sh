@@ -59,7 +59,7 @@ while read line ; do
         fi
 
         # generate encoding command
-        run_rawcooked --file -d "${file}"
+        run_rawcooked --file --check-padding -d "${file}"
         check_success "file rejected at input" "file accepted at input" || continue
 
         count=
