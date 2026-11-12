@@ -10,8 +10,8 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "CLI/Config.h"
-#include "CLI/Global.h"
+#include "Lib/Core/Config.h"
+#include "Lib/Core/Global.h"
 #include <string>
 #include <vector>
 using namespace std;

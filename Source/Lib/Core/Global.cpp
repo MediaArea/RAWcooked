@@ -30,8 +30,8 @@
         #include <fstream>
     #endif
 #endif
-#include "CLI/Global.h"
-#include "CLI/Help.h"
+#include "Lib/Core/Global.h"
+#include "Lib/Core/Help.h"
 #include "Lib/CoDec/FFmpeg_Library.h"
 int Help_Edit();
 //---------------------------------------------------------------------------

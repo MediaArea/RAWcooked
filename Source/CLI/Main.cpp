@@ -14,10 +14,10 @@
 #include <mutex>
 #include <sstream>
 #include <thread>
-#include "CLI/Global.h"
-#include "CLI/Input.h"
-#include "CLI/Output.h"
-#include "CLI/Help.h"
+#include "Lib/Core/Global.h"
+#include "Lib/Core/Input.h"
+#include "Lib/Core/Output.h"
+#include "Lib/Core/Help.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"

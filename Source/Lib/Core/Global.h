@@ -10,7 +10,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "CLI/Config.h"
+#include "Lib/Core/Config.h"
 #include "Lib/Common/Common.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"

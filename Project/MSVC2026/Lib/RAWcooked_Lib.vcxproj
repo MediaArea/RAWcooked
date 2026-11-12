@@ -171,6 +171,11 @@
     <ClInclude Include="..\..\..\Source\Lib\Common\Common.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.h" />
     <ClInclude Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Config.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Global.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Help.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Input.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Output.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h" />
     <ClInclude Include="..\..\..\Source\Lib\Transform\Transform.h" />
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h" />
@@ -247,6 +252,10 @@
     <ClCompile Include="..\..\..\Source\Lib\Common\Common.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Reversibility.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Compressed\RAWcooked\Track.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Global.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Help.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Input.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Output.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AVI\AVI.cpp" />

@@ -2,11 +2,7 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 
 bin_PROGRAMS = rawcooked
 rawcooked_SOURCES = \
-    ../../../Source/CLI/Global.cpp \
-    ../../../Source/CLI/Help.cpp \
-    ../../../Source/CLI/Input.cpp \
     ../../../Source/CLI/Main.cpp \
-    ../../../Source/CLI/Output.cpp \
     ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_GolombRice.cpp \
     ../../../Source/Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.cpp \
     ../../../Source/Lib/CoDec/FFV1/FFV1_Frame.cpp \
@@ -23,6 +19,10 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Compressed/RAWcooked/RAWcooked.cpp \
     ../../../Source/Lib/Compressed/RAWcooked/Reversibility.cpp \
     ../../../Source/Lib/Compressed/RAWcooked/Track.cpp \
+    ../../../Source/Lib/Core/Global.cpp \
+    ../../../Source/Lib/Core/Help.cpp \
+    ../../../Source/Lib/Core/Input.cpp \
+    ../../../Source/Lib/Core/Output.cpp \
     ../../../Source/Lib/License/License.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitreader.c \
