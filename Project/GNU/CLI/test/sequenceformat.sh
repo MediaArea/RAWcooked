@@ -18,10 +18,6 @@ make_file() {
         *.exr) options="-compression none -format half" ;;
     esac
     ffmpeg -nostdin -f lavfi -i testsrc=size=${size} -frames:v 1 ${options} "${@}" "${name}" >/dev/null 2>&1 || fatal "internal" "ffmpeg command failed"
-    if [[ "${name}" == *.exr ]] ; then
-        # header fields of FFmpeg not supported by RAWcooked, renamed with the same size to fields it skips
-        perl -0777 -pi -e 's/gamma\0float\0/arri.\0float\0/; s/writer\0string\0/camera\0string\0/' "${name}" || fatal "internal" "perl command failed"
-    fi
 }
 
 # sequence ${file} accepted, with one or several threads for the analysis of the files
