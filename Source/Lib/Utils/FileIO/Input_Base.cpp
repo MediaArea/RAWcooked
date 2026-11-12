@@ -297,6 +297,8 @@ void input_base_uncompressed::ParseBuffer_Init()
 {
     // Nothing from the previous file, e.g. its flavor if this one is not supported
     Flavor = (decltype(Flavor))-1;
+    FrameWidth = 0;
+    FrameHeight = 0;
 }
 
 //---------------------------------------------------------------------------

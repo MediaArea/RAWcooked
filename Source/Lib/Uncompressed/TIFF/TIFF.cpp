@@ -735,6 +735,8 @@ void tiff::ParseBuffer()
         return;
     if (Flavor == (decltype(Flavor))-1 || StripOffsets.empty() || StripOffsets.size() != StripBytesCounts.size())
         return; // Not reported as unsupported if not encoding (e.g. --info)
+    FrameWidth = Width;
+    FrameHeight = Height;
 
     // StripOffsets / StripBytesCounts / RowsPerStrip
     uint32_t StripOffsets_Last = StripOffsets[0] + StripBytesCounts[0];

@@ -605,6 +605,8 @@ void dpx::ParseBuffer()
         Unsupported(unsupported::NumberOfElements);
     uint32_t Width = Get_X4();
     uint32_t Height = Get_X4();
+    FrameWidth = Width;
+    FrameHeight = Height;
     Buffer_Offset = 780;
     if (Get_X4() != 0)
         Unsupported(unsupported::DataSign);

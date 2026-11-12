@@ -51,6 +51,26 @@ static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessa
 
 } // undecodable
 
+namespace unsupported
+{
+
+static const char* MessageText[] =
+{
+    "flavor (not same as the first file of the sequence)",
+    "frame size (not same as the first file of the sequence)",
+};
+
+enum code : uint8_t
+{
+    Flavor,
+    FrameSize,
+    Max
+};
+
+static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage);
+
+} // unsupported
+
 namespace incoherent
 {
 
@@ -74,7 +94,7 @@ namespace unsupported { static_assert(Max == sizeof(MessageText) / sizeof(const 
 const char** ErrorTexts[] =
 {
     undecodable::MessageText,
-    nullptr,
+    unsupported::MessageText,
     incoherent::MessageText,
     nullptr,
 };
@@ -558,6 +578,26 @@ void input::CheckDurations(vector<double> const& Durations, vector<string> const
             Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::Duration, Durations_FileName[minmax.second - Durations.begin()] + " (" + to_string(*minmax.second) + "s)");
         }
     }
+}
+
+//---------------------------------------------------------------------------
+bool input::CheckFormat(const sequence_format& First, input_base_uncompressed& File, errors* Errors)
+{
+    // A video track has one flavor and one frame size, FFmpeg would convert the frame and the file could not be rebuilt
+    auto NotSame = false;
+    if (File.Flavor != First.Flavor)
+    {
+        if (Errors)
+            Errors->Error(IO_FileInput, error::type::Unsupported, (error::generic::code)fileinput_issue::unsupported::Flavor, File.FileName + " (" + (File.Flavor == (uint64_t)-1 ? string("unknown") : File.Flavor_String()) + " instead of " + First.Flavor_String + ')'); // Unknown e.g. for a TIFF file smaller than its header
+        NotSame = true;
+    }
+    if (File.FrameWidth != First.FrameWidth || File.FrameHeight != First.FrameHeight)
+    {
+        if (Errors)
+            Errors->Error(IO_FileInput, error::type::Unsupported, (error::generic::code)fileinput_issue::unsupported::FrameSize, File.FileName + " (" + to_string(File.FrameWidth) + 'x' + to_string(File.FrameHeight) + " instead of " + to_string(First.FrameWidth) + 'x' + to_string(First.FrameHeight) + ')');
+        NotSame = true;
+    }
+    return NotSame;
 }
 
 //---------------------------------------------------------------------------

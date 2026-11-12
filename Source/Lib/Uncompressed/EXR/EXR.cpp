@@ -552,6 +552,8 @@ void exr::ParseBuffer()
         Unsupported(unsupported::displayWindow);
     Width++;
     Height++;
+    FrameWidth = Width;
+    FrameHeight = Height;
     if (UnsupportedFieldName)
         Unsupported(unsupported::FieldName);
     for (const auto& EXR_Tested_Item : EXR_Tested)

@@ -165,6 +165,8 @@ public:
     // Info
     uint64_t                    Flavor = (uint64_t)-1;
     virtual string              Flavor_String() = 0;
+    uint32_t                    FrameWidth = 0; // Video only
+    uint32_t                    FrameHeight = 0;
 
     // Common info
     bool                        IsSequence;
