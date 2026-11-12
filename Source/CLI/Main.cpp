@@ -582,7 +582,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             case Parser_DPX:
             case Parser_TIFF:
             case Parser_EXR:
-                ParseInfo.Slices = std::to_string(Parser->slice_x * Parser->slice_y);
+                ParseInfo.Slices = std::to_string(Parser->SliceCount());
             }
             ParseInfo.IsDetected = true;
             delete Parser;

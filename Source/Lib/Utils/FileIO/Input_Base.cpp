@@ -300,6 +300,7 @@ void input_base_uncompressed::ParseBuffer_Init()
     FrameWidth = 0;
     FrameHeight = 0;
     FrameOrientation = 0;
+    FrameBitDepth = 0;
 }
 
 //---------------------------------------------------------------------------
@@ -310,6 +311,36 @@ void input_base_uncompressed::CopyCommon(const input_base_uncompressed& Parser)
     SetSupported();
 
     CopyCommonParser(Parser);
+}
+
+//---------------------------------------------------------------------------
+size_t input_base_uncompressed::SliceCount()
+{
+    if (Actions[Action_VulkanEncoder])
+        return 0; // Encoder default
+
+    // Computing optimal count of slices. TODO: agree with everyone about the goal and/or permit multiple formulas
+    // Current idea:
+    // - have some SIMD compatible slice count (e.g. AVX-512 has 16 32-bit blocks, let's take multiples of 16)
+    // - each slice has around 256 KiB of data, there is a similar risk of losing 1 LTO block (correction code per block, to be confirmed but looks like a 256 KiB block size is classic and LTFS 2.4 spec indicates 512 KiB in the example)
+    // This leads to:
+    // SD: 16 slices (10-bit) or 24 slices (16-bit)
+    // HD/2K: 64 slices (10-bit) or 96 slices (16-bit)
+    // UHD/4K: 256 slices (10-bit) or 384 slices (16-bit)
+    size_t slice_x = 4;
+    if (FrameWidth >= 1440) // more than 2/3 of 1920, so e.g. DV100 is included
+        slice_x <<= 1;
+    if (FrameWidth >= 2880) // more than 3/2 of 1920, oversampled HD is not included
+        slice_x <<= 1;
+    if (FrameBitDepth > 10)
+        slice_x = slice_x * 3 / 2; // 1.5x more slices if 16-bit
+    if (slice_x > FrameWidth / 2)
+        slice_x = FrameWidth / 2;
+    if (slice_x > FrameHeight / 2)
+        slice_x = FrameHeight / 2;
+    if (!slice_x)
+        slice_x = 1;
+    return slice_x * slice_x;
 }
 
 int input_base_uncompressed::AddEdits(map<string, string>& Edits)
