@@ -62,4 +62,24 @@ while read line ; do
     popd >/dev/null 2>&1
 done < "${script_path}/avi.txt"
 
+# ffv1_vulkan: 4:2:2 video width not a multiple of 128 rejected before encoding (no Vulkan device needed)
+test="v210_48000_24_2_S_LE (ffv1_vulkan)"
+file="v210_48000_24_2_S_LE.avi"
+pushd "${files_path}/Formats/AVI/Flavors/v210_48000_24_2_S_LE" >/dev/null 2>&1
+    run_rawcooked -y --encode --file -c:v ffv1_vulkan "${file}"
+    if check_failure "file rejected at input" "file accepted at input" ; then
+        if contains "multiple" "${cmd_stderr}" && contains "of 128" "${cmd_stderr}" ; then
+            echo "OK: ${test}, file rejected at input" >&${fd}
+        else
+            echo "NOK: ${test}, file rejected at input without the width message: ${cmd_stderr}" >&${fd}
+            status=1
+        fi
+    fi
+    if [ -e "${file}.mkv" ] ; then
+        echo "NOK: ${test}, mkv created" >&${fd}
+        status=1
+    fi
+    clean
+popd >/dev/null 2>&1
+
 exit ${status}

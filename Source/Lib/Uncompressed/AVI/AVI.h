@@ -41,6 +41,7 @@ public:
     size_t                      GetStreamCount();
     size_t                      GetFrameCount() { return FrameCount; } // Video frames
     double                      GetFrameRate() { return FrameRate; } // Of the video stream, 0 if unknown
+    size_t                      GetWidth() { return Width; } // Of the video stream
 
     // Info about flavors
     static size_t               BytesPerBlock(flavor Flavor);
@@ -65,8 +66,8 @@ private:
     bool                        IsList;
 
     // Temp
-    uint16_t                    Width;
-    uint16_t                    Height;
+    uint16_t                    Width = 0;
+    uint16_t                    Height = 0;
     uint32_t                    BlockAlign = 0;
     uint8_t*                    In = nullptr;
     size_t                      In_Pos = 0;
