@@ -442,11 +442,6 @@ void input_base_uncompressed::ParseRAWcooked(parse_params& Params)
             Params.HashValue = &HashValue;
         }
         Params.InputFile_Name = FileName;
-        if (Params.IsContainer) {
-            auto SeparatorPos = Params.InputFile_Name.find('/');
-            if (SeparatorPos != (size_t)-1)
-                Params.InputFile_Name.erase(0, SeparatorPos + 1); // TODO: more generic removal of directory name for unique files
-        }
     }
 
     RAWcooked->Parse(Params, Index);

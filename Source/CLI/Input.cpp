@@ -201,7 +201,7 @@ int input::FileName_Compare(const string& Left, const string& Right)
 }
 
 //---------------------------------------------------------------------------
-void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<FileEntry>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
+void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t AllFiles_Pos, vector<FileEntry>& RemovedFiles, size_t& Path_Pos, string& FileName_Template, string& FileName_StartNumber, string& FileName_EndNumber, string& FileList, bitset<Action_Max> const& Actions, errors* Errors)
 {
     string FN(Files[AllFiles_Pos].FileName);
     string After;
@@ -384,6 +384,10 @@ void input::DetectSequence(bool CheckIfFilesExist, size_t AllFiles_Pos, vector<F
                 AllFiles_PosToDelete++;
             }
         }
+
+        // FFmpeg would also read the next files of the sequence present on disk
+        if (OnlyListedFiles && !access((Before + FN + After).c_str(), 0))
+            MustCreateFileList = true;
     }
 
     if (RemovedFiles.empty())
