@@ -12,6 +12,8 @@
 //---------------------------------------------------------------------------
 #include "Lib/Core/Config.h"
 #include "Lib/Core/Global.h"
+#include "Lib/Core/Metadata.h"
+#include <memory>
 #include <string>
 #include <vector>
 using namespace std;
@@ -33,6 +35,9 @@ struct stream
     size_t                      StreamCountMinus1 = 0;
     bool                        IsContainer = false;
     bool                        Problem = false;
+
+    // For user interfaces
+    shared_ptr<metadata>        Metadata; // Summary of the metadata of the files of the track, if requested
 };
 struct attachment
 {

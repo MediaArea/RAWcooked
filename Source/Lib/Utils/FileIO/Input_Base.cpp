@@ -406,6 +406,36 @@ int input_base_uncompressed::ListEdits()
 }
 
 //---------------------------------------------------------------------------
+void input_base_uncompressed::ListMetadata(vector<metadata_field>& Fields)
+{
+    // Common to all formats
+    Fields.clear();
+    Fields.push_back({ "Format", "Format", nullptr, metadata_field::Text, 0, 0 });
+    Fields.push_back({ "Format", "Width", "pixels", metadata_field::Unsigned, 0, 0 });
+    Fields.push_back({ "Format", "Height", "pixels", metadata_field::Unsigned, 0, 0 });
+    Fields.push_back({ "Format", "Bit depth", nullptr, metadata_field::Unsigned, 0, 0 });
+
+    ListMetadataParser(Fields);
+}
+
+//---------------------------------------------------------------------------
+void input_base_uncompressed::GetMetadata(vector<string>& Values, vector<bool>* Missing)
+{
+    // Common to all formats, a value per field of ListMetadata() whatever is known about the file
+    Values.clear();
+    Values.push_back((flavor)Flavor == (flavor)-1 ? string() : Flavor_String()); // Unknown flavor: tested on the bits of the flavor only, the other bits are not always set (e.g. WAV not supported, when not encoding)
+    Values.push_back(FrameWidth ? to_string(FrameWidth) : string());
+    Values.push_back(FrameHeight ? to_string(FrameHeight) : string());
+    Values.push_back(FrameBitDepth ? to_string(FrameBitDepth) : string());
+    if (Missing)
+        Missing->assign(Values.size(), false);
+
+    GetMetadataParser(Values, Missing);
+    if (Missing)
+        Missing->resize(Values.size()); // A flag per value, also if the parser gives none
+}
+
+//---------------------------------------------------------------------------
 void input_base_uncompressed::RegisterAsAttachment()
 {
     // Write RAWcooked file

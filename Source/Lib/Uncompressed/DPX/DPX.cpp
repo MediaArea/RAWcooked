@@ -9,6 +9,9 @@
 #include "Lib/Compressed/RAWcooked/RAWcooked.h"
 #include "Lib/ThirdParty/endianness.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <sstream>
 #include <ios>
 using namespace std;
@@ -278,6 +281,7 @@ enum edit_type : uint8_t
     Edit_S,
     Edit_U,
     Edit_F,
+    Edit_T, // Time code, HH:MM:SS:FF as 4 bytes in BCD in a 32-bit unsigned integer
 };
 
 struct edit_list {
@@ -374,7 +378,7 @@ static edit_list EditList[] = {
     // { 1864,   56,    TBD,   "Motion-Picture Film Information Header Reserved", nullptr },
 
     // 6.2 Television Information Header
-    { 1920,    4, Edit_U,   "SMPTE time code", nullptr },
+    { 1920,    4, Edit_T,   "SMPTE time code", "HH:MM:SS:FF" },
     { 1924,    4, Edit_U,   "SMPTE user bits", nullptr },
     { 1928,    1, Edit_U,   "Interlace", "0 = noninterlaced; 1 = 2:1 interlace"},
     { 1929,    1, Edit_U,   "Field number", nullptr },
@@ -441,11 +445,22 @@ void dpx::AddEditsParser(map<string, string>& Edits)
             transform(name_lower.begin(), name_lower.end(), name_lower.begin(), ::tolower);
             if (key_lower == name_lower) {
                 NameFound = true;
+                if (it->second.empty() && EditInfo.Type != Edit_S) {
+                    // No value: the field is not set (all bits set), which is shown as no value
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(EditInfo.Size);
+                    memset(EditBuffer.Data(), 0xFF, EditInfo.Size);
+                    it = Edits.erase(it);
+                    Found = true;
+                    break;
+                }
                 switch (EditInfo.Type) {
                 case Edit_S:
                 {
                     if (it->second.size() > EditInfo.Size)
                         it->second = "value is too long, max is " + to_string(EditInfo.Size);
+                    else if (it->second.find('\xFF') != string::npos)
+                        it->second = "invalid text value (byte 0xFF)"; // Read as the end of the text, the value could not be read back
                     else {
                         auto& EditBuffer = this->Edits[EditInfo.Offset];
                         EditBuffer.Resize(EditInfo.Size);
@@ -518,6 +533,38 @@ void dpx::AddEditsParser(map<string, string>& Edits)
                     Found = true;
                     break;
                 }
+                case Edit_T:
+                {
+                    // HH:MM:SS:FF (2 BCD digits per part), else a decimal number as for an unsigned integer (but nothing after the number, e.g. not other separators)
+                    const auto& Text = it->second;
+                    uint32_t Value32 = 0;
+                    bool IsValid = Text.size() == 11;
+                    for (size_t i = 0; IsValid && i < 11; i++) {
+                        if (i % 3 == 2)
+                            IsValid = Text[i] == ':';
+                        else if (Text[i] >= '0' && Text[i] <= '9')
+                            Value32 = (Value32 << 4) | (uint32_t)(Text[i] - '0');
+                        else
+                            IsValid = false;
+                    }
+                    if (!IsValid) {
+                        uint64_t Value;
+                        IsValid = Edit_Unsigned(Text, 4, Value);
+                        Value32 = (uint32_t)Value;
+                    }
+                    if (!IsValid) {
+                        it->second = "invalid time code value";
+                        break;
+                    }
+
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(4);
+                    Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
+                    memcpy(EditBuffer.Data(), &Value32, 4);
+                    it = Edits.erase(it);
+                    Found = true;
+                    break;
+                }
                 }
                 break;
             }
@@ -541,6 +588,179 @@ string dpx::ListEditsParser()
         Result += "\n";
     }
     return Result;
+}
+
+//---------------------------------------------------------------------------
+// Part of the header having the field
+static const char* EditList_Group(unsigned Offset)
+{
+    if (Offset < 768)
+        return "File information";
+    if (Offset < 780)
+        return "Image information";
+    if (Offset < 1408)
+        return "Image element";
+    if (Offset < 1664)
+        return "Image source information";
+    if (Offset < 1920)
+        return "Motion-picture film information";
+    return "Television information";
+}
+
+//---------------------------------------------------------------------------
+// Flags of the field (metadata_field::flag), in addition to Editable
+static uint8_t EditList_Flags(unsigned Offset)
+{
+    switch (Offset)
+    {
+    case    8: // Version number
+    case   16: // Total image file size
+    case   24: // Generic section header length
+    case   28: // Industry specific header length
+    case   32: // User-defined header length
+    case  660: // Encryption key
+    case  768: // Image orientation
+    case  770: // Number of image elements
+    case  772: // Pixels per line
+    case  776: // Lines per image element
+    case  780: // Data sign
+    case  800: // Descriptor
+    case  803: // Bit depth
+    case  804: // Packing
+    case  806: // Encoding
+    case  808: // Offset to data
+    case  812: // End-of-line padding
+    case  816: // End-of-image padding
+        return metadata_field::Structural;
+    default:
+        return 0;
+    }
+}
+
+//---------------------------------------------------------------------------
+void dpx::ListMetadataParser(vector<metadata_field>& Fields)
+{
+    for (const auto& EditInfo : EditList)
+    {
+        metadata_field::type Type;
+        switch (EditInfo.Type)
+        {
+        case Edit_S: Type = metadata_field::Text; break;
+        case Edit_F: Type = metadata_field::Float; break;
+        case Edit_T: Type = metadata_field::TimeCode; break;
+        default: Type = metadata_field::Unsigned;
+        }
+        Fields.push_back({ EditList_Group(EditInfo.Offset), EditInfo.Name, EditInfo.Description, Type, (uint8_t)(metadata_field::Editable | EditList_Flags(EditInfo.Offset)), (uint16_t)EditInfo.Size });
+    }
+}
+
+//---------------------------------------------------------------------------
+// Unsigned integer of Size bytes (8 max)
+static uint64_t Metadata_Unsigned(const uint8_t* Data, unsigned Size, bool IsBigEndian)
+{
+    uint64_t Value = 0;
+    for (unsigned i = 0; i < Size; i++)
+        Value |= (uint64_t)Data[i] << (8 * (IsBigEndian ? Size - 1 - i : i));
+    return Value;
+}
+
+//---------------------------------------------------------------------------
+// Decimal text giving back the same value, with 6 significant digits and more only if needed (the shortest one for usual values)
+// The decimal separator is the one of the numeric locale of the C library, as when the value of an edit is read: user interfaces must keep the "C" numeric locale
+static string Metadata_Float(float Value)
+{
+    char Text[32];
+    for (int Precision = 6; Precision <= 9; Precision++)
+    {
+        snprintf(Text, sizeof(Text), "%.*g", Precision, Value);
+        if (strtof(Text, nullptr) == Value)
+            break;
+    }
+    return Text;
+}
+
+//---------------------------------------------------------------------------
+void dpx::GetMetadataParser(vector<string>& Values, vector<bool>* Missing)
+{
+    // Header in the buffer: not after the end of the file or of what is read from it, nor in the image data
+    // Endianness and offset to the image data are read from the buffer, not from what the parsing kept (the file may be rejected, or edited after its parsing)
+    const auto Data = Buffer.Data();
+    size_t End = Buffer.Size();
+    if (End && FileMap)
+        End = min(End, FileMap->Readable_End());
+    bool File_IsBigEndian = false;
+    if (End >= 8 && !memcmp(Data, "SDPX", 4))
+        File_IsBigEndian = true;
+    else if (End < 8 || memcmp(Data, "XPDS", 4))
+        End = 0; // Not a DPX file
+    if (End)
+    {
+        auto OffsetToData = End >= 812 ? (uint32_t)Metadata_Unsigned(Data + 808, 4, File_IsBigEndian) : 0; // The one of the image element else the one of the file, as when parsing
+        if (!OffsetToData)
+            OffsetToData = (uint32_t)Metadata_Unsigned(Data + 4, 4, File_IsBigEndian);
+        End = min(End, (size_t)OffsetToData);
+    }
+
+    // A value per field, empty if not in the header or not set
+    Values.reserve(Values.size() + sizeof(EditList) / sizeof(EditList[0]));
+    for (const auto& EditInfo : EditList)
+    {
+        string Value;
+        const auto IsInHeader = EditInfo.Offset + EditInfo.Size <= End;
+        if (Missing)
+            Missing->push_back(!IsInHeader);
+        if (IsInHeader)
+        {
+            const auto Field = Data + EditInfo.Offset;
+            switch (EditInfo.Type)
+            {
+            case Edit_S:
+            {
+                // Up to the first NUL byte, or 0xFF byte (not set)
+                size_t Size = 0;
+                while (Size < EditInfo.Size && Field[Size] && Field[Size] != 0xFF)
+                    Size++;
+                Value.assign((const char*)Field, Size);
+                break;
+            }
+            case Edit_U:
+            {
+                // Not set if all bits are set
+                auto Number = Metadata_Unsigned(Field, EditInfo.Size, File_IsBigEndian);
+                if (Number != (EditInfo.Size >= 8 ? (uint64_t)-1 : (((uint64_t)1 << (8 * EditInfo.Size)) - 1)))
+                    Value = to_string(Number);
+                break;
+            }
+            case Edit_F:
+            {
+                // Not set if all bits are set, which is not a number
+                if (EditInfo.Size != 4)
+                    break;
+                auto Bits = (uint32_t)Metadata_Unsigned(Field, 4, File_IsBigEndian);
+                float Number;
+                memcpy(&Number, &Bits, 4);
+                if (std::isfinite(Number))
+                    Value = Metadata_Float(Number);
+                break;
+            }
+            case Edit_T:
+            {
+                // The 4 bytes from the most significant one (2 BCD digits each), not set if all bits are set
+                if (EditInfo.Size != 4)
+                    break;
+                auto Bits = (uint32_t)Metadata_Unsigned(Field, 4, File_IsBigEndian);
+                if (Bits != (uint32_t)-1)
+                {
+                    char Text[12];
+                    snprintf(Text, sizeof(Text), "%02X:%02X:%02X:%02X", (unsigned)(Bits >> 24), (unsigned)((Bits >> 16) & 0xFF), (unsigned)((Bits >> 8) & 0xFF), (unsigned)(Bits & 0xFF));
+                    Value = Text;
+                }
+                break;
+            }
+            }
+        }
+        Values.push_back(move(Value));
+    }
 }
 
 //---------------------------------------------------------------------------

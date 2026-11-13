@@ -42,8 +42,8 @@ private:
 
     // Parsing of the inputs
     bool                        ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* InputInfo, bool OverrideCheckPadding = false);
-    bool                        ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First);
-    bool                        ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding);
+    bool                        ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First, metadata* Metadata);
+    bool                        ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, metadata* Metadata);
     int                         ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos);
     int                         ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName);
     int                         ParseFile(size_t Files_Pos);

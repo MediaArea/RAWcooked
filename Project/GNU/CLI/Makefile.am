@@ -23,6 +23,7 @@ rawcooked_SOURCES = \
     ../../../Source/Lib/Core/Global.cpp \
     ../../../Source/Lib/Core/Help.cpp \
     ../../../Source/Lib/Core/Input.cpp \
+    ../../../Source/Lib/Core/Metadata.cpp \
     ../../../Source/Lib/Core/Output.cpp \
     ../../../Source/Lib/License/License.cpp \
     ../../../Source/Lib/ThirdParty/flac/src/libFLAC/bitmath.c \

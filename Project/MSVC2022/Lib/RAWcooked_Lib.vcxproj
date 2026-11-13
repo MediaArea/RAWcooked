@@ -30,6 +30,7 @@
     <ClInclude Include="..\..\..\Source\Lib\Core\Global.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Help.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Input.h" />
+    <ClInclude Include="..\..\..\Source\Lib\Core\Metadata.h" />
     <ClInclude Include="..\..\..\Source\Lib\Core\Output.h" />
     <ClInclude Include="..\..\..\Source\Lib\ThirdParty\endianness.h" />
     <ClInclude Include="..\..\..\Source\Lib\Transform\Transform.h" />
@@ -111,6 +112,7 @@
     <ClCompile Include="..\..\..\Source\Lib\Core\Global.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Help.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Input.cpp" />
+    <ClCompile Include="..\..\..\Source\Lib\Core\Metadata.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Core\Output.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Transform\Transform.cpp" />
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp" />

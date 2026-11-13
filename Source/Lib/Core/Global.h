@@ -64,6 +64,10 @@ public:
     bitset<Action_Max>          Actions;
     vector<size_t>              VulkanDecoders; // Index of the Vulkan device of each vulkan decoder
 
+    // Options not from the command line
+    bool                        Metadata_Enabled = false; // The summary of the metadata of each track is computed (Output.Streams[].Metadata)
+    string                      Edits_FileName; // If not empty, edits are only for the track whose first file has this name (as in Output.Streams[].FileName), the run fails if no track takes them
+
     // Intermediate info
     size_t                      Path_Pos_Global = 0;
     vector<string>              Inputs;

@@ -17,6 +17,7 @@
 #include "Lib/Core/Core.h"
 #include "Lib/Core/Global.h"
 #include "Lib/Core/Input.h"
+#include "Lib/Core/Metadata.h"
 #include "Lib/Core/Output.h"
 #include "Lib/Core/Help.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
@@ -124,6 +125,19 @@ int Help_Edit() {
 }
 
 //---------------------------------------------------------------------------
+// Metadata of the file which was just parsed (its content is still available), for the summary of its track
+static void Metadata_Add(metadata* Metadata, input_base_uncompressed& Parser, uint64_t Index)
+{
+    if (!Metadata)
+        return; // Not requested
+
+    vector<string> Values;
+    vector<bool> Missing;
+    Parser.GetMetadata(Values, &Missing);
+    Metadata->Add(Index, move(Values), Missing);
+}
+
+//---------------------------------------------------------------------------
 struct parse_info
 {
     string* Name = {};
@@ -142,6 +156,7 @@ struct parse_info
     bool   IsDetected = false;
     bool   IsContainer = false;
     bool   Problem = false;
+    shared_ptr<metadata> Metadata; // Summary of the metadata of the files of the track, if requested
 
     // Core and its parts used by ParseFile_Input_Uncompressed()
     core& Core;
@@ -195,7 +210,7 @@ bool core::ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info*
 }
 
 //---------------------------------------------------------------------------
-bool core::ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First)
+bool core::ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First, metadata* Metadata)
 {
     const auto& Name = RemovedFiles[i].FileName;
     if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
@@ -212,6 +227,7 @@ bool core::ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMa
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
         return true;
     }
+    Metadata_Add(Metadata, S, i); // After the edit of the file, done at the end of its parsing
     if (First && input::CheckFormat(*First, S, &Global.Errors)) {
         return true;
     }
@@ -225,7 +241,7 @@ struct worker_data {
     filemap FileMap;
     input_base_uncompressed* Parser;
 };
-bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
+bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, metadata* Metadata)
 {
     // Edit only: only the beginning of the files is needed (hash and padding bits check read the whole files sequentially)
     auto EditOnly = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch] && !Global.Actions[Action_CheckPadding] && !OverrideCheckPadding;
@@ -266,7 +282,7 @@ bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filem
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
         atomic<bool> HashFlush{ false };
-        auto Work = [this, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+        auto Work = [this, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, Metadata, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
                 if (i >= numFiles || (AnyError && !Global.Edits_Enabled)) { // Stop at the first error as with 1 thread, except for the edit (the next files are also edited)
@@ -275,7 +291,7 @@ bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filem
                         input_base::Hash_Batch_Flush(true);
                     break;
                 }
-                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First, Metadata)) {
                     AnyError = true;
                     if (Parser.RAWcooked)
                         Parser.RAWcooked->Abort(); // The reversibility data of this file may never be written (e.g. file which can not be opened, header not supported), the next files must not wait for it
@@ -320,7 +336,7 @@ bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filem
 
     auto AnyError = false;
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
-        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First, Metadata)) {
             if (!Global.Edits_Enabled)
                 return true;
             AnyError = true; // Edit: the next files are also edited, as with several threads
@@ -499,11 +515,21 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
+    // Summary of the metadata of the files of the track
+    if (Global.Metadata_Enabled)
+    {
+        vector<metadata_field> Fields;
+        SingleFile.ListMetadata(Fields);
+        Metadata = make_shared<metadata>();
+        Metadata->Init(move(Fields));
+    }
+
     if (RemovedFiles.empty())
     {
-        if (Global.Edits_Enabled && Edits_Track(Global, SingleFile))
+        if (Global.Edits_Enabled && (Global.Edits_FileName.empty() || *Name == Global.Edits_FileName) && Edits_Track(Global, SingleFile)) // Edits may be for one track only, the other tracks are not edited
             return true;
         RemovedFiles.push_back(Input.Files[Files_Pos]);
+        Metadata_Add(Metadata.get(), SingleFile, 0);
     }
     else
     {
@@ -543,16 +569,19 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
 
         if (Global.Edits_Enabled && IsFileNotAccepted(Global, SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI))
             return true; // Before the edit of the files, else the files are edited even if the command is refused
-        if (Global.Edits_Enabled && Edits_Track(Global, SingleFile))
+        if (Global.Edits_Enabled && (Global.Edits_FileName.empty() || *Name == Global.Edits_FileName) && Edits_Track(Global, SingleFile)) // Edits may be for one track only, the other tracks are not edited
             return true;
         auto FirstFile_NotEdited = Global.Edits_Enabled && SingleFile.HasErrors(); // The next files are also edited, as after another file which can not be edited
+        Metadata_Add(Metadata.get(), SingleFile, 0); // After the edit of the first file, and before the other files (its parser and its file map are reused for them)
 
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
-        if (Core.ParseFile_AdditionalInputs(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding) || FirstFile_NotEdited) {
+        if (Core.ParseFile_AdditionalInputs(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, Metadata.get()) || FirstFile_NotEdited) {
             return true;
         }
     }
+    if (Metadata)
+        Metadata->Finish();
 
     // License
     if (!Problem && Global.Actions[Action_Encode])
@@ -677,6 +706,7 @@ int core::ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         }
         Stream.Flavor = ParseInfo.Flavor;
         Stream.Problem = ParseInfo.Problem;
+        Stream.Metadata = ParseInfo.Metadata;
 
         Stream.StreamCountMinus1 = ParseInfo.StreamCountMinus1;
         Stream.IsContainer = ParseInfo.IsContainer;
@@ -1051,6 +1081,13 @@ int core::Run(const char* argv[], int argc)
 
     // Progress indicator
     Global.ProgressIndicator_Stop();
+
+    // Edits for one track only: not a success if the track is not found (e.g. the files changed since the track was listed), nothing is edited
+    if (!Value && Global.Edits_Enabled && !Global.Edits_FileName.empty() && !Global.Edits_Accepted && Global.Edits_NotEditable.none())
+    {
+        cerr << "Error: track to edit not found (first file " << Global.Edits_FileName << ")." << endl;
+        Value = 1;
+    }
 
     // Info
     if (!Global.Quiet)

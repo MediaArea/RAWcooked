@@ -73,6 +73,30 @@ struct input_info
 };
 
 //---------------------------------------------------------------------------
+// Metadata field of a format
+struct metadata_field
+{
+    enum type : uint8_t
+    {
+        Text,
+        Unsigned,
+        Float,
+        TimeCode, // HH:MM:SS:FF
+    };
+    enum flag : uint8_t
+    {
+        Editable    = 1 << 0, // With the name of the field as key, and without value for a field not set
+        Structural  = 1 << 1, // The content can not be read with a wrong value
+    };
+    const char*                 Group;          // Part of the format having the field
+    const char*                 Name;           // Also the key for editing if editable. Unique in its group and among the editable fields, not in the whole list (a field of the format may have the name of a common field)
+    const char*                 Description;    // Unit or format of the value, nullptr if none
+    type                        Type;
+    uint8_t                     Flags;
+    uint16_t                    Size;           // Count of bytes of the field in the file (Text: max count of bytes of the value; Unsigned: the value must fit in them), 0 if it is not a field of the file
+};
+
+//---------------------------------------------------------------------------
 class input_base
 {
 public:
@@ -198,6 +222,8 @@ public:
     bool                        IsEditable() { return !ListEditsParser().empty(); } // False if the format can not be edited
     int                         AddEdits(const map<string, string>& Edits); // Only if the format can be edited
     int                         ListEdits();
+    void                        ListMetadata(vector<metadata_field>& Fields); // Fields of the format, same list for all files
+    void                        GetMetadata(vector<string>& Values, vector<bool>* Missing = nullptr); // Value of each field for the parsed file, in the order of ListMetadata(), empty if not set or not available; Missing (if not null): for each field, if the file has no place for it (e.g. a header ending before the field), such a field must not be edited; to be called while the content of the file is still available
     void                        ParseRAWcooked(parse_params& Params);
 
 protected:
@@ -206,6 +232,8 @@ protected:
     virtual void                AddEditsParser(map<string, string>& /*Edits*/) {} // Removes the edits it will do, the value of the other ones becomes the error message, or empty if the name is unknown
     virtual void                Edit() {};
     virtual string              ListEditsParser() { return string(); } // Empty if the format can not be edited
+    virtual void                ListMetadataParser(vector<metadata_field>& /*Fields*/) {}
+    virtual void                GetMetadataParser(vector<string>& /*Values*/, vector<bool>* /*Missing*/) {}
     void                        RegisterAsAttachment();
 };
 

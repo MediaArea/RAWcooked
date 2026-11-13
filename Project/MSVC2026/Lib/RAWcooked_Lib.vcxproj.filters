@@ -420,6 +420,9 @@
     <ClInclude Include="..\..\..\Source\Lib\Core\Input.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Core\Metadata.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Core\Output.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
@@ -606,6 +609,9 @@
       <Filter>Source Files\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Core\Input.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Core\Metadata.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Core\Output.cpp">
