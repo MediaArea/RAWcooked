@@ -389,7 +389,10 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     // Management
     Flavor = SingleFile.Flavor_String();
     if (SingleFile.IsSequence)
-        Input.DetectSequence(Global.HasAtLeastOneFile, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, FileList, Global.Actions, &Global.Errors);
+    {
+        auto OnlyListedFiles = Global.HasAtLeastOneFile && Global.FileOption_IsProvided && Global.Inputs.size() == 1; // Only the given file, but whole sequences of a package
+        Input.DetectSequence(Global.HasAtLeastOneFile && !OnlyListedFiles, OnlyListedFiles, Files_Pos, RemovedFiles, Global.Path_Pos_Global, FileName_Template, FileName_StartNumber, FileName_EndNumber, FileList, Global.Actions, &Global.Errors);
+    }
 
     if (SingleFile.Version() == rawcooked::version::v2)
     {
@@ -572,6 +575,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 {
     // Init
     RAWcooked.ResetTrack();
+    auto IsNotSequence = false;
 
     for (int i = 0; i < Uncompressed_Max; i++) {
         auto Parser = CreateParser(i, &Global.Errors);
@@ -580,8 +584,12 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         auto NOK = ParseInfo.ParseFile_Input_Uncompressed(*Parser, Input, Files_Pos);
         if (!NOK && Parser->IsDetected()) {
             switch (i) {
+            case Parser_WAV:
+            case Parser_AIFF:
+                IsNotSequence = true;
+                break;
             case Parser_AVI:
-                Global.SetAcceptFiles();
+                IsNotSequence = true;
                 ParseInfo.IsContainer = true;
                 ParseInfo.StreamCountMinus1 = ((avi*)Parser)->GetStreamCount() - 1;
                 ParseInfo.FrameCount = ((avi*)Parser)->GetFrameCount();
@@ -633,7 +641,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     }
 
     // End
-    if (Global.HasAtLeastOneFile && !Global.AcceptFiles)
+    if (Global.HasAtLeastOneFile && !Global.AcceptFiles && !IsNotSequence)
     {
         Global.ProgressIndicator_Stop();
         cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;

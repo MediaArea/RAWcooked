@@ -753,6 +753,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
     StoreLicenseKey = false;
     DisplayCommand = false;
     AcceptFiles = false;
+    FileOption_IsProvided = false;
     OutputFileName_IsProvided = false;
     Decoder_IsProvided = false;
     Quiet = false;
@@ -913,6 +914,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if (strcmp(argv[i], "--file") == 0)
         {
+            FileOption_IsProvided = true; // Only the provided files, not the rest of their sequence
             int Value = SetAcceptFiles();
             if (Value)
                 return Value;

@@ -51,6 +51,7 @@ public:
     bool                        StoreLicenseKey;
     bool                        DisplayCommand;
     bool                        AcceptFiles;
+    bool                        FileOption_IsProvided;
     bool                        HasAtLeastOneDir;
     bool                        HasAtLeastOneFile;
     bool                        OutputFileName_IsProvided;
