@@ -1,0 +1,141 @@
+name: FFmpeg packages
+
+on:
+  push:
+    paths:
+      - '.github/workflows/FFmpeg_Packages.yml'
+      - '.github/scripts/ffmpeg_package*'
+      - 'Source/Lib/CoDec/FFmpeg_*'
+      - 'Project/GNU/CLI/configure.ac'
+  pull_request:
+    paths:
+      - '.github/workflows/FFmpeg_Packages.yml'
+      - '.github/scripts/ffmpeg_package*'
+      - 'Source/Lib/CoDec/FFmpeg_*'
+      - 'Project/GNU/CLI/configure.ac'
+  schedule:
+    - cron: '17 3 * * 1' # Weekly, for new snapshots and new packages
+  workflow_dispatch:
+
+# FFmpeg packages of MediaArea (latest snapshot) used by rawcooked, as intended for each package:
+# Linux packages installed by the package manager of their distribution, Windows ZIP files in the directories searched by rawcooked,
+# macOS ZIP files in the ffmpeg directory next to rawcooked and macOS DMG file installed in the system, also with -b
+
+jobs:
+
+  Packages:
+    runs-on: ubuntu-latest
+    outputs:
+      base: ${{ steps.list.outputs.base }}
+      linux: ${{ steps.list.outputs.linux }}
+      windows: ${{ steps.list.outputs.windows }}
+      mac: ${{ steps.list.outputs.mac }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: List
+        id: list
+        run: |
+          bash .github/scripts/ffmpeg_packages.sh > packages.txt
+          cat packages.txt
+          cat packages.txt >> "${GITHUB_OUTPUT}"
+
+  Linux_Build:
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Compile
+        run: |
+          # Debian 12: oldest C library of the distributions of the packages, C++ library linked statically, FFmpeg libraries loaded at run time
+          docker run --rm -v "${PWD}:/src" -w /src/Project/GNU/CLI debian:12 bash -c '
+            set -e
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends g++ make autoconf automake libtool > /dev/null
+            sh autogen.sh > /dev/null 2>&1
+            ./configure -q LDFLAGS="-static-libstdc++ -static-libgcc"
+            make -s -j$(nproc)
+            ./rawcooked --version'
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: rawcooked-linux-${{ matrix.arch }}
+          path: Project/GNU/CLI/rawcooked
+
+  Linux:
+    needs: [Packages, Linux_Build]
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.Packages.outputs.linux) }}
+      fail-fast: false
+    name: Linux (${{ matrix.file }})
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          name: rawcooked-linux-${{ matrix.arch }}
+          path: build
+      - name: Check
+        run: |
+          curl -fsSL -o "${{ matrix.file }}" "${{ needs.Packages.outputs.base }}/${{ matrix.file }}"
+          docker run --rm -v "${PWD}:/src" -w /src ${{ matrix.image }} bash .github/scripts/ffmpeg_package_linux.sh ${{ matrix.manager }} "${{ matrix.file }}" build/rawcooked
+
+  Windows:
+    needs: Packages
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Line endings
+        run: git config --global core.autocrlf false # Scripts with LF line endings
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: MSBuild
+        uses: microsoft/setup-msbuild@v3
+      - name: Compile
+        run: |
+          MSBuild.exe Project/MSVC2026/RAWcooked.slnx -p:Configuration=Release -p:Platform=x64 -m -v:minimal
+      - name: Check
+        run: bash .github/scripts/ffmpeg_package_windows.sh Project/MSVC2026/x64/Release/RAWcooked_CLI.exe ${{ needs.Packages.outputs.base }} ${{ needs.Packages.outputs.windows }}
+
+  Mac:
+    needs: Packages
+    strategy:
+      matrix:
+        os: [macos-latest, macos-15-intel]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Compile
+        run: |
+          brew install automake libtool > /dev/null
+          cd Project/GNU/CLI
+          sh autogen.sh > /dev/null 2>&1
+          ./configure -q # FFmpeg libraries loaded at run time (--with-ffmpeg=dynamic by default)
+          make -s -j$(sysctl -n hw.ncpu)
+          ./rawcooked --version
+      - name: Check
+        run: bash .github/scripts/ffmpeg_package_mac.sh Project/GNU/CLI/rawcooked ${{ needs.Packages.outputs.base }} ${{ needs.Packages.outputs.mac }}
