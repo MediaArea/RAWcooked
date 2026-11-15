@@ -940,10 +940,10 @@ int ParseFile(size_t Files_Pos)
         return 0;
 
     // Attachments
-    size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (1024 * 1024); // Default value arbitrary chosen
+    size_t AttachmentSizeFinal = (Global.AttachmentMaxSize != (size_t)-1) ? Global.AttachmentMaxSize : (4 * 1024 * 1024); // Default value arbitrary chosen, big enough for hash files of long sequences
     if (ParseInfo.FileMap.Size() >= AttachmentSizeFinal)
     {
-        cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nPlease contact info@mediaarea.net if you want support of such file." << endl;
+        cout << "Error: " << *ParseInfo.Name << " is not small, expected to be an attachment?\nUse --attachment-max-size for bigger attachments (current maximum is " << AttachmentSizeFinal << " bytes),\nor contact info@mediaarea.net if you want support of such file." << endl;
         return 1;
     }
     if (!ParseInfo.FileMap.Empty()) // Ignoring file with size of 0
