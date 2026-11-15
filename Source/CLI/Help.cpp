@@ -92,7 +92,7 @@ ReturnValue Help(const char* /*Name*/)
         "\n"
         "       --attachment-max-size value | -s value\n"
         "              Set maximum size of attachments to value (in bytes).\n"
-        "              The default value is 1048576.\n"
+        "              The default value is 4194304 (4 MiB).\n"
         "\n"
         "       --sublicense value\n"
         "              Output a license for a sub-licensee with ID value.\n"
