@@ -575,6 +575,75 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 }
 
 //---------------------------------------------------------------------------
+// FFmpeg package next to the executable or ffmpeg-ma package, else ffmpeg in PATH
+static string FFmpeg_BinName()
+{
+    auto Binary = FFmpeg_Binary();
+    return Binary.empty() ? string("ffmpeg") : ('\"' + Binary + '\"');
+}
+
+//---------------------------------------------------------------------------
+// Option in the full help of the FFmpeg binary (e.g. "-c[:<stream_spec>] <codec>" or "  -slicecrc  <int>"): 1 if present, 0 if not present, -1 if the binary can not be run
+static int FFmpeg_HasOption(const string& BinName, const char* Option)
+{
+    // Name without the stream specifier (e.g. -b:v) and without the "no" prefix of boolean options (e.g. -nostats)
+    string Name(Option + 1, strcspn(Option + 1, ":"));
+    string Name_WithoutNo = Name.size() > 2 && !Name.compare(0, 2, "no") ? Name.substr(2) : string();
+
+    #if defined(_WIN32) || defined(_WINDOWS)
+    auto Command = BinName + " -hide_banner -h full 2>NUL";
+    if (Command.front() == '\"')
+        Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
+    #else
+    auto Command = BinName + " -hide_banner -h full 2>/dev/null";
+    #endif
+    FILE* F = popen(Command.c_str(), "r");
+    if (!F)
+        return -1;
+    char Result[1024];
+    auto Found = false;
+    auto LineBegin = true;
+    while (fgets(Result, sizeof(Result), F)) // Whole output, so the binary is not stopped by a closed pipe
+    {
+        if (LineBegin && !Found)
+        {
+            auto Line = Result + strspn(Result, " ");
+            if (*Line == '-')
+            {
+                Line++;
+                string Help_Name(Line, strcspn(Line, " [<\r\n"));
+                Found = Help_Name == Name || (!Name_WithoutNo.empty() && Help_Name == Name_WithoutNo);
+            }
+        }
+        LineBegin = strchr(Result, '\n') != nullptr;
+    }
+    if (pclose(F))
+        return -1;
+    return Found;
+}
+
+//---------------------------------------------------------------------------
+static int Error_Unknown(const char* Option, const string& BinName)
+{
+    if (Option[1] != '-')
+    {
+        // May be an FFmpeg option
+        switch (FFmpeg_HasOption(BinName.empty() ? FFmpeg_BinName() : BinName, Option))
+        {
+        case 1:
+            cerr << "Error: FFmpeg option " << Option << " not yet tested.\nPlease contact info@mediaarea.net if you want support of such option." << endl;
+            return 1;
+        case -1:
+            cerr << "Error: option " << Option << " is unknown, or is an FFmpeg option not yet tested.\nSee --help for the list of options, or please contact info@mediaarea.net if you want support of such option." << endl;
+            return 1;
+        default:;
+        }
+    }
+    cerr << "Error: unknown option " << Option << ".\nSee --help for the list of options." << endl;
+    return 1;
+}
+
+//---------------------------------------------------------------------------
 int Error_Missing(const char* Option1)
 {
     cerr << "Error: missing argument for option '" << Option1 << "'." << endl;
@@ -733,7 +802,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
         return Error_NotTested(argv[i - 1], argv[i]);
     }
 
-    return Error_NotTested(argv[i]);
+    return Error_Unknown(argv[i], BinName);
 }
 
 //---------------------------------------------------------------------------
@@ -1211,11 +1280,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
 
     BinName_IsProvided = !BinName.empty();
     if (BinName.empty())
-    {
-        // FFmpeg package next to the executable or ffmpeg-ma package, else ffmpeg in PATH
-        auto Binary = FFmpeg_Binary();
-        BinName = Binary.empty() ? string("ffmpeg") : ('\"' + Binary + '\"');
-    }
+        BinName = FFmpeg_BinName();
 
     // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided (Vulkan also if it is a CPU implementation)
     if (Actions[Action_VulkanEncoder] && !Decoder_IsProvided)
