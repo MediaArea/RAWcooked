@@ -28,6 +28,14 @@ pushd "${files_path}" >/dev/null 2>&1
     check_failure "check failed on dpx gaps with -n option" "check succeded on dpx gaps despite -n option"
     rm -f "${file}.mkv"
 
+    run_rawcooked -y --no-accept-gaps --check "${file}"
+    check_failure "check failed on dpx gaps with -y and --no-accept-gaps options" "check succeded on dpx gaps despite --no-accept-gaps option"
+    rm -f "${file}.mkv"
+
+    run_rawcooked -y --all --no-accept-gaps "${file}"
+    check_failure "check failed on dpx gaps with -y, --all and --no-accept-gaps options" "check succeded on dpx gaps despite --all --no-accept-gaps options"
+    rm -f "${file}.mkv"
+
     run_rawcooked -n --accept-gaps --check "${file}"
     check_success "check failed on dpx gaps with -n and --accepts-gaps options" "check succeded on dpx gaps with -n and --accept-gaps option"
     rm -f "${file}.mkv"

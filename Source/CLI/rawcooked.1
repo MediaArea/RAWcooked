@@ -267,7 +267,7 @@ Is default.
 Use if there are missing files within the sequence numbering. RAWcooked creates a concatenated list of all files ensuring the sequence can be encoded.
 .TP
 .B --no-accept-gaps
-Do not accept-gaps within the sequence numbering. FFmpeg will fail any encoding attempts where gaps are present.
+Reject the compression if there are missing files within the sequence numbering, even with -y. Without --accept-gaps and --no-accept-gaps, the user is asked (see -y and -n).
 .TP
 .SS INPUT RELATED OPTIONS
 .TP
