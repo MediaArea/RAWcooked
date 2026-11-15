@@ -94,7 +94,10 @@ jobs:
       - name: Check
         run: |
           curl -fsSL -o "${{ matrix.file }}" "${{ needs.Packages.outputs.base }}/${{ matrix.file }}"
-          docker run --rm -v "${PWD}:/src" -w /src ${{ matrix.image }} bash .github/scripts/ffmpeg_package_linux.sh ${{ matrix.manager }} "${{ matrix.file }}" build/rawcooked
+          # Public key of the MediaArea repositories (fingerprint from https://mediaarea.net/en/Repos), for the signature of RPM packages
+          curl -fsSL -o MediaArea.key https://mediaarea.net/repo/rpm/snapshots/Fedora_43/x86_64/repodata/repomd.xml.key
+          [ "$(gpg --show-keys --with-colons MediaArea.key | grep -A1 '^pub:' | grep '^fpr:')" == 'fpr:::::::::C5CDF62C7AE05CC847657390C10E11090EC0E438:' ]
+          docker run --rm -v "${PWD}:/src" -w /src ${{ matrix.image }} bash .github/scripts/ffmpeg_package_linux.sh ${{ matrix.manager }} "${{ matrix.file }}" build/rawcooked MediaArea.key
 
   Windows:
     needs: Packages

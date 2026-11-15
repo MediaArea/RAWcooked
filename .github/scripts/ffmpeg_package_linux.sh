@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 # Check of an ffmpeg-ma package of MediaArea on Linux, in a container of its distribution: installed with the package manager (intended usage)
-# Usage: ffmpeg_package_linux.sh <package manager> <package file> <rawcooked>
+# Usage: ffmpeg_package_linux.sh <package manager> <package file> <rawcooked> <key file>
+# Key file: public key of the MediaArea repositories, the signature of RPM packages is checked with it
 
 Manager=${1}
 Package=${2}
 RAWcooked=${3}
+Key=${4}
 Check="$(dirname "${0}")/ffmpeg_package_check.sh"
 Name=$(basename "${Package}")
 
 # Installation, with the dependencies from the repositories of the distribution
 case "${Manager}" in
+    dnf|zypper|urpmi) rpm --import "${Key}" > install.log 2>&1 || { cat install.log ; echo "FAIL: ${Name}: import of the key failed" ; exit 1 ; } ;;
+esac
+case "${Manager}" in
     apt) apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "./${Package}" ;;
-    dnf) dnf install -y -q --nogpgcheck "./${Package}" ;;
-    zypper) zypper --non-interactive --quiet install --allow-unsigned-rpm "./${Package}" ;;
-    urpmi) urpmi.update -a -q && urpmi --auto --no-verify-rpm "./${Package}" ;;
+    dnf) dnf install -y -q "./${Package}" ;;
+    zypper) zypper --non-interactive --quiet install "./${Package}" ;;
+    urpmi) urpmi.update -a -q && urpmi --auto "./${Package}" ;;
     pacman) pacman -Syu --noconfirm --noprogressbar && pacman -U --noconfirm --noprogressbar "./${Package}" ;;
     *) echo "Unknown package manager ${Manager}" ; exit 1 ;;
 esac > install.log 2>&1 || { tail -n 30 install.log ; echo "FAIL: ${Name}: installation failed" ; exit 1 ; }
