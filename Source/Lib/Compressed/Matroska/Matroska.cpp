@@ -139,9 +139,19 @@ ELEMENT_CASE(    7263, Segment_Attachments_AttachedFile_FileData)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment)
+ELEMENT_CASE( 14D9B74, Segment_SeekHead)
 ELEMENT_CASE( 941A469, Segment_Attachments)
 ELEMENT_CASE( F43B675, Segment_Cluster)
 ELEMENT_CASE( 654AE6B, Segment_Tracks)
+ELEMENT_END()
+
+ELEMENT_BEGIN(Segment_SeekHead)
+ELEMENT_CASE(     DBB, Segment_SeekHead_Seek)
+ELEMENT_END()
+
+ELEMENT_BEGIN(Segment_SeekHead_Seek)
+ELEMENT_VOID(    13AB, Segment_SeekHead_Seek_SeekID)
+ELEMENT_VOID(    13AC, Segment_SeekHead_Seek_SeekPosition)
 ELEMENT_END()
 
 ELEMENT_BEGIN(Segment_Attachments)
@@ -528,6 +538,8 @@ void matroska::Segment()
 {
     SetDetected();
     IsList = true;
+    if (Segment_Offset == (size_t)-1)
+        Segment_Offset = Buffer_Offset;
 
     // In case of partial check, or if decoders are not available
     if (Decoders_Check && !Decoders_Check())
@@ -540,9 +552,63 @@ void matroska::Segment()
 }
 
 //---------------------------------------------------------------------------
+void matroska::Segment_SeekHead()
+{
+    IsList = true;
+    SeekHead_IsParsed = true;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_SeekHead_Seek()
+{
+    IsList = true;
+    Seek_ID = 0;
+    Seek_Position = (uint64_t)-1;
+}
+
+//---------------------------------------------------------------------------
+static uint64_t Get_UInt(const uint8_t* Data, size_t Size)
+{
+    uint64_t Value = 0;
+    for (size_t i = 0; i < Size && i < 8; i++)
+        Value = (Value << 8) | Data[i];
+    return Value;
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_SeekHead_Seek_SeekID()
+{
+    Seek_ID = Get_UInt(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    Seek_Set();
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_SeekHead_Seek_SeekPosition()
+{
+    Seek_Position = Get_UInt(Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    Seek_Set();
+}
+
+//---------------------------------------------------------------------------
+void matroska::Seek_Set()
+{
+    switch (Seek_ID)
+    {
+        case 0x114D9B74: // SeekHead
+            SeekHead_HasSeekHead = true;
+            break;
+        case 0x1941A469: // Attachments
+            if (Seek_Position != (uint64_t)-1 && SeekHead_Attachments == (uint64_t)-1)
+                SeekHead_Attachments = Seek_Position;
+            break;
+    }
+}
+
+//---------------------------------------------------------------------------
 void matroska::Segment_Attachments()
 {
     IsList = true;
+    Attachments_IsParsed = true;
 }
 
 //---------------------------------------------------------------------------
@@ -903,16 +969,27 @@ void matroska::Segment_Cluster()
 {
     if (RAWcooked_LibraryName.empty())
     {
+        // No reversibility data before the clusters, it may be after them (e.g. attachments added by another tool): clusters are skipped, and parsed after the reversibility data
+        if (Cluster_Offset != (size_t)-1)
+            return; // Next clusters, skipped
         memcpy(Cluster_Levels, Levels, sizeof(Levels));
         Cluster_Offset = Element_Begin_Offset;
         Cluster_Level = Level;
-        Level--;
         if (OutputHash) {
             OutputHash->Update(Buffer.Data(), Buffer_Offset - OutputHash->Offset);
             OutputHash->Disabled = true;
         }
+
+        // Attachments after the clusters: directly at their position from the SeekHead, else no attachments after the clusters if attachments are already parsed (only 1 Attachments element) or if the SeekHead is complete without attachments, else (no or outdated SeekHead) all clusters are skipped one by one
+        auto Segment_End = Levels[Level - 1].Offset_End;
+        if (!Attachments_IsParsed && SeekHead_Attachments != (uint64_t)-1 && SeekHead_Attachments < Segment_End - Segment_Offset && Segment_Offset + SeekHead_Attachments > Element_Begin_Offset)
+            Levels[Level].Offset_End = Segment_Offset + SeekHead_Attachments;
+        else if (Attachments_IsParsed || (SeekHead_Attachments == (uint64_t)-1 && SeekHead_IsParsed && !SeekHead_HasSeekHead))
+            Levels[Level].Offset_End = Segment_End;
         return;
     }
+    if (Cluster_Level != (size_t)-1)
+        return; // Reversibility data after the clusters, clusters are parsed after the end of the parsing of the reversibility data
 
     IsList = true;
 

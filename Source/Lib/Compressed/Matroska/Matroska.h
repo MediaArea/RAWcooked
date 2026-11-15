@@ -103,6 +103,16 @@ private:
     size_t Cluster_Offset = (size_t)-1;
     size_t Element_Begin_Offset;
 
+    // SeekHead, for finding the attachments after the clusters (e.g. added by another tool)
+    size_t Segment_Offset = (size_t)-1; // Start of the Segment content, SeekHead positions are relative to it
+    bool Attachments_IsParsed = false;
+    bool SeekHead_IsParsed = false;
+    bool SeekHead_HasSeekHead = false; // Another SeekHead is referenced, so the list of elements may be incomplete
+    uint64_t SeekHead_Attachments = (uint64_t)-1; // Position of the attachments
+    uint64_t Seek_ID = 0;
+    uint64_t Seek_Position = (uint64_t)-1;
+    void Seek_Set();
+
     #define MATROSKA_ELEMENT(_NAME) \
         void _NAME(); \
         call SubElements_##_NAME(uint64_t Name);
@@ -153,6 +163,10 @@ private:
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_FileHash);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryName);
     MATROSKA_ELEMENT(Segment_Attachments_AttachedFile_FileData_RawCookedTrack_LibraryVersion);
+    MATROSKA_ELEMENT(Segment_SeekHead);
+    MATROSKA_ELEMENT(Segment_SeekHead_Seek);
+    MATROSKA_ELEMENT(Segment_SeekHead_Seek_SeekID);
+    MATROSKA_ELEMENT(Segment_SeekHead_Seek_SeekPosition);
     MATROSKA_ELEMENT(Segment_Cluster);
     MATROSKA_ELEMENT(Segment_Cluster_BlockGroup);
     MATROSKA_ELEMENT(Segment_Cluster_BlockGroup_Block);
