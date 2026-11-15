@@ -94,10 +94,14 @@ jobs:
       - name: Check
         run: |
           curl -fsSL -o "${{ matrix.file }}" "${{ needs.Packages.outputs.base }}/${{ matrix.file }}"
-          # Public key of the MediaArea repositories (fingerprint from https://mediaarea.net/en/Repos), for the signature of RPM packages
+          if [ "${{ matrix.manager }}" == "pacman" ]; then
+            curl -fsSL -o "${{ matrix.file }}.sig" "${{ needs.Packages.outputs.base }}/${{ matrix.file }}.sig"
+          fi
+          # Public key of the MediaArea repositories (fingerprint from https://mediaarea.net/en/Repos), for the signature of RPM and Arch packages
+          Fingerprint=C5CDF62C7AE05CC847657390C10E11090EC0E438
           curl -fsSL -o MediaArea.key https://mediaarea.net/repo/rpm/snapshots/Fedora_43/x86_64/repodata/repomd.xml.key
-          [ "$(gpg --show-keys --with-colons MediaArea.key | grep -A1 '^pub:' | grep '^fpr:')" == 'fpr:::::::::C5CDF62C7AE05CC847657390C10E11090EC0E438:' ]
-          docker run --rm -v "${PWD}:/src" -w /src ${{ matrix.image }} bash .github/scripts/ffmpeg_package_linux.sh ${{ matrix.manager }} "${{ matrix.file }}" build/rawcooked MediaArea.key
+          [ "$(gpg --show-keys --with-colons MediaArea.key | grep -A1 '^pub:' | grep '^fpr:')" == "fpr:::::::::${Fingerprint}:" ]
+          docker run --rm -v "${PWD}:/src" -w /src ${{ matrix.image }} bash .github/scripts/ffmpeg_package_linux.sh ${{ matrix.manager }} "${{ matrix.file }}" build/rawcooked MediaArea.key ${Fingerprint}
 
   Windows:
     needs: Packages

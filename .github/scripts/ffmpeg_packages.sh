@@ -14,7 +14,9 @@ Windows=
 Mac=
 for File in ${Files} ; do
     case "${File}" in
-        FFmpeg_Dev_*) continue ;; # Headers of the libraries (for building rawcooked)
+        FFmpeg_Dev_*|ffmpeg-ma-dev_*|ffmpeg-ma-devel-*) continue ;; # Headers of the libraries (for building rawcooked)
+        ffmpeg-ma-debuginfo-*) continue ;; # Debug information
+        *.pkg.tar.zst.sig) continue ;; # Signature of an Arch package, checked with the package
         FFmpeg_Bin_*_Windows_*.zip) Windows="${Windows} ${File}" ; continue ;;
         FFmpeg_Bin_*_Mac_*.zip|ffmpeg-ma_*_Mac.dmg) Mac="${Mac} ${File}" ; continue ;;
         *_amd64.*.deb) Arch=x64 Distro=$(echo "${File}" | sed 's/.*_amd64\.\(.*\)\.deb$/\1/') ;;
