@@ -71,7 +71,7 @@ rawcooked -y --all --no-accept-gaps -s 5281680 path/sequence_name/ -o path/seque
 | ```rawcooked```        | Calls the software                         |
 | ```-y```               | Answers 'yes' to software questions        |
 | ```--all```            | Preservation command with CRC-32 hashes    |
-| ```--no-accept-gaps``` | Exit with warning if sequence gaps found   |
+| ```--no-accept-gaps``` | Exit with error if sequence gaps found     |
 |                        | --all command defaults to accepting gaps   |
 | ```-s 5281680```       | Set max attachment size to 5MB             |
 | ```-o```               | Use output path for FFV1 MKV               |

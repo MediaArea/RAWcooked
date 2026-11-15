@@ -33,6 +33,7 @@ enum action : uint8_t
     Action_CheckPadding,
     Action_CheckPaddingOptionIsSet,
     Action_AcceptGaps,
+    Action_RejectGaps, // --no-accept-gaps: gaps are an error, without question to the user
     Action_VersionValueIsAuto,
     Action_Version2,
     Action_AcceptTruncated,

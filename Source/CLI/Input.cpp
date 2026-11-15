@@ -59,6 +59,7 @@ static const char* MessageText[] =
     "flavor (not same as the first file of the sequence)",
     "frame size (not same as the first file of the sequence)",
     "orientation (not same as the first file of the sequence)",
+    "file names (gap in file names, rejected due to --no-accept-gaps)",
 };
 
 enum code : uint8_t
@@ -66,6 +67,7 @@ enum code : uint8_t
     Flavor,
     FrameSize,
     Orientation,
+    FileMissing,
     Max
 };
 
@@ -351,15 +353,18 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
                                     {
                                         if (Actions[Action_Coherency] && !Actions[Action_AcceptGaps] && Errors)
                                         {
-                                            Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN + After);
+                                            // Error with --no-accept-gaps, else warning (question to the user)
+                                            auto Type = Actions[Action_RejectGaps] ? error::type::Unsupported : error::type::Incoherent;
+                                            auto Code = Actions[Action_RejectGaps] ? (error::generic::code)fileinput_issue::unsupported::FileMissing : (error::generic::code)fileinput_issue::incoherent::FileMissing;
+                                            Errors->Error(IO_FileInput, Type, Code, Before.substr(Path_Pos) + FN + After);
                                             if (Number1 + 1 != Number2)
                                             {
                                                 auto FN2 = to_string(Number2 - 1);
                                                 if (FN.size() > FN2.size())
                                                     FN2.insert(0, FN.size() - FN2.size(), '0');
                                                 if (Number1 + 2 != Number2)
-                                                    Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, "...");
-                                                Errors->Error(IO_FileInput, error::type::Incoherent, (error::generic::code)fileinput_issue::incoherent::FileMissing, Before.substr(Path_Pos) + FN2 + After);
+                                                    Errors->Error(IO_FileInput, Type, Code, "...");
+                                                Errors->Error(IO_FileInput, Type, Code, Before.substr(Path_Pos) + FN2 + After);
                                             }
                                         }
                                         FN = File2_FileName.substr(Before.size(), TestDigit - Before.size());

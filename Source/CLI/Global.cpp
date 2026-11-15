@@ -326,6 +326,7 @@ int global::SetQuickCheckPadding()
 int global::SetAcceptGaps(bool Value)
 {
     Actions.set(Action_AcceptGaps, Value);
+    Actions.set(Action_RejectGaps, false);
     return 0;
 }
 
@@ -960,6 +961,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
             int Value = SetAcceptGaps(false);
             if (Value)
                 return Value;
+            Actions.set(Action_RejectGaps);
         }
         else if (strcmp(argv[i], "--no-check") == 0)
         {
