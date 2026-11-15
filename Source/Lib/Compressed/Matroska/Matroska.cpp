@@ -926,7 +926,7 @@ void matroska::Segment_Cluster()
         }
 
         Hashes_FromRAWcooked->WouldBeError = true;
-        if (!(Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch]) || !Hashes_FromRAWcooked->NoMoreHashFiles())
+        if (!(Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch] || Actions[Action_Info]) || !Hashes_FromRAWcooked->NoMoreHashFiles()) // Kept with --info alone for showing that hashes are present
         {
             delete Hashes_FromRAWcooked;
             Hashes_FromRAWcooked = nullptr;
