@@ -967,7 +967,7 @@ void dpx::ConformanceCheck()
         uint32_t* HeaderCopy32 = (uint32_t*)HeaderCopy;
         const uint32_t* Buffer32 = (const uint32_t*)Buffer.Data();
         memmove(HeaderCopy + 36, Buffer.Data() + 36, 160 - 36); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
-        memmove(HeaderCopy + 1532, Buffer.Data() + 1532, 24); // Image filename + Creation date/time: yyyy:mm:dd:hh:mm:ssLTZ
+        memmove(HeaderCopy + 1432, Buffer.Data() + 1432, 1556 - 1432); // Source image filename + Source image date/time: yyyy:mm:dd:hh:mm:ssLTZ
         if (Buffer.Size() >= 2048)
         {
             HeaderCopy32[1676 / 4] = Buffer32[1676 / 4]; // Count
