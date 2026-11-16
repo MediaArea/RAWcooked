@@ -62,8 +62,13 @@ int global::SetBinName(const char* FileName)
     if (!FFmpeg_Library_SetPath(FileName))
     {
         BinName = FileName;
+        #if defined(_WIN32) || defined(_WINDOWS)
         if (BinName.find_first_of(" \t") != string::npos && BinName.front() != '\"')
             BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary
+        #else
+        if (BinName.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-+,:@%~") != string::npos && BinName.front() != '\"')
+            BinName = QuotedName(BinName); // Used as is in command lines, as the searched binary; quoted if a character may be special for the shell
+        #endif
     }
     return 0;
 }
@@ -76,7 +81,7 @@ const string& global::FFmpeg_Version()
     FFmpeg_Version_IsComputed = true;
 
     #if defined(_WIN32) || defined(_WINDOWS)
-    auto Command = BinName + " -version 2>NUL";
+    auto Command = Cmd_PercentEscaped(BinName) + " -version 2>NUL";
     if (Command.front() == '\"')
         Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
     #else
@@ -579,7 +584,7 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 static string FFmpeg_BinName()
 {
     auto Binary = FFmpeg_Binary();
-    return Binary.empty() ? string("ffmpeg") : ('\"' + Binary + '\"');
+    return Binary.empty() ? string("ffmpeg") : QuotedName(Binary);
 }
 
 //---------------------------------------------------------------------------
@@ -591,7 +596,7 @@ static int FFmpeg_HasOption(const string& BinName, const char* Option)
     string Name_WithoutNo = Name.size() > 2 && !Name.compare(0, 2, "no") ? Name.substr(2) : string();
 
     #if defined(_WIN32) || defined(_WINDOWS)
-    auto Command = BinName + " -hide_banner -h full 2>NUL";
+    auto Command = Cmd_PercentEscaped(BinName) + " -hide_banner -h full 2>NUL";
     if (Command.front() == '\"')
         Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
     #else
@@ -1019,9 +1024,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0))
         {
+            LogFile_IgnorePos.insert(i); // The key is not written in the log file
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], false);
+            LogFile_IgnorePos.insert(i);
             if (Value)
                 return Value;
         }
@@ -1162,9 +1169,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0))
         {
+            LogFile_IgnorePos.insert(i); // The key is not written in the log file
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], true);
+            LogFile_IgnorePos.insert(i);
             if (Value)
                 return Value;
         }
@@ -1409,7 +1418,10 @@ void global::ProgressIndicator_Stop()
 {
     if (!ProgressIndicator_Thread)
         return;
-    ProgressIndicator_Current = ProgressIndicator_Total;
+    {
+        lock_guard<mutex> Lock(ProgressIndicator_Mutex); // The thread is waiting or will see the end before a wait
+        ProgressIndicator_Current = ProgressIndicator_Total;
+    }
     ProgressIndicator_IsEnd.notify_one();
     ProgressIndicator_Thread->join();
     delete ProgressIndicator_Thread;
@@ -1435,8 +1447,7 @@ void global::ProgressIndicator_Show()
     // Show progress indicator at a specific frequency
     const chrono::seconds Frequency = chrono::seconds(1);
     size_t StallDetection = 0;
-    mutex Mutex;
-    unique_lock<mutex> Lock(Mutex);
+    unique_lock<mutex> Lock(ProgressIndicator_Mutex);
     do
     {
         if (ProgressIndicator_IsPaused)
@@ -1482,7 +1493,8 @@ void global::ProgressIndicator_Show()
 
             ProgressIndicator_Value = ProgressIndicator_New;
         }
-    } while (ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && ProgressIndicator_Current != ProgressIndicator_Total);
+    } while (ProgressIndicator_Current != ProgressIndicator_Total // No wait if the progress is already finished, its notification is lost if sent before the wait
+        && ProgressIndicator_IsEnd.wait_for(Lock, Frequency) == cv_status::timeout && ProgressIndicator_Current != ProgressIndicator_Total);
 
     // Show summary
     cerr << '\r';

@@ -120,6 +120,15 @@ const char* errors::ErrorMessage()
                         }
                         ErrorMessageCache += '.';
                         ErrorMessageCache += '\n';
+                        if (Parsers[i].Codes[j][k].StringList) // e.g. names of the files having this error
+                        {
+                            for (const auto& String : *Parsers[i].Codes[j][k].StringList)
+                            {
+                                ErrorMessageCache += "       ";
+                                ErrorMessageCache += String;
+                                ErrorMessageCache += '\n';
+                            }
+                        }
                     }
                 }
                 else if (i < IO_Max)
@@ -226,7 +235,7 @@ void errors::DeleteStrings()
 {
     std::lock_guard<std::mutex> lock(Mutex);
 
-    for (uint8_t i = Parser_Max + 1; i < Parsers.size(); i++)
+    for (uint8_t i = 0; i < Parsers.size(); i++) // Parsers may also have strings
         for (uint8_t j = 0; j < error::type_Max; j++)
             for (uint8_t k = 0; k < Parsers[i].Codes[j].size(); k++)
                 delete Parsers[i].Codes[j][k].StringList;

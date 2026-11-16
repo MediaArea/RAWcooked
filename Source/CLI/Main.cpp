@@ -198,7 +198,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
     SingleFile.Parse(FileMap);
     Global.ProgressIndicator_Increment();
 
-    if (SingleFile.ParserCode == Parser_EXR && SingleFile.IsDetected() && !Global.Actions[Action_Check])
+    if (SingleFile.ParserCode == Parser_EXR && SingleFile.IsDetected() && Global.Actions[Action_Encode] && !Global.Actions[Action_Check]) // Only an encoding is refused, the content can be listed or edited
     {
         Global.ProgressIndicator_Stop();
         cerr << "EXR support depends a lot on the FFmpeg version you have, it is safer to double check the output,\n"
@@ -233,12 +233,14 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
     if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
         return true;
     }
-    if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash]) { // Also needed for the hash, for its comparison with the hash files
+    if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash] || Global.Edits_Enabled) { // Also needed for the hash, for its comparison with the hash files, and for the names of the files which can not be edited
         S.FileName = Name.substr(Global.Path_Pos_Global);
         FormatPath(S.FileName);
     }
 
     S.Index = i;
+    if (Global.Edits_Enabled)
+        S.ClearErrorState(); // This file is edited even if the previous file parsed by this parser could not be edited
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
         return true;
     }
@@ -346,12 +348,15 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         return AnyError.load();
     }
 
+    auto AnyError = false;
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
         if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
-            return true;
+            if (!Global.Edits_Enabled)
+                return true;
+            AnyError = true; // Edit: the next files are also edited, as with several threads
         }
     }
-    return false;
+    return AnyError;
 }
 
 //---------------------------------------------------------------------------

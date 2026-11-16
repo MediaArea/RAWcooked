@@ -19,6 +19,64 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Template of the names of a sequence, for FFmpeg: a % of the names is doubled, else FFmpeg takes it as the start of a pattern
+// The pattern of the number (%0Nd) contains the last digit of the template (the names have no digit after their number), its % is the last one before this digit
+static string FFmpeg_Template(const string& Template)
+{
+    const auto Pattern_End = Template.find_last_of("0123456789");
+    const auto Pattern_Begin = Pattern_End == string::npos ? string::npos : Template.rfind('%', Pattern_End);
+    string Result;
+    Result.reserve(Template.size());
+    for (size_t i = 0; i < Template.size(); i++)
+    {
+        Result += Template[i];
+        if (Template[i] == '%' && i != Pattern_Begin)
+            Result += '%';
+    }
+    return Result;
+}
+
+//---------------------------------------------------------------------------
+// True if FFmpeg takes the name of a file as the pattern of a sequence: each % is followed by another % or by digits then d, the latter once in the name
+static bool FFmpeg_IsPattern(const string& Name)
+{
+    size_t Count = 0;
+    for (size_t i = 0; i < Name.size(); i++)
+    {
+        if (Name[i] != '%')
+            continue;
+        i++;
+        while (i < Name.size() && Name[i] >= '0' && Name[i] <= '9')
+            i++;
+        if (i >= Name.size())
+            return false;
+        if (Name[i] == 'd')
+            Count++;
+        else if (Name[i] != '%')
+            return false;
+    }
+    return Count == 1;
+}
+
+//---------------------------------------------------------------------------
+// Name of a file in a list of files for FFmpeg: between single quotes, a ' of the name is put out of the quotes and escaped (e.g. it's becomes 'it'\''s')
+static string FFmpeg_ListName(const string& Name)
+{
+    string Result;
+    Result.reserve(Name.size() + 2);
+    Result += '\'';
+    for (const auto Char : Name)
+    {
+        if (Char == '\'')
+            Result += "'\\''";
+        else
+            Result += Char;
+    }
+    Result += '\'';
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 int output::Process(global& Global, bool IgnoreReversibilityFile)
 {
     if (!Streams.empty())
@@ -131,9 +189,13 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
             }
 
             // FileName_Template (is the file name if no sequence detected)
-            Command += " -i \"";
-            Command += Streams[i].FileName_Template.empty() ? Streams[i].FileName : Streams[i].FileName_Template;
-            Command += "\"";
+            // A % of the names is not the start of a pattern: doubled in a template, and no pattern in the name of a single image
+            const auto IsTemplate = !Streams[i].FileName_Template.empty();
+            const auto IsImage = !Streams[i].Flavor.compare(0, 4, "DPX/") || !Streams[i].Flavor.compare(0, 5, "TIFF/") || !Streams[i].Flavor.compare(0, 4, "EXR/");
+            if (!IsTemplate && IsImage && Streams[i].FileName.find('%') != string::npos)
+                Command += " -pattern_type none";
+            Command += " -i ";
+            Command += QuotedName(IsTemplate ? FFmpeg_Template(Streams[i].FileName_Template) : Streams[i].FileName);
         }
         else // It is a list of files
         {
@@ -158,8 +220,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                             cerr << "Error: issue with frame rate " << Option->second << ".\nPlease contact info@mediaarea.net if you want support of such content." << endl;
                             return 1;
                         }
-                        if (FrameRate_Num / FrameRate_Den != 25)
-                        {
+                        { // Also at the default frame rate of the list reader (25): its list needs the "file" keyword
                             int FrameTimeStamp_Stored = 0;
                             decltype(FrameRate_Num) FrameTimeStamp_Num = 0;
 
@@ -172,7 +233,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                 auto j = FileList.find('\n', i);
                                 if (j == string::npos)
                                     j = FileList.size();
-                                FileList_Temp += "file '";
 #if defined(_WIN32) || defined(_WINDOWS)
                                 if (i + 2 < FileList.size() && FileList[i + 1] != ':' && FileList[i + 2] != PathSeparator && !CurrentPath)
 #else
@@ -186,14 +246,20 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                         CurrentPath = nullptr;
                                     }
                                 }
+                                string Name;
                                 if (CurrentPath)
                                 {
-                                    FileList_Temp.append(CurrentPath);
-                                    FileList_Temp.append(1, PathSeparator);
+                                    Name.append(CurrentPath);
+                                    Name.append(1, PathSeparator);
                                 }
-                                FileList_Temp.append(FileList, i, j - i);
+                                Name.append(FileList, i, j - i);
                                 i = j + 1;
-                                FileList_Temp += "'\nduration ";
+                                FileList_Temp += "file ";
+                                FileList_Temp += FFmpeg_ListName(Name);
+                                FileList_Temp += '\n';
+                                if (FFmpeg_IsPattern(Name)) // FFmpeg would read a sequence from such a name
+                                    FileList_Temp += "option pattern_type none\n";
+                                FileList_Temp += "duration ";
 
                                 FrameTimeStamp_Num += FrameRate_Den;
                                 auto Duration_Temp = int(round(FrameTimeStamp_Num / FrameRate_Num * 1000000)) - FrameTimeStamp_Stored;
@@ -245,9 +311,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
             FileList_File->Close();
             FilesToRemove.push_back(FileList_File);
 
-            Command += " -i \"";
-            Command += FileList_File->FileName;
-            Command += '\"';
+            Command += " -i ";
+            Command += QuotedName(FileList_File->FileName);
         }
 
         if (Global.Errors.HasErrors())
@@ -282,13 +347,13 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         {
             stringstream t;
             t << MapPos++;
-            Command += " -attach \"" + Attachments[i].FileName_In + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=" + Attachments[i].FileName_Out + "\"";
+            Command += " -attach " + QuotedName(Attachments[i].FileName_In) + " -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + ' ' + QuotedName("filename=" + Attachments[i].FileName_Out);
         }
     }
     stringstream t;
     t << MapPos++;
     if (!IgnoreReversibilityFile)
-        Command += " -attach \"" + Global.rawcooked_reversibility_FileName + "\" -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
+        Command += " -attach " + QuotedName(Global.rawcooked_reversibility_FileName) + " -metadata:s:" + t.str() + " mimetype=application/octet-stream -metadata:s:" + t.str() + " \"filename=RAWcooked reversibility data\" ";
     if (Global.OutputFileName.empty())
     {
         Global.OutputFileName = FileName;
@@ -300,9 +365,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
             Global.OutputFileName.pop_back();
         Global.OutputFileName += ".mkv";
     }
-    Command += " -f matroska \"";
-    Command += Global.OutputFileName;
-    Command += '\"';
+    Command += " -f matroska ";
+    Command += QuotedName(Global.OutputFileName);
     for (const auto& Option : Global.MoreOutputOptions)
     {
         Command += ' ';
@@ -326,9 +390,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
         {
             Command += " -an";
         }
-        Command += " -f framemd5 \"";
-        Command += Global.FrameMd5FileName;
-        Command += '\"';
+        Command += " -f framemd5 ";
+        Command += QuotedName(Global.FrameMd5FileName);
     }
 
     // Info
@@ -349,11 +412,12 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     {
         cout << Command;
         if (Global.Actions[Action_Version2])
-            cout << " && cat " << Global.rawcooked_reversibility_FileName << " >> " << Global.OutputFileName << " && rm " << Global.rawcooked_reversibility_FileName;
+            cout << " && cat " << QuotedName(Global.rawcooked_reversibility_FileName) << " >> " << QuotedName(Global.OutputFileName) << " && rm " << QuotedName(Global.rawcooked_reversibility_FileName);
     }
     else
     {
         #if defined(_WIN32) || defined(_WINDOWS)
+        Command = Cmd_PercentEscaped(Command);
         if (Command.front() == '\"')
             Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
         #endif

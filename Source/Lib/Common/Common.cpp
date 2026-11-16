@@ -21,6 +21,64 @@ void FormatPath(string& s)
         s[i++] = '/';
 }
 
+//---------------------------------------------------------------------------
+string QuotedName(const string& Name)
+{
+    string Result;
+    Result.reserve(Name.size() + 2);
+    Result += '\"';
+    #if defined(_WIN32) || defined(_WINDOWS)
+    Result += Name; // Nothing is escaped, % is escaped only when the command is run by cmd (Cmd_PercentEscaped)
+    #else
+    for (const auto Char : Name)
+    {
+        if (Char == '\\' || Char == '\"' || Char == '$' || Char == '`')
+            Result += '\\';
+        Result += Char;
+    }
+    #endif
+    Result += '\"';
+    return Result;
+}
+
+//---------------------------------------------------------------------------
+#if defined(_WIN32) || defined(_WINDOWS)
+string Cmd_PercentEscaped(const string& Command)
+{
+    // cmd has no escape for % inside double quotes, ^% is used out of them
+    string Result;
+    Result.reserve(Command.size());
+    bool InQuotes = false;
+    size_t i = 0;
+    if (!Command.empty() && Command.front() == '\"')
+    {
+        // The program reads its name until the next quote, a quoted name of the program is kept
+        i = Command.find('\"', 1);
+        i = i == string::npos ? Command.size() : (i + 1);
+        Result.assign(Command, 0, i);
+    }
+    for (; i < Command.size(); i++)
+    {
+        const auto Char = Command[i];
+        if (Char == '%')
+        {
+            if (InQuotes)
+            {
+                Result.append(Result.size() - 1 - Result.find_last_not_of('\\'), '\\'); // The backslashes before a closing quote are doubled, else the program reads \" as a quote
+                Result += "\"^%\"";
+            }
+            else
+                Result += "^%";
+            continue;
+        }
+        if (Char == '\"')
+            InQuotes = !InQuotes; // As cmd, without escape of quotes
+        Result += Char;
+    }
+    return Result;
+}
+#endif
+
 //***************************************************************************
 // Conversions
 //***************************************************************************

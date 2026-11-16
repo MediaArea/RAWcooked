@@ -30,6 +30,7 @@ static const char* MessageText[] =
     "offset to data",
     "expected data size is bigger than real file size",
     "file can not be written (edit)",
+    "field after the header of the file (edit)",
 };
 
 enum code : uint8_t
@@ -40,6 +41,7 @@ enum code : uint8_t
     OffsetToData,
     DataSize,
     Write,
+    EditNotInHeader,
     Max
 };
 
@@ -390,6 +392,41 @@ static edit_list EditList[] = {
     // { 1972,   76,    TBD,   "Reserved for future use", nullptr },
 };
 
+//---------------------------------------------------------------------------
+// Unsigned integer of an edit, false if the text is not only a decimal number which fits in Size bytes
+// (stoull accepts a text after the number and negates a number with a minus sign)
+static bool Edit_Unsigned(const string& Text, unsigned Size, uint64_t& Value)
+{
+    Value = 0;
+    try {
+        size_t End;
+        Value = stoull(Text, &End);
+        if (End != Text.size() || Text.find('-') != string::npos)
+            return false;
+    } catch (const exception&) {
+        return false;
+    }
+    return Size >= 8 || !(Value >> (8 * Size));
+}
+
+//---------------------------------------------------------------------------
+// Float of an edit (float if Size is 4, else double), false if the text is not only a number which fits in this float
+// (stof and stod accept a text after the number)
+static bool Edit_Float(const string& Text, unsigned Size, double& Value)
+{
+    Value = 0;
+    try {
+        size_t End;
+        Value = Size == 4 ? stof(Text, &End) : stod(Text, &End);
+        if (End != Text.size())
+            return false;
+    } catch (const exception&) {
+        return false;
+    }
+    return true;
+}
+
+//---------------------------------------------------------------------------
 void dpx::AddEditsParser(map<string, string>& Edits)
 {
     for (auto it = Edits.begin(); it != Edits.end(); ) {
@@ -417,63 +454,64 @@ void dpx::AddEditsParser(map<string, string>& Edits)
                 }
                 case Edit_U:
                 {
-                    try {
-                        auto& EditBuffer = this->Edits[EditInfo.Offset];
-                        EditBuffer.Resize(EditInfo.Size);
-
-                        uint64_t Value = stoull(it->second);
-                        uint8_t* BufferPtr = EditBuffer.Data();
-
-                        if (EditInfo.Size == 1) {
-                            *BufferPtr = (uint8_t)Value;
-                        } else if (EditInfo.Size == 2) {
-                            uint16_t Value16 = (uint16_t)Value;
-                            Value16 = IsBigEndian ? htob16(Value16) : htol16(Value16);
-                            memcpy(BufferPtr, &Value16, 2);
-                        } else if (EditInfo.Size == 4) {
-                            uint32_t Value32 = (uint32_t)Value;
-                            Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
-                            memcpy(BufferPtr, &Value32, 4);
-                        } else if (EditInfo.Size == 8) {
-                            uint64_t Value64 = Value;
-                            Value64 = IsBigEndian ? htob64(Value64) : htol64(Value64);
-                            memcpy(BufferPtr, &Value64, 8);
-                        } else {
-                            it->second = "unsupported size: " + to_string(EditInfo.Size);
-                            break;
-                        }
-                        it = Edits.erase(it);
-                        Found = true;
-                    } catch (const exception&) {
+                    uint64_t Value;
+                    if (!Edit_Unsigned(it->second, EditInfo.Size, Value)) {
                         it->second = "invalid unsigned integer value";
+                        break;
                     }
+
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(EditInfo.Size);
+                    uint8_t* BufferPtr = EditBuffer.Data();
+
+                    if (EditInfo.Size == 1) {
+                        *BufferPtr = (uint8_t)Value;
+                    } else if (EditInfo.Size == 2) {
+                        uint16_t Value16 = (uint16_t)Value;
+                        Value16 = IsBigEndian ? htob16(Value16) : htol16(Value16);
+                        memcpy(BufferPtr, &Value16, 2);
+                    } else if (EditInfo.Size == 4) {
+                        uint32_t Value32 = (uint32_t)Value;
+                        Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
+                        memcpy(BufferPtr, &Value32, 4);
+                    } else if (EditInfo.Size == 8) {
+                        uint64_t Value64 = Value;
+                        Value64 = IsBigEndian ? htob64(Value64) : htol64(Value64);
+                        memcpy(BufferPtr, &Value64, 8);
+                    } else {
+                        it->second = "unsupported size: " + to_string(EditInfo.Size);
+                        break;
+                    }
+                    it = Edits.erase(it);
+                    Found = true;
                     break;
                 }
                 case Edit_F:
                 {
-                    try {
-                        auto& EditBuffer = this->Edits[EditInfo.Offset];
-                        EditBuffer.Resize(EditInfo.Size);
-
-                        uint8_t* BufferPtr = EditBuffer.Data();
-
-                        if (EditInfo.Size == 4) {
-                            float Value = stof(it->second);
-                            Value = IsBigEndian ? htobf(Value) : htolf(Value);
-                            memcpy(BufferPtr, &Value, 4);
-                        } else if (EditInfo.Size == 8) {
-                            double Value = stod(it->second);
-                            Value = IsBigEndian ? htobd(Value) : htold(Value);
-                            memcpy(BufferPtr, &Value, 8);
-                        } else {
-                            it->second = "unsupported size: " + to_string(EditInfo.Size);
-                            break;
-                        }
-                        it = Edits.erase(it);
-                        Found = true;
-                    } catch (const exception&) {
+                    double Value;
+                    if (!Edit_Float(it->second, EditInfo.Size, Value)) {
                         it->second = "invalid float value";
+                        break;
                     }
+
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(EditInfo.Size);
+                    uint8_t* BufferPtr = EditBuffer.Data();
+
+                    if (EditInfo.Size == 4) {
+                        float Value32 = (float)Value;
+                        Value32 = IsBigEndian ? htobf(Value32) : htolf(Value32);
+                        memcpy(BufferPtr, &Value32, 4);
+                    } else if (EditInfo.Size == 8) {
+                        double Value64 = Value;
+                        Value64 = IsBigEndian ? htobd(Value64) : htold(Value64);
+                        memcpy(BufferPtr, &Value64, 8);
+                    } else {
+                        it->second = "unsupported size: " + to_string(EditInfo.Size);
+                        break;
+                    }
+                    it = Edits.erase(it);
+                    Found = true;
                     break;
                 }
                 }
@@ -996,16 +1034,58 @@ void dpx::ConformanceCheck()
 }
 
 //---------------------------------------------------------------------------
+// End of the header in the buffer: not after the end of the file or of what is read from it, nor in the image data, 0 if it is not a DPX file
+// Endianness and offset to the image data are read from the buffer, not from what the parsing kept (the file may be rejected)
+static size_t Header_End(const buffer_view& Buffer, filemap* FileMap)
+{
+    const auto Data = Buffer.Data();
+    size_t End = Buffer.Size();
+    if (End && FileMap)
+        End = min(End, FileMap->Readable_End());
+    bool File_IsBigEndian;
+    if (End >= 8 && !memcmp(Data, "SDPX", 4))
+        File_IsBigEndian = true;
+    else if (End >= 8 && !memcmp(Data, "XPDS", 4))
+        File_IsBigEndian = false;
+    else
+        return 0;
+    const auto Get4 = [&](size_t Offset) {
+        uint32_t Value;
+        memcpy(&Value, Data + Offset, 4);
+        return File_IsBigEndian ? btoh32(Value) : ltoh32(Value);
+    };
+    auto OffsetToData = End >= 812 ? Get4(808) : 0; // The one of the image element else the one of the file, as when parsing
+    if (!OffsetToData)
+        OffsetToData = Get4(4);
+    return min(End, (size_t)OffsetToData);
+}
+
+//---------------------------------------------------------------------------
 void dpx::Edit()
 {
-    size_t Changed_Begin = (size_t)-1;
-    size_t Changed_End = 0;
+    if (Edits.empty())
+        return;
+
+    // All fields must be in the header of this file (a field after a shorter header would be written in the image data), else nothing is written in the file
+    const auto Header_Size = Header_End(Buffer, FileMap);
     for (const auto& Edit : Edits) {
         auto Edit_End = Edit.first + Edit.second.Size();
         if (Edit_End > Buffer.Size() || (FileMap && Edit_End > FileMap->Readable_End())) {
             Undecodable(undecodable::BufferOverflow);
-            continue;
+            return;
         }
+        if (Edit_End > Header_Size) {
+            Undecodable(undecodable::EditNotInHeader);
+            if (Errors)
+                Errors->Error(ParserCode, error::type::Undecodable, (error::generic::code)undecodable::EditNotInHeader, FileName); // Listed after the message, the files which are not edited
+            return;
+        }
+    }
+
+    size_t Changed_Begin = (size_t)-1;
+    size_t Changed_End = 0;
+    for (const auto& Edit : Edits) {
+        auto Edit_End = Edit.first + Edit.second.Size();
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
             memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
             Changed_Begin = min(Changed_Begin, (size_t)Edit.first);

@@ -41,8 +41,10 @@ typedef std::array<uint8_t, 16> md5;
 //---------------------------------------------------------------------------
 // Platform specific
 void FormatPath(string& s);
+string QuotedName(const string& Name); // Name between double quotes for the command line of an external program; on Unix, with the characters which are special for the shell inside double quotes escaped (a name is never expanded nor run by the shell)
 #if defined(_WIN32) || defined(_WINDOWS)
     static const char PathSeparator = '\\';
+    string Cmd_PercentEscaped(const string& Command); // Command run by cmd: each % escaped (else %...% is expanded, also inside double quotes); not for a displayed command, which may be run by another shell
 #else
     static const char PathSeparator = '/';
 #endif
