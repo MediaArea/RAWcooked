@@ -393,6 +393,26 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
         // FFmpeg would also read the next files of the sequence present on disk
         if (OnlyListedFiles && !access((Before + FN + After).c_str(), 0))
             MustCreateFileList = true;
+
+        // Several input files: the ones which are in this sequence are not the start of another one
+        // The input files and the files of the sequence are in the same order, the input files after the sequence are not read
+        if (CheckIfFilesExist)
+        {
+            size_t Sequence_Pos = 0;
+            auto Pos = AllFiles_Pos + 1;
+            auto Pos_Kept = Pos; // Where the next input file kept in the list goes
+            for (; Pos < Files.size() && FileName_Compare(Files[Pos].FileName, RemovedFiles.back().FileName) <= 0; Pos++)
+            {
+                while (FileName_Compare(RemovedFiles[Sequence_Pos].FileName, Files[Pos].FileName) < 0)
+                    Sequence_Pos++;
+                if (RemovedFiles[Sequence_Pos].FileName == Files[Pos].FileName)
+                    continue;
+                if (Pos_Kept != Pos)
+                    swap(Files[Pos_Kept], Files[Pos]);
+                Pos_Kept++;
+            }
+            Files.erase(Files.begin() + Pos_Kept, Files.begin() + Pos);
+        }
     }
 
     if (RemovedFiles.empty())
