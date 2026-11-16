@@ -62,8 +62,13 @@ int global::SetBinName(const char* FileName)
     if (!FFmpeg_Library_SetPath(FileName))
     {
         BinName = FileName;
+        #if defined(_WIN32) || defined(_WINDOWS)
         if (BinName.find_first_of(" \t") != string::npos && BinName.front() != '\"')
             BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary
+        #else
+        if (BinName.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-+,:@%~") != string::npos && BinName.front() != '\"')
+            BinName = QuotedName(BinName); // Used as is in command lines, as the searched binary; quoted if a character may be special for the shell
+        #endif
     }
     return 0;
 }
@@ -579,7 +584,7 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 static string FFmpeg_BinName()
 {
     auto Binary = FFmpeg_Binary();
-    return Binary.empty() ? string("ffmpeg") : ('\"' + Binary + '\"');
+    return Binary.empty() ? string("ffmpeg") : QuotedName(Binary);
 }
 
 //---------------------------------------------------------------------------

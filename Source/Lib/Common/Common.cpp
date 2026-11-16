@@ -21,6 +21,26 @@ void FormatPath(string& s)
         s[i++] = '/';
 }
 
+//---------------------------------------------------------------------------
+string QuotedName(const string& Name)
+{
+    string Result;
+    Result.reserve(Name.size() + 2);
+    Result += '\"';
+    #if defined(_WIN32) || defined(_WINDOWS)
+    Result += Name; // Nothing is escaped (cmd has no escape for % inside double quotes)
+    #else
+    for (const auto Char : Name)
+    {
+        if (Char == '\\' || Char == '\"' || Char == '$' || Char == '`')
+            Result += '\\';
+        Result += Char;
+    }
+    #endif
+    Result += '\"';
+    return Result;
+}
+
 //***************************************************************************
 // Conversions
 //***************************************************************************
