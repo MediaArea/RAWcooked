@@ -239,6 +239,8 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
     }
 
     S.Index = i;
+    if (Global.Edits_Enabled)
+        S.ClearErrorState(); // This file is edited even if the previous file parsed by this parser could not be edited
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
         return true;
     }
@@ -346,12 +348,15 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         return AnyError.load();
     }
 
+    auto AnyError = false;
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
         if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
-            return true;
+            if (!Global.Edits_Enabled)
+                return true;
+            AnyError = true; // Edit: the next files are also edited, as with several threads
         }
     }
-    return false;
+    return AnyError;
 }
 
 //---------------------------------------------------------------------------

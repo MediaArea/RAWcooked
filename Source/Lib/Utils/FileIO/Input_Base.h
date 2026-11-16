@@ -98,6 +98,7 @@ public:
     bool                        IsDetected() { return Info[Info_IsDetected]; }
     bool                        IsSupported() { return Info[Info_IsSupported] && !HasErrors(); }
     bool                        HasErrors() { return Info[Info_HasErrors]; }
+    void                        ClearErrorState() { Info.reset(Info_HasErrors); Info.reset(Info_BufferOverflow); } // Before the parsing of another file by this parser, else the errors of the previous file stop the parsing of this file
     input_info*                 InputInfo = nullptr;
 
     // Common info
