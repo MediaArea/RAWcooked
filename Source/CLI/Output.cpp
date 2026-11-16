@@ -59,6 +59,24 @@ static bool FFmpeg_IsPattern(const string& Name)
 }
 
 //---------------------------------------------------------------------------
+// Name of a file in a list of files for FFmpeg: between single quotes, a ' of the name is put out of the quotes and escaped (e.g. it's becomes 'it'\''s')
+static string FFmpeg_ListName(const string& Name)
+{
+    string Result;
+    Result.reserve(Name.size() + 2);
+    Result += '\'';
+    for (const auto Char : Name)
+    {
+        if (Char == '\'')
+            Result += "'\\''";
+        else
+            Result += Char;
+    }
+    Result += '\'';
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 int output::Process(global& Global, bool IgnoreReversibilityFile)
 {
     if (!Streams.empty())
@@ -215,8 +233,6 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                 auto j = FileList.find('\n', i);
                                 if (j == string::npos)
                                     j = FileList.size();
-                                FileList_Temp += "file '";
-                                const auto Name_Pos = FileList_Temp.size();
 #if defined(_WIN32) || defined(_WINDOWS)
                                 if (i + 2 < FileList.size() && FileList[i + 1] != ':' && FileList[i + 2] != PathSeparator && !CurrentPath)
 #else
@@ -230,16 +246,18 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                         CurrentPath = nullptr;
                                     }
                                 }
+                                string Name;
                                 if (CurrentPath)
                                 {
-                                    FileList_Temp.append(CurrentPath);
-                                    FileList_Temp.append(1, PathSeparator);
+                                    Name.append(CurrentPath);
+                                    Name.append(1, PathSeparator);
                                 }
-                                FileList_Temp.append(FileList, i, j - i);
+                                Name.append(FileList, i, j - i);
                                 i = j + 1;
-                                const auto IsPattern = FFmpeg_IsPattern(FileList_Temp.substr(Name_Pos)); // FFmpeg would read a sequence from such a name
-                                FileList_Temp += "'\n";
-                                if (IsPattern)
+                                FileList_Temp += "file ";
+                                FileList_Temp += FFmpeg_ListName(Name);
+                                FileList_Temp += '\n';
+                                if (FFmpeg_IsPattern(Name)) // FFmpeg would read a sequence from such a name
                                     FileList_Temp += "option pattern_type none\n";
                                 FileList_Temp += "duration ";
 
