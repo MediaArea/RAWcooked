@@ -158,8 +158,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                             cerr << "Error: issue with frame rate " << Option->second << ".\nPlease contact info@mediaarea.net if you want support of such content." << endl;
                             return 1;
                         }
-                        if (FrameRate_Num / FrameRate_Den != 25)
-                        {
+                        { // Also at the default frame rate of the list reader (25): its list needs the "file" keyword
                             int FrameTimeStamp_Stored = 0;
                             decltype(FrameRate_Num) FrameTimeStamp_Num = 0;
 
