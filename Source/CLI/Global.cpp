@@ -1019,9 +1019,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if ((strcmp(argv[i], "--license") == 0 || strcmp(argv[i], "--licence") == 0))
         {
+            LogFile_IgnorePos.insert(i); // The key is not written in the log file
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], false);
+            LogFile_IgnorePos.insert(i);
             if (Value)
                 return Value;
         }
@@ -1162,9 +1164,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if ((strcmp(argv[i], "--store-license") == 0 || strcmp(argv[i], "--store-licence") == 0))
         {
+            LogFile_IgnorePos.insert(i); // The key is not written in the log file
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
             int Value = SetLicenseKey(argv[++i], true);
+            LogFile_IgnorePos.insert(i);
             if (Value)
                 return Value;
         }
