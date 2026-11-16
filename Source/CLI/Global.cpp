@@ -81,7 +81,7 @@ const string& global::FFmpeg_Version()
     FFmpeg_Version_IsComputed = true;
 
     #if defined(_WIN32) || defined(_WINDOWS)
-    auto Command = BinName + " -version 2>NUL";
+    auto Command = Cmd_PercentEscaped(BinName) + " -version 2>NUL";
     if (Command.front() == '\"')
         Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
     #else
@@ -596,7 +596,7 @@ static int FFmpeg_HasOption(const string& BinName, const char* Option)
     string Name_WithoutNo = Name.size() > 2 && !Name.compare(0, 2, "no") ? Name.substr(2) : string();
 
     #if defined(_WIN32) || defined(_WINDOWS)
-    auto Command = BinName + " -hide_banner -h full 2>NUL";
+    auto Command = Cmd_PercentEscaped(BinName) + " -hide_banner -h full 2>NUL";
     if (Command.front() == '\"')
         Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
     #else

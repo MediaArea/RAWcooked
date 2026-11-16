@@ -417,6 +417,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
     else
     {
         #if defined(_WIN32) || defined(_WINDOWS)
+        Command = Cmd_PercentEscaped(Command);
         if (Command.front() == '\"')
             Command = '\"' + Command + '\"'; // cmd /c removes the first and last quotes of the command if it starts with a quote
         #endif
