@@ -390,6 +390,41 @@ static edit_list EditList[] = {
     // { 1972,   76,    TBD,   "Reserved for future use", nullptr },
 };
 
+//---------------------------------------------------------------------------
+// Unsigned integer of an edit, false if the text is not only a decimal number which fits in Size bytes
+// (stoull accepts a text after the number and negates a number with a minus sign)
+static bool Edit_Unsigned(const string& Text, unsigned Size, uint64_t& Value)
+{
+    Value = 0;
+    try {
+        size_t End;
+        Value = stoull(Text, &End);
+        if (End != Text.size() || Text.find('-') != string::npos)
+            return false;
+    } catch (const exception&) {
+        return false;
+    }
+    return Size >= 8 || !(Value >> (8 * Size));
+}
+
+//---------------------------------------------------------------------------
+// Float of an edit (float if Size is 4, else double), false if the text is not only a number which fits in this float
+// (stof and stod accept a text after the number)
+static bool Edit_Float(const string& Text, unsigned Size, double& Value)
+{
+    Value = 0;
+    try {
+        size_t End;
+        Value = Size == 4 ? stof(Text, &End) : stod(Text, &End);
+        if (End != Text.size())
+            return false;
+    } catch (const exception&) {
+        return false;
+    }
+    return true;
+}
+
+//---------------------------------------------------------------------------
 void dpx::AddEditsParser(map<string, string>& Edits)
 {
     for (auto it = Edits.begin(); it != Edits.end(); ) {
@@ -417,63 +452,64 @@ void dpx::AddEditsParser(map<string, string>& Edits)
                 }
                 case Edit_U:
                 {
-                    try {
-                        auto& EditBuffer = this->Edits[EditInfo.Offset];
-                        EditBuffer.Resize(EditInfo.Size);
-
-                        uint64_t Value = stoull(it->second);
-                        uint8_t* BufferPtr = EditBuffer.Data();
-
-                        if (EditInfo.Size == 1) {
-                            *BufferPtr = (uint8_t)Value;
-                        } else if (EditInfo.Size == 2) {
-                            uint16_t Value16 = (uint16_t)Value;
-                            Value16 = IsBigEndian ? htob16(Value16) : htol16(Value16);
-                            memcpy(BufferPtr, &Value16, 2);
-                        } else if (EditInfo.Size == 4) {
-                            uint32_t Value32 = (uint32_t)Value;
-                            Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
-                            memcpy(BufferPtr, &Value32, 4);
-                        } else if (EditInfo.Size == 8) {
-                            uint64_t Value64 = Value;
-                            Value64 = IsBigEndian ? htob64(Value64) : htol64(Value64);
-                            memcpy(BufferPtr, &Value64, 8);
-                        } else {
-                            it->second = "unsupported size: " + to_string(EditInfo.Size);
-                            break;
-                        }
-                        it = Edits.erase(it);
-                        Found = true;
-                    } catch (const exception&) {
+                    uint64_t Value;
+                    if (!Edit_Unsigned(it->second, EditInfo.Size, Value)) {
                         it->second = "invalid unsigned integer value";
+                        break;
                     }
+
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(EditInfo.Size);
+                    uint8_t* BufferPtr = EditBuffer.Data();
+
+                    if (EditInfo.Size == 1) {
+                        *BufferPtr = (uint8_t)Value;
+                    } else if (EditInfo.Size == 2) {
+                        uint16_t Value16 = (uint16_t)Value;
+                        Value16 = IsBigEndian ? htob16(Value16) : htol16(Value16);
+                        memcpy(BufferPtr, &Value16, 2);
+                    } else if (EditInfo.Size == 4) {
+                        uint32_t Value32 = (uint32_t)Value;
+                        Value32 = IsBigEndian ? htob32(Value32) : htol32(Value32);
+                        memcpy(BufferPtr, &Value32, 4);
+                    } else if (EditInfo.Size == 8) {
+                        uint64_t Value64 = Value;
+                        Value64 = IsBigEndian ? htob64(Value64) : htol64(Value64);
+                        memcpy(BufferPtr, &Value64, 8);
+                    } else {
+                        it->second = "unsupported size: " + to_string(EditInfo.Size);
+                        break;
+                    }
+                    it = Edits.erase(it);
+                    Found = true;
                     break;
                 }
                 case Edit_F:
                 {
-                    try {
-                        auto& EditBuffer = this->Edits[EditInfo.Offset];
-                        EditBuffer.Resize(EditInfo.Size);
-
-                        uint8_t* BufferPtr = EditBuffer.Data();
-
-                        if (EditInfo.Size == 4) {
-                            float Value = stof(it->second);
-                            Value = IsBigEndian ? htobf(Value) : htolf(Value);
-                            memcpy(BufferPtr, &Value, 4);
-                        } else if (EditInfo.Size == 8) {
-                            double Value = stod(it->second);
-                            Value = IsBigEndian ? htobd(Value) : htold(Value);
-                            memcpy(BufferPtr, &Value, 8);
-                        } else {
-                            it->second = "unsupported size: " + to_string(EditInfo.Size);
-                            break;
-                        }
-                        it = Edits.erase(it);
-                        Found = true;
-                    } catch (const exception&) {
+                    double Value;
+                    if (!Edit_Float(it->second, EditInfo.Size, Value)) {
                         it->second = "invalid float value";
+                        break;
                     }
+
+                    auto& EditBuffer = this->Edits[EditInfo.Offset];
+                    EditBuffer.Resize(EditInfo.Size);
+                    uint8_t* BufferPtr = EditBuffer.Data();
+
+                    if (EditInfo.Size == 4) {
+                        float Value32 = (float)Value;
+                        Value32 = IsBigEndian ? htobf(Value32) : htolf(Value32);
+                        memcpy(BufferPtr, &Value32, 4);
+                    } else if (EditInfo.Size == 8) {
+                        double Value64 = Value;
+                        Value64 = IsBigEndian ? htobd(Value64) : htold(Value64);
+                        memcpy(BufferPtr, &Value64, 8);
+                    } else {
+                        it->second = "unsupported size: " + to_string(EditInfo.Size);
+                        break;
+                    }
+                    it = Edits.erase(it);
+                    Found = true;
                     break;
                 }
                 }
