@@ -43,7 +43,7 @@ public:
 
 // 512-bit vectors are not used: transforms are limited by memory bandwidth, and on some CPUs (e.g. Skylake-SP/X) 512-bit instructions lower
 // the frequency of the core, slowing down the decoding done by other threads on the same core (measured: slower than AVX2 and scalar code)
-#if defined(_M_X64) || defined(__x86_64__)
+#if (defined(_M_X64) || defined(__x86_64__)) && (!defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9)) // GCC 4.8 (e.g. RHEL 7) does not provide the intrinsics in the functions with a target attribute
 #include <immintrin.h>
 #if defined(_MSC_VER)
 #include <intrin.h>
