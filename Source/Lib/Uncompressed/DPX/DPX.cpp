@@ -30,6 +30,7 @@ static const char* MessageText[] =
     "offset to data",
     "expected data size is bigger than real file size",
     "file can not be written (edit)",
+    "field after the header of the file (edit)",
 };
 
 enum code : uint8_t
@@ -40,6 +41,7 @@ enum code : uint8_t
     OffsetToData,
     DataSize,
     Write,
+    EditNotInHeader,
     Max
 };
 
@@ -1032,16 +1034,58 @@ void dpx::ConformanceCheck()
 }
 
 //---------------------------------------------------------------------------
+// End of the header in the buffer: not after the end of the file or of what is read from it, nor in the image data, 0 if it is not a DPX file
+// Endianness and offset to the image data are read from the buffer, not from what the parsing kept (the file may be rejected)
+static size_t Header_End(const buffer_view& Buffer, filemap* FileMap)
+{
+    const auto Data = Buffer.Data();
+    size_t End = Buffer.Size();
+    if (End && FileMap)
+        End = min(End, FileMap->Readable_End());
+    bool File_IsBigEndian;
+    if (End >= 8 && !memcmp(Data, "SDPX", 4))
+        File_IsBigEndian = true;
+    else if (End >= 8 && !memcmp(Data, "XPDS", 4))
+        File_IsBigEndian = false;
+    else
+        return 0;
+    const auto Get4 = [&](size_t Offset) {
+        uint32_t Value;
+        memcpy(&Value, Data + Offset, 4);
+        return File_IsBigEndian ? btoh32(Value) : ltoh32(Value);
+    };
+    auto OffsetToData = End >= 812 ? Get4(808) : 0; // The one of the image element else the one of the file, as when parsing
+    if (!OffsetToData)
+        OffsetToData = Get4(4);
+    return min(End, (size_t)OffsetToData);
+}
+
+//---------------------------------------------------------------------------
 void dpx::Edit()
 {
-    size_t Changed_Begin = (size_t)-1;
-    size_t Changed_End = 0;
+    if (Edits.empty())
+        return;
+
+    // All fields must be in the header of this file (a field after a shorter header would be written in the image data), else nothing is written in the file
+    const auto Header_Size = Header_End(Buffer, FileMap);
     for (const auto& Edit : Edits) {
         auto Edit_End = Edit.first + Edit.second.Size();
         if (Edit_End > Buffer.Size() || (FileMap && Edit_End > FileMap->Readable_End())) {
             Undecodable(undecodable::BufferOverflow);
-            continue;
+            return;
         }
+        if (Edit_End > Header_Size) {
+            Undecodable(undecodable::EditNotInHeader);
+            if (Errors)
+                Errors->Error(ParserCode, error::type::Undecodable, (error::generic::code)undecodable::EditNotInHeader, FileName); // Listed after the message, the files which are not edited
+            return;
+        }
+    }
+
+    size_t Changed_Begin = (size_t)-1;
+    size_t Changed_End = 0;
+    for (const auto& Edit : Edits) {
+        auto Edit_End = Edit.first + Edit.second.Size();
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
             memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
             Changed_Begin = min(Changed_Begin, (size_t)Edit.first);

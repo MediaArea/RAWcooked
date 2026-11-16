@@ -233,7 +233,7 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
     if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
         return true;
     }
-    if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash]) { // Also needed for the hash, for its comparison with the hash files
+    if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash] || Global.Edits_Enabled) { // Also needed for the hash, for its comparison with the hash files, and for the names of the files which can not be edited
         S.FileName = Name.substr(Global.Path_Pos_Global);
         FormatPath(S.FileName);
     }

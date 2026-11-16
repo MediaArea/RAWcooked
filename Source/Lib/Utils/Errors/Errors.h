@@ -110,10 +110,10 @@ public:
 private:
     struct per_parser
     {
-        union info
+        struct info
         {
-            size_t              Count;
-            std::vector<string>*StringList;
+            size_t              Count = 0; // Parsers
+            std::vector<string>*StringList = nullptr; // IO, and parsers for e.g. the names of the files having the error
         };
         std::vector<info>       Codes[error::type_Max];
     };
