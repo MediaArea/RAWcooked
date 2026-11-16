@@ -16,7 +16,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#if (defined(_M_X64) || defined(__x86_64__)) && !defined(HAVE_OPENSSL)
+#if (defined(_M_X64) || defined(__x86_64__)) && !defined(HAVE_OPENSSL) && (!defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9)) // GCC 4.8 (e.g. RHEL 7) does not provide the intrinsics in the functions with a target attribute
 #include <immintrin.h>
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -24,7 +24,10 @@
 #define TARGET_AVX512VL
 #else
 #define TARGET_AVX2 __attribute__((target("avx2")))
-#define TARGET_AVX512VL __attribute__((target("avx2,avx512f,avx512vl")))
+#define TARGET_AVX512VL __attribute__((target("avx2,avx512f,avx512vl,avx512bw"))) // BW: without it, GCC 8 splits unaligned 256-bit loads into 128-bit vmovdqu to registers 16-31, which have only the EVEX vmovdqu8/16/32/64 (assembler error)
+#endif
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ >= 6 // GCC 4.9 does not know AVX512VL, GCC 5 does not know it in __builtin_cpu_supports()
+#define MD5_LANES_AVX512
 #endif
 #define MD5_LANES_SIMD
 #elif (defined(__aarch64__) || defined(_M_ARM64)) && !defined(__ARM_BIG_ENDIAN) && !defined(HAVE_OPENSSL)
@@ -55,7 +58,7 @@ static void MD5_Update_Parts(MD5_CTX* Ctx, const md5_part* Parts, size_t Count, 
 
 #ifndef MD5_LANES_NEON
 //---------------------------------------------------------------------------
-// 0: none, 1: AVX2, 2: AVX-512 (F + VL)
+// 0: none, 1: AVX2, 2: AVX-512 (F + VL + BW)
 static int SimdLevel()
 {
     static const int Level = []()
@@ -73,15 +76,17 @@ static int SimdLevel()
             __cpuidex(Info, 7, 0);
             if (!(Info[1] & (1 << 5))) // AVX2
                 return 0;
-            if ((Info[1] & (1 << 16)) && (Info[1] & (1 << 31)) && (XCR0 & 0xE6) == 0xE6) // AVX512F, AVX512VL, opmask and ZMM states
+            if ((Info[1] & (1 << 16)) && (Info[1] & (1 << 31)) && (Info[1] & (1 << 30)) && (XCR0 & 0xE6) == 0xE6) // AVX512F, AVX512VL, AVX512BW, opmask and ZMM states
                 return 2;
             return 1;
         #else
             __builtin_cpu_init();
             if (!__builtin_cpu_supports("avx2"))
                 return 0;
-            if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl"))
-                return 2;
+            #ifdef MD5_LANES_AVX512
+                if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl") && __builtin_cpu_supports("avx512bw"))
+                    return 2;
+            #endif
             return 1;
         #endif
     }();
@@ -236,6 +241,7 @@ MD5_LANES_FUNCTION(MD5_Lanes_AVX2, TARGET_AVX2)
 #undef I
 #undef ROTL
 
+#ifdef MD5_LANES_AVX512
 // AVX-512VL: functions with 1 instruction (shorter dependency chain, so faster than scalar code even with 1 lane)
 #define F(x, y, z) _mm256_ternarylogic_epi32(x, y, z, 0xCA)
 #define G(x, y, z) _mm256_ternarylogic_epi32(x, y, z, 0xE4)
@@ -248,6 +254,7 @@ MD5_LANES_FUNCTION(MD5_Lanes_AVX512VL, TARGET_AVX512VL)
 #undef H
 #undef I
 #undef ROTL
+#endif //MD5_LANES_AVX512
 
 #else //MD5_LANES_NEON
 
@@ -350,10 +357,12 @@ volatile MD5_u32plus Lanes_Measure_Sink; // Results of the measurement are used
 //---------------------------------------------------------------------------
 static lanes_function Lanes_Function()
 {
-    #ifdef MD5_LANES_NEON
+    #if defined(MD5_LANES_NEON)
         return MD5_Lanes_NEON;
-    #else
+    #elif defined(MD5_LANES_AVX512)
         return SimdLevel() >= 2 ? MD5_Lanes_AVX512VL : MD5_Lanes_AVX2;
+    #else
+        return MD5_Lanes_AVX2;
     #endif
 }
 
