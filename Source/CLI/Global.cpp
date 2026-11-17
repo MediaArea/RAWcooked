@@ -63,8 +63,8 @@ int global::SetBinName(const char* FileName)
     {
         BinName = FileName;
         #if defined(_WIN32) || defined(_WINDOWS)
-        if (BinName.find_first_of(" \t") != string::npos && BinName.front() != '\"')
-            BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary
+        if (BinName.find_first_of(" \t&|<>^(),;=") != string::npos && BinName.front() != '\"')
+            BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary; quoted if a character is special for cmd (% is escaped by Cmd_PercentEscaped only out of quotes)
         #else
         if (BinName.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-+,:@%~") != string::npos && BinName.front() != '\"')
             BinName = QuotedName(BinName); // Used as is in command lines, as the searched binary; quoted if a character may be special for the shell

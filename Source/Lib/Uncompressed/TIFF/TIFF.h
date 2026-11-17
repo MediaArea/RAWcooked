@@ -69,6 +69,7 @@ public:
     static size_t               BytesPerBlock(flavor Flavor); // Of a line of a plane if planar
     static size_t               PixelsPerBlock(flavor Flavor); // Need no overlap every x pixels
     static size_t               PlaneCount(flavor Flavor); // Planes after each other, 1 if not planar
+    static bool                 MayHavePaddingBits(flavor Flavor, size_t Width); // Ends of lines not on a byte boundary
 
 private:
     void                        ParseBuffer();

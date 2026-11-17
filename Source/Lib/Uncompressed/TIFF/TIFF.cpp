@@ -871,6 +871,15 @@ size_t tiff::PlaneCount(tiff::flavor Flavor)
 }
 
 //---------------------------------------------------------------------------
+bool tiff::MayHavePaddingBits(tiff::flavor Flavor, size_t Width)
+{
+    if ((size_t)Flavor >= flavor_Max)
+        return false;
+
+    return (Width * BytesPerBlock(Flavor) * 8 / PixelsPerBlock(Flavor)) % 8; // Lines begin on a byte boundary
+}
+
+//---------------------------------------------------------------------------
 string TIFF_Flavor_String(uint8_t Flavor)
 {
     const auto& Info = TIFF_Tested[(size_t)Flavor];
