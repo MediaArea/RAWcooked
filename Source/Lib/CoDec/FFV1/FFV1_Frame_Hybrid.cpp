@@ -153,6 +153,9 @@ struct ffv1_frame_hybrid_private
     bool                        Vulkan_Required[Decoder_Max] = {}; // The device must be available
     bool                        Vulkan_Waiting[Decoder_Max] = {}; // Not available until the first decoder on the same device decoded a frame
     bool                        Vulkan_Useful[Decoder_Max] = {}; // Available after the first decoder on the same device decoded a frame
+    std::string                 Vulkan_Name[Decoder_Max]; // Name of the device, for the first decoder on the device
+    bool                        Vulkan_IsGPU[Decoder_Max] = {}; // Device is a GPU (not a CPU implementation), for the first decoder on the device
+    bool                        Vulkan_Announced[Decoder_Max] = {}; // Device announced as selected after the first frame decoded with it (not if the decoder can not use it), by the transfer thread
 
     // Jobs
     std::deque<hybrid_job*>     Transfer_Jobs[Decoder_Max]; // Decoded by FFmpeg decoders, in decoding order
@@ -264,16 +267,14 @@ ffv1_frame_ffmpeg* ffv1_frame_hybrid_private::Decoder_New(size_t i)
     auto Decoder = new ffv1_frame_ffmpeg(Pools[i], true, Device);
 
     // Device selected, the other decoder on this device is used only with a big GPU if requested (not faster with small GPUs, frames wait for the GPU instead of being decoded by our decoder at the end)
+    // Device announced after the first frame decoded with it (by the transfer thread)
     if (First == i && Device)
     {
         uint32_t SMCount;
-        std::string Name;
-        auto IsGPU = FFmpeg_Library_VulkanIsGPU(Device, &SMCount, &Name);
+        Vulkan_IsGPU[i] = FFmpeg_Library_VulkanIsGPU(Device, &SMCount, &Vulkan_Name[i]);
         for (size_t j = i + 1; j < Decoder_Max; j++)
             if (Vulkan_First[j] == i)
-                Vulkan_Useful[j] = !Vulkan_BigGPU[j] || (IsGPU && SMCount >= 64);
-        if (DecodersStats.Vulkan_Selected)
-            DecodersStats.Vulkan_Selected(Vulkan_Device[i], Name, IsGPU);
+                Vulkan_Useful[j] = !Vulkan_BigGPU[j] || (Vulkan_IsGPU[i] && SMCount >= 64);
     }
 
     ffmpeg::av_buffer_unref(&Device);
@@ -352,6 +353,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         auto& Decoder = FFmpeg[i];
         bool Error;
         bool Missing; // Vulkan device requested and not available, the frame is not decoded again and the caller stops
+        bool Redo_; // First frame for this FFmpeg decoder, it can not decode the stream, the frame is decoded by the fallback decoder
         {
             TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
             if (!Decoder)
@@ -364,10 +366,18 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             }
             Decoder->RawFrame_Index = Job->Frame ? Job->Frame->Index : (size_t)-1;
             Error = Decoder->Decode(Job->Packet, Job->Packet_Size);
+            if (Error && Vulkan_Required[i])
+            {
+                // Explicitly requested, the caller stops if hardware decoding with Vulkan is not possible (issue of the decoder, not of the frame), else our decoder decodes the frames
+                auto Issue = Decoder->VulkanIssue();
+                if (Issue != ffv1_frame_ffmpeg::vulkan_issue::None)
+                    FFmpeg_Library_SetVulkanSetupFailed(Vulkan_Device[i], Vulkan_Name[Vulkan_First[i]], Vulkan_IsGPU[Vulkan_First[i]], Issue == ffv1_frame_ffmpeg::vulkan_issue::Unsupported);
+            }
             Missing = Error && FFmpeg_Library_VulkanMissing() != (size_t)-1;
-            if (Job->WarmUp || (Job->First && Error))
+            Redo_ = Job->First && Error && !Missing && !Vulkan_Required[i]; // An explicitly requested decoder decodes the frame, a frame it can not decode has an issue
+            if (Job->WarmUp || Redo_)
                 Decoder->Discard(); // Not output
-            if (!Job->First || !Error || Missing)
+            if (!Redo_)
                 ffmpeg::av_buffer_unref(&Job->Packet); // FFmpeg has its own reference if needed, else the packet is kept for the fallback decoder
         }
         auto Job_Duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - Start).count();
@@ -395,7 +405,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
                     else
                         Disabled[j] = true; // Stays busy
                 }
-        if (Job->First && Error && !Missing)
+        if (Redo_)
         {
             // FFmpeg decoder can not decode the stream, the frame is decoded by the fallback decoder
             Disabled[i] = true; // FFmpeg decoder stays busy
@@ -463,6 +473,13 @@ void ffv1_frame_hybrid_private::Transfer(size_t i)
         Decoder->RawFrame = Job->Frame;
         TRACE_SCOPE(Names[i].Transfer, Job->Frame->Index);
         auto Error = Decoder->Output() || Job->Error;
+        if (!Error && i >= Decoder_Vulkan && Vulkan_First[i] == i && !Vulkan_Announced[i])
+        {
+            // Device announced after the first frame decoded with it (not if the decoder can not use it)
+            Vulkan_Announced[i] = true;
+            if (DecodersStats.Vulkan_Selected)
+                DecodersStats.Vulkan_Selected(Vulkan_Device[i], Vulkan_Name[i], Vulkan_IsGPU[i]);
+        }
         Job->FrameReady->Ready(Job->Opaque, Error);
         DecodersStats.Frames[Stats_Index(i)]++;
 

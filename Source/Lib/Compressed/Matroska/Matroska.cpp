@@ -505,6 +505,8 @@ void matroska::ParseBuffer()
     for (auto TrackInfo_Current : TrackInfo)
         TrackInfo_Current->Output_End();
     Output_Wait();
+    if (Decoders_Check && !Decoders_Check())
+        Decoders_AreMissing = true; // A decoder may know that it can not be used only during the decoding of the last frames (e.g. Vulkan setup failure), after the parsing of the last block
 
     // Clean up
     if (RAWcooked_LibraryName.empty())

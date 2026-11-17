@@ -15,6 +15,8 @@
 #endif //RAWCOOKED_FFMPEG
 #include <atomic>
 #include <cstring>
+#include <mutex>
+#include <string>
 #include <vector>
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
@@ -714,6 +716,40 @@ void FFmpeg_Library_SetVulkanMissing(size_t Device)
 size_t FFmpeg_Library_VulkanMissing()
 {
     return Vulkan_Missing;
+}
+
+//---------------------------------------------------------------------------
+static mutex Vulkan_SetupFailed_Mutex;
+static bool Vulkan_SetupFailed = false;
+static string Vulkan_SetupFailed_Name;
+static bool Vulkan_SetupFailed_IsGPU = true;
+static bool Vulkan_SetupFailed_Unsupported = false;
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_SetVulkanSetupFailed(size_t Device, const string& Name, bool IsGPU, bool Unsupported)
+{
+    {
+        lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+        if (Vulkan_Missing != (size_t)-1)
+            return; // First reason only
+        Vulkan_SetupFailed = true;
+        Vulkan_SetupFailed_Name = Name;
+        Vulkan_SetupFailed_IsGPU = IsGPU;
+        Vulkan_SetupFailed_Unsupported = Unsupported;
+    }
+    FFmpeg_Library_SetVulkanMissing(Device);
+}
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_VulkanSetupFailed(string& Name, bool& IsGPU, bool& Unsupported)
+{
+    lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+    if (!Vulkan_SetupFailed)
+        return false;
+    Name = Vulkan_SetupFailed_Name;
+    IsGPU = Vulkan_SetupFailed_IsGPU;
+    Unsupported = Vulkan_SetupFailed_Unsupported;
+    return true;
 }
 
 #ifndef RAWCOOKED_FFMPEG

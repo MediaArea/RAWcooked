@@ -41,11 +41,22 @@ struct ffv1_frame_ffmpeg_frames
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-static AVPixelFormat Vulkan_Format(AVCodecContext*, const AVPixelFormat* Formats)
+static AVPixelFormat Vulkan_Format(AVCodecContext* Context, const AVPixelFormat* Formats)
 {
     // Vulkan only, so decoding fails if Vulkan decoding is not possible
     while (*Formats != AV_PIX_FMT_NONE && *Formats != AV_PIX_FMT_VULKAN)
         Formats++;
+
+    // Vulkan not proposed: its setup failed if it was proposed before (FFmpeg proposes again the formats without the one it could not set up), else it is not possible with this stream
+    if (Context->opaque)
+    {
+        auto& Setup = *(ffv1_frame_ffmpeg::vulkan_setup*)Context->opaque;
+        if (*Formats == AV_PIX_FMT_NONE)
+            Setup.Failed = true;
+        else
+            Setup.Proposed = true;
+    }
+
     return *Formats;
 }
 
@@ -65,6 +76,7 @@ ffv1_frame_ffmpeg::ffv1_frame_ffmpeg(ThreadPool* Pool_, bool Vulkan, AVBufferRef
     {
         Context->hw_device_ctx = VulkanDevice ? ffmpeg::av_buffer_ref(VulkanDevice) : nullptr;
         Context->get_format = Vulkan_Format;
+        Context->opaque = &VulkanSetup;
     }
 }
 

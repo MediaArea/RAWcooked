@@ -44,6 +44,12 @@ std::vector<size_t> FFmpeg_Library_Vulkan(bool AllowCPU = false);
 void FFmpeg_Library_SetVulkanMissing(size_t Device);
 size_t FFmpeg_Library_VulkanMissing();
 
+// Vulkan device explicitly requested and available, but the FFmpeg decoder can not set up the hardware decoding with it (issue of the decoder, e.g. of the GPU or of its driver, not of the file)
+// or does not support it with this stream (Unsupported, e.g. FFV1 version 0 or 1), FFmpeg_Library_VulkanMissing() is then also set
+// FFmpeg_Library_VulkanSetupFailed() returns false if it is not the reason of FFmpeg_Library_VulkanMissing(), else sets Name (name of the device, maybe empty), IsGPU (false if it is a CPU implementation) and Unsupported
+void FFmpeg_Library_SetVulkanSetupFailed(size_t Device, const std::string& Name, bool IsGPU, bool Unsupported);
+bool FFmpeg_Library_VulkanSetupFailed(std::string& Name, bool& IsGPU, bool& Unsupported);
+
 // Name of the Vulkan device used by default by FFmpeg (detected if not already done, the device is then kept for the decoder), empty if not available
 // IsGPU: set to true if the device is a GPU, false if it is a CPU implementation (e.g. lavapipe) or if not available
 std::string FFmpeg_Library_VulkanName(bool* IsGPU = nullptr);

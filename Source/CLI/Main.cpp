@@ -798,6 +798,8 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         else if (M->Decoders_AreMissing)
         {
             cerr << '\n' << Global.FFmpeg_Error << endl;
+            if (Global.Log)
+                *Global.Log += '\n' + Global.FFmpeg_Error + '\n';
             ParseInfo.IsDetected = true;
             DoesNotHaveReversibility = true; // No more info
             ReturnValue = 1;
