@@ -147,11 +147,23 @@ bool global::CheckFFmpeg(bool IsCompressed)
             return false;
         }
 
-        // Vulkan device of a vulkan decoder not available (known when the decoder creates the device)
+        // Vulkan device of a vulkan decoder not available (known when the decoder creates the device) or not usable by the decoder (known when the decoder decodes the first frame)
         auto Vulkan_Missing = FFmpeg_Library_VulkanMissing();
         if (Vulkan_Missing != (size_t)-1)
         {
-            FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (unable to find Vulkan device with index " + to_string(Vulkan_Missing) + ").";
+            string Name;
+            bool IsGPU, Unsupported;
+            if (FFmpeg_Library_VulkanSetupFailed(Name, IsGPU, Unsupported))
+            {
+                if (Unsupported)
+                    FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (the FFmpeg ffv1_vulkan decoder does not support this stream, e.g. FFV1 version 0 or 1, or is not in this FFmpeg build, not an issue of the file).";
+                else
+                    FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (the FFmpeg ffv1_vulkan decoder can not be initialized on "
+                                 + (Name.empty() ? "the Vulkan device with index " + to_string(Vulkan_Missing) : Name)
+                                 + ", issue of this decoder, e.g. of the " + (IsGPU ? "GPU or of its driver" : "Vulkan implementation") + ", not of the file).";
+            }
+            else
+                FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (unable to find Vulkan device with index " + to_string(Vulkan_Missing) + ").";
             return false;
         }
     }

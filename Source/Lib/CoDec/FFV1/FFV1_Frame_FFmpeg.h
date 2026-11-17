@@ -47,11 +47,26 @@ public:
     size_t RawFrame_Index = (size_t)-1; // Index of the frame given to Decode(), for instrumentation
     bool Output(); // To raw frame
     void Discard(); // Last decoded frame, instead of Output()
+    // Decode() failed because hardware decoding with Vulkan is not possible (issue of the decoder, not of the frame): its setup failed (e.g. issue of the GPU or of its driver), or it is not proposed by FFmpeg for this stream (e.g. FFV1 version 0 or 1, or FFmpeg build without it)
+    enum class vulkan_issue : uint8_t
+    {
+        None,
+        Setup,
+        Unsupported,
+    };
+    vulkan_issue VulkanIssue() const { return VulkanSetup.Failed ? (VulkanSetup.Proposed ? vulkan_issue::Setup : vulkan_issue::Unsupported) : vulkan_issue::None; }
+    struct vulkan_setup
+    {
+        bool                    Proposed = false; // Vulkan format proposed by FFmpeg
+        bool                    Failed = false; // Vulkan format not proposed (again) by FFmpeg
+    };
 
     // Decoded frame
     raw_frame*                  RawFrame;
 
 private:
+    vulkan_setup                VulkanSetup;
+
     bool Decode(AVFrame* Frame, AVBufferRef* Buffer, size_t Buffer_Size);
     bool Output(AVFrame* Frame);
 
