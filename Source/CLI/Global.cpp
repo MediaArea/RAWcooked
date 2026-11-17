@@ -56,12 +56,35 @@ int global::SetComputeOutputHash()
 }
 
 //---------------------------------------------------------------------------
+// Path of the FFmpeg binary run by cmd: a directory with ';' breaks the search of the libraries of the binary, the short path (8.3) is used if available
+static string Cmd_PathWithoutSemicolon(const string& Path)
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+    if (Path.find(';') == string::npos)
+        return Path;
+    auto Size = GetShortPathNameA(Path.c_str(), nullptr, 0); // Same code page as the command line
+    if (!Size)
+        return Path;
+    string Result(Size, '\0');
+    Size = GetShortPathNameA(Path.c_str(), &Result[0], Size);
+    if (!Size || Size >= Result.size())
+        return Path;
+    Result.resize(Size);
+    if (Result.find(';') != string::npos)
+        return Path; // No short name (e.g. disabled on the volume)
+    return Result;
+    #else
+    return Path;
+    #endif
+}
+
+//---------------------------------------------------------------------------
 int global::SetBinName(const char* FileName)
 {
     // FFmpeg binary, or libavcodec library for the FFmpeg decoders
     if (!FFmpeg_Library_SetPath(FileName))
     {
-        BinName = FileName;
+        BinName = Cmd_PathWithoutSemicolon(FileName);
         #if defined(_WIN32) || defined(_WINDOWS)
         if (BinName.find_first_of(" \t&|<>^(),;=") != string::npos && BinName.front() != '\"')
             BinName = '\"' + BinName + '\"'; // Used as is in command lines, as the searched binary; quoted if a character is special for cmd (% is escaped by Cmd_PercentEscaped only out of quotes)
@@ -584,7 +607,7 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
 static string FFmpeg_BinName()
 {
     auto Binary = FFmpeg_Binary();
-    return Binary.empty() ? string("ffmpeg") : QuotedName(Binary);
+    return Binary.empty() ? string("ffmpeg") : QuotedName(Cmd_PathWithoutSemicolon(Binary));
 }
 
 //---------------------------------------------------------------------------

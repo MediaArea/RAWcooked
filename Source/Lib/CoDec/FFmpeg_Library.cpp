@@ -391,7 +391,22 @@ static bool Library_Load(string& Error)
         if (GetFileAttributesW(Path.c_str()) == INVALID_FILE_ATTRIBUTES)
             continue;
         library Libraries[Library_Max];
-        Libraries[Library_avcodec] = LoadLibraryExW(Path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS); // Dependencies are searched in the directory of the library, of the executable and of the system, not in the current directory
+        auto Path_Load = Path;
+        if (Path.find(L';') != wstring::npos)
+        {
+            // A directory with ';' breaks the search of the dependencies, the short path (8.3) is used if available
+            auto Size = GetShortPathNameW(Path.c_str(), nullptr, 0);
+            wstring Path_Short(Size, L'\0');
+            if (Size)
+                Size = GetShortPathNameW(Path.c_str(), &Path_Short[0], Size);
+            if (Size && Size < Path_Short.size())
+            {
+                Path_Short.resize(Size);
+                if (Path_Short.find(L';') == wstring::npos)
+                    Path_Load = Path_Short;
+            }
+        }
+        Libraries[Library_avcodec] = LoadLibraryExW(Path_Load.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS); // Dependencies are searched in the directory of the library, of the executable and of the system, not in the current directory
         if (!Libraries[Library_avcodec])
         {
             string Reason;
