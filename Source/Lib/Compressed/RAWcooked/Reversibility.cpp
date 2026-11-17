@@ -9,6 +9,7 @@
 #include "zlib.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
 #include "Lib/Compressed/RAWcooked/Track.h"
+#include "Lib/Utils/FileIO/FileIO.h"
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -241,7 +242,18 @@ buffer reversibility::Data(element Element, size_t Pos) const
     if (ElementS >= element_Max)
         return buffer();
     const auto& Data = Data_[ElementS];
-    return Data.Data(BaseData_, Pos);
+    auto Content = Data.Data(BaseData_, Pos);
+
+    if (Element == element::FileName)
+    {
+        // E.g. name in the ANSI code page from a previous version on Windows
+        string Name = Content;
+        FileName_FromStored(Name);
+        if (Name.size() != Content.Size() || memcmp(Name.data(), Content.Data(), Name.size()))
+            Content.Create((const uint8_t*)Name.data(), Name.size());
+    }
+
+    return Content;
 }
 
 //---------------------------------------------------------------------------

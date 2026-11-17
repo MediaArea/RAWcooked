@@ -46,19 +46,176 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+static bool IsUTF8(const char* Name, size_t Size)
+{
+    auto Current = (const uint8_t*)Name;
+    auto End = Current + Size;
+    while (Current < End)
+    {
+        auto Value = (uint32_t)*Current++;
+        if (Value < 0x80)
+            continue;
+        size_t Count;
+        if ((Value & 0xE0) == 0xC0)
+        {
+            Count = 1;
+            Value &= 0x1F;
+        }
+        else if ((Value & 0xF0) == 0xE0)
+        {
+            Count = 2;
+            Value &= 0x0F;
+        }
+        else if ((Value & 0xF8) == 0xF0)
+        {
+            Count = 3;
+            Value &= 0x07;
+        }
+        else
+            return false;
+        if ((size_t)(End - Current) < Count)
+            return false;
+        for (size_t i = 0; i < Count; i++)
+        {
+            auto Continuation = *Current++;
+            if ((Continuation & 0xC0) != 0x80)
+                return false;
+            Value = (Value << 6) | (Continuation & 0x3F);
+        }
+        static const uint32_t Minimum[] = { 0x80, 0x800, 0x10000 };
+        if (Value < Minimum[Count - 1] || Value > 0x10FFFF || (Value >= 0xD800 && Value <= 0xDFFF))
+            return false; // Overlong, out of range or surrogate
+    }
+    return true;
+}
+
+//---------------------------------------------------------------------------
 #if defined(_WIN32) || defined(_WINDOWS)
+// Code page of the ANSI API, UTF-8 with the activeCodePage of the manifest (Windows 10 version 1903 and later)
+static UINT FileApisCodePage()
+{
+    return AreFileApisANSI() ? GetACP() : GetOEMCP();
+}
+
+//---------------------------------------------------------------------------
+// ANSI code page of the system, code page of the file names in the files created by the versions without the activeCodePage of the manifest
+static UINT LegacyCodePage()
+{
+    static const UINT CodePage = []() -> UINT
+    {
+        DWORD Value = 0;
+        if (!GetLocaleInfoEx(LOCALE_NAME_SYSTEM_DEFAULT, LOCALE_IDEFAULTANSICODEPAGE | LOCALE_RETURN_NUMBER, (LPWSTR)&Value, sizeof(Value) / sizeof(WCHAR)) || !Value || Value == CP_UTF8)
+            return 1252;
+        return (UINT)Value;
+    }();
+    return CodePage;
+}
+
+//---------------------------------------------------------------------------
+static wstring ToWide(UINT CodePage, const char* Name, size_t Size)
+{
+    auto WideSize = MultiByteToWideChar(CodePage, 0, Name, (int)Size, nullptr, 0);
+    if (WideSize <= 0)
+        return {};
+    wstring Result(WideSize, L'\0');
+    MultiByteToWideChar(CodePage, 0, Name, (int)Size, &Result[0], WideSize);
+    return Result;
+}
+
+//---------------------------------------------------------------------------
+static string FromWide(UINT CodePage, const wstring& Name)
+{
+    auto Size = WideCharToMultiByte(CodePage, 0, Name.c_str(), (int)Name.size(), nullptr, 0, nullptr, nullptr);
+    if (Size <= 0)
+        return {};
+    string Result(Size, '\0');
+    WideCharToMultiByte(CodePage, 0, Name.c_str(), (int)Name.size(), &Result[0], Size, nullptr, nullptr);
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 static wstring WideName(const char* FileName)
 {
     // Same code page as the ANSI API
-    auto CodePage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
-    auto Size = MultiByteToWideChar(CodePage, 0, FileName, -1, nullptr, 0);
-    if (Size <= 1)
-        return {};
-    wstring Name(Size, L'\0');
-    MultiByteToWideChar(CodePage, 0, FileName, -1, &Name[0], Size);
-    Name.resize(Size - 1);
-    return Name;
+    auto CodePage = FileApisCodePage();
+    auto Size = strlen(FileName);
+    if (CodePage == CP_UTF8 && !IsUTF8(FileName, Size))
+        CodePage = LegacyCodePage(); // Not UTF-8, e.g. a name from a file created by a previous version, in the ANSI code page
+    return ToWide(CodePage, FileName, Size);
 }
+#else
+//---------------------------------------------------------------------------
+static string Windows1252ToUTF8(const string& Name)
+{
+    static const uint16_t Table_80_9F[32] =
+    {
+        0x20AC, 0x0081, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008D, 0x017D, 0x008F,
+        0x0090, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x009D, 0x017E, 0x0178,
+    };
+    string Result;
+    Result.reserve(Name.size() * 2);
+    for (auto Char : Name)
+    {
+        uint32_t Value = (uint8_t)Char;
+        if (Value >= 0x80 && Value < 0xA0)
+            Value = Table_80_9F[Value - 0x80];
+        if (Value < 0x80)
+            Result += (char)Value;
+        else if (Value < 0x800)
+        {
+            Result += (char)(0xC0 | (Value >> 6));
+            Result += (char)(0x80 | (Value & 0x3F));
+        }
+        else
+        {
+            Result += (char)(0xE0 | (Value >> 12));
+            Result += (char)(0x80 | ((Value >> 6) & 0x3F));
+            Result += (char)(0x80 | (Value & 0x3F));
+        }
+    }
+    return Result;
+}
+#endif //defined(_WIN32) || defined(_WINDOWS)
+
+//---------------------------------------------------------------------------
+bool FileName_LegacyToUTF8(string& Name)
+{
+    if (IsUTF8(Name.c_str(), Name.size()))
+        return false;
+    #if defined(_WIN32) || defined(_WINDOWS)
+        Name = FromWide(CP_UTF8, ToWide(LegacyCodePage(), Name.c_str(), Name.size()));
+    #else
+        Name = Windows1252ToUTF8(Name);
+    #endif
+    return true;
+}
+
+//---------------------------------------------------------------------------
+void FileName_FromStored(string& Name)
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        if (FileApisCodePage() == CP_UTF8) // Else same code page as the previous versions
+            FileName_LegacyToUTF8(Name);
+    #elif defined(__APPLE__)
+        FileName_LegacyToUTF8(Name); // Only UTF-8 in the file systems
+    #else
+        (void)Name; // Any byte sequence is accepted by the file systems, kept as is
+    #endif
+}
+
+//---------------------------------------------------------------------------
+void FileName_FromUTF8(string& Name)
+{
+    #if defined(_WIN32) || defined(_WINDOWS)
+        auto CodePage = FileApisCodePage();
+        if (CodePage != CP_UTF8 && IsUTF8(Name.c_str(), Name.size()))
+            Name = FromWide(CodePage, ToWide(CP_UTF8, Name.c_str(), Name.size()));
+    #else
+        (void)Name;
+    #endif
+}
+
+#if defined(_WIN32) || defined(_WINDOWS)
 
 //---------------------------------------------------------------------------
 wstring WideFileName(const char* FileName)

@@ -32,6 +32,7 @@ for File in ${Files} ; do
         Raspbian_*) Image=debian:${Distro#Raspbian_} Manager=apt ;; # Raspberry Pi OS (64-bit) is based on Debian arm64
         Fedora_*) Image=fedora:${Distro#Fedora_} Manager=dnf ;;
         AlmaLinux_*) Image=almalinux:${Distro#AlmaLinux_} Manager=dnf ;;
+        Mageia_9) continue ;; # End of life, no more mirrors: the dependencies of the package can not be installed
         Mageia_*) Image=mageia:${Distro#Mageia_} Manager=urpmi ;;
         openSUSE_Leap_*) Image=opensuse/leap:${Distro#openSUSE_Leap_} Manager=zypper ;;
         openSUSE_Tumbleweed) Image=opensuse/tumbleweed Manager=zypper ;;
