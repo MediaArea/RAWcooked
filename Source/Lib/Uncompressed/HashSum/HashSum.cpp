@@ -152,7 +152,9 @@ void hashes::FromFile_Internal(string const& FileName, md5 const& MD5)
     {
         if (find(HashFiles.begin(), HashFiles.end(), FileName) == HashFiles.end())
         {
-            if (Errors)
+            if (NotListed_IsInfo)
+                NotListed.push_back(FileName);
+            else if (Errors)
                 Errors->Error(IO_Hashes, WouldBeError ? error::type::Undecodable : error::type::Invalid, CheckFromFiles ? (error::generic::code)hashes_issue::undecodable::FileMissing : (error::generic::code)hashes_issue::invalid::FileHashMissing, FileName);
         }
     }
