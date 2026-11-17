@@ -389,11 +389,8 @@ int input_base_uncompressed::AddEdits(map<string, string>& Edits)
     }
 
     auto WillEdit = !Edits.empty();
-    if (!WillEdit) {
-        Edit();
-        if (HasErrors())
-            return 1; // The first file can not be edited, the other files are not edited either
-    }
+    if (!WillEdit)
+        Edit(); // If the first file can not be edited, the other files are edited, as after another file which can not be edited (the error is checked by the caller)
     return WillEdit;
 }
 
