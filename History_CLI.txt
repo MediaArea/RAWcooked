@@ -1,3 +1,60 @@
+Version 26.11, 2026-11-17
+-------------
+Thanks to Centre national de l'audiovisuel (CNA) Luxembourg for sponsoring the GPU support on macOS
+Add GPU decoding, also for the check after encoding (FFmpeg 9 libraries with Vulkan are needed)
+Add hybrid decoding: CPU and GPU decode together, also with several GPUs
+Add --decoder option: internal, ffmpeg, vulkan (GPU), auto (CPU and GPU, default with -c:v ffv1_vulkan) or a combination
+GPU encoding and decoding on macOS (Apple silicon, macOS 26 or later) without GPU license
+Add --show-stats option (CPU and GPU used, speed of encoding and decoding)
+Add --edit option for editing DPX header fields in place (keys listed with --help-edit, values checked, fields after the header of a file refused)
+Add --io-threads option
+FFmpeg searched next to rawcooked first (FFmpeg builds of MediaArea preferred) and checked at the start
+-b (--bin-name) may also select the libavcodec library used for decoding
+Faster decoding and checking (next frames decoded during the output of previous frames, AVX2 transforms)
+Lower CPU usage of hashes (MD5 of several frames or files at once with AVX2, AVX-512 or NEON)
+Faster analysis of image sequences (multi-threaded conformance checks, fewer file system requests)
+Faster hashes when files are read from the storage (more I/O threads, no file cache)
+More FFV1 slices with FFmpeg 8.0 and later (powers of 2 up to 1024, depending on the frame size and bit depth)
+Windows: support of file names with any character (e.g. Cyrillic, Japanese), Windows 10 version 1903 or later
+TIFF: gray and RGB 2, 4, 6, 10, 12 and 14-bit, planar RGB, RGB and RGBA 8-bit BE (warning: FFmpeg with the new TIFF decoding is needed, e.g. ffmpeg-ma)
+TIFF: accept XMP, IPTC, Photoshop, Exif, GPS, ICC and PrintIM tags
+TIFF: reject files not decoded identically by FFmpeg (compressed, strips not matching RowsPerStrip, RGB without RowsPerStrip)
+TIFF: padding bits checked as with DPX (encoding without check refused if non-zero padding bits may be lost)
+EXR: accept more metadata attributes (e.g. FilmLight and DPX ones, gamma, writer, shutterAngle), long attribute names and non-image data before the image data
+EXR: --check needed only for encoding (not for e.g. --info or --edit)
+Support of DPX Y 10-bit from Lasergraphics Director
+DPX: accept another source image filename with the ditto key set to same as the previous frame
+Support of any slice count with DPX having group of pixels and with v210
+ffv1_vulkan: FFmpeg default slice count (better use of the GPU), v210 with a width not multiple of 128 rejected (not supported by FFmpeg)
+FFV1: decode slices having a CRC error anyway (the error is still reported)
+Matroska: reversibility data and attachments after the clusters (e.g. moved by another tool) are found
+Attachments: 4 MiB maximum size by default (was 1 MiB), for the hash files of long sequences
+--info: show that hashes of uncompressed files are present, also without --check
+Check: files not in the reversibility data (e.g. attachments added by another tool) shown as info, not as error
+Clearer message for unknown options
+Windows: support of paths longer than 260 characters
+Compatibility with recent FFmpeg versions for FLAC audio
+Add FFmpeg installation instructions, with GPU support, in README
+Add a documentation about RAWcooked and antivirus software
+Fix non reversible encoding of sequences having files with another flavor, frame size or orientation than the first file (now rejected)
+Fix wrong hash of files of 4 GiB or more on Windows
+Fix potential crash with --compute-output-hash (included in --all)
+Fix potential hang with multi-threading
+Fix rejection of valid FFV1 streams with more vertical than horizontal slices
+Fix order of file names with numbers of 10 digits or more, non-ASCII characters or leading zeros
+Fix sequence detection using digits of a folder name as frame number
+Fix FFmpeg error with image sequences having gaps at 25 frames per second
+Fix several tracks when several files of the same sequence are given
+Fix file and directory names with % (all platforms), with $ ` " \ (Linux and macOS), with ' in sequences with gaps
+Fix false "missing frame in source" in the check after encoding of a file in a folder (--file)
+Fix --file only the given image files, without the rest of their sequence, and not needed for WAV, AIFF and AVI files
+Fix --no-accept-gaps accepting gaps with -y
+Fix options of an outdated temporary license still accepted
+Fix license key written in the log file of --log-name
+Fix -b (--bin-name) and FFmpeg next to rawcooked with a path having spaces, ; or other characters special for the shell
+Fix crash when decoding a Matroska file without cluster (e.g. truncated) with a WAV track
+Fix progress indicator sometimes disappearing, and a 1 second wait at the end of short analyses
+
 Version 25.12, 2025-12-30
 -------------
 Add a case study (thanks to @digitensions)
