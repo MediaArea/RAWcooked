@@ -27,6 +27,8 @@ public:
     // Options
     bool                        CheckFromFiles = false;
     bool                        WouldBeError = false;
+    bool                        NotListed_IsInfo = false; // Files without hash are listed in NotListed, not an error (e.g. attachments added by another tool after the encoding)
+    std::vector<string>         NotListed;
 
     // Structs
     struct value

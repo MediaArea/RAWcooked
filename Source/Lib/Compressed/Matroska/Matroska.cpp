@@ -1029,6 +1029,7 @@ void matroska::Segment_Cluster()
         }
 
         Hashes_FromRAWcooked->WouldBeError = true;
+        Hashes_FromRAWcooked->NotListed_IsInfo = true; // Files not in the reversibility data are not checked (e.g. attachments added by another tool), they are shown as info
         if (!(Actions[Action_Decode] || Actions[Action_Check] || Actions[Action_Conch] || Actions[Action_Info]) || !Hashes_FromRAWcooked->NoMoreHashFiles()) // Kept with --info alone for showing that hashes are present
         {
             delete Hashes_FromRAWcooked;

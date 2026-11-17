@@ -750,6 +750,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     bool NoOutputCheck = !Global.Actions[Action_Decode] && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     auto DoesNotHaveReversibility = false;
+    vector<string> NotListed; // Files without hash in the reversibility data, not checked
     size_t Decoding_Frames[decoders_stats::Max] = {};
     double Decoding_Seconds = 0;
     double Decoding_Content_Seconds = 0;
@@ -807,6 +808,8 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
 
             if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
                 HasCheckedReversibility = true;
+            if (M->Hashes_FromRAWcooked)
+                NotListed = M->Hashes_FromRAWcooked->NotListed;
 
             if (Global.Actions[Action_Info] || Global.Log)
             {
@@ -879,6 +882,18 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         Info += "\nInfo: ";
         Info += (HasCheckedReversibility ? "Reversibility" : "Decoding");
         Info += " was checked, issues detected, see below.";
+    }
+    if (!NotListed.empty() && !Global.Quiet)
+    {
+        sort(NotListed.begin(), NotListed.end());
+        Info += "\nInfo: files present but not listed in source, not checked (e.g. attachments added after the encoding):";
+        for (size_t i = 0; i < NotListed.size() && i < 10; i++)
+        {
+            Info += "\n      ";
+            Info += NotListed[i];
+        }
+        if (NotListed.size() > 10)
+            Info += "\n      ...";
     }
     if (Global.ShowStats && ParseInfo.IsDetected && !DoesNotHaveReversibility)
     {
