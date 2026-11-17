@@ -632,11 +632,11 @@ void matroska::Segment_Attachments_AttachedFile_FileName()
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData()
 {
-    if (Cluster_Offset != (size_t)-1)
+    if (Cluster_Offset != (size_t)-1 && Cluster_Level == (size_t)-1)
+        return; // After the clusters, already parsed before the parsing of the clusters
+    if (Cluster_Offset != (size_t)-1 && Level == 1)
     {
-        if (Cluster_Level == (size_t)-1)
-            return;
-
+        // RAWcooked element after the Segment (attachments after the clusters, in the Segment, are tested below as the ones before the clusters)
         // This is a RAWcooked file, not intended to be demuxed
         IsList = true;
         TrackInfo_Pos = (size_t)-1;
