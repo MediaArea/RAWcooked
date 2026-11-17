@@ -309,6 +309,27 @@ void matroska::Shutdown()
     // Check
     if (Errors)
     {
+        // Name not in UTF-8 in the reversibility data (ANSI code page of a previous version on Windows) and in UTF-8 in the attachment
+        for (auto AttachedFile = AttachedFiles.begin(); AttachedFile != AttachedFiles.end();)
+        {
+            if (AttachedFile->second.Flags[ReversibilityFileHasName] && !AttachedFile->second.Flags[IsInFromAttachments])
+            {
+                auto Name = AttachedFile->first;
+                if (FileName_LegacyToUTF8(Name))
+                {
+                    auto Attachment = AttachedFiles.find(Name);
+                    if (Attachment != AttachedFiles.end() && Attachment->second.Flags[IsInFromAttachments] && !Attachment->second.Flags[ReversibilityFileHasName])
+                    {
+                        Attachment->second.Flags |= AttachedFile->second.Flags;
+                        Attachment->second.FileSizeFromReversibilityFile = AttachedFile->second.FileSizeFromReversibilityFile;
+                        AttachedFile = AttachedFiles.erase(AttachedFile);
+                        continue;
+                    }
+                }
+            }
+            ++AttachedFile;
+        }
+
         bool ReversibilityFileHasNames = false;
         for (const auto& AttachedFile : AttachedFiles)
         {
@@ -626,6 +647,7 @@ void matroska::Segment_Attachments_AttachedFile()
 void matroska::Segment_Attachments_AttachedFile_FileName()
 {
     AttachedFile_FileName.assign((const char*)Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
+    FileName_FromUTF8(AttachedFile_FileName);
     FormatPath(AttachedFile_FileName);
 }
 
@@ -735,6 +757,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
     AttachedFile_FileName.assign((char*)Output.Data(), Output.Size());
     if (AttachedFile_FileName.empty())
         return; // Not valid, ignoring
+    FileName_FromStored(AttachedFile_FileName);
 
     auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
     AttachedFile.Flags.set(ReversibilityFileHasName);

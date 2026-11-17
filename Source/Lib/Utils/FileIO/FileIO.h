@@ -23,6 +23,15 @@ inline wstring WideFileName(const string& FileName) { return WideFileName(FileNa
 string NarrowFileName(const wchar_t* FileName);
 #endif //defined(_WIN32) || defined(_WINDOWS)
 
+// File names are in UTF-8, except on Linux (any byte sequence) and on Windows versions without the activeCodePage of the manifest (ANSI code page)
+// File names in files of previous versions on Windows are in the ANSI code page of Windows
+// Name which is not UTF-8 (from a previous version on Windows) converted to UTF-8, false if the name is already UTF-8
+bool FileName_LegacyToUTF8(string& Name);
+// Name stored in a file (reversibility data, hash file) to a file name
+void FileName_FromStored(string& Name);
+// Name in UTF-8 (e.g. Matroska attachment) to a file name
+void FileName_FromUTF8(string& Name);
+
 // Directory kept open for opening the files in it from their name (cheaper than from the full path, which is parsed again for each file)
 class directory
 {

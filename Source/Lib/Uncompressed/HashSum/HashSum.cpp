@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include "Lib/Uncompressed/HashSum/HashSum.h"
+#include "Lib/Utils/FileIO/FileIO.h"
 #include <algorithm>
 using namespace std;
 //---------------------------------------------------------------------------
@@ -318,6 +319,7 @@ void hashsum::ParseBuffer()
         }
         
         // Add
+        FileName_FromStored(Name); // E.g. hash file created on Windows in the ANSI code page
         if (List)
             List->FromHashFile(HomePath + Name, MD5);
 

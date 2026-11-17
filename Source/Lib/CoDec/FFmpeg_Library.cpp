@@ -162,12 +162,15 @@ static bool Binary_Path(const path& Directory, const char* Name, string& Result)
         return false;
 
     // Command lines are in the ANSI code page, the path is ignored if it can not be represented in it
+    // UTF-8 code page (activeCodePage of the manifest): any path, WC_NO_BEST_FIT_CHARS and UsedDefaultChar are invalid with UTF-8
+    auto IsUTF8 = GetACP() == CP_UTF8;
+    DWORD Flags = IsUTF8 ? 0 : WC_NO_BEST_FIT_CHARS;
     BOOL UsedDefaultChar = FALSE;
-    auto Size = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Path.c_str(), (int)Path.size(), nullptr, 0, nullptr, &UsedDefaultChar);
+    auto Size = WideCharToMultiByte(CP_ACP, Flags, Path.c_str(), (int)Path.size(), nullptr, 0, nullptr, IsUTF8 ? nullptr : &UsedDefaultChar);
     if (!Size || UsedDefaultChar)
         return false;
     Result.assign(Size, '\0');
-    WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Path.c_str(), (int)Path.size(), &Result[0], Size, nullptr, nullptr);
+    WideCharToMultiByte(CP_ACP, Flags, Path.c_str(), (int)Path.size(), &Result[0], Size, nullptr, nullptr);
     #else
     auto Path = Directory + '/' + Name;
     struct stat Stat;
