@@ -360,6 +360,17 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
 }
 
 //---------------------------------------------------------------------------
+// File of a sequence as input without --file, the sequence is not handled as a whole: refused, true if refused
+static bool IsFileNotAccepted(bool IsNotSequence)
+{
+    if (!Global.HasAtLeastOneFile || Global.AcceptFiles || IsNotSequence)
+        return false;
+    Global.ProgressIndicator_Stop();
+    cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;
+    return true;
+}
+
+//---------------------------------------------------------------------------
 bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos)
 {
     if (SingleFile.IsDetected())
@@ -532,6 +543,8 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             }
         }
 
+        if (Global.Edits_Enabled && IsFileNotAccepted(SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI))
+            return true; // Before the edit of the files, else the files are edited even if the command is refused
         if (Global.Edits_Enabled && SingleFile.AddEdits(Global.Edits))
             return true;
         auto FirstFile_NotEdited = Global.Edits_Enabled && SingleFile.HasErrors(); // The next files are also edited, as after another file which can not be edited
@@ -649,12 +662,8 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     }
 
     // End
-    if (Global.HasAtLeastOneFile && !Global.AcceptFiles && !IsNotSequence)
-    {
-        Global.ProgressIndicator_Stop();
-        cerr << "Input is a file so directory will not be handled as a whole.\nConfirm that this is what you want to do by adding \" --file\" to the command." << endl;
+    if (IsFileNotAccepted(IsNotSequence))
         return 1;
-    }
     if (ParseInfo.IsDetected)
     {
         stream Stream;
