@@ -506,7 +506,9 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             cerr << "Info: non-zero padding bits found in first file,\n"
                 << "      forcing the check of padding bits for all files.\n" << endl;
         }
-        else if (SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor) && !Global.Actions[Action_CheckPaddingOptionIsSet] && !Global.Edits_Enabled) // If --no-checking-padding is not present, and padding bits are not relevant when editing
+        else if (((SingleFile.ParserCode == Parser_DPX && dpx::MayHavePaddingBits((dpx::flavor)SingleFile.Flavor))
+               || (SingleFile.ParserCode == Parser_TIFF && tiff::MayHavePaddingBits((tiff::flavor)SingleFile.Flavor, SingleFile.FrameWidth)))
+              && !Global.Actions[Action_CheckPaddingOptionIsSet] && !Global.Edits_Enabled) // If --no-checking-padding is not present, and padding bits are not relevant when editing
         {
             Global.ProgressIndicator_Stop();
             if (Global.Actions[Action_Check])
