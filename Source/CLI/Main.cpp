@@ -309,6 +309,8 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                 }
                 if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
                     AnyError = true;
+                    if (Parser.RAWcooked)
+                        Parser.RAWcooked->Abort(); // The reversibility data of this file may never be written (e.g. file which can not be opened, header not supported), the next files must not wait for it
                 }
             }
         };
