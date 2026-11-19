@@ -99,6 +99,9 @@ void frame_writer::FrameCall(raw_frame* RawFrame)
 
     if (!Mode[IsNotBegin])
     {
+        // The previous file of this writer may be still open (checked and same), the new file must not be compared with it
+        Output->Read.Close();
+
         if (!Mode[NoWrite])
         {
             // Open output file in writing mode only if the file does not exist
