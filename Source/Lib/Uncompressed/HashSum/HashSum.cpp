@@ -126,6 +126,16 @@ void hashes::RemoveEmptyFiles()
 }
 
 //---------------------------------------------------------------------------
+void hashes::LegacyNamesToUTF8()
+{
+    std::lock_guard<std::mutex> lock(DataMutex);
+    for (auto& HashItem : List_FromHashFiles)
+        FileName_LegacyToUTF8(HashItem.Name);
+    if (IsSorted)
+        sort(List_FromHashFiles.begin(), List_FromHashFiles.end());
+}
+
+//---------------------------------------------------------------------------
 void hashes::FromFile(string const& FileName, md5 const& MD5)
 {
     std::lock_guard<std::mutex> lock(DataMutex);

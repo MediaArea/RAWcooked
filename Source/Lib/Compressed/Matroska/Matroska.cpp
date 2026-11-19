@@ -309,7 +309,7 @@ void matroska::Shutdown()
     // Check
     if (Errors)
     {
-        // Name not in UTF-8 in the reversibility data (ANSI code page of a previous version on Windows) and in UTF-8 in the attachment
+        // Name not in UTF-8 in the reversibility data (ANSI code page of a previous version on Windows) and in UTF-8 in the attachment, if the attachment is after the reversibility data (else already done during the parsing)
         for (auto AttachedFile = AttachedFiles.begin(); AttachedFile != AttachedFiles.end();)
         {
             if (AttachedFile->second.Flags[ReversibilityFileHasName] && !AttachedFile->second.Flags[IsInFromAttachments])
@@ -761,6 +761,29 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
         return; // Not valid, ignoring
     FileName_FromStored(AttachedFile_FileName);
 
+    // Name still not in UTF-8 (Linux) and in UTF-8 in the attachment (converted by FFmpeg): file created on Windows by a previous version, all names are in the ANSI code page and are converted to UTF-8 as the names of the attachments, so names of files in a same directory and hashes match
+    auto Name = AttachedFile_FileName;
+    if (FileName_LegacyToUTF8(Name))
+    {
+        if (!FileNames_AreLegacy && AttachedFiles.find(AttachedFile_FileName) == AttachedFiles.end())
+        {
+            auto Attachment = AttachedFiles.find(Name);
+            if (Attachment != AttachedFiles.end() && Attachment->second.Flags[IsInFromAttachments] && !Attachment->second.Flags[ReversibilityFileHasName])
+            {
+                FileNames_AreLegacy = true;
+                if (ReversibilityData)
+                    ReversibilityData->FileNames_AreLegacy = true;
+                for (const auto& TrackInfo_Current : TrackInfo)
+                    if (TrackInfo_Current && TrackInfo_Current->ReversibilityData)
+                        TrackInfo_Current->ReversibilityData->FileNames_AreLegacy = true;
+                if (Hashes_FromRAWcooked)
+                    Hashes_FromRAWcooked->LegacyNamesToUTF8(); // Hashes already registered
+            }
+        }
+        if (FileNames_AreLegacy)
+            AttachedFile_FileName = Name;
+    }
+
     auto& AttachedFile = AttachedFiles[AttachedFile_FileName];
     AttachedFile.Flags.set(ReversibilityFileHasName);
 }
@@ -787,6 +810,13 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedAttachment_Fil
     // File with a size of 0 are not in attachment, it is created here
     if (!FileSize)
     {
+        auto Name = AttachedFile_FileName;
+        if (!FileNames_AreLegacy && FileName_LegacyToUTF8(Name))
+        {
+            AttachedFile_FileNames_Empty.push_back(AttachedFile_FileName); // Name still not in UTF-8 (Linux), created when it is known if names are in the ANSI code page of a previous version on Windows
+            return;
+        }
+
         raw_frame RawFrame;
 
         frame_writer FrameWriter(FrameWriter_Template);
@@ -1020,6 +1050,20 @@ void matroska::Segment_Cluster()
         return; // Reversibility data after the clusters, clusters are parsed after the end of the parsing of the reversibility data
 
     IsList = true;
+
+    // Attachments with a size of 0 and a name not in UTF-8, names of all attachments are known
+    for (auto& Name : AttachedFile_FileNames_Empty)
+    {
+        if (FileNames_AreLegacy)
+            FileName_LegacyToUTF8(Name);
+        raw_frame RawFrame;
+
+        frame_writer FrameWriter(FrameWriter_Template);
+        FrameWriter.OutputFileName = Name;
+        RawFrame.FrameProcess = &FrameWriter;
+        RawFrame.Process();
+    }
+    AttachedFile_FileNames_Empty.clear();
 
     // Check if Hashes check is useful
     if (Hashes_FromRAWcooked)
@@ -1563,6 +1607,7 @@ void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(revers
     {
         Data = new reversibility();
         Data->SetBaseData(Buffer.Data());
+        Data->FileNames_AreLegacy = FileNames_AreLegacy; // Reversibility data of attachments may be before the one of tracks
     }
 
     switch (Element)

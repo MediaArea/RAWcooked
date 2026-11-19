@@ -61,6 +61,7 @@ public:
     void                        FromHashFile(buffer_base const& FileName, md5 const& MD5) { FromHashFile(string((const char*)FileName.Data(), FileName.Size()), MD5); }
     void                        Ignore(string const& FileName);
     void                        RemoveEmptyFiles();
+    void                        LegacyNamesToUTF8(); // Names not in UTF-8 converted from the ANSI code page of a previous version on Windows
     bool                        NoMoreHashFiles() { if (!IsSorted) NoMoreHashFiles_Internal(); return !List_FromHashFiles.empty(); } // Return true if Hashes are useful
     void                        FromFile(string const& FileName, md5 const& MD5);
     void                        Finish();

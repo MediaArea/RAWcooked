@@ -207,6 +207,8 @@ private:
     };
     map<string, attached_file>  AttachedFiles;
     set<string>                 AttachedFile_FileNames_IsHash; // Store the files detected as being hash file
+    bool                        FileNames_AreLegacy = false; // Names in the ANSI code page of a previous version on Windows, detected from the names of attachments
+    vector<string>              AttachedFile_FileNames_Empty; // Files with a size of 0 and a name not in UTF-8, created after the parsing of the names of all attachments
     enum reversibility_compat
     {
         Compat_Modern,
