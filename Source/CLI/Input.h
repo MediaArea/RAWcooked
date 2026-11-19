@@ -17,10 +17,11 @@
 using namespace std;
 //---------------------------------------------------------------------------
 
-// File entry
+// File entry, with the size from the directory listing if available (Windows), else 0: no query of the size of each file, the file map checks it
 struct FileEntry
 {
     string FileName;
+    uintmax_t FileSize;
 };
 
 // Flavor, frame size and orientation of the first file of a sequence, the other files must have the same ones (FFmpeg would convert their frames)
@@ -50,7 +51,7 @@ public:
     static int FileName_Compare(const string& Left, const string& Right);
 
     // I/O
-    static bool OpenInput(filemap& FileMap, const string& Name, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0, const directory* Dir = nullptr); // Only the header is read if HeaderSize is not 0, the file is opened relative to Dir if it is directly in it
+    static bool OpenInput(filemap& FileMap, const string& Name, uintmax_t FileSize, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0, const directory* Dir = nullptr); // Only the header is read if HeaderSize is not 0, the file is opened relative to Dir if it is directly in it
 };
 
 #endif
