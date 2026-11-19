@@ -127,19 +127,27 @@ static vector<path> Path_Directories()
     #endif
     for (size_t Begin = 0; Begin < Env.size();)
     {
-        auto End = Env.find(Separator, Begin);
-        if (End == path::npos)
-            End = Env.size();
-        auto Directory = Env.substr(Begin, End - Begin);
-        Begin = End + 1;
         #if defined(_WIN32)
-        if (Directory.size() >= 2 && Directory.front() == L'"' && Directory.back() == L'"')
-            Directory = Directory.substr(1, Directory.size() - 2);
+        // Quotes are removed, a separator between quotes is part of the directory (e.g. a directory with ';', quoted in PATH), as with cmd
+        path Directory;
+        for (auto InQuotes = false; Begin < Env.size() && (InQuotes || Env[Begin] != Separator); Begin++)
+        {
+            if (Env[Begin] == L'"')
+                InQuotes = !InQuotes;
+            else
+                Directory += Env[Begin];
+        }
+        Begin++;
         if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
             continue;
         while (Directory.back() == L'\\' || Directory.back() == L'/')
             Directory.pop_back();
         #else
+        auto End = Env.find(Separator, Begin);
+        if (End == path::npos)
+            End = Env.size();
+        auto Directory = Env.substr(Begin, End - Begin);
+        Begin = End + 1;
         if (Directory.empty() || Directory.front() != '/')
             continue;
         while (Directory.size() > 1 && Directory.back() == '/')
