@@ -267,6 +267,10 @@ matroska::~matroska()
 //---------------------------------------------------------------------------
 void matroska::Shutdown()
 {
+    if (Shutdown_IsDone)
+        return; // Already done, e.g. before the destructor for getting the results of the checks
+    Shutdown_IsDone = true;
+
     // Tracks
     for (size_t i = 0; i < TrackInfo.size(); i++)
     {
@@ -366,7 +370,7 @@ void matroska::Shutdown()
                 if (AttachedFile.second.Flags[IsInFromAttachments])
                 {
                     if (ReversibilityFileHasNames)
-                        Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)(filechecker_issue::undecodable::Attachment_Compressed_Extra), AttachedFile.first);
+                        Attachments_NotListed.push_back(AttachedFile.first); // Not checked (e.g. added by another tool after the encoding), shown as info
                 }
                 else
                 {

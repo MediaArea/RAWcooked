@@ -752,7 +752,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     bool NoOutputCheck = !Global.Actions[Action_Decode] && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     auto DoesNotHaveReversibility = false;
-    vector<string> NotListed; // Files without hash in the reversibility data, not checked
+    vector<string> NotListed; // Files without hash or attachments not in the reversibility data, not checked
     size_t Decoding_Frames[decoders_stats::Max] = {};
     double Decoding_Seconds = 0;
     double Decoding_Content_Seconds = 0;
@@ -809,11 +809,13 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         else if (M->IsDetected())
         {
             ParseInfo.IsDetected = true;
+            M->Shutdown(); // End of the checks (e.g. attachments), before the use of their results
 
             if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
                 HasCheckedReversibility = true;
             if (M->Hashes_FromRAWcooked)
                 NotListed = M->Hashes_FromRAWcooked->NotListed;
+            NotListed.insert(NotListed.end(), M->Attachments_NotListed.begin(), M->Attachments_NotListed.end());
 
             if (Global.Actions[Action_Info] || Global.Log)
             {
@@ -890,6 +892,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     if (!NotListed.empty() && !Global.Quiet)
     {
         sort(NotListed.begin(), NotListed.end());
+        NotListed.erase(unique(NotListed.begin(), NotListed.end()), NotListed.end()); // An attachment may be both without hash and not in the attachments of the reversibility data
         Info += "\nInfo: files present but not listed in source, not checked (e.g. attachments added after the encoding):";
         for (size_t i = 0; i < NotListed.size() && i < 10; i++)
         {
