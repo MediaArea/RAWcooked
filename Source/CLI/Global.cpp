@@ -424,6 +424,7 @@ int global::SetEdit(const char* Value)
 
     auto Delimiter = strchr(Value, '=');
     if (!Delimiter) {
+        cerr << "Error: --edit value '" << Value << "' is not in the key=value form.\nSee --help-edit for the list of keys." << endl;
         return 1;
     }
     auto ValueS = string(Value);
