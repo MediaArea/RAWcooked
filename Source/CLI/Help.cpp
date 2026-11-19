@@ -310,7 +310,7 @@ ReturnValue Help(const char* /*Name*/)
         "              file.\n"
         "              See FFmpeg framemd5 documentation for more information.\n"
         "\n"
-        "       --framemd5-an value\n"
+        "       --framemd5-an\n"
         "              Disable audio streams in framemd5 output.\n"
         "              Imply --framemd5.\n"
         "\n"
