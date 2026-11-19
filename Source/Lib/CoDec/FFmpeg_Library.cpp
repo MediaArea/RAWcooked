@@ -140,8 +140,10 @@ static vector<path> Path_Directories()
         Begin++;
         if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
             continue;
-        while (Directory.back() == L'\\' || Directory.back() == L'/')
+        while (!Directory.empty() && (Directory.back() == L'\\' || Directory.back() == L'/'))
             Directory.pop_back();
+        if (Directory.empty())
+            continue; // Only separators (e.g. "\\")
         #else
         auto End = Env.find(Separator, Begin);
         if (End == path::npos)
