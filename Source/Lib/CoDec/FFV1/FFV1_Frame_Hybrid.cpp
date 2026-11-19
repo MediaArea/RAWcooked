@@ -157,6 +157,7 @@ struct ffv1_frame_hybrid_private
     std::string                 Vulkan_Name[Decoder_Max]; // Name of the device, for the first decoder on the device
     bool                        Vulkan_IsGPU[Decoder_Max] = {}; // Device is a GPU (not a CPU implementation), for the first decoder on the device
     bool                        Vulkan_Announced[Decoder_Max] = {}; // Device announced as selected after the first frame decoded with it (not if the decoder can not use it), by the transfer thread
+    bool                        Vulkan_Decoded[Decoder_Max] = {}; // A frame was decoded with the device, for the first decoder on the device, else the device is kept instead of being released (see FFmpeg_Library_VulkanKeep())
 
     // Jobs
     std::deque<hybrid_job*>     Transfer_Jobs[Decoder_Max]; // Decoded by FFmpeg decoders, in decoding order
@@ -222,8 +223,11 @@ struct ffv1_frame_hybrid_private
 
     ~ffv1_frame_hybrid_private()
     {
-        for (auto Decoder : FFmpeg)
-            delete Decoder;
+        for (size_t i = 0; i < Decoder_Max; i++)
+        {
+            Vulkan_Keep(i);
+            delete FFmpeg[i];
+        }
         delete Ours;
         for (auto Pool : Pools)
             if (Pool)
@@ -234,6 +238,7 @@ struct ffv1_frame_hybrid_private
     }
 
     ffv1_frame_ffmpeg* Decoder_New(size_t i);
+    void Vulkan_Keep(size_t i);
     void Run(size_t i);
     void Transfer(size_t i);
     hybrid_job* Job_New();
@@ -280,6 +285,15 @@ ffv1_frame_ffmpeg* ffv1_frame_hybrid_private::Decoder_New(size_t i)
 
     ffmpeg::av_buffer_unref(&Device);
     return Decoder;
+}
+
+//---------------------------------------------------------------------------
+// Vulkan device of an FFmpeg decoder kept instead of being released if no frame was decoded with it (e.g. setup failure), before the release of the decoder
+// Mutex must be locked if the threads run
+void ffv1_frame_hybrid_private::Vulkan_Keep(size_t i)
+{
+    if (i >= Decoder_Vulkan && FFmpeg[i] && !Vulkan_Decoded[Vulkan_First[i]])
+        FFmpeg_Library_VulkanKeep(Vulkan_Device[i], FFmpeg[i]->VulkanDevice());
 }
 
 //---------------------------------------------------------------------------
@@ -395,6 +409,8 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             Duration[i] = Duration[i] ? (Duration[i] * 3 + Job_Duration) / 4 : Job_Duration; // Duration of the first frame includes the initialization
             trace::Counter(Names[i].Duration, (int64_t)(Duration[i] * 1000));
         }
+        if (i >= Decoder_Vulkan && !Error)
+            Vulkan_Decoded[Vulkan_First[i]] = true;
         if (i >= Decoder_Vulkan && Vulkan_First[i] == i && !Error)
             for (size_t j = i + 1; j < Decoder_Max; j++)
                 if (Vulkan_Waiting[j] && Vulkan_First[j] == i)
@@ -454,6 +470,7 @@ void ffv1_frame_hybrid_private::Transfer(size_t i)
                 return;
 
             // No more frames, FFmpeg decoder is released during the output of last frames
+            Vulkan_Keep(i);
             auto Decoder_Old = FFmpeg[i];
             auto Pool_Old = Pools[i];
             FFmpeg[i] = nullptr;

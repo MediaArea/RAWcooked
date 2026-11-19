@@ -17,6 +17,7 @@
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
@@ -751,12 +752,38 @@ string FFmpeg_Library_VulkanName(bool* IsGPU)
 }
 
 //---------------------------------------------------------------------------
+// Vulkan devices on which no frame could be decoded, with their index, never released (see FFmpeg_Library_VulkanKeep()) and reused by the next decoders on the same device
+static mutex Vulkan_Kept_Mutex;
+static vector<pair<size_t, AVBufferRef*>>& Vulkan_Kept = *new vector<pair<size_t, AVBufferRef*>>; // Not destroyed, the devices stay referenced until the end
+
+//---------------------------------------------------------------------------
 AVBufferRef* FFmpeg_Library_VulkanDevice(size_t Index)
 {
+    {
+        lock_guard<mutex> Lock(Vulkan_Kept_Mutex);
+        for (const auto& Kept : Vulkan_Kept)
+            if (Kept.first == Index)
+                return ffmpeg::av_buffer_ref(Kept.second);
+    }
     if (!Index)
         if (auto Device = Vulkan_Device.exchange(nullptr))
             return Device;
     return Vulkan_Device_Create(Index);
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_VulkanKeep(size_t Index, AVBufferRef* Device)
+{
+    if (!Device)
+        return;
+    lock_guard<mutex> Lock(Vulkan_Kept_Mutex);
+    for (const auto& Kept : Vulkan_Kept)
+        if (Kept.second->data == Device->data)
+        {
+            ffmpeg::av_buffer_unref(&Device); // Already kept, the device is not released
+            return;
+        }
+    Vulkan_Kept.emplace_back(Index, Device);
 }
 
 //---------------------------------------------------------------------------

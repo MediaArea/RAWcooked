@@ -388,7 +388,12 @@ namespace ffmpeg
 }
 
 // Vulkan device with this index in the list of devices (0 for the default device), the default device detected by FFmpeg_Library_Vulkan() is given to the first caller (who owns the reference) so it is not created twice, else a new device (nullptr if not available)
+// A device kept by FFmpeg_Library_VulkanKeep() with this index is given (new reference) instead of a new device
 AVBufferRef* FFmpeg_Library_VulkanDevice(size_t Index);
+
+// Vulkan device with this index on which no frame could be decoded, kept until the end instead of being released (the reference is owned by the callee)
+// Releasing such device may crash in the Vulkan driver (vkDestroyDevice() of Mesa Dozen on a Qualcomm Adreno X1 GPU on Windows), and the crash would replace the error message about the decoder
+void FFmpeg_Library_VulkanKeep(size_t Index, AVBufferRef* Device);
 
 // Vulkan device is a GPU, not a CPU implementation (e.g. lavapipe), SMCount is set to its count of streaming multiprocessors if it is an NVIDIA GPU (else 0), Name to its name
 bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount, std::string* Name = nullptr);
