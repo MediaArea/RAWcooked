@@ -473,8 +473,8 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
             return;
 
         do {
-            uintmax_t FileSize = ((uintmax_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
-            DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
+            // No file size from the directory listing, it may be outdated (e.g. hard link to a file changed through another link), the size is read from the opened file
+            DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
         }
         while (FindNextFileW(hFind, &FindFileData));
 
