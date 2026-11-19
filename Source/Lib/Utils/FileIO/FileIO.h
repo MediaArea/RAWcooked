@@ -76,7 +76,8 @@ public:
         #endif //defined(_WIN32) || defined(_WINDOWS)
         header, // Internal, set by Open_HeaderMode()
     };
-    // Memory map: the file is opened relative to Dir if it is directly in it, with random access if Dir is provided
+    // FileSize: size of the file if known (e.g. from the directory listing), else 0
+    // Memory map: the file is opened relative to Dir if it is directly in it, with random access if Dir is provided; on Windows, FileSize is not used (size from the file mapping object, FileSize may be outdated)
     int                         Open_ReadMode(const char* FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWtite_ = false, const directory* Dir = nullptr);
     int                         Open_ReadMode(const string& FileName, uintmax_t FileSize = 0, method NewMethod = {}, size_t Begin = {}, size_t End = {}, bool AlsoWrite_ = false) { return Open_ReadMode(FileName.c_str(), FileSize, NewMethod, Begin, End, AlsoWrite_); }
     // Reads only the first HeaderSize bytes, without memory map (cheaper when only the header is needed, e.g. for editing it): Size() is the file size, Readable_End() the count of bytes read

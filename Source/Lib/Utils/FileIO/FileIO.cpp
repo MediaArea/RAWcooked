@@ -308,6 +308,46 @@ static HANDLE CreateFile_Relative(HANDLE Dir, const char* FileName, DWORD Desire
         return INVALID_HANDLE_VALUE;
     return NewFile;
 }
+
+//---------------------------------------------------------------------------
+// File mapping object of a whole file, with the size of the file when the object was created, known without I/O
+// No file mapping object for a 0-byte file (not supported by CreateFileMapping), Size is then 0
+// Size is (uintmax_t)-1 if not known (error, or should not happen)
+static HANDLE CreateFileMapping_Size(HANDLE File, DWORD Protect, uintmax_t& Size)
+{
+    struct section_basic_information
+    {
+        PVOID           BaseAddress;
+        ULONG           AllocationAttributes;
+        LARGE_INTEGER   MaximumSize;
+    };
+    typedef NTSTATUS (NTAPI* NtQuerySection_Type)(HANDLE, int, PVOID, SIZE_T, PSIZE_T);
+    typedef NTSTATUS (NTAPI* RtlGetLastNtStatus_Type)();
+
+    // Loaded at run time, no need of ntdll.lib, and before CreateFileMapping() so its error status is not changed by these calls
+    static const auto Ntdll = GetModuleHandleW(L"ntdll.dll");
+    static const auto NtQuerySection_Ptr = (NtQuerySection_Type)(void*)GetProcAddress(Ntdll, "NtQuerySection");
+    static const auto RtlGetLastNtStatus_Ptr = (RtlGetLastNtStatus_Type)(void*)GetProcAddress(Ntdll, "RtlGetLastNtStatus");
+
+    Size = (uintmax_t)-1;
+    auto Mapping = CreateFileMapping(File, 0, Protect, 0, 0, 0);
+    if (!Mapping)
+    {
+        // 0-byte file if the error says it, from the Win32 error and the NT status kept by the thread (no I/O)
+        // The Win32 error (ERROR_FILE_INVALID) is not enough, it is also used for other NT statuses (e.g. STATUS_FILE_INVALID, volume externally altered)
+        // The NT status is not enough, it is not changed by errors reported only with a Win32 error (e.g. invalid parameter), it may be from a previous error
+        const NTSTATUS Status_MappedFileSizeZero = (NTSTATUS)0xC000011EL; // STATUS_MAPPED_FILE_SIZE_ZERO
+        if (GetLastError() == ERROR_FILE_INVALID && RtlGetLastNtStatus_Ptr && RtlGetLastNtStatus_Ptr() == Status_MappedFileSizeZero)
+            Size = 0;
+        return nullptr;
+    }
+
+    section_basic_information Info;
+    const int SectionBasicInformation = 0;
+    if (NtQuerySection_Ptr && NtQuerySection_Ptr(Mapping, SectionBasicInformation, &Info, sizeof(Info), nullptr) >= 0 && Info.MaximumSize.QuadPart >= 0)
+        Size = (uintmax_t)Info.MaximumSize.QuadPart;
+    return Mapping;
+}
 #endif //defined(_WIN32) || defined(_WINDOWS)
 
 //---------------------------------------------------------------------------
@@ -545,36 +585,30 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         NewFile = CreateFileW(WideFileName(FileName).c_str(), DesiredAccess[AlsoWrite], ShareMode[AlsoWrite], 0, OPEN_EXISTING, Dir ? (FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS) : Flags[AlsoWrite], 0);
     if (NewFile == INVALID_HANDLE_VALUE)
         return 1;
-    if (!FileSize)
+
+    // Size of the file from the file mapping object (known without I/O), FileSize is not used: it may be outdated
+    // (e.g. size from the directory listing, the directory entry of a hard link keeps the old size after a change of the file through another link)
+    static const DWORD Protects[2] = { PAGE_READONLY, PAGE_READWRITE };
+    auto NewMapping = CreateFileMapping_Size(NewFile, Protects[AlsoWrite], FileSize);
+    if (FileSize == (uintmax_t)-1)
     {
-        DWORD FileSizeHigh;
-        auto FileSizeLow = GetFileSize(NewFile, &FileSizeHigh);
-        if ((FileSizeLow != INVALID_FILE_SIZE || GetLastError() == NO_ERROR) // If no error (special case with 32-bit max value)
-            && (!FileSizeHigh || sizeof(size_t) >= 8)) // Mapping 4+ GiB files is not supported in 32-bit mode
-        {
-            FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
-        }
-        else
-        {
-            CloseHandle(NewFile);
-            return 1;
-        }
+        // From the file if the size is not known from CreateFileMapping (error, or should not happen), without file mapping object only a 0-byte file is accepted
+        LARGE_INTEGER FileSize_Temp;
+        if (GetFileSizeEx(NewFile, &FileSize_Temp) && (NewMapping || !FileSize_Temp.QuadPart))
+            FileSize = (uintmax_t)FileSize_Temp.QuadPart;
     }
-    if (FileSize)
+    if (FileSize == (uintmax_t)-1 || (sizeof(size_t) < 8 && FileSize >> 32)) // Error, or mapping 4+ GiB files is not supported in 32-bit mode
     {
-        static const DWORD Protects[2] = { PAGE_READONLY, PAGE_READWRITE };
-        auto NewMapping = CreateFileMapping(NewFile, 0, Protects[AlsoWrite], 0, 0, 0);
-        if (!NewMapping)
-        {
-            CloseHandle(NewFile);
-            return 1;
-        }
-        Private = NewFile;
+        if (NewMapping)
+            CloseHandle(NewMapping);
+        CloseHandle(NewFile);
+        return 1;
+    }
+    Private = NewFile;
+    if (NewMapping)
         Private2 = NewMapping;
-    }
-    else
-        Private = NewFile; // CreateFileMapping does not support 0-byte files, so we will map manually to nullptr
-#else 
+    // Else 0-byte file (CreateFileMapping does not support 0-byte files), so we will map manually to nullptr
+#else
     static const int oflag[2] = { O_RDONLY, O_RDWR };
     auto fd = FileName_Relative ? openat(Dir->Private, FileName_Relative, oflag[AlsoWrite], 0) : -1;
     if (fd == -1)
