@@ -259,7 +259,7 @@ To have confidence in the ```--check``` feature, which confirms for us a DPX seq
   
 When we encounter an error there are a few commands used that make reporting the issue a little easier at the [Media Area RAWcooked GitHub issue tracker](https://github.com/MediaArea/RAWcooked/issues).  
 ```
-rawcooked -d -y -all --no-accept-gaps <path/sequence_name>  
+rawcooked -d -y --all --no-accept-gaps <path/sequence_name>  
 ```
 Adding the ```-d``` flag doesn't run the encoding but returns the command that would be sent to FFmpeg. This flag also leaves the reversibility data available as a text file and this is useful for sending to Media Area to help with finding errors.  
 ```
