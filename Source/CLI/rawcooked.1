@@ -109,7 +109,7 @@ The default value is \fIauto\fR if the video encoder is ffv1_vulkan, else \fIint
 .B --io-threads \fIvalue\fR
 Force the number of IO threads to \fIvalue\fR.
 .br
-Default value is found in the system hardware concurrency, if available, otherwise it will default to 4.
+Default value is twice the system hardware concurrency (4 times when only editing), with a hardware concurrency of 4 if it is not available.
 .TP
 .B --quiet
 Do not show information related to RAWcooked.
