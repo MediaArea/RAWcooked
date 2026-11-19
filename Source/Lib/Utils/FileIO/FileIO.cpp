@@ -532,7 +532,10 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
         }
         else
+        {
+            CloseHandle(NewFile);
             return 1;
+        }
     }
     if (FileSize)
     {
