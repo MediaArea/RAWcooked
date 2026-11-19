@@ -230,7 +230,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First)
 {
     const auto& Name = RemovedFiles[i].FileName;
-    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
+    if (input::OpenInput(FileMap, Name, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
         return true;
     }
     if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash] || Global.Edits_Enabled) { // Also needed for the hash, for its comparison with the hash files, and for the names of the files which can not be edited
@@ -960,7 +960,7 @@ int ParseFile(size_t Files_Pos)
     ParseInfo.Name = &Input.Files[Files_Pos].FileName;
 
     // Open file
-    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, Input.Files[Files_Pos].FileSize, &Global.Errors, Global.Edits_Enabled))
+    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors, Global.Edits_Enabled))
         return 1;
 
     // Compressed content
