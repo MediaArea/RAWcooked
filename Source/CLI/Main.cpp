@@ -301,7 +301,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
-                if (i >= numFiles) {
+                if (i >= numFiles || (AnyError && !Global.Edits_Enabled)) { // Stop at the first error as with 1 thread, except for the edit (the next files are also edited)
                     // No more files, hashes of the last files computed without waiting for other files
                     if (Parser.Hash_Batch && !HashFlush.exchange(true))
                         input_base::Hash_Batch_Flush(true);
