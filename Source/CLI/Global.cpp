@@ -776,7 +776,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
             OutputOptions["f"] = argv[i];
             return 0;
         }
-        return 0;
+        return Error_NotTested(argv[i - 1], argv[i]);
     }
     if (!strcmp(argv[i], "-g"))
     {
