@@ -121,7 +121,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;FLAC__NO_DLL;RAWCOOKED_FFMPEG;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -141,7 +141,7 @@
       <WarningLevel>Level4</WarningLevel>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;FLAC__NO_DLL;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;FLAC__NO_DLL;RAWCOOKED_FFMPEG;FLAC__HAS_OGG=0;FLAC__NO_ASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../../../Source;../../../Source/Lib/ThirdParty/flac/include;../../../Source/Lib/ThirdParty/flac/src/libFLAC/include;../../../Source/Lib/ThirdParty/md5;../../../Source/Lib/ThirdParty/thread-pool/include;../../../Source/Lib/ThirdParty/zlib</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
