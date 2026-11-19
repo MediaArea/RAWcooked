@@ -286,7 +286,9 @@ Use this command to force the audio encoding format to \fIvalue\fR: \fIcopy\fR (
 The default value is \fIFLAC\fR.
 .TP
 .B -c:v \fIvalue
-Force the video encoding format \fIvalue\fR: only \fIffv1\fR is currently allowed, which is the default value.
+Force the video encoding format to \fIvalue\fR: \fIffv1\fR (FFmpeg FFV1 encoder) or \fIffv1_vulkan\fR (FFmpeg FFV1 encoder with Vulkan hardware encoding on the first Vulkan device, \fIffv1_vulkan:N\fR on the Vulkan device N from 0 to 9, e.g. \fIffv1_vulkan:1\fR on the second device).
+.br
+The default value is \fIffv1\fR.
 .TP
 .B -coder \fIvalue
 If video encoding format is \fIffv1\fR, set the Coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table).
