@@ -633,6 +633,11 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         }
         FileSize = Fstat.st_size;
     }
+    if (sizeof(size_t) < 8 && FileSize >> 32) // Mapping 4+ GiB files is not supported in 32-bit mode
+    {
+        close(fd);
+        return 1;
+    }
     Private = fd;
 #endif
 
@@ -774,17 +779,17 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
         FileSize = Fstat.st_size;
     }
 #endif
-    if (sizeof(size_t) < 8 && FileSize >> 32) // Files of 4+ GiB are not supported in 32-bit mode
-    {
-        Close();
-        return 1;
-    }
-
-    // Whole file: memory map if the file is big (memory usage)
+    // Whole file: memory map if the file is big (memory usage), also for 4+ GiB in 32-bit mode (the memory map checks the size of the file, FileSize may be outdated)
     if (IsWholeFile && FileSize > WholeFile_Max)
     {
         Close();
         return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_);
+    }
+
+    if (sizeof(size_t) < 8 && FileSize >> 32) // Files of 4+ GiB are not supported in 32-bit mode
+    {
+        Close();
+        return 1;
     }
 
     // Read
@@ -794,7 +799,7 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
         return 0; // Special case for 0-byte files
     auto ReadSize = HeaderSize;
     if (IsWholeFile)
-        ReadSize = (ReadSize + SectorSize - 1) / SectorSize * SectorSize; // Without the file cache, the size is a multiple of the sector size
+        ReadSize = (ReadSize / SectorSize + 1) * SectorSize; // Without the file cache, the size is a multiple of the sector size, and at least 1 byte more than FileSize for detecting a bigger file without querying its size (FileSize may be outdated, e.g. from the directory listing)
     if (ReadSize > Header_Buffer_Size) // Reuse of the buffer of the previous file if big enough
     {
         Header_Buffer_Free();
@@ -823,21 +828,30 @@ int filemap::Open_HeaderMode(const string& FileName, size_t HeaderSize, bool Als
     }
     Header_Size = BytesRead;
 #else
+    auto ReadError = false;
     while (Header_Size < HeaderSize) // Up to the needed bytes, no additional call for detecting the end of the file
     {
         auto BytesRead = read(Private, Header + Header_Size, ReadSize - Header_Size); // Size rounded up as needed without the file cache
         if (BytesRead <= 0)
+        {
+            ReadError = BytesRead < 0; // Else end of a smaller file
             break;
+        }
         Header_Size += BytesRead;
     }
-    if (IsWholeFile && Header_Size < HeaderSize)
+    if (IsWholeFile && ReadError)
     {
         Close();
         return Open_ReadMode(FileName.c_str(), FileSize, {}, {}, {}, AlsoWrite_); // E.g. file system not supporting reads without the file cache
     }
 #endif
-    if (Header_Size > HeaderSize)
-        Header_Size = HeaderSize;
+    if (IsWholeFile && Header_Size > HeaderSize)
+    {
+        // The file is bigger than FileSize, which was outdated: memory map with the size of the file
+        Close();
+        return Open_ReadMode(FileName.c_str(), 0, {}, {}, {}, AlsoWrite_);
+    }
+    // If the file is smaller than FileSize, Size() is the count of bytes read (end of the file)
     AssignBase(Header, IsWholeFile ? Header_Size : (size_t)FileSize);
 
     return 0;
