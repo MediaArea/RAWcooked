@@ -27,10 +27,8 @@ string NarrowFileName(const wchar_t* FileName);
 // File names in files of previous versions on Windows are in the ANSI code page of Windows
 // Name which is not UTF-8 (from a previous version on Windows) converted to UTF-8, false if the name is already UTF-8
 bool FileName_LegacyToUTF8(string& Name);
-// Name stored in a file (reversibility data, hash file) to a file name
+// Name stored in a file (reversibility data, hash file, Matroska attachment) to a file name
 void FileName_FromStored(string& Name);
-// Name in UTF-8 (e.g. Matroska attachment) to a file name
-void FileName_FromUTF8(string& Name);
 
 // Directory kept open for opening the files in it from their name (cheaper than from the full path, which is parsed again for each file)
 class directory

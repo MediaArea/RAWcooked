@@ -230,23 +230,11 @@ void FileName_FromStored(string& Name)
         if (CodePage == CP_UTF8)
             FileName_LegacyToUTF8(Name);
         else if (IsUTF8(Name.c_str(), Name.size()))
-            Name = UTF8ToCodePage(CodePage, Name); // UTF-8 (e.g. file created on Linux, on macOS or on Windows with the UTF-8 code page) to the ANSI code page, as the names of attachments, else same code page as the previous versions
+            Name = UTF8ToCodePage(CodePage, Name); // UTF-8 (e.g. names of attachments written by FFmpeg, file created on Linux, on macOS or on Windows with the UTF-8 code page) to the ANSI code page, else same code page as the previous versions
     #elif defined(__APPLE__)
         FileName_LegacyToUTF8(Name); // Only UTF-8 in the file systems
     #else
         (void)Name; // Any byte sequence is accepted by the file systems, kept as is
-    #endif
-}
-
-//---------------------------------------------------------------------------
-void FileName_FromUTF8(string& Name)
-{
-    #if defined(_WIN32) || defined(_WINDOWS)
-        auto CodePage = FileApisCodePage();
-        if (CodePage != CP_UTF8 && IsUTF8(Name.c_str(), Name.size()))
-            Name = UTF8ToCodePage(CodePage, Name);
-    #else
-        (void)Name;
     #endif
 }
 

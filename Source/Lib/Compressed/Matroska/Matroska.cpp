@@ -649,7 +649,7 @@ void matroska::Segment_Attachments_AttachedFile()
 void matroska::Segment_Attachments_AttachedFile_FileName()
 {
     AttachedFile_FileName.assign((const char*)Buffer.Data() + Buffer_Offset, Levels[Level].Offset_End - Buffer_Offset);
-    FileName_FromUTF8(AttachedFile_FileName);
+    FileName_FromStored(AttachedFile_FileName); // UTF-8 from FFmpeg, except e.g. a name not in UTF-8 on Linux (same bytes as in the reversibility data)
     FormatPath(AttachedFile_FileName);
 }
 
