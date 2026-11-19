@@ -134,6 +134,38 @@ static string FromWide(UINT CodePage, const wstring& Name)
 }
 
 //---------------------------------------------------------------------------
+// Name in UTF-8 to the code page, each part of the path only if all its characters are in the code page (else kept in UTF-8, as by the previous versions), so the name of a directory is the same for all its files
+static string UTF8ToCodePage(UINT CodePage, const string& Name)
+{
+    string Result;
+    size_t Begin = 0;
+    for (;;)
+    {
+        auto End = Name.find_first_of("/\\", Begin);
+        if (End == string::npos)
+            End = Name.size();
+        auto Part = ToWide(CP_UTF8, Name.c_str() + Begin, End - Begin);
+        BOOL UsedDefaultChar = FALSE;
+        auto Size = Part.empty() ? 0 : WideCharToMultiByte(CodePage, WC_NO_BEST_FIT_CHARS, Part.c_str(), (int)Part.size(), nullptr, 0, nullptr, &UsedDefaultChar);
+        string Part_Converted;
+        if (Size > 0 && !UsedDefaultChar)
+        {
+            Part_Converted.resize(Size);
+            WideCharToMultiByte(CodePage, WC_NO_BEST_FIT_CHARS, Part.c_str(), (int)Part.size(), &Part_Converted[0], Size, nullptr, nullptr);
+        }
+        if (!Part_Converted.empty() && Part_Converted.find_first_of("/\\") == string::npos) // A path separator byte is the second byte of a character of a double-byte code page
+            Result += Part_Converted;
+        else
+            Result.append(Name, Begin, End - Begin);
+        if (End == Name.size())
+            break;
+        Result += Name[End];
+        Begin = End + 1;
+    }
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 static wstring WideName(const char* FileName)
 {
     // Same code page as the ANSI API
@@ -194,8 +226,11 @@ bool FileName_LegacyToUTF8(string& Name)
 void FileName_FromStored(string& Name)
 {
     #if defined(_WIN32) || defined(_WINDOWS)
-        if (FileApisCodePage() == CP_UTF8) // Else same code page as the previous versions
+        auto CodePage = FileApisCodePage();
+        if (CodePage == CP_UTF8)
             FileName_LegacyToUTF8(Name);
+        else if (IsUTF8(Name.c_str(), Name.size()))
+            Name = UTF8ToCodePage(CodePage, Name); // UTF-8 (e.g. file created on Linux, on macOS or on Windows with the UTF-8 code page) to the ANSI code page, as the names of attachments, else same code page as the previous versions
     #elif defined(__APPLE__)
         FileName_LegacyToUTF8(Name); // Only UTF-8 in the file systems
     #else
@@ -209,7 +244,7 @@ void FileName_FromUTF8(string& Name)
     #if defined(_WIN32) || defined(_WINDOWS)
         auto CodePage = FileApisCodePage();
         if (CodePage != CP_UTF8 && IsUTF8(Name.c_str(), Name.size()))
-            Name = FromWide(CodePage, ToWide(CP_UTF8, Name.c_str(), Name.size()));
+            Name = UTF8ToCodePage(CodePage, Name);
     #else
         (void)Name;
     #endif

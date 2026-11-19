@@ -23,7 +23,7 @@ inline wstring WideFileName(const string& FileName) { return WideFileName(FileNa
 string NarrowFileName(const wchar_t* FileName);
 #endif //defined(_WIN32) || defined(_WINDOWS)
 
-// File names are in UTF-8, except on Linux (any byte sequence) and on Windows versions without the activeCodePage of the manifest (ANSI code page)
+// File names are in UTF-8, except on Linux (any byte sequence) and on Windows versions without the activeCodePage of the manifest (ANSI code page, names in UTF-8 in files converted to it)
 // File names in files of previous versions on Windows are in the ANSI code page of Windows
 // Name which is not UTF-8 (from a previous version on Windows) converted to UTF-8, false if the name is already UTF-8
 bool FileName_LegacyToUTF8(string& Name);
