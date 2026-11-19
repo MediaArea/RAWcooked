@@ -1103,6 +1103,28 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
 #endif
     {
         size_t i = 0;
+        #if defined(_WIN32) || defined(_WINDOWS)
+        // Root of UNC and Win32 namespace paths (\\server\share, \\?\C:, \\?\UNC\server\share) is not a directory to create, the creation starts after it
+        auto IsSeparator = [&](size_t Pos) { return FullName[Pos] == '\\' || FullName[Pos] == '/'; };
+        if (FullName.size() > 4 && IsSeparator(0) && IsSeparator(1))
+        {
+            size_t Root_Count;
+            if ((FullName[2] == '?' || FullName[2] == '.') && IsSeparator(3))
+            {
+                i = 3;
+                Root_Count = (FullName.size() > 7 && !_strnicmp(FullName.c_str() + 4, "UNC", 3) && IsSeparator(7)) ? 3 : 1; // \\?\UNC\server\share or \\?\C:
+            }
+            else
+            {
+                i = 1;
+                Root_Count = 2; // \\server\share
+            }
+            while (Root_Count-- && i != (size_t)-1)
+                i = FullName.find_first_of("/\\", i + 1);
+            if (i == (size_t)-1)
+                i = FullName.size(); // Only the root, nothing to create
+        }
+        #endif
         for (;;)
         {
             i = FullName.find_first_of("/\\", i + 1);
