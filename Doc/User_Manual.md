@@ -26,13 +26,13 @@ To encode your sequences using the best preservation flags within RAWcooked then
 | ```--hash```              | Important flag which computes hashes and embeds them in reversibility data stored in MKV wrapper allowing reversibility test assurance when original sequences absent |
 | ```--coherency```         | Ensures package and content are coherent. Eg, sequence gap checks and audio duration matches image sequence duration |
 | ```--check```             | Checks that an encoded file can be decoded correctly. If input is raw content, after encoding it checks that output would be same as the input content. Whereas if input is compressed content, it checks that output would be same as the original content where hashes are present |
-| ```--check_padding```     | Runs padding checks for DPX files that do not have zero padding. Ensures additional padding data is stored in reversibility file for perfect restoration of the DPX. Can be time consuming  |
+| ```--check-padding```     | Runs padding checks for DPX files that do not have zero padding. Ensures additional padding data is stored in reversibility file for perfect restoration of the DPX. Can be time consuming  |
 | ```--accept-gaps```       | Where gaps in a sequence are found this flag ensures the encoding completes successfully. If you require that gaps are not encoded then follow the ```--all``` command with ```--no-accept-gaps``` |
 
   
 If you do not require all of these flags you can build your own command with just the flags you prefer, for example:
 ```
-rawcooked --info --conch --encode --hash --check --no-accept-gap <folder> / <file>
+rawcooked --info --conch --encode --hash --check --no-accept-gaps <folder> / <file>
 ```
   
 For more information about all the available flags in RAWcooked please visit the help page:
@@ -47,7 +47,7 @@ The filenames of the single-image files must end with a numbered sequence. `RAWc
 
 The number sequence within the filename can be formed with leading zero padding - e.g. 000001.dpx, 000002.dpx... 500000.dpx - or no leading zero padding - e.g. 1.dpx, 2.dpx... 500000.dpx.
 
-`RAWcooked` has no strict expectations of a complete, continuous number sequence, so breaks in the sequence  - e.g. 47.dpx, 48.dpx, 65.dpx, 66.dpx - will cause no error or failure in `RAWcooked`, unless you specify that you want this with the ```--no-accept-gaps``` flag.
+`RAWcooked` has no strict expectations of a complete, continuous number sequence: breaks in the sequence  - e.g. 47.dpx, 48.dpx, 65.dpx, 66.dpx - are reported and you are asked if the encoding should continue (```-y``` or ```-n``` answers for you), unless you specify that you accept them with the ```--accept-gaps``` flag (included in ```--all```) or that you reject them with the ```--no-accept-gaps``` flag.
 
 `RAWcooked` has expectations about the folder and subfolder structures containing the image files, and the Matroska that is created will manage subfolders in this way: 
   
