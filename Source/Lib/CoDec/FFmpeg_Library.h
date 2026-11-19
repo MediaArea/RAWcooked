@@ -21,7 +21,7 @@
 // Path of ffmpeg-ma binary (ffmpeg-ma package) in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory
 // (FFmpeg package next to the executable, same directories as the first ones for the libraries) or in PATH,
 // else of ffmpeg binary in the directory of the executable or in its subdirectories
-// Empty if not found (ffmpeg in PATH is used)
+// Empty if not found (ffmpeg in PATH is used), except on Windows if the ffmpeg binary found by cmd in the current directory or in PATH is in a directory with ';' (path of this binary)
 std::string FFmpeg_Binary();
 
 //***************************************************************************

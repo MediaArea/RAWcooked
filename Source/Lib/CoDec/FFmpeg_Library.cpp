@@ -197,7 +197,7 @@ string FFmpeg_Binary()
     string Result;
 
     // ffmpeg-ma (FFmpeg build of MediaArea, with -ma suffix) next to the executable then in PATH,
-    // then ffmpeg next to the executable (ffmpeg in PATH is found by the system)
+    // then ffmpeg next to the executable (ffmpeg in PATH is found by the system, except on Windows if its directory has ';')
     auto Directories = Package_Directories();
     auto Package_Count = Directories.size();
     for (auto& Directory : Path_Directories())
@@ -208,6 +208,51 @@ string FFmpeg_Binary()
     for (size_t i = 0; i < Package_Count; i++)
         if (Binary_Path(Directories[i], "ffmpeg", Result))
             return Result;
+
+    #if defined(_WIN32)
+    // ffmpeg run by cmd from its name: a directory with ';' breaks the search of the libraries of the binary, so its path is provided in this case, for the short path (8.3)
+    // Same search as cmd: current directory (except if NoDefaultCurrentDirectoryInExePath is set) then PATH, with the extensions in PATHEXT order in each directory
+    vector<path> Cmd_Directories;
+    if (NeedCurrentDirectoryForExePathW(L"ffmpeg"))
+    {
+        auto Size = GetCurrentDirectoryW(0, nullptr);
+        path Directory(Size, L'\0');
+        if (Size && (Size = GetCurrentDirectoryW(Size, &Directory[0])) && Size < Directory.size())
+        {
+            Directory.resize(Size);
+            while (!Directory.empty() && (Directory.back() == L'\\' || Directory.back() == L'/'))
+                Directory.pop_back(); // Root directory
+            Cmd_Directories.push_back(Directory);
+        }
+    }
+    Cmd_Directories.insert(Cmd_Directories.end(), Directories.begin() + Package_Count, Directories.end());
+    while (!Cmd_Directories.empty() && Cmd_Directories.back().find(L';') == path::npos)
+        Cmd_Directories.pop_back(); // Only directories up to the last one with ';' are useful
+    wstring Extensions(L".COM;.EXE;.BAT;.CMD"); // Default of cmd if PATHEXT is not set
+    if (auto Size = GetEnvironmentVariableW(L"PATHEXT", nullptr, 0))
+    {
+        wstring Value(Size, L'\0');
+        if ((Size = GetEnvironmentVariableW(L"PATHEXT", &Value[0], Size)) && Size < Value.size())
+            Extensions = Value.substr(0, Size);
+    }
+    for (const auto& Directory : Cmd_Directories)
+        for (size_t Begin = 0; Begin < Extensions.size();)
+        {
+            auto End = Extensions.find(L';', Begin);
+            if (End == path::npos)
+                End = Extensions.size();
+            auto Extension = Extensions.substr(Begin, End - Begin);
+            Begin = End + 1;
+            if (Extension.empty())
+                continue;
+            auto Attributes = GetFileAttributesW((Directory + L"\\ffmpeg" + Extension).c_str());
+            if (Attributes == INVALID_FILE_ATTRIBUTES || (Attributes & FILE_ATTRIBUTE_DIRECTORY))
+                continue;
+            if (Directory.find(L';') != path::npos && !_wcsicmp(Extension.c_str(), L".exe") && Binary_Path(Directory, "ffmpeg", Result))
+                return Result;
+            return string(); // Found by cmd, run from its name
+        }
+    #endif
 
     return string();
 }
