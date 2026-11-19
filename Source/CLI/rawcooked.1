@@ -78,7 +78,7 @@ Set the version of the output.
 .br
 The default output value is 1.
 .br
-Other possible value is \fI2\fR. This is a preview release, this value should be used used only when you know why you do it.
+Other possible value is \fI2\fR. This is a preview release, this value should be used only when you know why you do it.
 .br
 .TP
 .B --bin-name \fIvalue\fR | \fB-b \fIvalue
@@ -157,8 +157,6 @@ This is the default, but may change in the future.
 .TP
 .B --no-check
 Don't run any checks (see above).
-.br
-This is the default, but may change in the future.
 .TP
 .B --info
 Provides extra information about the compressed file, for example the presence of hashes for the raw data.
@@ -185,7 +183,7 @@ This is the default, but may change in the future.
 .B --no-check-padding
 Do not run padding checks, as they are demanding of time and processor usage.
 .br
-This method is quicker, but be aware it may lead to partial reversibility with files that do no conform.
+This method is quicker, but be aware it may lead to partial reversibility with files that do not conform.
 .TP
 .B --coherency
 Checks that the package and contents are coherent. For example, is the audio file duration the same as the image sequence duration, or are there gaps in the sequence numbering.
@@ -210,7 +208,7 @@ Do not carry out conformance check (see above).
 This is default, but may change in the future.
 .TP
 .B --decode
-Encode a compressed stream into audio-visual RAW data.
+Decode a compressed stream into audio-visual RAW data.
 .br
 This is default.
 .TP
@@ -237,7 +235,7 @@ Computes the hash of audio-visual RAW data files.
 .br
 During encoding it computes a hash for each file within a source folder and stores this within the RAWcooked reversibility metadata for comparison during --check or --check-padding.
 .br
-During decoding of a matroska with hashes in the metadata the file is decoded and new hashes generated for the which are then tested against the source file hashes stored in the metadata. Any issues raised by this check is considered a decoding error. This permits a reversibility check without the original files.
+During decoding of a matroska with hashes in the metadata the file is decoded and new hashes generated for the files are then tested against the source file hashes stored in the metadata. Any issues raised by this check is considered a decoding error. This permits a reversibility check without the original files.
 .TP
 .B --no-hash
 Do not compute or test the hash of the file (see above).
@@ -337,7 +335,7 @@ It can be used in conjunction with opposing commands. For example if you want to
 If you want to retain the console output of the RAWcooked encoding or decoding processes, you can set the stdout to a separate log file. This option is useful if you're automating batch encodings and need to assess the log outputs to make decisions within the logic of your code.
 .SH EXAMPLE: Decoding using --all action
 .B rawcooked --all <file.mkv>
-This command works the same as the encoding of raw audio-visual data, but decodes the Matroska file back to it's original raw state. Please see individual flag differences (above) to understand the differences between its use during encoding and decoding.
+This command works the same as the encoding of raw audio-visual data, but decodes the Matroska file back to its original raw state. Please see individual flag differences (above) to understand the differences between its use during encoding and decoding.
 .br
 It can be used in conjunction with opposing commands. For example if you want to use this command without --conch, you can add --no-conch after the --all and the conch command will be skipped.
 .SH COPYRIGHT
