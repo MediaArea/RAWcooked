@@ -1195,7 +1195,7 @@ file::return_value file::Write(const uint8_t* Data, size_t Size)
     while (Offset < Size)
     {
         size_t Size_Temp = Size - Offset;
-        BytesWritten = write(P, Data, Size_Temp);
+        BytesWritten = write(P, Data + Offset, Size_Temp);
         if (BytesWritten == 0 || BytesWritten == -1)
             break;
         Offset += (size_t)BytesWritten;
