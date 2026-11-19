@@ -139,6 +139,7 @@ struct ffv1_frame_hybrid_private
     bool                        Ending = false; // No more frames
     size_t                      Last = Decoder_Max; // Decoder of the previous frame
     bool                        Intra = false; // All frames are keyframes
+    bool                        SliceCrc = false; // Slices with a CRC, checked by us for frames decoded by FFmpeg decoders (FFmpeg conceals a slice with a wrong CRC, without error)
     std::deque<hybrid_job*>     Redo; // First frames for FFmpeg decoders which failed, to be decoded by the fallback decoder
     size_t                      First_Pending = 0; // Count of first frames for FFmpeg decoders not decoded, the fallback decoder may have to decode them
 
@@ -354,6 +355,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         bool Error;
         bool Missing; // Vulkan device requested and not available, the frame is not decoded again and the caller stops
         bool Redo_; // First frame for this FFmpeg decoder, it can not decode the stream, the frame is decoded by the fallback decoder
+        auto Crc_Error = false; // Frame decoded, but a slice has a wrong CRC (issue of the frame, not of the decoder)
         {
             TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
             if (!Decoder)
@@ -377,6 +379,8 @@ void ffv1_frame_hybrid_private::Run(size_t i)
             Redo_ = Job->First && Error && !Missing && !Vulkan_Required[i]; // An explicitly requested decoder decodes the frame, a frame it can not decode has an issue
             if (Job->WarmUp || Redo_)
                 Decoder->Discard(); // Not output
+            else if (!Error && SliceCrc)
+                Crc_Error = ffv1_frame::SliceCrc_Error(Job->Packet->data, Job->Packet_Size, Pools[i]); // Checked by us, FFmpeg conceals a slice with a wrong CRC (decoded frame without error)
             if (!Redo_)
                 ffmpeg::av_buffer_unref(&Job->Packet); // FFmpeg has its own reference if needed, else the packet is kept for the fallback decoder
         }
@@ -423,7 +427,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         }
         else
         {
-            Job->Error = Error;
+            Job->Error = Error || Crc_Error;
             Transfer_Jobs[i].push_back(Job);
             trace::Counter(Names[i].Queue, (int64_t)Transfer_Jobs[i].size());
             if (Missing)
@@ -601,13 +605,15 @@ bool ffv1_frame_hybrid::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
         P->Ours->RawFrame = RawFrame;
         Result = P->Ours->OutOfBand(Buffer, Buffer_Size);
         P->Intra = P->Ours->Intra();
+        P->SliceCrc = P->Ours->SliceCrc();
     }
     else
     {
-        // Parsing by our decoder (not used for decoding), for knowing if all frames are keyframes
+        // Parsing by our decoder (not used for decoding), for knowing if all frames are keyframes and if slices have a CRC
         ffv1_frame Parser(nullptr);
         Parser.OutOfBand(Buffer, Buffer_Size);
         P->Intra = Parser.Intra();
+        P->SliceCrc = Parser.SliceCrc();
     }
     P->Extradata.assign(Buffer, Buffer + Buffer_Size);
     return Result;

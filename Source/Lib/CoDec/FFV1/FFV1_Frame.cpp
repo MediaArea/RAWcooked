@@ -11,6 +11,9 @@
 #include "Lib/Utils/CRC32/ZenCRC32.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
+#include <thread>
+#include <utility>
+#include <vector>
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreorder"
@@ -382,6 +385,67 @@ void ffv1_frame::Wait()
                 return false;
         return true;
     });
+}
+
+//---------------------------------------------------------------------------
+bool ffv1_frame::SliceCrc_Error(const uint8_t* Buffer, size_t Buffer_Size, ThreadPool* Pool)
+{
+    // Slices from the end of the frame like in Process(), each one with slice_size, error_status and slice_crc_parity at its end
+    const size_t TailSize = 8;
+    std::vector<std::pair<const uint8_t*, size_t>> Slices;
+    auto Slices_BufferPos = Buffer_Size;
+    while (Slices_BufferPos)
+    {
+        if (Slices_BufferPos < TailSize)
+            return true;
+        size_t Size = BigEndian2int24u(Buffer + Slices_BufferPos - TailSize);
+        Size += TailSize;
+        if (Size > Slices_BufferPos)
+            return true;
+        Slices_BufferPos -= Size;
+        Slices.emplace_back(Buffer + Slices_BufferPos, Size);
+    }
+
+    // Each slice like in slice::Parse(): error_status, CRC of the slice with its slice_crc_parity is 0
+    auto Slices_Error = [&Slices](size_t Begin, size_t End) -> bool
+    {
+        for (auto i = Begin; i < End; i++)
+        {
+            const auto& Slice = Slices[i];
+            if (Slice.first[Slice.second - 5] || ZenCRC32(Slice.first, Slice.second))
+                return true;
+        }
+        return false;
+    };
+
+    // Parts of the slices with about the same size in parallel, at least 1 MiB per part (a task per slice would cost more than the CRC of the slice, e.g. 1024 slices per frame)
+    static const size_t Parts_Max = std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 4;
+    auto Parts = Buffer_Size >> 20;
+    if (Parts > Parts_Max)
+        Parts = Parts_Max;
+    if (!Pool || Parts <= 1)
+        return Slices_Error(0, Slices.size());
+    auto Part_Size = Buffer_Size / Parts;
+    std::vector<std::future<bool>> Futures;
+    auto Error = false;
+    size_t Begin = 0;
+    size_t Size = 0;
+    for (size_t i = 0; i < Slices.size(); i++)
+    {
+        Size += Slices[i].second;
+        if (i + 1 == Slices.size())
+            Error = Slices_Error(Begin, i + 1); // Last part in this thread
+        else if (Size >= Part_Size)
+        {
+            Futures.push_back(Pool->submit(Slices_Error, Begin, i + 1));
+            Begin = i + 1;
+            Size = 0;
+        }
+    }
+    for (auto& Future : Futures)
+        if (Future.get())
+            Error = true;
+    return Error;
 }
 
 //***************************************************************************
