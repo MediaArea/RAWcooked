@@ -35,7 +35,7 @@ Decodes the Matroska file back to the original RAW image sequence, including res
 .B --help \fR|\fB -h
 Displays the help guide.
 .TP
-.B --help-edit \fR|\fB -h
+.B --help-edit
 Displays the help guide for edit options.
 .TP
 .B --version
@@ -78,7 +78,7 @@ Set the version of the output.
 .br
 The default output value is 1.
 .br
-Other possible value is \fI2\fR. This is a preview release, this value should be used used only when you know why you do it.
+Other possible value is \fI2\fR. This is a preview release, this value should be used only when you know why you do it.
 .br
 .TP
 .B --bin-name \fIvalue\fR | \fB-b \fIvalue
@@ -86,7 +86,7 @@ Indicate the name of the encoder to use to \fIvalue\fR.
 .br
 The default value is \fIffmpeg-ma\fR in the directory of the executable, in its ffmpeg, ffmpeg/lib or ffmpeg/bin subdirectory or in PATH, else \fIffmpeg\fR in the same directories.
 .br
-If \fIvalue\fR is the name of a libavcodec library (e.g. libavcodec.62.dylib, libavcodec.so.62 or avcodec-62.dll), it is the library used by the \fIffmpeg\fR and \fIvulkan\fR decoders instead of the searched one, so the option may be used twice (encoder and library).
+If \fIvalue\fR is the name of a libavcodec library (e.g. libavcodec.63.dylib, libavcodec.so.63 or avcodec-63.dll), it is the library used by the \fIffmpeg\fR and \fIvulkan\fR decoders instead of the searched one, so the option may be used twice (encoder and library).
 .TP
 .B --rawcooked-file-name \fIvalue\fR | \fB-r \fIvalue
 Set during encoding, or retrieve by decoding, the name of the \fBRAWcooked\fR reversibility data file to \fIvalue\fR.
@@ -102,14 +102,14 @@ Set the FFV1 decoder used for decoding and checking to \fIvalue\fR.
 .br
 Possible values are \fIinternal\fR (RAWcooked decoder), \fIffmpeg\fR (FFmpeg libavcodec decoder), \fIvulkan\fR (FFmpeg libavcodec decoder with Vulkan hardware decoding on the default Vulkan device, \fIvulkanN\fR on the Vulkan device N, e.g. \fIvulkan1\fR on the second device), a combination of them with \fI+\fR (\fIinternal+ffmpeg\fR, \fIinternal+vulkan\fR, \fIffmpeg+vulkan\fR, \fIinternal+ffmpeg+vulkan\fR, \fIinternal+vulkan0+vulkan1\fR...: decoders in parallel, each frame is decoded by the first available decoder; a device twice e.g. \fIinternal+vulkan+vulkan\fR: 2 vulkan decoders on the same device, faster with big GPUs) and \fIauto\fR (\fIinternal\fR and \fIvulkan\fR on each discrete GPU, else on the first GPU, if FFmpeg libraries and a Vulkan GPU are available, with a second vulkan decoder on NVIDIA GPUs with at least 64 streaming multiprocessors, else \fIinternal\fR).
 .br
-Values with \fIvulkan\fR use any Vulkan device, including a CPU implementation (e.g. lavapipe), \fIauto\fR uses a CPU implementation only if the video encoder is ffv1_vulkan. Values with \fIffmpeg\fR or \fIvulkan\fR need FFmpeg libavcodec and libavutil libraries, searched in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in PATH on Windows, or in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in the library paths of the system on Linux or in Homebrew and MacPorts library directories on macOS, libraries of the ffmpeg-ma package first, only if available in this build.
+Values with \fIvulkan\fR use any Vulkan device, including a CPU implementation (e.g. lavapipe), \fIauto\fR uses a CPU implementation only if the video encoder is ffv1_vulkan. Values with \fIffmpeg\fR or \fIvulkan\fR need FFmpeg 9 libavcodec 63 and libavutil 61 libraries, searched in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in PATH on Windows, or in the directory of the executable, in its ffmpeg, ffmpeg/lib and ffmpeg/bin subdirectories, then in the library paths of the system on Linux or in Homebrew and MacPorts library directories on macOS, libraries of the ffmpeg-ma package first, only if available in this build.
 .br
 The default value is \fIauto\fR if the video encoder is ffv1_vulkan, else \fIinternal\fR.
 .TP
 .B --io-threads \fIvalue\fR
 Force the number of IO threads to \fIvalue\fR.
 .br
-Default value is found in the system hardware concurrency, if available, otherwise it will default to 4.
+Default value is twice the system hardware concurrency (4 times when only editing), with a hardware concurrency of 4 if it is not available.
 .TP
 .B --quiet
 Do not show information related to RAWcooked.
@@ -128,6 +128,9 @@ Assume \fIyes\fR in answer to all prompts, and run non-interactively.
 Automatic no to prompts.
 .br
 Assume \fIno\fR as answer to all prompts, and run non-interactively.
+.TP
+.B --log-name \fIvalue\fR
+Set the name of the RAWcooked log file written after successful processing.
 .SS ACTIONS
 .TP
 .B --all
@@ -154,8 +157,6 @@ This is the default, but may change in the future.
 .TP
 .B --no-check
 Don't run any checks (see above).
-.br
-This is the default, but may change in the future.
 .TP
 .B --info
 Provides extra information about the compressed file, for example the presence of hashes for the raw data.
@@ -182,7 +183,7 @@ This is the default, but may change in the future.
 .B --no-check-padding
 Do not run padding checks, as they are demanding of time and processor usage.
 .br
-This method is quicker, but be aware it may lead to partial reversibility with files that do no conform.
+This method is quicker, but be aware it may lead to partial reversibility with files that do not conform.
 .TP
 .B --coherency
 Checks that the package and contents are coherent. For example, is the audio file duration the same as the image sequence duration, or are there gaps in the sequence numbering.
@@ -207,7 +208,7 @@ Do not carry out conformance check (see above).
 This is default, but may change in the future.
 .TP
 .B --decode
-Encode a compressed stream into audio-visual RAW data.
+Decode a compressed stream into audio-visual RAW data.
 .br
 This is default.
 .TP
@@ -225,7 +226,7 @@ Do not carry out encode (see above).
 .B --edit \fIkey=value
 Edit audio-visual RAW data.
 .br
-Valid keys are listed by using --help-edit option.\n".
+Valid keys are listed by using --help-edit option.
 .br
 All other features are deactivated when using this option.
 .TP
@@ -234,7 +235,7 @@ Computes the hash of audio-visual RAW data files.
 .br
 During encoding it computes a hash for each file within a source folder and stores this within the RAWcooked reversibility metadata for comparison during --check or --check-padding.
 .br
-During decoding of a matroska with hashes in the metadata the file is decoded and new hashes generated for the which are then tested against the source file hashes stored in the metadata. Any issues raised by this check is considered a decoding error. This permits a reversibility check without the original files.
+During decoding of a matroska with hashes in the metadata the file is decoded and new hashes generated for the files are then tested against the source file hashes stored in the metadata. Any issues raised by this check is considered a decoding error. This permits a reversibility check without the original files.
 .TP
 .B --no-hash
 Do not compute or test the hash of the file (see above).
@@ -286,7 +287,9 @@ Use this command to force the audio encoding format to \fIvalue\fR: \fIcopy\fR (
 The default value is \fIFLAC\fR.
 .TP
 .B -c:v \fIvalue
-Force the video encoding format \fIvalue\fR: only \fIffv1\fR is currently allowed, which is the default value.
+Force the video encoding format to \fIvalue\fR: \fIffv1\fR (FFmpeg FFV1 encoder) or \fIffv1_vulkan\fR (FFmpeg FFV1 encoder with Vulkan hardware encoding on the first Vulkan device, \fIffv1_vulkan:N\fR on the Vulkan device N from 0 to 9, e.g. \fIffv1_vulkan:1\fR on the second device).
+.br
+The default value is \fIffv1\fR.
 .TP
 .B -coder \fIvalue
 If video encoding format is \fIffv1\fR, set the Coder to \fIvalue\fR: \fI0\fR (Golomb-Rice), \fI1\fR (Range Coder), \fI2\fR (Range Coder with custom state transition table).
@@ -298,7 +301,7 @@ If the video encoding format is \fIffv1\fR, set the Context to \fIvalue\fR: \fI0
 .br
 The default value is \fI0\fR.
 .TP
-.B -format \fIvalue
+.B -f \fIvalue
 Set the container format to \fIvalue\fR: only \fImatroska\fR is currently allowed, which is the default value.
 .TP
 .B -g \fIvalue
@@ -332,7 +335,7 @@ It can be used in conjunction with opposing commands. For example if you want to
 If you want to retain the console output of the RAWcooked encoding or decoding processes, you can set the stdout to a separate log file. This option is useful if you're automating batch encodings and need to assess the log outputs to make decisions within the logic of your code.
 .SH EXAMPLE: Decoding using --all action
 .B rawcooked --all <file.mkv>
-This command works the same as the encoding of raw audio-visual data, but decodes the Matroska file back to it's original raw state. Please see individual flag differences (above) to understand the differences between its use during encoding and decoding.
+This command works the same as the encoding of raw audio-visual data, but decodes the Matroska file back to its original raw state. Please see individual flag differences (above) to understand the differences between its use during encoding and decoding.
 .br
 It can be used in conjunction with opposing commands. For example if you want to use this command without --conch, you can add --no-conch after the --all and the conch command will be skipped.
 .SH COPYRIGHT

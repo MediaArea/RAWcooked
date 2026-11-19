@@ -230,7 +230,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First)
 {
     const auto& Name = RemovedFiles[i].FileName;
-    if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
+    if (input::OpenInput(FileMap, Name, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
         return true;
     }
     if (Global.Actions[Action_Encode] || Global.Actions[Action_Hash] || Global.Edits_Enabled) { // Also needed for the hash, for its comparison with the hash files, and for the names of the files which can not be edited
@@ -301,7 +301,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
-                if (i >= numFiles) {
+                if (i >= numFiles || (AnyError && !Global.Edits_Enabled)) { // Stop at the first error as with 1 thread, except for the edit (the next files are also edited)
                     // No more files, hashes of the last files computed without waiting for other files
                     if (Parser.Hash_Batch && !HashFlush.exchange(true))
                         input_base::Hash_Batch_Flush(true);
@@ -309,6 +309,8 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                 }
                 if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
                     AnyError = true;
+                    if (Parser.RAWcooked)
+                        Parser.RAWcooked->Abort(); // The reversibility data of this file may never be written (e.g. file which can not be opened, header not supported), the next files must not wait for it
                 }
             }
         };
@@ -750,7 +752,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     bool NoOutputCheck = !Global.Actions[Action_Decode] && !Global.OutputFileName_IsProvided;
     bool HasCheckedReversibility = !NoOutputCheck;
     auto DoesNotHaveReversibility = false;
-    vector<string> NotListed; // Files without hash in the reversibility data, not checked
+    vector<string> NotListed; // Files without hash or attachments not in the reversibility data, not checked
     size_t Decoding_Frames[decoders_stats::Max] = {};
     double Decoding_Seconds = 0;
     double Decoding_Content_Seconds = 0;
@@ -807,11 +809,13 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         else if (M->IsDetected())
         {
             ParseInfo.IsDetected = true;
+            M->Shutdown(); // End of the checks (e.g. attachments), before the use of their results
 
             if (!HasCheckedReversibility && M->Hashes_FromRAWcooked)
                 HasCheckedReversibility = true;
             if (M->Hashes_FromRAWcooked)
                 NotListed = M->Hashes_FromRAWcooked->NotListed;
+            NotListed.insert(NotListed.end(), M->Attachments_NotListed.begin(), M->Attachments_NotListed.end());
 
             if (Global.Actions[Action_Info] || Global.Log)
             {
@@ -888,6 +892,7 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
     if (!NotListed.empty() && !Global.Quiet)
     {
         sort(NotListed.begin(), NotListed.end());
+        NotListed.erase(unique(NotListed.begin(), NotListed.end()), NotListed.end()); // An attachment may be both without hash and not in the attachments of the reversibility data
         Info += "\nInfo: files present but not listed in source, not checked (e.g. attachments added after the encoding):";
         for (size_t i = 0; i < NotListed.size() && i < 10; i++)
         {
@@ -958,7 +963,7 @@ int ParseFile(size_t Files_Pos)
     ParseInfo.Name = &Input.Files[Files_Pos].FileName;
 
     // Open file
-    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, Input.Files[Files_Pos].FileSize, &Global.Errors, Global.Edits_Enabled))
+    if (input::OpenInput(ParseInfo.FileMap, *ParseInfo.Name, &Global.Errors, Global.Edits_Enabled))
         return 1;
 
     // Compressed content

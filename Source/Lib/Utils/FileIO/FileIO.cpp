@@ -134,6 +134,38 @@ static string FromWide(UINT CodePage, const wstring& Name)
 }
 
 //---------------------------------------------------------------------------
+// Name in UTF-8 to the code page, each part of the path only if all its characters are in the code page (else kept in UTF-8, as by the previous versions), so the name of a directory is the same for all its files
+static string UTF8ToCodePage(UINT CodePage, const string& Name)
+{
+    string Result;
+    size_t Begin = 0;
+    for (;;)
+    {
+        auto End = Name.find_first_of("/\\", Begin);
+        if (End == string::npos)
+            End = Name.size();
+        auto Part = ToWide(CP_UTF8, Name.c_str() + Begin, End - Begin);
+        BOOL UsedDefaultChar = FALSE;
+        auto Size = Part.empty() ? 0 : WideCharToMultiByte(CodePage, WC_NO_BEST_FIT_CHARS, Part.c_str(), (int)Part.size(), nullptr, 0, nullptr, &UsedDefaultChar);
+        string Part_Converted;
+        if (Size > 0 && !UsedDefaultChar)
+        {
+            Part_Converted.resize(Size);
+            WideCharToMultiByte(CodePage, WC_NO_BEST_FIT_CHARS, Part.c_str(), (int)Part.size(), &Part_Converted[0], Size, nullptr, nullptr);
+        }
+        if (!Part_Converted.empty() && Part_Converted.find_first_of("/\\") == string::npos) // A path separator byte is the second byte of a character of a double-byte code page
+            Result += Part_Converted;
+        else
+            Result.append(Name, Begin, End - Begin);
+        if (End == Name.size())
+            break;
+        Result += Name[End];
+        Begin = End + 1;
+    }
+    return Result;
+}
+
+//---------------------------------------------------------------------------
 static wstring WideName(const char* FileName)
 {
     // Same code page as the ANSI API
@@ -194,24 +226,15 @@ bool FileName_LegacyToUTF8(string& Name)
 void FileName_FromStored(string& Name)
 {
     #if defined(_WIN32) || defined(_WINDOWS)
-        if (FileApisCodePage() == CP_UTF8) // Else same code page as the previous versions
+        auto CodePage = FileApisCodePage();
+        if (CodePage == CP_UTF8)
             FileName_LegacyToUTF8(Name);
+        else if (IsUTF8(Name.c_str(), Name.size()))
+            Name = UTF8ToCodePage(CodePage, Name); // UTF-8 (e.g. names of attachments written by FFmpeg, file created on Linux, on macOS or on Windows with the UTF-8 code page) to the ANSI code page, else same code page as the previous versions
     #elif defined(__APPLE__)
         FileName_LegacyToUTF8(Name); // Only UTF-8 in the file systems
     #else
         (void)Name; // Any byte sequence is accepted by the file systems, kept as is
-    #endif
-}
-
-//---------------------------------------------------------------------------
-void FileName_FromUTF8(string& Name)
-{
-    #if defined(_WIN32) || defined(_WINDOWS)
-        auto CodePage = FileApisCodePage();
-        if (CodePage != CP_UTF8 && IsUTF8(Name.c_str(), Name.size()))
-            Name = FromWide(CodePage, ToWide(CP_UTF8, Name.c_str(), Name.size()));
-    #else
-        (void)Name;
     #endif
 }
 
@@ -532,7 +555,10 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
         }
         else
+        {
+            CloseHandle(NewFile);
             return 1;
+        }
     }
     if (FileSize)
     {
@@ -1100,6 +1126,28 @@ file::return_value file::Open_WriteMode(const string& BaseDirectory, const strin
 #endif
     {
         size_t i = 0;
+        #if defined(_WIN32) || defined(_WINDOWS)
+        // Root of UNC and Win32 namespace paths (\\server\share, \\?\C:, \\?\UNC\server\share) is not a directory to create, the creation starts after it
+        auto IsSeparator = [&](size_t Pos) { return FullName[Pos] == '\\' || FullName[Pos] == '/'; };
+        if (FullName.size() > 4 && IsSeparator(0) && IsSeparator(1))
+        {
+            size_t Root_Count;
+            if ((FullName[2] == '?' || FullName[2] == '.') && IsSeparator(3))
+            {
+                i = 3;
+                Root_Count = (FullName.size() > 7 && !_strnicmp(FullName.c_str() + 4, "UNC", 3) && IsSeparator(7)) ? 3 : 1; // \\?\UNC\server\share or \\?\C:
+            }
+            else
+            {
+                i = 1;
+                Root_Count = 2; // \\server\share
+            }
+            while (Root_Count-- && i != (size_t)-1)
+                i = FullName.find_first_of("/\\", i + 1);
+            if (i == (size_t)-1)
+                i = FullName.size(); // Only the root, nothing to create
+        }
+        #endif
         for (;;)
         {
             i = FullName.find_first_of("/\\", i + 1);
@@ -1170,7 +1218,7 @@ file::return_value file::Write(const uint8_t* Data, size_t Size)
     while (Offset < Size)
     {
         size_t Size_Temp = Size - Offset;
-        BytesWritten = write(P, Data, Size_Temp);
+        BytesWritten = write(P, Data + Offset, Size_Temp);
         if (BytesWritten == 0 || BytesWritten == -1)
             break;
         Offset += (size_t)BytesWritten;

@@ -46,6 +46,7 @@ public:
                                 ~rawcooked();
 
     void                        Parse(const parse_params& Params = {}, uint64_t Index = 0);
+    void                        Abort(); // A file of the track can not be parsed: the files waiting for it are not blocked, nothing more is written
     void                        ResetTrack();
 
     bool                        HasInData();

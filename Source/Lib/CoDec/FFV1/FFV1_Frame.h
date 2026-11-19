@@ -50,6 +50,11 @@ public:
 
     // Info
     bool Intra() const { return P.ConfigurationRecord_IsPresent && P.intra; } // All frames are keyframes
+    bool SliceCrc() const { return P.ConfigurationRecord_IsPresent && P.ec == 1 && !P.Error(); } // Slices with a CRC (error correction)
+
+    // Slices of a frame decoded by another decoder (stream with slices with a CRC), checked like in our decoder: true if a slice has a wrong CRC or an error status, or if slices are not found
+    // Parts of the slices are checked in parallel if there is a pool (big frames)
+    static bool SliceCrc_Error(const uint8_t* Buffer, size_t Buffer_Size, ThreadPool* Pool);
 
 private:
     // Parameters

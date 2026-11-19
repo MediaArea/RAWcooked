@@ -49,7 +49,7 @@ public:
     matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callback Ask_Callback, ThreadPool* Pool, errors* Errors = nullptr);
     ~matroska();
 
-    void                        Shutdown();
+    void                        Shutdown(); // End of the outputs and checks, done only once (it may be called before the destructor for getting the results of the checks)
 
     bool                        Quiet = false;
     bool                        NoOutputCheck = false;
@@ -58,6 +58,7 @@ public:
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
     output_hash*                OutputHash = nullptr;
+    vector<string>              Attachments_NotListed; // Attachments not in the reversibility data (e.g. added by another tool after the encoding), not checked, filled by Shutdown()
 
     // Theading relating functions
     void                        ProgressIndicator_Show();
@@ -207,6 +208,8 @@ private:
     };
     map<string, attached_file>  AttachedFiles;
     set<string>                 AttachedFile_FileNames_IsHash; // Store the files detected as being hash file
+    bool                        FileNames_AreLegacy = false; // Names in the ANSI code page of a previous version on Windows, detected from the names of attachments
+    vector<string>              AttachedFile_FileNames_Empty; // Files with a size of 0 and a name not in UTF-8, created after the parsing of the names of all attachments
     enum reversibility_compat
     {
         Compat_Modern,
@@ -217,6 +220,7 @@ private:
     frame_writer*               FrameWriter_Template;
     bool                        RAWcooked_FileNameIsValid;
     uint64_t                    Cluster_Timestamp;
+    bool                        Shutdown_IsDone = false;
 
     // Progress indicator, values published by the parser for the progress indicator thread
     size_t                      ProgressIndicator_Total = 0; // Not modified during the life of the thread

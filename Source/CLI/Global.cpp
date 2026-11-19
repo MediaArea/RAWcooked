@@ -424,6 +424,7 @@ int global::SetEdit(const char* Value)
 
     auto Delimiter = strchr(Value, '=');
     if (!Delimiter) {
+        cerr << "Error: --edit value '" << Value << "' is not in the key=value form.\nSee --help-edit for the list of keys." << endl;
         return 1;
     }
     auto ValueS = string(Value);
@@ -775,7 +776,7 @@ int global::SetOption(const char* argv[], int& i, int argc)
             OutputOptions["f"] = argv[i];
             return 0;
         }
-        return 0;
+        return Error_NotTested(argv[i - 1], argv[i]);
     }
     if (!strcmp(argv[i], "-g"))
     {
@@ -1107,6 +1108,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
         else if (strcmp(argv[i], "--no-encode") == 0)
         {
             int Value = SetEncode(false);
+            if (Value)
+                return Value;
+        }
+        else if (strcmp(argv[i], "--no-framemd5") == 0)
+        {
+            int Value = SetFrameMd5(false);
             if (Value)
                 return Value;
         }

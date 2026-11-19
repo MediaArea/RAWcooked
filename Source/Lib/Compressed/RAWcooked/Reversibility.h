@@ -25,6 +25,9 @@ public:
         InData,
     ENUM_END(element)
 
+    // Options
+    bool                        FileNames_AreLegacy = false; // Names in the ANSI code page of a previous version on Windows, converted to UTF-8 also where names are kept as is (Linux)
+
     // Actions - Storing
     void                        SetBaseData(const uint8_t* BaseData);
     void                        SetUnique();

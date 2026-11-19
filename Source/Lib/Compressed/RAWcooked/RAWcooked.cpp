@@ -462,6 +462,7 @@ public:
     std::mutex                  ParseMutex;
     std::condition_variable     ParseCondition;
     uint64_t                    NextIndex = 0;
+    bool                        Aborted = false;
 };
 
 //---------------------------------------------------------------------------
@@ -620,7 +621,9 @@ void rawcooked::Parse(const parse_params& Params, uint64_t Index)
     if (!Params.IsAttachment)
     {
         std::unique_lock<std::mutex> lock(Data_->ParseMutex);
-        Data_->ParseCondition.wait(lock, [this, Index]() { return Data_->NextIndex == Index; });
+        Data_->ParseCondition.wait(lock, [this, Index]() { return Data_->NextIndex == Index || Data_->Aborted; });
+        if (Data_->Aborted)
+            return; // A previous file may never come, the encoding stops so the reversibility data is not needed
     }
 
     // Write
@@ -648,10 +651,21 @@ void rawcooked::Parse(const parse_params& Params, uint64_t Index)
 }
 
 //---------------------------------------------------------------------------
+void rawcooked::Abort()
+{
+    {
+        std::unique_lock<std::mutex> lock(Data_->ParseMutex);
+        Data_->Aborted = true;
+    }
+    Data_->ParseCondition.notify_all();
+}
+
+//---------------------------------------------------------------------------
 void rawcooked::ResetTrack()
 {
     Data_->IsNotFirstFrame = 0;
     Data_->NextIndex = 0;
+    Data_->Aborted = false;
 }
 
 //---------------------------------------------------------------------------

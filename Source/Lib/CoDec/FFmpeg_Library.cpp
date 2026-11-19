@@ -17,6 +17,7 @@
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
@@ -127,19 +128,29 @@ static vector<path> Path_Directories()
     #endif
     for (size_t Begin = 0; Begin < Env.size();)
     {
+        #if defined(_WIN32)
+        // Quotes are removed, a separator between quotes is part of the directory (e.g. a directory with ';', quoted in PATH), as with cmd
+        path Directory;
+        for (auto InQuotes = false; Begin < Env.size() && (InQuotes || Env[Begin] != Separator); Begin++)
+        {
+            if (Env[Begin] == L'"')
+                InQuotes = !InQuotes;
+            else
+                Directory += Env[Begin];
+        }
+        Begin++;
+        if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
+            continue;
+        while (!Directory.empty() && (Directory.back() == L'\\' || Directory.back() == L'/'))
+            Directory.pop_back();
+        if (Directory.empty())
+            continue; // Only separators (e.g. "\\")
+        #else
         auto End = Env.find(Separator, Begin);
         if (End == path::npos)
             End = Env.size();
         auto Directory = Env.substr(Begin, End - Begin);
         Begin = End + 1;
-        #if defined(_WIN32)
-        if (Directory.size() >= 2 && Directory.front() == L'"' && Directory.back() == L'"')
-            Directory = Directory.substr(1, Directory.size() - 2);
-        if (!((Directory.size() >= 3 && Directory[1] == L':' && (Directory[2] == L'\\' || Directory[2] == L'/')) || (Directory.size() >= 2 && Directory[0] == L'\\' && Directory[1] == L'\\')))
-            continue;
-        while (Directory.back() == L'\\' || Directory.back() == L'/')
-            Directory.pop_back();
-        #else
         if (Directory.empty() || Directory.front() != '/')
             continue;
         while (Directory.size() > 1 && Directory.back() == '/')
@@ -189,7 +200,7 @@ string FFmpeg_Binary()
     string Result;
 
     // ffmpeg-ma (FFmpeg build of MediaArea, with -ma suffix) next to the executable then in PATH,
-    // then ffmpeg next to the executable (ffmpeg in PATH is found by the system)
+    // then ffmpeg next to the executable (ffmpeg in PATH is found by the system, except on Windows if its directory has ';')
     auto Directories = Package_Directories();
     auto Package_Count = Directories.size();
     for (auto& Directory : Path_Directories())
@@ -200,6 +211,51 @@ string FFmpeg_Binary()
     for (size_t i = 0; i < Package_Count; i++)
         if (Binary_Path(Directories[i], "ffmpeg", Result))
             return Result;
+
+    #if defined(_WIN32)
+    // ffmpeg run by cmd from its name: a directory with ';' breaks the search of the libraries of the binary, so its path is provided in this case, for the short path (8.3)
+    // Same search as cmd: current directory (except if NoDefaultCurrentDirectoryInExePath is set) then PATH, with the extensions in PATHEXT order in each directory
+    vector<path> Cmd_Directories;
+    if (NeedCurrentDirectoryForExePathW(L"ffmpeg"))
+    {
+        auto Size = GetCurrentDirectoryW(0, nullptr);
+        path Directory(Size, L'\0');
+        if (Size && (Size = GetCurrentDirectoryW(Size, &Directory[0])) && Size < Directory.size())
+        {
+            Directory.resize(Size);
+            while (!Directory.empty() && (Directory.back() == L'\\' || Directory.back() == L'/'))
+                Directory.pop_back(); // Root directory
+            Cmd_Directories.push_back(Directory);
+        }
+    }
+    Cmd_Directories.insert(Cmd_Directories.end(), Directories.begin() + Package_Count, Directories.end());
+    while (!Cmd_Directories.empty() && Cmd_Directories.back().find(L';') == path::npos)
+        Cmd_Directories.pop_back(); // Only directories up to the last one with ';' are useful
+    wstring Extensions(L".COM;.EXE;.BAT;.CMD"); // Default of cmd if PATHEXT is not set
+    if (auto Size = GetEnvironmentVariableW(L"PATHEXT", nullptr, 0))
+    {
+        wstring Value(Size, L'\0');
+        if ((Size = GetEnvironmentVariableW(L"PATHEXT", &Value[0], Size)) && Size < Value.size())
+            Extensions = Value.substr(0, Size);
+    }
+    for (const auto& Directory : Cmd_Directories)
+        for (size_t Begin = 0; Begin < Extensions.size();)
+        {
+            auto End = Extensions.find(L';', Begin);
+            if (End == path::npos)
+                End = Extensions.size();
+            auto Extension = Extensions.substr(Begin, End - Begin);
+            Begin = End + 1;
+            if (Extension.empty())
+                continue;
+            auto Attributes = GetFileAttributesW((Directory + L"\\ffmpeg" + Extension).c_str());
+            if (Attributes == INVALID_FILE_ATTRIBUTES || (Attributes & FILE_ATTRIBUTE_DIRECTORY))
+                continue;
+            if (Directory.find(L';') != path::npos && !_wcsicmp(Extension.c_str(), L".exe") && Binary_Path(Directory, "ffmpeg", Result))
+                return Result;
+            return string(); // Found by cmd, run from its name
+        }
+    #endif
 
     return string();
 }
@@ -696,12 +752,38 @@ string FFmpeg_Library_VulkanName(bool* IsGPU)
 }
 
 //---------------------------------------------------------------------------
+// Vulkan devices on which no frame could be decoded, with their index, never released (see FFmpeg_Library_VulkanKeep()) and reused by the next decoders on the same device
+static mutex Vulkan_Kept_Mutex;
+static vector<pair<size_t, AVBufferRef*>>& Vulkan_Kept = *new vector<pair<size_t, AVBufferRef*>>; // Not destroyed, the devices stay referenced until the end
+
+//---------------------------------------------------------------------------
 AVBufferRef* FFmpeg_Library_VulkanDevice(size_t Index)
 {
+    {
+        lock_guard<mutex> Lock(Vulkan_Kept_Mutex);
+        for (const auto& Kept : Vulkan_Kept)
+            if (Kept.first == Index)
+                return ffmpeg::av_buffer_ref(Kept.second);
+    }
     if (!Index)
         if (auto Device = Vulkan_Device.exchange(nullptr))
             return Device;
     return Vulkan_Device_Create(Index);
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_VulkanKeep(size_t Index, AVBufferRef* Device)
+{
+    if (!Device)
+        return;
+    lock_guard<mutex> Lock(Vulkan_Kept_Mutex);
+    for (const auto& Kept : Vulkan_Kept)
+        if (Kept.second->data == Device->data)
+        {
+            ffmpeg::av_buffer_unref(&Device); // Already kept, the device is not released
+            return;
+        }
+    Vulkan_Kept.emplace_back(Index, Device);
 }
 
 //---------------------------------------------------------------------------

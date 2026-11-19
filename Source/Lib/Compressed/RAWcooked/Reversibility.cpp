@@ -249,6 +249,8 @@ buffer reversibility::Data(element Element, size_t Pos) const
         // E.g. name in the ANSI code page from a previous version on Windows
         string Name = Content;
         FileName_FromStored(Name);
+        if (FileNames_AreLegacy)
+            FileName_LegacyToUTF8(Name);
         if (Name.size() != Content.Size() || memcmp(Name.data(), Content.Data(), Name.size()))
             Content.Create((const uint8_t*)Name.data(), Name.size());
     }

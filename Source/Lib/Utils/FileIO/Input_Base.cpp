@@ -396,7 +396,7 @@ int input_base_uncompressed::AddEdits(map<string, string>& Edits)
 
 int input_base_uncompressed::ListEdits()
 {
-    cerr << ListEditsParser();
+    cout << ListEditsParser();
     return 0;
 }
 
