@@ -1111,6 +1111,12 @@ int global::ManageCommandLine(const char* argv[], int argc)
             if (Value)
                 return Value;
         }
+        else if (strcmp(argv[i], "--no-framemd5") == 0)
+        {
+            int Value = SetFrameMd5(false);
+            if (Value)
+                return Value;
+        }
         else if (strcmp(argv[i], "--no-hash") == 0)
         {
             int Value = SetHash(false);
