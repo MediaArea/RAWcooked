@@ -369,7 +369,7 @@ ReturnValue Help(const char* /*Name*/)
         "              0 (small), 1 (large).\n"
         "              The default value is 0.\n"
         "\n"
-        "       -format value\n"
+        "       -f value\n"
         "              Set the container format to value: only matroska is currently\n"
         "              allowed, which is the default value.\n"
         "\n"
