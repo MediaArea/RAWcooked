@@ -90,7 +90,9 @@ private:
     void                        AddEditsParser(map<string, string>& Edits);
     string                      ListEditsParser();
     void                        Edit();
-    map<unsigned, buffer>       Edits;
+    map<unsigned, buffer>       Edits; // Numbers in the endianness of the first file
+    map<unsigned, buffer>       Edits_OtherEndianness; // Created only if a file does not have the endianness of the first file
+    bool                        Edits_IsBigEndian = false;
 
     // Comparison
     uint8_t*                    HeaderCopy = NULL;
