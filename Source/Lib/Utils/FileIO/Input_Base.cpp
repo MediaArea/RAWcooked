@@ -378,15 +378,23 @@ size_t input_base_uncompressed::SliceCount(bool LimitedSlices)
 int input_base_uncompressed::AddEdits(map<string, string>& Edits)
 {
     AddEditsParser(Edits);
+    if (!Edits.empty() && ListEditsParser().empty()) { // No edit is possible with this format
+        cerr << "Edit: " << ParserName(ParserCode) << " files can not be edited.\nSee --help-edit for the list of formats and keys." << endl;
+        return 1;
+    }
+    auto HasUnknownName = false;
     for (auto& Edit : Edits) {
         cerr << "Edit \"" << Edit.first;
         if (Edit.second.empty()) {
             cerr << "\" unknown." << endl;
+            HasUnknownName = true;
         }
         else {
             cerr << "\" " << Edit.second << '.' << endl;
         }
     }
+    if (HasUnknownName)
+        cerr << "See --help-edit for the list of keys." << endl;
 
     auto WillEdit = !Edits.empty();
     if (!WillEdit)
