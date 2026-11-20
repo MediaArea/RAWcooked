@@ -235,9 +235,11 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
     if (!FN.empty())
     {
         FileName_StartNumber = FN;
+        auto FileSize = Files[AllFiles_Pos].FileSize; // Size of the next file in the sequence, 0 if unknown
         for (;;)
         {
-            RemovedFiles.push_back({ Before + FN + After });
+            RemovedFiles.push_back({ Before + FN + After, FileSize });
+            FileSize = 0;
             FileName_EndNumber = FN;
             size_t i = FN.size() - 1;
             for (;;)
@@ -378,8 +380,12 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
                     }
 
                     // Keep checking files in the sequence
+                    if (Files[AllFiles_Pos].FileName == Before + FN + After)
+                        FileSize = Files[AllFiles_Pos].FileSize;
                     AllFiles_PosToDelete = AllFiles_Pos;
                 }
+                else
+                    FileSize = Files[AllFiles_PosToDelete].FileSize;
                 AllFiles_PosToDelete++;
             }
         }
@@ -432,7 +438,7 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
 
 //---------------------------------------------------------------------------
 void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files);
-void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<FileEntry>& Files, int IsDirFromFileRead)
+void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden, vector<FileEntry>& Files, int IsDirFromFileRead, uintmax_t FileSize = 0)
 {
     if (File_Name != "." && File_Name != "..") // Avoid . and ..
     {
@@ -449,7 +455,7 @@ void DetectSequence_FromDir_Sub(string Dir_Name, string File_Name, bool IsHidden
         if (IsDirFromFileRead != 0)
             DetectSequence_FromDir(File_Name_Complete.c_str(), Files);
         else if (!IsHidden && (File_Name_Complete.size()<29 || File_Name_Complete.rfind(".rawcooked_reversibility_data")!=File_Name_Complete.size()-29))
-            Files.push_back({File_Name_Complete});
+            Files.push_back({File_Name_Complete, FileSize});
     }
 }
 
@@ -467,8 +473,8 @@ void DetectSequence_FromDir(const char* Dir_Name, vector<FileEntry>& Files)
             return;
 
         do {
-            // No file size from the directory listing, it may be outdated (e.g. hard link to a file changed through another link), the size is read from the opened file
-            DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+            uintmax_t FileSize = ((uintmax_t)FindFileData.nFileSizeHigh << 32) | FindFileData.nFileSizeLow;
+            DetectSequence_FromDir_Sub(Dir_Name2, NarrowFileName(FindFileData.cFileName), FindFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN, Files, FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, FileSize);
         }
         while (FindNextFileW(hFind, &FindFileData));
 
@@ -528,7 +534,7 @@ int input::AnalyzeInputs(global& Global)
                 HasMoreThanOneFile = true;
             Global.HasAtLeastOneFile = true;
 
-            Files.push_back({Global.Inputs[i]});
+            Files.push_back({Global.Inputs[i], 0});
         }
     }
     if (Global.HasAtLeastOneDir && HasMoreThanOneFile)
@@ -632,9 +638,9 @@ bool input::CheckFormat(const sequence_format& First, input_base_uncompressed& F
 }
 
 //---------------------------------------------------------------------------
-bool input::OpenInput(filemap& FileMap, const string& Name, errors* Errors, bool AlsoWrite, size_t HeaderSize, const directory* Dir)
+bool input::OpenInput(filemap& FileMap, const string& Name, uintmax_t FileSize, errors* Errors, bool AlsoWrite, size_t HeaderSize, const directory* Dir)
 {
-    if (HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, AlsoWrite, 0, Dir) : FileMap.Open_ReadMode(Name.c_str(), 0, {}, {}, {}, AlsoWrite, Dir))
+    if (HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, AlsoWrite, FileSize, Dir) : FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, AlsoWrite, Dir))
     {
         if (Errors)
         {
