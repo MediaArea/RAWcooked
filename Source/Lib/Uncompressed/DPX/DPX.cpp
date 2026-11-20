@@ -266,6 +266,7 @@ void dpx::CopyCommonParser(const input_base_uncompressed& Parser)
 
     // Edits
     Edits = DPX.Edits;
+    Edits_IsBigEndian = DPX.Edits_IsBigEndian;
 
     // Temp
     In = DPX.In;
@@ -429,6 +430,7 @@ static bool Edit_Float(const string& Text, unsigned Size, double& Value)
 //---------------------------------------------------------------------------
 void dpx::AddEditsParser(map<string, string>& Edits)
 {
+    Edits_IsBigEndian = IsBigEndian; // Numbers are in the endianness of the first file
     for (auto it = Edits.begin(); it != Edits.end(); ) {
         bool Found = false;
         string key_lower = it->first;
@@ -1066,9 +1068,24 @@ void dpx::Edit()
     if (Edits.empty())
         return;
 
+    // Numbers in the endianness of this file, the edits for the other endianness are created only when a file needs them (a sequence has usually one endianness)
+    if (IsBigEndian != Edits_IsBigEndian && Edits_OtherEndianness.empty()) {
+        Edits_OtherEndianness = Edits;
+        for (auto& Edit : Edits_OtherEndianness) {
+            for (const auto& EditInfo : EditList) {
+                if (EditInfo.Offset == Edit.first) {
+                    if (EditInfo.Type != Edit_S)
+                        reverse(Edit.second.Data(), Edit.second.Data() + Edit.second.Size()); // Bytes of the number in reverse order
+                    break;
+                }
+            }
+        }
+    }
+    const auto& Edits_File = IsBigEndian == Edits_IsBigEndian ? Edits : Edits_OtherEndianness;
+
     // All fields must be in the header of this file (a field after a shorter header would be written in the image data), else nothing is written in the file
     const auto Header_Size = Header_End(Buffer, FileMap);
-    for (const auto& Edit : Edits) {
+    for (const auto& Edit : Edits_File) {
         auto Edit_End = Edit.first + Edit.second.Size();
         if (Edit_End > Buffer.Size() || (FileMap && Edit_End > FileMap->Readable_End())) {
             Undecodable(undecodable::BufferOverflow);
@@ -1084,7 +1101,7 @@ void dpx::Edit()
 
     size_t Changed_Begin = (size_t)-1;
     size_t Changed_End = 0;
-    for (const auto& Edit : Edits) {
+    for (const auto& Edit : Edits_File) {
         auto Edit_End = Edit.first + Edit.second.Size();
         if (memcmp((const void*)(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size())) {
             memcpy(const_cast<uint8_t*>(Buffer.Data() + Edit.first), Edit.second.Data(), Edit.second.Size());
