@@ -321,6 +321,7 @@ namespace e
         ICCProfile = 34675,
         GPSIFD = 34853,
         SilverFastFilm = 35244, // Private tag (film maker, name and speed)
+        ImageSourceData = 37724, // Photoshop document data (layers)
         PrintIM = 50341,
     };
 };
@@ -589,6 +590,7 @@ void tiff::ParseBuffer()
             case    e::ExifIFD                      :
             case    e::GPSIFD                       :
             case    e::SilverFastFilm               :
+            case    e::ImageSourceData              :
             case    e::PrintIM                      :
                                                         Buffer_Offset += 10;
                                                         break;
