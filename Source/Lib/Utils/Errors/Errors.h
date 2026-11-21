@@ -47,6 +47,7 @@ enum parser
     IO_Hashes,
     IO_Max,
 };
+const char* ParserName(parser ParserCode); // Parsers only (before Parser_Max)
 
 namespace error
 {

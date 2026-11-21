@@ -457,7 +457,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             break;
         default:;
         }
-        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet] && !Global.Edits_Enabled) // No reversibility to check when editing
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
@@ -484,7 +484,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         default: // TODO: remove when we are confident enough
             ForceCheck = true;
         }
-        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet] && !Global.Edits_Enabled) // No reversibility to check when editing
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
@@ -497,7 +497,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     if (SingleFile.ParserCode == Parser_AVI)
     {
         bool ForceCheck = true; // TODO: remove when we are confident enough
-        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet])
+        if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet] && !Global.Edits_Enabled) // No reversibility to check when editing
         {
             cerr << "Info: this is a preview release,\n"
                 << "      --check is set in order to verify the reversibility.\n"
@@ -508,7 +508,11 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     }
 
     if (RemovedFiles.empty())
+    {
+        if (Global.Edits_Enabled && SingleFile.AddEdits(Global.Edits))
+            return true; // Formats which are not in sequences (WAV, AIFF, AVI) can not be edited
         RemovedFiles.push_back(Input.Files[Files_Pos]);
+    }
     else
     {
         // OverrideCheckPadding info

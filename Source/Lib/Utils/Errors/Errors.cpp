@@ -63,6 +63,11 @@ static const char* ParserNames[] =
 };
 static_assert(Parser_Max == sizeof(ParserNames) / sizeof(const char*), IncoherencyMessage); \
 
+const char* ParserName(parser ParserCode)
+{
+    return ParserNames[ParserCode];
+}
+
 //---------------------------------------------------------------------------
 static const char* ErrorTypes_Strings[] =
 {
