@@ -1084,6 +1084,7 @@ int main(int argc, const char* argv[])
         {
             ComputePrefix(Attachment.FileName_In);
         }
+        PrefixContent.resize(PrefixContent.find_last_of("/\\") + 1); // Directories only, not the beginning of the file names
         auto PrefixSize = PrefixContent.size();
 
         if (Global.Log)
