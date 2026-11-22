@@ -375,8 +375,9 @@ size_t input_base_uncompressed::SliceCount(bool LimitedSlices)
     return num_h_slices * num_v_slices;
 }
 
-int input_base_uncompressed::AddEdits(map<string, string>& Edits)
+int input_base_uncompressed::AddEdits(const map<string, string>& Edits_Wanted)
 {
+    auto Edits = Edits_Wanted; // The parser removes the edits it handles, the edits wanted must stay for the next sequences
     AddEditsParser(Edits);
     for (auto& Edit : Edits) {
         cerr << "Edit \"" << Edit.first;
