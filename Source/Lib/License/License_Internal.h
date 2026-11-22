@@ -16,6 +16,7 @@
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
 #include "Lib/Uncompressed/AVI/AVI.h"
+#include "Lib/Uncompressed/PSD/PSD.h"
 #include "Lib/License/License.h"
 //---------------------------------------------------------------------------
 
@@ -101,6 +102,7 @@ static const license_info License_Infos[] =
     { "WAV flavors"         , wav::flavor_Max       , WAV_Flavor_String     },
     { "AIFF flavors"        , aiff::flavor_Max      , AIFF_Flavor_String    },
     { "AVI flavors"         , avi::flavor_Max       , AVI_Flavor_String     },
+    { "PSD flavors"         , psd::flavor_Max       , PSD_Flavor_String     },
 };
 const size_t License_Infos_Size = License_Parser_Offset + Uncompressed_Max;
 static_assert(sizeof(License_Infos) / sizeof(license_info) == License_Infos_Size, "license_info issue");
@@ -129,6 +131,7 @@ public:
     void                SetSupported(wav::flavor Flavor) { SetSupported(Parser_WAV, (size_t)Flavor); }
     void                SetSupported(aiff::flavor Flavor) { SetSupported(Parser_AIFF, (size_t)Flavor); }
     void                SetSupported(avi::flavor Flavor) { SetSupported(Parser_AVI, (size_t)Flavor); }
+    void                SetSupported(psd::flavor Flavor) { SetSupported(Parser_PSD, (size_t)Flavor); }
     bool                IsSupported(size_t Type, size_t SubType);
     bool                IsSupported(parser Parser, size_t Flavor) { return IsSupported(License_Parser_Offset + Parser, Flavor); }
 

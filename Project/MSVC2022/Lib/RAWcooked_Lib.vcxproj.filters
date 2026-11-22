@@ -166,6 +166,12 @@
     <Filter Include="Source Files\Uncompressed\AVI">
       <UniqueIdentifier>{2bc33129-6e73-401f-a81b-c32caa839efa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Uncompressed\PSD">
+      <UniqueIdentifier>{6f3c2a1e-8b4d-4e7a-9c15-3d2b7e8f0a41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Uncompressed\PSD">
+      <UniqueIdentifier>{a2d94b7c-15e3-4f6b-8a90-7c4e1b3d5f62}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\Lib\Utils\BitStream\BitStream.h">
@@ -326,6 +332,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.h">
       <Filter>Header Files\Uncompressed\TIFF</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\Lib\Uncompressed\PSD\PSD.h">
+      <Filter>Header Files\Uncompressed\PSD</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.h">
       <Filter>Header Files\Uncompressed\AIFF</Filter>
@@ -508,6 +517,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\TIFF\TIFF.cpp">
       <Filter>Source Files\Uncompressed\TIFF</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Lib\Uncompressed\PSD\PSD.cpp">
+      <Filter>Source Files\Uncompressed\PSD</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\Lib\Uncompressed\AIFF\AIFF.cpp">
       <Filter>Source Files\Uncompressed\AIFF</Filter>

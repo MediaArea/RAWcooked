@@ -33,6 +33,7 @@ enum parser
     Parser_WAV,
     Parser_AIFF,
     Parser_AVI,
+    Parser_PSD, // After the audio and compound parsers, for keeping the license flags of the previous parsers
     Uncompressed_Max, // After this line, this isn't parsers of uncompressed data
     Parser_Matroska = Uncompressed_Max,
     Parser_ReversibilityData,
