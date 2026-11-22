@@ -92,6 +92,7 @@ public:
     // Writes the bytes from Begin to End of Data() to the file (needed only if the file is not memory mapped)
     int                         Write(size_t Begin, size_t End);
     bool                        IsOpen() { return Private == (decltype(Private))-1 ? false : true; }
+    bool                        IsWritable() { return AlsoWrite; } // Opened also for writing
     int                         Remap(size_t Begin = 0, size_t End = 0);
     int                         Close();
 

@@ -741,6 +741,14 @@ void dpx::ParseBuffer()
     }
     if (HasErrors())
         return;
+    if (Flavor == (decltype(Flavor))-1)
+    {
+        // Not reported as unsupported if not encoding (e.g. --info), the size of the image data is not known
+        if (Actions[Action_Conch])
+            ConformanceCheck();
+        Edit();
+        return;
+    }
 
     // Line ending inside a block, any slice count is suitable as the decoder merges the data of a DPX block in several slices
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);
@@ -1072,6 +1080,12 @@ void dpx::Edit()
 {
     if (Edits.empty())
         return;
+    if (FileMap && !FileMap->IsWritable()) { // Opened only for reading, it can not be written
+        Undecodable(undecodable::Write);
+        if (Errors)
+            Errors->Error(ParserCode, error::type::Undecodable, (error::generic::code)undecodable::Write, FileName); // Listed after the message, the files which are not edited
+        return;
+    }
 
     // Numbers in the endianness of this file, the edits for the other endianness are created only when a file needs them (a sequence has usually one endianness)
     if (IsBigEndian != Edits_IsBigEndian && Edits_OtherEndianness.empty()) {

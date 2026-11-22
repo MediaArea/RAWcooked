@@ -334,6 +334,8 @@ string aiff::Flavor_String()
 //---------------------------------------------------------------------------
 uint8_t aiff::BitDepth()
 {
+    if (Flavor >= flavor_Max)
+        return 0; // Unsupported flavor, not reported if not encoding (e.g. --info)
     return AIFF_Tested[Flavor].sampleSize;
 }
 

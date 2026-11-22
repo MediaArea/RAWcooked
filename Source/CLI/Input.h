@@ -51,7 +51,7 @@ public:
     static int FileName_Compare(const string& Left, const string& Right);
 
     // I/O
-    static bool OpenInput(filemap& FileMap, const string& Name, uintmax_t FileSize, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0, const directory* Dir = nullptr); // Only the header is read if HeaderSize is not 0, the file is opened relative to Dir if it is directly in it
+    static bool OpenInput(filemap& FileMap, const string& Name, uintmax_t FileSize, errors* Errors, bool AlsoWrite = false, size_t HeaderSize = 0, const directory* Dir = nullptr); // Only the header is read if HeaderSize is not 0, the file is opened relative to Dir if it is directly in it, only for reading if it can not be written
 };
 
 #endif

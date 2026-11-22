@@ -571,6 +571,8 @@ void exr::ParseBuffer()
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
+    if (Flavor == (decltype(Flavor))-1)
+        return; // Not reported as unsupported if not encoding (e.g. --info)
 
     // Offset Tables
     auto IsWrong = false;

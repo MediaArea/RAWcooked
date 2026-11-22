@@ -210,7 +210,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 
     if (Global.Errors.HasErrors())
     {
-        if (strstr(Global.Errors.ErrorMessage(), "becoming too big"))
+        if (strstr(Global.Errors.ErrorMessage().c_str(), "becoming too big"))
         {
             Global.ProgressIndicator_Stop();
             cerr << "Error: the reversibility file is becoming big.\n"
@@ -407,7 +407,8 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     }
 
     // Management
-    Flavor = SingleFile.Flavor_String();
+    auto IsFlavorKnown = SingleFile.Flavor != (decltype(SingleFile.Flavor))-1; // Unsupported flavor not reported if not encoding (e.g. --info)
+    Flavor = IsFlavorKnown ? SingleFile.Flavor_String() : (string(ParserName(SingleFile.ParserCode)) + "/unsupported");
     if (SingleFile.IsSequence)
     {
         auto OnlyListedFiles = Global.HasAtLeastOneFile && Global.FileOption_IsProvided && Global.Inputs.size() == 1; // Only the given file, but whole sequences of a package
@@ -442,7 +443,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
-    if (SingleFile.ParserCode == Parser_DPX)
+    if (SingleFile.ParserCode == Parser_DPX && IsFlavorKnown)
     {
         bool ForceCheck = false;
         if (dpx::IsVFlip(SingleFile.Flavor))
@@ -469,7 +470,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
-    if (SingleFile.ParserCode == Parser_TIFF)
+    if (SingleFile.ParserCode == Parser_TIFF && IsFlavorKnown)
     {
         bool ForceCheck = false;
         switch ((tiff::flavor)SingleFile.Flavor)
@@ -1086,6 +1087,7 @@ int main(int argc, const char* argv[])
         {
             ComputePrefix(Attachment.FileName_In);
         }
+        PrefixContent.resize(PrefixContent.find_last_of("/\\") + 1); // Directories only, not the beginning of the file names
         auto PrefixSize = PrefixContent.size();
 
         if (Global.Log)
@@ -1331,6 +1333,7 @@ int main(int argc, const char* argv[])
             // Parse (check mode)
             Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
             Global.Actions.set(Action_Decode, false); // Override config
+            Global.Actions.set(Action_Hash, false); // The hashes of the decoded files are compared with the ones of the source files, the output file is not hashed
             Value = ParseFile_Compressed(ParseInfo, &FileOpenName);
             if (!Value && !ParseInfo.IsDetected)
             {

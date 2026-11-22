@@ -5,6 +5,9 @@
  */
 
 //---------------------------------------------------------------------------
+#include <cerrno>
+#include <cfloat>
+#include <climits>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -613,6 +616,33 @@ int Error_NotTested(const char* Option1, const char* Option2 = NULL)
         cerr << ' ' << Option2;
     cerr << " not yet tested.\nPlease contact info@mediaarea.net if you want support of such option." << endl;
     return 1;
+}
+
+//---------------------------------------------------------------------------
+// Frame rate: a number or a fraction, positive and finite
+static bool FrameRate_IsValid(const char* Value)
+{
+    char* End;
+    errno = 0;
+    auto FrameRate = strtod(Value, &End);
+    if (End != Value && *End == '/')
+    {
+        auto Denominator = End + 1;
+        FrameRate /= strtod(Denominator, &End);
+        if (End == Denominator)
+            return false;
+    }
+    return End != Value && !*End && !errno && FrameRate > 0 && FrameRate <= DBL_MAX;
+}
+
+//---------------------------------------------------------------------------
+// Count (e.g. of threads): digits only, not more than the maximum of int
+static bool Count_IsValid(const char* Value)
+{
+    char* End;
+    errno = 0;
+    auto Count = strtoul(Value, &End, 10);
+    return *Value >= '0' && *Value <= '9' && !*End && !errno && Count <= INT_MAX;
 }
 
 //---------------------------------------------------------------------------
@@ -1247,7 +1277,7 @@ int global::ManageCommandLine(const char* argv[], int argc)
                 return Error_Missing(argv[i]);
             if (i + 1 == argc)
                 return Error_Missing(argv[i]);
-            IoThreads = atoi(argv[++i]);
+            IoThreads = Count_IsValid(argv[++i]) ? atoi(argv[i]) : 0;
             if (!IoThreads)
             {
                 cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a non zero positive number.\n";
@@ -1263,9 +1293,9 @@ int global::ManageCommandLine(const char* argv[], int argc)
             }
             if (++i >= argc)
                 return Error_NotTested(argv[i - 1]);
-            if (!atof(argv[i]))
+            if (!FrameRate_IsValid(argv[i]))
             {
-                cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a number\n";
+                cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be a positive number\n";
                 return 1;
             }
             VideoInputOptions["framerate"] = argv[i];
@@ -1292,6 +1322,11 @@ int global::ManageCommandLine(const char* argv[], int argc)
         {
             if (++i >= argc)
                 return Error_NotTested(argv[i - 1]);
+            if (!Count_IsValid(argv[i]))
+            {
+                cerr << "Invalid \"" << argv[i - 1] << " " << argv[i] << "\" value, it must be 0 or a positive number\n";
+                return 1;
+            }
             OutputOptions["threads"] = argv[i];
             License.Feature(feature::GeneralOptions);
         }
@@ -1448,7 +1483,7 @@ int global::SetDefaults()
 //---------------------------------------------------------------------------
 void global::ProgressIndicator_Start(size_t Total)
 {
-    if (ProgressIndicator_Thread)
+    if (ProgressIndicator_Thread || Quiet)
         return;
     ProgressIndicator_Current = 0;
     ProgressIndicator_Total = Total;
