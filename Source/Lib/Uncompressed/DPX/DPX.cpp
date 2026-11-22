@@ -433,12 +433,14 @@ void dpx::AddEditsParser(map<string, string>& Edits)
     Edits_IsBigEndian = IsBigEndian; // Numbers are in the endianness of the first file
     for (auto it = Edits.begin(); it != Edits.end(); ) {
         bool Found = false;
+        bool NameFound = false;
         string key_lower = it->first;
         transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
         for (auto& EditInfo : EditList) {
             string name_lower = EditInfo.Name;
             transform(name_lower.begin(), name_lower.end(), name_lower.begin(), ::tolower);
             if (key_lower == name_lower) {
+                NameFound = true;
                 switch (EditInfo.Type) {
                 case Edit_S:
                 {
@@ -520,8 +522,11 @@ void dpx::AddEditsParser(map<string, string>& Edits)
                 break;
             }
         }
-        if (!Found)
+        if (!Found) {
+            if (!NameFound)
+                it->second.clear(); // Unknown name
             ++it;
+        }
     }
 }
 

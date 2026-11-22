@@ -202,9 +202,9 @@ public:
 protected:
     void                        ParseBuffer_Init();
     virtual void                CopyCommonParser(const input_base_uncompressed& /*Parser*/) {}
-    virtual void                AddEditsParser(map<string, string>& /*Edits*/) {}
+    virtual void                AddEditsParser(map<string, string>& /*Edits*/) {} // Removes the edits it will do, the value of the other ones becomes the error message, or empty if the name is unknown
     virtual void                Edit() {};
-    virtual string              ListEditsParser() { return string(); }
+    virtual string              ListEditsParser() { return string(); } // Empty if the format can not be edited
     void                        RegisterAsAttachment();
 };
 
