@@ -370,6 +370,7 @@ void input::DetectSequence(bool CheckIfFilesExist, bool OnlyListedFiles, size_t 
                                         FN = File2_FileName.substr(Before.size(), TestDigit - Before.size());
                                         NextFileFound = true;
                                         MustCreateFileList = true;
+                                        AllFiles_Pos = AllFiles_Pos_Next; // The files before it (e.g. a file of another format in the gap) are kept in the list
                                     }
                                     break;
                                 }
