@@ -1328,6 +1328,7 @@ int main(int argc, const char* argv[])
             // Parse (check mode)
             Global.Actions.set(Action_QuickCheckAfterEncode, !Global.Actions[Action_Check]);
             Global.Actions.set(Action_Decode, false); // Override config
+            Global.Actions.set(Action_Hash, false); // The hashes of the decoded files are compared with the ones of the source files, the output file is not hashed
             Value = ParseFile_Compressed(ParseInfo, &FileOpenName);
             if (!Value && !ParseInfo.IsDetected)
             {
