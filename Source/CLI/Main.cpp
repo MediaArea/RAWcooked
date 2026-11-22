@@ -208,7 +208,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 
     if (Global.Errors.HasErrors())
     {
-        if (strstr(Global.Errors.ErrorMessage(), "becoming too big"))
+        if (strstr(Global.Errors.ErrorMessage().c_str(), "becoming too big"))
         {
             Global.ProgressIndicator_Stop();
             cerr << "Error: the reversibility file is becoming big.\n"

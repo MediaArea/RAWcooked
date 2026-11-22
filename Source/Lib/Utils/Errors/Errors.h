@@ -99,7 +99,7 @@ public:
     ~errors()                   { DeleteStrings(); }
 
     // Error message read
-    const char*                 ErrorMessage();
+    string                      ErrorMessage(); // A copy, the message may be built again by another thread
 
     // Error message write
     void                        Error(parser Parser, error::type Type, error::generic::code Code);

@@ -89,12 +89,12 @@ static const char* ErrorTypes_Infos[] =
 static_assert(error::type_Max == sizeof(ErrorTypes_Infos) / sizeof(const char*), IncoherencyMessage); \
 
 //---------------------------------------------------------------------------
-const char* errors::ErrorMessage()
+string errors::ErrorMessage()
 {
     std::lock_guard<std::mutex> lock(Mutex);
 
     if (Parsers.empty())
-        return NULL;
+        return string();
 
     ErrorMessageCache = '\n';
 
@@ -163,7 +163,7 @@ const char* errors::ErrorMessage()
             ErrorMessageCache += '\n';
         }
 
-    return ErrorMessageCache.c_str();
+    return ErrorMessageCache;
 }
 
 //---------------------------------------------------------------------------
