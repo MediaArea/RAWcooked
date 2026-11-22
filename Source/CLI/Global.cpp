@@ -1483,7 +1483,7 @@ int global::SetDefaults()
 //---------------------------------------------------------------------------
 void global::ProgressIndicator_Start(size_t Total)
 {
-    if (ProgressIndicator_Thread)
+    if (ProgressIndicator_Thread || Quiet)
         return;
     ProgressIndicator_Current = 0;
     ProgressIndicator_Total = Total;
