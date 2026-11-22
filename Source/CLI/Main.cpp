@@ -405,7 +405,8 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     }
 
     // Management
-    Flavor = SingleFile.Flavor_String();
+    auto IsFlavorKnown = SingleFile.Flavor != (decltype(SingleFile.Flavor))-1; // Unsupported flavor not reported if not encoding (e.g. --info)
+    Flavor = IsFlavorKnown ? SingleFile.Flavor_String() : (string(ParserName(SingleFile.ParserCode)) + "/unsupported");
     if (SingleFile.IsSequence)
     {
         auto OnlyListedFiles = Global.HasAtLeastOneFile && Global.FileOption_IsProvided && Global.Inputs.size() == 1; // Only the given file, but whole sequences of a package
@@ -440,7 +441,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
-    if (SingleFile.ParserCode == Parser_DPX)
+    if (SingleFile.ParserCode == Parser_DPX && IsFlavorKnown)
     {
         bool ForceCheck = false;
         if (dpx::IsVFlip(SingleFile.Flavor))
@@ -467,7 +468,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
-    if (SingleFile.ParserCode == Parser_TIFF)
+    if (SingleFile.ParserCode == Parser_TIFF && IsFlavorKnown)
     {
         bool ForceCheck = false;
         switch ((tiff::flavor)SingleFile.Flavor)

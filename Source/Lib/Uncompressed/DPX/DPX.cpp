@@ -741,6 +741,14 @@ void dpx::ParseBuffer()
     }
     if (HasErrors())
         return;
+    if (Flavor == (decltype(Flavor))-1)
+    {
+        // Not reported as unsupported if not encoding (e.g. --info), the size of the image data is not known
+        if (Actions[Action_Conch])
+            ConformanceCheck();
+        Edit();
+        return;
+    }
 
     // Line ending inside a block, any slice count is suitable as the decoder merges the data of a DPX block in several slices
     size_t Slice_Multiplier = PixelsPerBlock((flavor)Flavor);

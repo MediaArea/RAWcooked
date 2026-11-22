@@ -528,7 +528,8 @@ void wav::WAVE_fmt_()
         Unsupported(unsupported::Flavor);
     if (HasErrors())
         return;
-    Flavor = (decltype(Flavor))WavFlavor;
+    if (WavFlavor != (decltype(WavFlavor))-1) // Not reported as unsupported if not encoding (e.g. --info)
+        Flavor = (decltype(Flavor))WavFlavor;
 
     if (InputInfo && !InputInfo->SampleRate)
         InputInfo->SampleRate = SamplesPerSec;
@@ -549,10 +550,12 @@ string wav::Flavor_String()
 //---------------------------------------------------------------------------
 uint8_t wav::BitDepth()
 {
-    return WAV_Tested[Flavor].BitDepth;
+    return WAV_BitDepth((wav::flavor)Flavor);
 }
 uint8_t WAV_BitDepth(wav::flavor Flavor)
 {
+    if ((size_t)Flavor >= wav::flavor_Max)
+        return 0; // Unsupported flavor, not reported if not encoding (e.g. --info)
     return WAV_Tested[(uint8_t)Flavor].BitDepth;
 }
 
