@@ -17,6 +17,7 @@ namespace exr_issue { extern const char** ErrorTexts[]; }
 namespace wav_issue { extern const char** ErrorTexts[]; }
 namespace aiff_issue { extern const char** ErrorTexts[]; }
 namespace avi_issue { extern const char** ErrorTexts[]; }
+namespace psd_issue { extern const char** ErrorTexts[]; }
 namespace matroska_issue { extern const char** ErrorTexts[]; }
 namespace reversibility_issue { extern const char** ErrorTexts[]; }
 namespace intermediatewrite_issue { extern const char** ErrorTexts[]; }
@@ -32,6 +33,7 @@ static const char*** AllErrorTexts[] =
     wav_issue::ErrorTexts,
     aiff_issue::ErrorTexts,
     avi_issue::ErrorTexts,
+    psd_issue::ErrorTexts,
     matroska_issue::ErrorTexts,
     reversibility_issue::ErrorTexts,
     nullptr,
@@ -55,6 +57,7 @@ static const char* ParserNames[] =
     "WAV",
     "AIFF",
     "AVI",
+    "PSD",
     "Matroska",
     "Reversibility data",
     "HashSum",

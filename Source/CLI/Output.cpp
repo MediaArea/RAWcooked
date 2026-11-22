@@ -175,6 +175,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                 Command += " -f image2 -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -f image2 -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "PSD/"))
+                Command += " -f image2 -c:v psd";
             if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
             {
                 Command += " -f image2 -c:v exr -consider_float16_as_uint16 1";
@@ -191,7 +193,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
             // FileName_Template (is the file name if no sequence detected)
             // A % of the names is not the start of a pattern: doubled in a template, and no pattern in the name of a single image
             const auto IsTemplate = !Streams[i].FileName_Template.empty();
-            const auto IsImage = !Streams[i].Flavor.compare(0, 4, "DPX/") || !Streams[i].Flavor.compare(0, 5, "TIFF/") || !Streams[i].Flavor.compare(0, 4, "EXR/");
+            const auto IsImage = !Streams[i].Flavor.compare(0, 4, "DPX/") || !Streams[i].Flavor.compare(0, 5, "TIFF/") || !Streams[i].Flavor.compare(0, 4, "EXR/") || !Streams[i].Flavor.compare(0, 4, "PSD/");
             if (!IsTemplate && IsImage && Streams[i].FileName.find('%') != string::npos)
                 Command += " -pattern_type none";
             Command += " -i ";
@@ -295,6 +297,8 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                 Command += " -c:v dpx";
             if (!Streams[i].Flavor.compare(0, 5, "TIFF/"))
                 Command += " -c:v tiff";
+            if (!Streams[i].Flavor.compare(0, 4, "PSD/"))
+                Command += " -c:v psd";
             if (!Streams[i].Flavor.compare(0, 4, "EXR/"))
                 Command += " -c:v exr -consider_float16_as_uint16 1";
 

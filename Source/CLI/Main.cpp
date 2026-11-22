@@ -21,6 +21,7 @@
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
+#include "Lib/Uncompressed/PSD/PSD.h"
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
@@ -139,6 +140,7 @@ static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_
     case Parser_WAV: Parser = new wav(Errors); break;
     case Parser_AIFF: Parser = new aiff(Errors); break;
     case Parser_AVI: Parser = new avi(Errors); break;
+    case Parser_PSD: Parser = new psd(Errors); break;
     default: return  (input_base_uncompressed*)nullptr;
     }
 
@@ -494,7 +496,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
-    if (SingleFile.ParserCode == Parser_AVI)
+    if (SingleFile.ParserCode == Parser_AVI || SingleFile.ParserCode == Parser_PSD)
     {
         bool ForceCheck = true; // TODO: remove when we are confident enough
         if (ForceCheck && !Global.Actions[Action_Check] && !Global.Actions[Action_CheckOptionIsSet] && !Global.Edits_Enabled) // No reversibility to check when editing
@@ -567,7 +569,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         Problem = !Global.License.IsSupported(SingleFile.ParserCode, (uint8_t)SingleFile.Flavor);
 
     // Technical limitations
-    if (SingleFile.ParserCode >= Parser_WAV && SingleFile.ParserCode < Uncompressed_Max && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24)
+    if ((SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI) && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24)
     {
         const auto& c_a = Global.OutputOptions.find("c:a");
         if (c_a == Global.OutputOptions.end())
@@ -625,6 +627,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
             case Parser_DPX:
             case Parser_TIFF:
             case Parser_EXR:
+            case Parser_PSD:
                 ParseInfo.Slices = std::to_string(Parser->SliceCount(Global.Actions[Action_Encode] && Global.FFmpeg_LimitedSlices())); // Slice layouts accepted by the FFmpeg encoder depend on its version
             }
             ParseInfo.IsDetected = true;

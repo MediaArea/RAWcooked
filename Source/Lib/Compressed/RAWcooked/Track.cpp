@@ -16,6 +16,7 @@
 #include "Lib/Uncompressed/EXR/EXR.h"
 #include "Lib/Uncompressed/WAV/WAV.h"
 #include "Lib/Uncompressed/AIFF/AIFF.h"
+#include "Lib/Uncompressed/PSD/PSD.h"
 #include "ThreadPool.h"
 #include "Lib/Utils/MD5/MD5_Lanes.h"
 #include "Lib/Utils/Trace/Trace.h"
@@ -506,6 +507,7 @@ input_base_uncompressed* track_info::InitOutput_Find()
         TEST_OUTPUT(dpx, DPX);
         TEST_OUTPUT(tiff, TIFF);
         TEST_OUTPUT(exr, EXR);
+        TEST_OUTPUT(psd, TIFF); // Pixels handled as TIFF
         break;
     case format_kind::audio:
         TEST_OUTPUT(wav, None);
@@ -543,7 +545,7 @@ input_base_uncompressed* track_info::InitOutput(input_base_uncompressed* Potenti
     }
 
     RawFrame->Flavor = Flavor;
-    RawFrame->Flavor_Private = PotentialParser->Flavor;
+    RawFrame->Flavor_Private = PotentialParser->ParserCode == Parser_PSD ? (uint64_t)psd::TIFF_Flavor((psd::flavor)PotentialParser->Flavor) : PotentialParser->Flavor; // PSD pixels are handled as TIFF
 
     if (!ReversibilityData->Unique())
     {
