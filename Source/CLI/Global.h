@@ -69,6 +69,8 @@ public:
     user_mode                   Mode = Ask;
     hashes*                     Hashes = nullptr;
     errors                      Errors;
+    bool                        Edits_Accepted = false; // A track accepted the edits
+    bitset<Parser_Max>          Edits_NotEditable; // Formats of the tracks which are not images and can not be edited, such tracks are left as they are
     ask_callback                Ask_Callback = nullptr;
     string*                     Log = nullptr;
 
