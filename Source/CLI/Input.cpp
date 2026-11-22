@@ -641,7 +641,8 @@ bool input::CheckFormat(const sequence_format& First, input_base_uncompressed& F
 //---------------------------------------------------------------------------
 bool input::OpenInput(filemap& FileMap, const string& Name, uintmax_t FileSize, errors* Errors, bool AlsoWrite, size_t HeaderSize, const directory* Dir)
 {
-    if (HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, AlsoWrite, FileSize, Dir) : FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, AlsoWrite, Dir))
+    const auto Open = [&](bool Write) { return HeaderSize ? FileMap.Open_HeaderMode(Name, HeaderSize, Write, FileSize, Dir) : FileMap.Open_ReadMode(Name.c_str(), FileSize, {}, {}, {}, Write, Dir); };
+    if (Open(AlsoWrite) && (!AlsoWrite || Open(false))) // A file which can not be written is opened for reading only, e.g. a file which is not edited (its format is not known yet)
     {
         if (Errors)
         {
