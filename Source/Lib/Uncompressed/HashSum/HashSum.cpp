@@ -194,6 +194,7 @@ void hashes::NoMoreHashFiles_Internal()
     // Sort and make unique
     sort(List_FromHashFiles.begin(),List_FromHashFiles.end());
     List_FromHashFiles.erase(unique(List_FromHashFiles.begin(), List_FromHashFiles.end()), List_FromHashFiles.end());
+    sort(List_FromFiles.begin(), List_FromFiles.end()); // Not in the order of the names if the files are hashed by several threads, searched by name if CheckFromFiles is set
 
     // If hash files are present, parse already registered files
     if (!List_FromHashFiles.empty())
