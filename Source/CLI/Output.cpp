@@ -234,7 +234,7 @@ int output::FFmpeg_Command(const char* FileName, global& Global, bool IgnoreReve
                                 if (j == string::npos)
                                     j = FileList.size();
 #if defined(_WIN32) || defined(_WINDOWS)
-                                if (i + 2 < FileList.size() && FileList[i + 1] != ':' && FileList[i + 2] != PathSeparator && !CurrentPath)
+                                if (i + 2 < FileList.size() && (FileList[i + 1] != ':' || FileList[i + 2] != PathSeparator) && !CurrentPath)
 #else
                                 if (FileList[i] != PathSeparator && !CurrentPath)
 #endif
