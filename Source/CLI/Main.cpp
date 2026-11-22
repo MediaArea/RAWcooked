@@ -375,6 +375,29 @@ static bool IsFileNotAccepted(bool IsNotSequence)
 }
 
 //---------------------------------------------------------------------------
+// Edits of a track, true if they are refused (the messages are shown)
+// Images in a format which can not be edited are an error
+// Another track which can not be edited (e.g. the audio of a package) is left as it is, the edits are for the other tracks
+static bool Edits_Track(input_base_uncompressed& SingleFile)
+{
+    if (SingleFile.IsEditable())
+    {
+        if (SingleFile.AddEdits(Global.Edits))
+            return true;
+        Global.Edits_Accepted = true;
+        return false;
+    }
+    if (SingleFile.IsSequence)
+    {
+        Global.ProgressIndicator_Stop();
+        cerr << "Edit: " << ParserName(SingleFile.ParserCode) << " files can not be edited.\nSee --help-edit for the list of formats and keys." << endl;
+        return true;
+    }
+    Global.Edits_NotEditable.set(SingleFile.ParserCode);
+    return false;
+}
+
+//---------------------------------------------------------------------------
 bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos)
 {
     if (SingleFile.IsDetected())
@@ -512,8 +535,8 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
 
     if (RemovedFiles.empty())
     {
-        if (Global.Edits_Enabled && SingleFile.AddEdits(Global.Edits))
-            return true; // Formats which are not in sequences (WAV, AIFF, AVI) can not be edited
+        if (Global.Edits_Enabled && Edits_Track(SingleFile))
+            return true;
         RemovedFiles.push_back(Input.Files[Files_Pos]);
     }
     else
@@ -554,7 +577,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
 
         if (Global.Edits_Enabled && IsFileNotAccepted(SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI))
             return true; // Before the edit of the files, else the files are edited even if the command is refused
-        if (Global.Edits_Enabled && SingleFile.AddEdits(Global.Edits))
+        if (Global.Edits_Enabled && Edits_Track(SingleFile))
             return true;
         auto FirstFile_NotEdited = Global.Edits_Enabled && SingleFile.HasErrors(); // The next files are also edited, as after another file which can not be edited
 
@@ -570,7 +593,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         Problem = !Global.License.IsSupported(SingleFile.ParserCode, (uint8_t)SingleFile.Flavor);
 
     // Technical limitations
-    if ((SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI) && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24)
+    if (!Global.Edits_Enabled && (SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI) && ((input_base_uncompressed_audio*)&SingleFile)->BitDepth() > 24) // No encoding when editing
     {
         const auto& c_a = Global.OutputOptions.find("c:a");
         if (c_a == Global.OutputOptions.end())
@@ -1342,6 +1365,19 @@ int main(int argc, const char* argv[])
                 Value = 1;
             }
         }
+    }
+
+    // Edits: an error if no track of the input accepted them
+    if (!Value && Global.Edits_Enabled && !Global.Edits_Accepted && !Global.Inputs.empty())
+    {
+        cerr << '\n';
+        if (Global.Edits_NotEditable.none())
+            cerr << "Edit: content to edit not found.\n"; // No track at all, e.g. only attachments
+        for (size_t i = 0; i < Parser_Max; i++)
+            if (Global.Edits_NotEditable[i])
+                cerr << "Edit: " << ParserName((parser)i) << " files can not be edited.\n";
+        cerr << "See --help-edit for the list of formats and keys." << endl;
+        Value = 1;
     }
 
     // Global errors

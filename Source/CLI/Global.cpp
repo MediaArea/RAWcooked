@@ -877,6 +877,33 @@ int global::SetOption(const char* argv[], int& i, int argc)
 }
 
 //---------------------------------------------------------------------------
+// Options which can not be used with --edit, they do not apply to an edit: encoding, decoding, check of the encoding, hash, compressed content, output
+// (the options handled by global::SetOption, given to FFmpeg, and an output file name after -i can not be used either)
+static const char* const Options_NotWithEdit[] =
+{
+    "--all",
+    "--bin-name", "-b",
+    "--check",
+    "--check-padding",
+    "--compute-output-hash",
+    "--decode",
+    "--decoder",
+    "--display-command", "-d",
+    "--encode",
+    "--framemd5",
+    "--framemd5-an",
+    "--framemd5-name",
+    "--hash",
+    "--info",
+    "--io",
+    "--output-name", "-o",
+    "--output-version",
+    "--rawcooked-file-name", "-r",
+    "--show-stats",
+    "-threads",
+};
+
+//---------------------------------------------------------------------------
 int global::ManageCommandLine(const char* argv[], int argc)
 {
     if (argc < 2)
@@ -905,8 +932,14 @@ int global::ManageCommandLine(const char* argv[], int argc)
     Hashes = new hashes(&Errors);
     ProgressIndicator_Thread = NULL;
 
+    const char* Edit_Refused = nullptr; // First option of the command line which can not be used with --edit, wherever --edit is
     for (int i = 1; i < argc; i++)
     {
+        if (!Edit_Refused)
+            for (const auto Name : Options_NotWithEdit)
+                if (!strcmp(argv[i], Name))
+                    Edit_Refused = argv[i];
+
         if ((argv[i][0] == '.' && argv[i][1] == '\0')
          || (argv[i][0] == '.' && (argv[i][1] == '/' || argv[i][1] == '\\') && argv[i][2] == '\0'))
         {
@@ -1343,6 +1376,8 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
         else if (argv[i][0] == '-' && argv[i][1] != '\0')
         {
+            if (!Edit_Refused)
+                Edit_Refused = argv[i]; // Option given to FFmpeg
             int Value = SetOption(argv, i, argc);
             if (Value)
                 return Value;
@@ -1364,6 +1399,15 @@ int global::ManageCommandLine(const char* argv[], int argc)
         }
     }
 
+    if (Edits_Enabled && Edit_Refused) {
+        cerr << "Error: option " << Edit_Refused << " can not be used with --edit." << endl;
+        return 1;
+    }
+    if (Edits_Enabled && OutputFileName_IsProvided) {
+        cerr << "Error: output file name '" << OutputFileName << "' can not be used with --edit." << endl;
+        return 1;
+    }
+
     BinName_IsProvided = !BinName.empty();
     if (BinName.empty())
         BinName = FFmpeg_BinName();
@@ -1371,11 +1415,6 @@ int global::ManageCommandLine(const char* argv[], int argc)
     // Vulkan is wanted if the video encoder is ffv1_vulkan, so the decoder for checking is auto if no decoder is provided (Vulkan also if it is a CPU implementation)
     if (Actions[Action_VulkanEncoder] && !Decoder_IsProvided)
         Actions.set(Action_AutoDecoder);
-
-    if (!Edits.empty() && Actions[Action_Encode]) {
-        cerr << "Error: Edit while encoding is not supported." << endl;
-        return 1;
-    }
 
     if (!IoThreads) {
         IoThreads = thread::hardware_concurrency();

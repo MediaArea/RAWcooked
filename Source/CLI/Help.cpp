@@ -289,6 +289,8 @@ ReturnValue Help(const char* /*Name*/)
         "              Edit audio-visual RAW data.\n"
         "              Valid keys are listed by using --help-edit option.\n"
         "              All other features are deactivated when using this option.\n"
+        "              Options which do not apply to an edit, e.g. about encoding,\n"
+        "              decoding or output, are refused.\n"
         "\n"
         "       --hash Computes the hash of audio-visual RAW data files.\n"
         "              During encoding it computes a hash for each file within a source\n"

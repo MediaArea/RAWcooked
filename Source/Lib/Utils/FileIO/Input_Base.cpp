@@ -379,10 +379,6 @@ int input_base_uncompressed::AddEdits(const map<string, string>& Edits_Wanted)
 {
     auto Edits = Edits_Wanted; // The parser removes the edits it handles, the edits wanted must stay for the next sequences
     AddEditsParser(Edits);
-    if (!Edits.empty() && ListEditsParser().empty()) { // No edit is possible with this format
-        cerr << "Edit: " << ParserName(ParserCode) << " files can not be edited.\nSee --help-edit for the list of formats and keys." << endl;
-        return 1;
-    }
     auto HasUnknownName = false;
     for (auto& Edit : Edits) {
         cerr << "Edit \"" << Edit.first;

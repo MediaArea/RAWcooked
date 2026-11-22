@@ -195,7 +195,8 @@ public:
 
     void                        CopyCommon(const input_base_uncompressed& Parser);
     virtual size_t              HeaderSize() { return 0; } // Count of bytes needed for parsing and editing the header if no other action needs the content, 0 if unknown
-    int                         AddEdits(const map<string, string>& Edits);
+    bool                        IsEditable() { return !ListEditsParser().empty(); } // False if the format can not be edited
+    int                         AddEdits(const map<string, string>& Edits); // Only if the format can be edited
     int                         ListEdits();
     void                        ParseRAWcooked(parse_params& Params);
 
