@@ -105,6 +105,8 @@ private:
     size_t Cluster_Level = (size_t)-1;
     size_t Cluster_Offset = (size_t)-1;
     size_t Element_Begin_Offset;
+    bool Decoding_IsInit = false; // Init done at the first Cluster, else at the end of the parsing (no Cluster)
+    bool Decoding_Init();
 
     // SeekHead, for finding the attachments after the clusters (e.g. added by another tool)
     size_t Segment_Offset = (size_t)-1; // Start of the Segment content, SeekHead positions are relative to it
