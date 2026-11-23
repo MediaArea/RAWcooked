@@ -14,10 +14,12 @@
 #include <mutex>
 #include <sstream>
 #include <thread>
-#include "CLI/Global.h"
-#include "CLI/Input.h"
-#include "CLI/Output.h"
-#include "CLI/Help.h"
+#include "Lib/Core/Core.h"
+#include "Lib/Core/Global.h"
+#include "Lib/Core/Input.h"
+#include "Lib/Core/Metadata.h"
+#include "Lib/Core/Output.h"
+#include "Lib/Core/Help.h"
 #include "Lib/Compressed/Matroska/Matroska.h"
 #include "Lib/Uncompressed/DPX/DPX.h"
 #include "Lib/Uncompressed/TIFF/TIFF.h"
@@ -34,13 +36,6 @@
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
 using namespace std;
-//---------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------
-global Global;
-input Input;
-output Output;
-rawcooked RAWcooked;
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -96,40 +91,6 @@ static string Stats_CPU()
 }
 
 //---------------------------------------------------------------------------
-// Ask user about overwriting files
-user_mode Ask_Callback(user_mode* Mode, const string& FileName, const string& ExtraText, bool Always, bool* ProgressIndicator_IsPaused, condition_variable* ProgressIndicator_IsEnd)
-{
-    if (Mode && *Mode != Ask)
-        return *Mode;
-
-    string Result;
-    if (ProgressIndicator_IsPaused)
-        *ProgressIndicator_IsPaused = true;
-    if (ProgressIndicator_IsEnd)
-        ProgressIndicator_IsEnd->notify_one();
-    cerr << "                                                            \r"; // Clean up output
-    cerr << "File '" << FileName << "' already exists" << ExtraText << ". Overwrite? [y/N] ";
-    getline(cin, Result);
-    if (ProgressIndicator_IsPaused)
-        *ProgressIndicator_IsPaused = false;
-    if (ProgressIndicator_IsEnd)
-        ProgressIndicator_IsEnd->notify_one();
-    cerr << "                                                            \r"; // Clean up output
-    user_mode NewMode = (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')) ? AlwaysYes : AlwaysNo;
-
-    if (Mode && Always)
-    {
-        cerr << "Use this choice for all other files? [y/N] ";
-        getline(cin, Result);
-        if (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y'))
-            * Mode = NewMode;
-    }
-
-    cerr << endl;
-    return NewMode;
-}
-
-//---------------------------------------------------------------------------
 static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_base_uncompressed* SourceParser = nullptr)
 {
     input_base_uncompressed* Parser;
@@ -153,7 +114,7 @@ static input_base_uncompressed* CreateParser(int i, errors* Errors, const input_
 
 int Help_Edit() {
     for (int i = 0; i < Uncompressed_Max; i++) {
-        auto Parser = CreateParser(i, &Global.Errors);
+        auto Parser = CreateParser(i, nullptr);
         if (!Parser)
             continue;
         Parser->ListEdits();
@@ -161,6 +122,19 @@ int Help_Edit() {
     }
 
     return ReturnValue_OK;
+}
+
+//---------------------------------------------------------------------------
+// Metadata of the file which was just parsed (its content is still available), for the summary of its track
+static void Metadata_Add(metadata* Metadata, input_base_uncompressed& Parser, uint64_t Index)
+{
+    if (!Metadata)
+        return; // Not requested
+
+    vector<string> Values;
+    vector<bool> Missing;
+    Parser.GetMetadata(Values, &Missing);
+    Metadata->Add(Index, move(Values), Missing);
 }
 
 //---------------------------------------------------------------------------
@@ -182,12 +156,19 @@ struct parse_info
     bool   IsDetected = false;
     bool   IsContainer = false;
     bool   Problem = false;
+    shared_ptr<metadata> Metadata; // Summary of the metadata of the files of the track, if requested
 
+    // Core and its parts used by ParseFile_Input_Uncompressed()
+    core& Core;
+    global& Global;
+    rawcooked& RAWcooked;
+
+    parse_info(core& Core_Source) : Core(Core_Source), Global(Core_Source.Global), RAWcooked(Core_Source.RAWcooked) {}
     bool ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFile, input& Input, size_t Files_Pos);
 };
 
 //---------------------------------------------------------------------------
-bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* InputInfo, bool OverrideCheckPadding = false)
+bool core::ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* InputInfo, bool OverrideCheckPadding)
 {
     // Init
     SingleFile.Actions = Global.Actions;
@@ -229,7 +210,7 @@ bool ParseFile_Input(input_base& SingleFile, filemap& FileMap, input_info* Input
 }
 
 //---------------------------------------------------------------------------
-bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First)
+bool core::ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, size_t HeaderSize, const directory* Dir, size_t i, const sequence_format* First, metadata* Metadata)
 {
     const auto& Name = RemovedFiles[i].FileName;
     if (input::OpenInput(FileMap, Name, RemovedFiles[i].FileSize, &Global.Errors, Global.Edits_Enabled, HeaderSize, Dir)) {
@@ -246,6 +227,7 @@ bool ParseFile_AdditionalInput(input_base_uncompressed& S, filemap& FileMap, con
     if (ParseFile_Input(S, FileMap, nullptr, OverrideCheckPadding)) {
         return true;
     }
+    Metadata_Add(Metadata, S, i); // After the edit of the file, done at the end of its parsing
     if (First && input::CheckFormat(*First, S, &Global.Errors)) {
         return true;
     }
@@ -259,7 +241,7 @@ struct worker_data {
     filemap FileMap;
     input_base_uncompressed* Parser;
 };
-bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding)
+bool core::ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& FileMap, const vector<FileEntry>& RemovedFiles, bool OverrideCheckPadding, metadata* Metadata)
 {
     // Edit only: only the beginning of the files is needed (hash and padding bits check read the whole files sequentially)
     auto EditOnly = Global.Edits_Enabled && !Global.Actions[Action_Encode] && !Global.Actions[Action_Hash] && !Global.Actions[Action_Conch] && !Global.Actions[Action_CheckPadding] && !OverrideCheckPadding;
@@ -300,7 +282,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
         atomic<size_t> nextIndex{ 1 };
         atomic<bool> AnyError{ false };
         atomic<bool> HashFlush{ false };
-        auto Work = [&nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
+        auto Work = [this, &nextIndex, numFiles, &RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, First, Metadata, &AnyError, &HashFlush](input_base_uncompressed& Parser, filemap& Worker_FileMap) {
             for (;;) {
                 auto i = nextIndex.fetch_add(1, memory_order_relaxed);
                 if (i >= numFiles || (AnyError && !Global.Edits_Enabled)) { // Stop at the first error as with 1 thread, except for the edit (the next files are also edited)
@@ -309,7 +291,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
                         input_base::Hash_Batch_Flush(true);
                     break;
                 }
-                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
+                if (ParseFile_AdditionalInput(Parser, Worker_FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First, Metadata)) {
                     AnyError = true;
                     if (Parser.RAWcooked)
                         Parser.RAWcooked->Abort(); // The reversibility data of this file may never be written (e.g. file which can not be opened, header not supported), the next files must not wait for it
@@ -354,7 +336,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
 
     auto AnyError = false;
     for (size_t i = 1; i < RemovedFiles.size(); i++) {
-        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First)) {
+        if (ParseFile_AdditionalInput(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, HeaderSize, Dir, i, First, Metadata)) {
             if (!Global.Edits_Enabled)
                 return true;
             AnyError = true; // Edit: the next files are also edited, as with several threads
@@ -365,7 +347,7 @@ bool ParseFile_AdditionalInputs(input_base_uncompressed& SingleFile, filemap& Fi
 
 //---------------------------------------------------------------------------
 // File of a sequence as input without --file, the sequence is not handled as a whole: refused, true if refused
-static bool IsFileNotAccepted(bool IsNotSequence)
+static bool IsFileNotAccepted(global& Global, bool IsNotSequence)
 {
     if (!Global.HasAtLeastOneFile || Global.AcceptFiles || IsNotSequence)
         return false;
@@ -378,7 +360,7 @@ static bool IsFileNotAccepted(bool IsNotSequence)
 // Edits of a track, true if they are refused (the messages are shown)
 // Images in a format which can not be edited are an error
 // Another track which can not be edited (e.g. the audio of a package) is left as it is, the edits are for the other tracks
-static bool Edits_Track(input_base_uncompressed& SingleFile)
+static bool Edits_Track(global& Global, input_base_uncompressed& SingleFile)
 {
     if (SingleFile.IsEditable())
     {
@@ -405,7 +387,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
 
     // Init
     RAWcooked.Mode = &Global.Mode;
-    RAWcooked.Ask_Callback = Ask_Callback;
+    RAWcooked.Ask_Callback = Global.Ask_Callback;
     RAWcooked.ProgressIndicator_IsEnd = &Global.ProgressIndicator_IsEnd;
     RAWcooked.ProgressIndicator_IsPaused = &Global.ProgressIndicator_IsPaused;
     RAWcooked.Errors = &Global.Errors;
@@ -416,7 +398,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
     FormatPath(SingleFile.FileName);
 
     // Parse
-    if (ParseFile_Input((input_base&)SingleFile, FileMap, &InputInfo, !Global.Actions[Action_CheckPaddingOptionIsSet]))
+    if (Core.ParseFile_Input((input_base&)SingleFile, FileMap, &InputInfo, !Global.Actions[Action_CheckPaddingOptionIsSet]))
         return true;
     if (!SingleFile.IsDetected() || SingleFile.ParserCode >= Uncompressed_Max)
         return false;
@@ -533,11 +515,21 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
         }
     }
 
+    // Summary of the metadata of the files of the track
+    if (Global.Metadata_Enabled)
+    {
+        vector<metadata_field> Fields;
+        SingleFile.ListMetadata(Fields);
+        Metadata = make_shared<metadata>();
+        Metadata->Init(move(Fields));
+    }
+
     if (RemovedFiles.empty())
     {
-        if (Global.Edits_Enabled && Edits_Track(SingleFile))
+        if (Global.Edits_Enabled && (Global.Edits_FileName.empty() || *Name == Global.Edits_FileName) && Edits_Track(Global, SingleFile)) // Edits may be for one track only, the other tracks are not edited
             return true;
         RemovedFiles.push_back(Input.Files[Files_Pos]);
+        Metadata_Add(Metadata.get(), SingleFile, 0);
     }
     else
     {
@@ -575,18 +567,21 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
             }
         }
 
-        if (Global.Edits_Enabled && IsFileNotAccepted(SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI))
+        if (Global.Edits_Enabled && IsFileNotAccepted(Global, SingleFile.ParserCode == Parser_WAV || SingleFile.ParserCode == Parser_AIFF || SingleFile.ParserCode == Parser_AVI))
             return true; // Before the edit of the files, else the files are edited even if the command is refused
-        if (Global.Edits_Enabled && Edits_Track(SingleFile))
+        if (Global.Edits_Enabled && (Global.Edits_FileName.empty() || *Name == Global.Edits_FileName) && Edits_Track(Global, SingleFile)) // Edits may be for one track only, the other tracks are not edited
             return true;
         auto FirstFile_NotEdited = Global.Edits_Enabled && SingleFile.HasErrors(); // The next files are also edited, as after another file which can not be edited
+        Metadata_Add(Metadata.get(), SingleFile, 0); // After the edit of the first file, and before the other files (its parser and its file map are reused for them)
 
         Global.ProgressIndicator_Start(Input.Files.size() + RemovedFiles.size() - 1);
         SingleFile.InputInfo->FrameCount = RemovedFiles.size();
-        if (ParseFile_AdditionalInputs(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding) || FirstFile_NotEdited) {
+        if (Core.ParseFile_AdditionalInputs(SingleFile, FileMap, RemovedFiles, OverrideCheckPadding, Metadata.get()) || FirstFile_NotEdited) {
             return true;
         }
     }
+    if (Metadata)
+        Metadata->Finish();
 
     // License
     if (!Problem && Global.Actions[Action_Encode])
@@ -624,7 +619,7 @@ bool parse_info::ParseFile_Input_Uncompressed(input_base_uncompressed& SingleFil
 }
 
 //---------------------------------------------------------------------------
-int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
+int core::ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 {
     // Init
     RAWcooked.ResetTrack();
@@ -695,7 +690,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
     }
 
     // End
-    if (IsFileNotAccepted(IsNotSequence))
+    if (IsFileNotAccepted(Global, IsNotSequence))
         return 1;
     if (ParseInfo.IsDetected)
     {
@@ -711,6 +706,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
         }
         Stream.Flavor = ParseInfo.Flavor;
         Stream.Problem = ParseInfo.Problem;
+        Stream.Metadata = ParseInfo.Metadata;
 
         Stream.StreamCountMinus1 = ParseInfo.StreamCountMinus1;
         Stream.IsContainer = ParseInfo.IsContainer;
@@ -765,7 +761,7 @@ int ParseFile_Uncompressed(parse_info& ParseInfo, size_t Files_Pos)
 }
 
 //---------------------------------------------------------------------------
-int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
+int core::ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
 {
     // Init
     string OutputDirectoryName;
@@ -807,12 +803,12 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
         else
             Thread_Pool = nullptr;
 
-        matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Ask_Callback, Thread_Pool, &Global.Errors);
+        matroska* M = new matroska(OutputDirectoryName, &Global.Mode, Global.Ask_Callback, Thread_Pool, &Global.Errors);
         M->Quiet = Global.Quiet;
         M->ProgressIndicator_Summary = !Global.ShowStats; // Speed in the stats
         M->ProgressIndicator_Shares = Global.ShowStats;
         M->NoOutputCheck = NoOutputCheck;
-        M->Decoders_Check = [] { return Global.CheckFFmpeg(true); }; // FFmpeg libraries for the FFmpeg decoders, before the decoding
+        M->Decoders_Check = [this] { return Global.CheckFFmpeg(true); }; // FFmpeg libraries for the FFmpeg decoders, before the decoding
         if (FileOpenName)
             M->FileName = *FileOpenName;
         M->OpenStyle = Global.FileOpenMethod;
@@ -987,10 +983,10 @@ int ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName)
 }
 
 //---------------------------------------------------------------------------
-int ParseFile(size_t Files_Pos)
+int core::ParseFile(size_t Files_Pos)
 {
     // Init
-    parse_info ParseInfo;
+    parse_info ParseInfo(*this);
     ParseInfo.Name = &Input.Files[Files_Pos].FileName;
 
     // Open file
@@ -1028,17 +1024,23 @@ int ParseFile(size_t Files_Pos)
 }
 
 //---------------------------------------------------------------------------
-int main(int argc, const char* argv[])
+int core::Run(const char* argv[], int argc)
 {
-    // Global configuration
-    Global.Ask_Callback = Ask_Callback;
+    // Nothing is kept from a previous run in the same process, except the FFmpeg libraries if they are loaded
+    FFmpeg_Library_Reset(); // Before the command line, which may provide a library
 
     // Manage command line
     if (int Value = Global.ManageCommandLine(argv, argc))
         return Value;
     VulkanDecoders_Devices = Global.VulkanDecoders;
-    if (Global.ShowStats)
-        DecodersStats.Vulkan_Selected = Stats_VulkanSelected;
+
+    // Statistics and Vulkan device not found of a previous run are not kept either
+    {
+        lock_guard<mutex> Lock(Stats_Mutex);
+        Stats_Vulkan_Devices.clear();
+    }
+    DecodersStats.Vulkan_Selected = Global.ShowStats ? Stats_VulkanSelected : nullptr;
+    FFmpeg_Library_SetVulkanMissing((size_t)-1);
 
     // Analyze input
     if (int Value = Input.AnalyzeInputs(Global))
@@ -1079,6 +1081,13 @@ int main(int argc, const char* argv[])
 
     // Progress indicator
     Global.ProgressIndicator_Stop();
+
+    // Edits for one track only: not a success if the track is not found (e.g. the files changed since the track was listed), nothing is edited
+    if (!Value && Global.Edits_Enabled && !Global.Edits_FileName.empty() && !Global.Edits_Accepted && Global.Edits_NotEditable.none())
+    {
+        cerr << "Error: track to edit not found (first file " << Global.Edits_FileName << ")." << endl;
+        Value = 1;
+    }
 
     // Info
     if (!Global.Quiet)
@@ -1236,10 +1245,7 @@ int main(int argc, const char* argv[])
             if ((!Value && Global.Actions[Action_Encode] && !Output.Streams.empty())
                 || (Global.Actions[Action_Check] && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty()))
             {
-                cerr << "Do you want to continue despite warnings? [y/N] ";
-                string Result;
-                getline(cin, Result);
-                if (!(!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y')))
+                if (!Global.Question_Callback || !Global.Question_Callback("Do you want to continue despite warnings?"))
                     Value = 1;
             }
         }
@@ -1340,7 +1346,7 @@ int main(int argc, const char* argv[])
     // Check result
     if (!Value && !Global.DisplayCommand && (!Global.Actions[Action_CheckOptionIsSet] || Global.Actions[Action_Check]) && !Global.Errors.HasErrors() && !Global.OutputFileName.empty() && !Output.Streams.empty())
     {
-        parse_info ParseInfo;
+        parse_info ParseInfo(*this);
         Value = ParseInfo.FileMap.Open_ReadMode(Global.OutputFileName);
         if (!Value)
         {
@@ -1404,10 +1410,7 @@ int main(int argc, const char* argv[])
                 bool WriteLog = false;
                 if (Global.Mode != AlwaysYes)
                 {
-                    cerr << "File '" << Global.LogFileName << "' already exists. Overwrite? [y/N] ";
-                    string Result;
-                    getline(cin, Result);
-                    if (!Result.empty() && (Result[0] == 'Y' || Result[0] == 'y'))
+                    if (Global.Question_Callback && Global.Question_Callback("File '" + Global.LogFileName + "' already exists. Overwrite?"))
                         WriteLog = true;
                     else
                         Value = 1;

@@ -19,6 +19,7 @@
 #include <atomic>
 #include <bitset>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -53,7 +54,7 @@ public:
 
     bool                        Quiet = false;
     bool                        NoOutputCheck = false;
-    bool                        (*Decoders_Check)() = nullptr; // Called when the format is detected, before any decoding, and before each block (a decoder may know later that it is not available e.g. a Vulkan device), parsing is stopped if it returns false
+    std::function<bool()>       Decoders_Check; // Called when the format is detected, before any decoding, and before each block (a decoder may know later that it is not available e.g. a Vulkan device), parsing is stopped if it returns false
     bool                        Decoders_AreMissing = false;
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
@@ -216,6 +217,7 @@ private:
         Compat_18_10_1,
     };
     reversibility_compat        ReversibilityCompat = Compat_Modern;
+    bool                        IsRejected = false; // Reversibility data is not supported, parsing is stopped and there is no final check
     ThreadPool*                 FramesPool = nullptr;
     frame_writer*               FrameWriter_Template;
     bool                        RAWcooked_FileNameIsValid;
@@ -234,6 +236,7 @@ private:
     void                        Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type);
     void                        StoreFromCurrentToEndOfElement(buffer& Output);
     void                        RejectIncompatibleVersions();
+    void                        Reject(matroska_issue::undecodable::code Code);
     bool                        UnknownSize(uint64_t Name, uint64_t Size);
     void                        End();
     input_base_uncompressed_compound* InitOutput_Find();

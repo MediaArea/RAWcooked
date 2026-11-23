@@ -540,13 +540,32 @@ static bool Library_Load(string& Error)
 #endif //RAWCOOKED_FFMPEG_DYNAMIC
 
 //---------------------------------------------------------------------------
+static mutex Load_Mutex;
+static bool Load_IsDone = false;
+static bool Load_Result = false;
+static string Load_Error;
+
+//---------------------------------------------------------------------------
 bool FFmpeg_Library_Load(string* Error)
 {
-    static string Load_Error;
-    static const bool Loaded = [] { TRACE_SCOPE("FFmpeg load"); return Library_Load(Load_Error); }(); // Once, thread safe
-    if (!Loaded && Error)
+    lock_guard<mutex> Lock(Load_Mutex);
+    if (!Load_IsDone) // Once, thread safe
+    {
+        TRACE_SCOPE("FFmpeg load");
+        Load_Result = Library_Load(Load_Error);
+        Load_IsDone = true;
+    }
+    if (!Load_Result && Error)
         *Error = Load_Error;
-    return Loaded;
+    return Load_Result;
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_Reset()
+{
+    lock_guard<mutex> Lock(Load_Mutex);
+    Library_Path_Provided.clear();
+    Load_IsDone = Load_Result; // A failed load is not kept, loaded libraries can not be replaced
 }
 
 //***************************************************************************
@@ -681,11 +700,12 @@ static vulkan_device_info Vulkan_Info(vulkan_get_physical_device_properties GetP
 // Vulkan devices, in the order of their index for FFmpeg, listed with the instance of the default device (empty if Vulkan is not available), this device is kept for the decoder (device creation is long)
 static const vector<vulkan_device_info>& Vulkan_Detect()
 {
+    static const vector<vulkan_device_info> None;
+    if (!FFmpeg_Library_Load())
+        return None; // Not kept, the libraries may be loaded later (see FFmpeg_Library_Reset())
     static const vector<vulkan_device_info> Devices = []() -> vector<vulkan_device_info> // Once, thread safe
     {
         vector<vulkan_device_info> Result;
-        if (!FFmpeg_Library_Load())
-            return Result;
 
         // Default device, same as the one created by the decoder
         auto Device = Vulkan_Device_Create(0);
@@ -717,10 +737,11 @@ static const vector<vulkan_device_info>& Vulkan_Detect()
 //---------------------------------------------------------------------------
 vector<size_t> FFmpeg_Library_Vulkan(bool AllowCPU)
 {
+    if (!FFmpeg_Library_Load())
+        return vector<size_t>(); // Nothing is done once without the libraries, they may be loaded later (see FFmpeg_Library_Reset())
     static const bool Quiet = [] // Once, before the detection
     {
-        if (FFmpeg_Library_Load())
-            ffmpeg::av_log_set_level(AV_LOG_QUIET); // No message if Vulkan is not available, or if the decoding fails later (the caller falls back to our decoder)
+        ffmpeg::av_log_set_level(AV_LOG_QUIET); // No message if Vulkan is not available, or if the decoding fails later (the caller falls back to our decoder)
         return true;
     }();
     (void)Quiet;
@@ -802,10 +823,20 @@ bool FFmpeg_Library_VulkanIsGPU(AVBufferRef* Device, uint32_t* SMCount, string* 
 
 //---------------------------------------------------------------------------
 static atomic<size_t> Vulkan_Missing((size_t)-1);
+static mutex Vulkan_SetupFailed_Mutex;
+static bool Vulkan_SetupFailed = false;
+static string Vulkan_SetupFailed_Name;
+static bool Vulkan_SetupFailed_IsGPU = true;
+static bool Vulkan_SetupFailed_Unsupported = false;
 
 //---------------------------------------------------------------------------
 void FFmpeg_Library_SetVulkanMissing(size_t Device)
 {
+    if (Device == (size_t)-1)
+    {
+        lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+        Vulkan_SetupFailed = false; // Reason of a previous run in the same process
+    }
     Vulkan_Missing = Device;
 }
 
@@ -814,13 +845,6 @@ size_t FFmpeg_Library_VulkanMissing()
 {
     return Vulkan_Missing;
 }
-
-//---------------------------------------------------------------------------
-static mutex Vulkan_SetupFailed_Mutex;
-static bool Vulkan_SetupFailed = false;
-static string Vulkan_SetupFailed_Name;
-static bool Vulkan_SetupFailed_IsGPU = true;
-static bool Vulkan_SetupFailed_Unsupported = false;
 
 //---------------------------------------------------------------------------
 void FFmpeg_Library_SetVulkanSetupFailed(size_t Device, const string& Name, bool IsGPU, bool Unsupported)
@@ -857,6 +881,12 @@ bool FFmpeg_Library_Load(std::string* Error)
     if (Error)
         *Error = "FFmpeg is not supported in this build";
     return false;
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_Reset()
+{
+    Library_Path_Provided.clear();
 }
 
 //---------------------------------------------------------------------------

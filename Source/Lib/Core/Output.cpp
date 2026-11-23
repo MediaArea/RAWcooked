@@ -5,7 +5,7 @@
  */
 
 //---------------------------------------------------------------------------
-#include "CLI/Output.h"
+#include "Lib/Core/Output.h"
 #include "Lib/Compressed/RAWcooked/IntermediateWrite.h"
 #include <cmath>
 #include <iostream>

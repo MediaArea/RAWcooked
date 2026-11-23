@@ -10,7 +10,7 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-#include "CLI/Config.h"
+#include "Lib/Core/Config.h"
 #include "Lib/Common/Common.h"
 #include "Lib/Uncompressed/HashSum/HashSum.h"
 #include "Lib/License/License.h"
@@ -28,41 +28,48 @@ using namespace std;
 class global
 {
 public:
+    // Constructor/Destructor
+                                ~global();
+
     // Options
     map<string, string>         VideoInputOptions;
     map<string, string>         OutputOptions;
     vector<string>              MoreOutputOptions;
     map<string, string>         Edits;
-    bool                        Edits_Enabled;
-    bool                        Edits_Help;
-    size_t                      IoThreads;
-    size_t                      AttachmentMaxSize;
+    bool                        Edits_Enabled = false;
+    bool                        Edits_Help = false;
+    size_t                      IoThreads = 0;
+    size_t                      AttachmentMaxSize = (size_t)-1;
     string                      rawcooked_reversibility_FileName;
     string                      OutputFileName;
     string                      FrameMd5FileName;
     string                      LogFileName;
     string                      BinName;
     string                      LicenseKey;
-    uint64_t                    SubLicenseId;
-    uint64_t                    SubLicenseDur;
-    filemap::method             FileOpenMethod;
-    bool                        IgnoreLicenseKey;
-    bool                        ShowLicenseKey;
-    bool                        StoreLicenseKey;
-    bool                        DisplayCommand;
-    bool                        AcceptFiles;
-    bool                        FileOption_IsProvided;
-    bool                        HasAtLeastOneDir;
-    bool                        HasAtLeastOneFile;
-    bool                        OutputFileName_IsProvided;
-    bool                        Decoder_IsProvided;
-    bool                        Quiet;
-    bool                        ShowStats;
+    uint64_t                    SubLicenseId = 0;
+    uint64_t                    SubLicenseDur = 1;
+    filemap::method             FileOpenMethod = filemap::method::mmap;
+    bool                        IgnoreLicenseKey = false;
+    bool                        ShowLicenseKey = false;
+    bool                        StoreLicenseKey = false;
+    bool                        DisplayCommand = false;
+    bool                        AcceptFiles = false;
+    bool                        FileOption_IsProvided = false;
+    bool                        HasAtLeastOneDir = false;
+    bool                        HasAtLeastOneFile = false;
+    bool                        OutputFileName_IsProvided = false;
+    bool                        Decoder_IsProvided = false;
+    bool                        Quiet = false;
+    bool                        ShowStats = false;
     bitset<Action_Max>          Actions;
     vector<size_t>              VulkanDecoders; // Index of the Vulkan device of each vulkan decoder
 
+    // Options not from the command line
+    bool                        Metadata_Enabled = false; // The summary of the metadata of each track is computed (Output.Streams[].Metadata)
+    string                      Edits_FileName; // If not empty, edits are only for the track whose first file has this name (as in Output.Streams[].FileName), the run fails if no track takes them
+
     // Intermediate info
-    size_t                      Path_Pos_Global;
+    size_t                      Path_Pos_Global = 0;
     vector<string>              Inputs;
     set<int>                    LogFile_IgnorePos;
     license                     License;
@@ -72,6 +79,7 @@ public:
     bool                        Edits_Accepted = false; // A track accepted the edits
     bitset<Parser_Max>          Edits_NotEditable; // Formats of the tracks which are not images and can not be edited, such tracks are left as they are
     ask_callback                Ask_Callback = nullptr;
+    question_callback           Question_Callback = nullptr;
     string*                     Log = nullptr;
 
     // Conformance check intermediary info
@@ -134,9 +142,9 @@ public:
 
 private:
     // Progress indicator
-    thread*                     ProgressIndicator_Thread;
-    atomic<size_t>              ProgressIndicator_Current;
-    size_t                      ProgressIndicator_Total;
+    thread*                     ProgressIndicator_Thread = nullptr;
+    atomic<size_t>              ProgressIndicator_Current{ 0 };
+    size_t                      ProgressIndicator_Total = 0;
     mutex                       ProgressIndicator_Mutex; // The end is notified under it, the thread tests the end under it before a wait (else it could start a wait after the notification)
 
     // FFmpeg binary
