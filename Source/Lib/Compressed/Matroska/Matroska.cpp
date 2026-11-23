@@ -1592,25 +1592,13 @@ bool track_info::ParseDecodedFrame(const buffer& BeforeData, const buffer& After
 //---------------------------------------------------------------------------
 void matroska::Uncompress(buffer& Output)
 {
-    uint64_t RealBuffer_Size = Get_EB();
-    if (RealBuffer_Size)
+    // Same bounded reader as the reversibility data (no allocation above the maximal deflate ratio, no exception), empty if not readable
+    if (Buffer_Offset > Levels[Level].Offset_End || Levels[Level].Offset_End > Buffer.Size())
     {
-        Output.Create(RealBuffer_Size);
-
-        uLongf t = (uLongf)RealBuffer_Size;
-        if (uncompress((Bytef*)Output.Data(), &t, (const Bytef*)Buffer.Data() + Buffer_Offset, (uLong)(Levels[Level].Offset_End - Buffer_Offset))<0)
-        {
-            Output.Clear();
-        }
-        if (t != RealBuffer_Size)
-        {
-            Output.Clear();
-        }
+        Output.Clear();
+        return;
     }
-    else
-    {
-        StoreFromCurrentToEndOfElement(Output);
-    }
+    UncompressBounded(Buffer.Data() + Buffer_Offset, (size_t)(Levels[Level].Offset_End - Buffer_Offset), Output);
 }
 
 //---------------------------------------------------------------------------

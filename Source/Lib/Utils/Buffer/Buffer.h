@@ -163,7 +163,8 @@ public:
     void Create(const uint8_t* NewData, size_t NewSize)
     {
         Create(NewSize);
-        memcpy(Data(), NewData, Size());
+        if (Size()) // No null pointer to memcpy() (empty source)
+            memcpy(Data(), NewData, Size());
     }
     void Create(const buffer_base& Buffer_Source)
     {
@@ -179,7 +180,8 @@ public:
         auto SizeToCopy = Buffer_Source.Size();
         if (SizeToCopy > SizeToCopy_Max)
             SizeToCopy = SizeToCopy_Max;
-        memcpy(Data() + Offset, Buffer_Source.Data(), SizeToCopy);
+        if (SizeToCopy) // No null pointer to memcpy() (empty source or destination)
+            memcpy(Data() + Offset, Buffer_Source.Data(), SizeToCopy);
         return SizeToCopy;
     }
     size_t CopyLimit(const buffer_base& Buffer_Source)
@@ -189,7 +191,8 @@ public:
 
     void SetZero()
     {
-        memset(Data(), 0, Size());
+        if (Size()) // No null pointer to memset() (empty buffer)
+            memset(Data(), 0, Size());
     }
 
     size_t SetZero(size_t Offset, size_t Count)
@@ -200,7 +203,8 @@ public:
         SizeToZero -= Offset;
         if (SizeToZero > Count)
             SizeToZero = Count;
-        memset(Data() + Offset, 0, SizeToZero);
+        if (SizeToZero) // No null pointer to memset() (empty buffer)
+            memset(Data() + Offset, 0, SizeToZero);
         return SizeToZero;
     }
 
