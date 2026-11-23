@@ -185,6 +185,7 @@ bool raw_frame::Process()
 {
     MergeIn();
     In_.Clear();
+    ProcessedSize += FrameSize();
 
     if (FrameProcess)
         FrameProcess->FrameCall(this);

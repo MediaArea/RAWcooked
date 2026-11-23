@@ -250,6 +250,7 @@ void aiff::ParseBuffer()
     SetDetected();
 
     Flavor = (decltype(Flavor))-1;
+    DataSize = (uint64_t)-1;
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer.Size();
     Levels[0].SubElements = &aiff::SubElements__;
@@ -286,6 +287,8 @@ void aiff::ParseBuffer()
             Name |= Get_B4();
             Size -= 4;
         }
+        if (Level == 2 && Levels[1].SubElements == &aiff::SubElements_AIFF && Name == 0x53534E44 && DataSize == (uint64_t)-1 && Size >= 8) // "SSND"
+            DataSize = Size - 8; // As declared (without offset and blockSize), the chunk may be truncated if only the header is parsed
         if (Buffer_Offset + Size > End)
         {
             if (!Actions[Action_AcceptTruncated])

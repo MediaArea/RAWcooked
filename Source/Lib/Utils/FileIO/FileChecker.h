@@ -33,6 +33,7 @@ namespace filechecker_issue
             Frame_Source_Missing,
             Frame_Source_Extra,
             Format_Undetected,
+            Audio_Size,
             Max
         };
 

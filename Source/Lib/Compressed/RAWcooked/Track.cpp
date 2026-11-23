@@ -130,6 +130,8 @@ bool track_info::Init(const uint8_t* BaseData)
             auto Wrapper2 = (audio_wrapper*)Wrapper;
             auto Parser2 = (input_base_uncompressed_audio*)Parser;
             Wrapper2->SetConfig(Parser2->BitDepth(), Parser2->Sign(), Parser2->Endianness());
+            if (ReversibilityData && ReversibilityData->Unique())
+                Audio_DataSize = Parser2->DataSize; // Checked at the end against the size of the decoded data
             delete Parser; // No more used
             Parser = nullptr;
         }
@@ -579,6 +581,15 @@ void track_info::End(size_t i)
         RawFrame->SetIn(buffer_or_view());
         FrameWriter->Mode[frame_writer::IsNotEnd] = false;
         RawFrame->Process();
+
+        // Size of the decoded audio data, else missing or extra blocks (e.g. lost during a remux) would give a shorter or longer file without error
+        if (Audio_DataSize != (uint64_t)-1 && RawFrame->ProcessedSize != Audio_DataSize && Errors)
+        {
+            string OutputInfo = ReversibilityData->Data(reversibility::element::FileName);
+            FormatPath(OutputInfo);
+            OutputInfo += " (" + to_string(RawFrame->ProcessedSize) + " bytes instead of " + to_string(Audio_DataSize) + ')';
+            Errors->Error(IO_FileChecker, error::type::Undecodable, (error::generic::code)filechecker_issue::undecodable::Audio_Size, OutputInfo);
+        }
     }
 
     // Checks

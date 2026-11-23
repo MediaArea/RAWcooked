@@ -283,6 +283,7 @@ void wav::ParseBuffer()
     SetDetected();
 
     Flavor = (decltype(Flavor))-1;
+    DataSize = (uint64_t)-1;
     Buffer_Offset = 0;
     Levels[0].Offset_End = Buffer.Size();
     Levels[0].SubElements = &wav::SubElements__;
@@ -338,6 +339,8 @@ void wav::ParseBuffer()
                     Undecodable(undecodable::ds64_dataSize);
                 Size = ds64_dataSize;
             }
+            if (Levels[1].SubElements == &wav::SubElements_WAVE && Name == 0x64617461 && !DataIsParsed) // "data"
+                DataSize = Size; // As declared, the chunk may be truncated if only the header is parsed
         }
         if (Size > End - Buffer_Offset)
         {

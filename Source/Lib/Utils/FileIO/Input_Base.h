@@ -258,6 +258,9 @@ public:
     virtual uint8_t             BitDepth() = 0;
     virtual sign                Sign() = 0;
     virtual endianness          Endianness() = 0;
+
+    // Size of the audio data declared in the file header, (uint64_t)-1 if unknown
+    uint64_t                    DataSize = (uint64_t)-1;
 };
 
 struct file_output
