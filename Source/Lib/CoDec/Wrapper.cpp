@@ -336,9 +336,12 @@ void flac_wrapper::FLAC_Metadata(uint8_t channels, uint8_t bits_per_sample)
 //---------------------------------------------------------------------------
 void flac_wrapper::FLAC_Write(const uint32_t* const buffer[], size_t blocksize)
 {
+    // Buffer big enough for this block (up to 65535 samples, the size of previous blocks is not a limit)
     auto& Buffer = RawFrame->Buffer();
-    if (!Buffer.Data())
-        Buffer.Create(16384 / 8 * OutputBitDepth * channels_); // 16384 is the max blocksize in spec
+    size_t BytesPerSample = OutputBitDepth >= 24 ? 3 : (OutputBitDepth / 8); // Bytes written per sample below
+    auto Buffer_Size = blocksize * channels_ * BytesPerSample;
+    if (Buffer.Size() < Buffer_Size)
+        Buffer.Create(Buffer_Size); // Content of the previous block is not kept
     auto Data = Buffer.DataForModification();
 
     // Converting libFLAC output to WAV style

@@ -81,7 +81,7 @@ man1_MANS = ../../../Source/CLI/rawcooked.1
 
 AM_TESTS_FD_REDIRECT = 9>&2
 
-TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/vulkan.sh test/decoders.sh test/avi.sh test/psd.sh test/pcm.sh test/reversibilityfile.sh test/paddingbits.sh test/check.sh test/legacy.sh test/multiple.sh test/manytracks.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/gaps.sh test/sequenceformat.sh test/longpath.sh test/filenames.sh test/slices.sh test/framerate.sh test/hash.sh test/notfound.sh test/version.sh test/audiosize.sh test/noblock.sh
+TESTS = test/test1.sh test/test1b.sh test/test2.sh test/test3.sh test/vulkan.sh test/decoders.sh test/avi.sh test/psd.sh test/pcm.sh test/reversibilityfile.sh test/paddingbits.sh test/check.sh test/legacy.sh test/multiple.sh test/manytracks.sh test/valgrind.sh test/overwrite.sh test/increasingdigitcount.sh test/gaps.sh test/sequenceformat.sh test/longpath.sh test/filenames.sh test/slices.sh test/framerate.sh test/hash.sh test/notfound.sh test/version.sh test/audiosize.sh test/noblock.sh test/flacblocksize.sh
 
 TESTING_DIR = test/TestingFiles
 
