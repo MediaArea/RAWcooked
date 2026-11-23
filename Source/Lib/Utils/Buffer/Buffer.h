@@ -212,17 +212,20 @@ public:
     {
         if (!NewSize)
         {
-            ClearBase();
+            Clear();
             return;
         }
-        if (NewSize < Size())
+        if (NewSize <= Size())
         {
             AssignBase(Data(), NewSize); // We just change the Size value, no shrink of memory
             return;
         }
+        auto OldBuffer = Data();
         auto NewBuffer = new uint8_t[NewSize];
-        memcpy(NewBuffer, Data(), Size());
+        if (Size()) // No null pointer to memcpy() (empty source)
+            memcpy(NewBuffer, OldBuffer, Size());
         AssignBase(NewBuffer, NewSize);
+        delete[] OldBuffer;
     }
 
     void Clear()
@@ -384,22 +387,17 @@ public:
         AssignBase(NewData, NewSize);
     }
 
-    void CopyCut(const uint8_t* NewData, size_t NewSize)
-    {
-        Resize(NewSize);
-        memcpy(DataForModification(), NewData, NewSize);
-    }
-
     void Resize(size_t NewSize)
     {
-        if (NewSize < Size())
+        if (NewSize <= Size())
         {
             AssignBase(Data(), NewSize); // We just change the Size value, no shrink of memory
             return;
         }
         auto OldBuffer = Data();
         auto NewBuffer = new uint8_t[NewSize];
-        memcpy(NewBuffer, OldBuffer, NewSize);
+        if (Size()) // Only the old content, no null pointer to memcpy() (empty source)
+            memcpy(NewBuffer, OldBuffer, Size());
         AssignBase(NewBuffer, NewSize);
         if (IsOwned_)
             delete[] OldBuffer;

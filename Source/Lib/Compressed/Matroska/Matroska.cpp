@@ -263,6 +263,8 @@ matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callb
 matroska::~matroska()
 {
     Shutdown();
+    if (FileMap2 && FileMap != FileMap2)
+        delete FileMap; // File map of the clusters with a buffered read, see Segment_Cluster()
     delete Hashes_FromRAWcooked;
     delete Hashes_FromAttachments;
     delete FrameWriter_Template;
@@ -485,7 +487,7 @@ void matroska::ParseBuffer()
             TRACE_SCOPE("Remap");
             FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
-            if (OpenStyle == filemap::method::mmap)
+            if (!FileMap2 || FileMap == FileMap2) // Reversibility data is in this file map (the file map of the clusters is another one with a buffered read, see Segment_Cluster())
             {
             if (ReversibilityData)
                 ReversibilityData->SetBaseData(Buffer.Data());
@@ -518,6 +520,11 @@ void matroska::ParseBuffer()
         // Progress indicator
         ProgressIndicator_Offset.store(Buffer_Offset, std::memory_order_relaxed);
     }
+
+    // No Cluster (e.g. all blocks removed by a remux): same init as before the first block, so the parts of the files stored in the reversibility data are output (e.g. the header of a WAV file) and the missing content is detected
+    // The reversibility data is still in the buffer: the whole file is mapped until the first Cluster (the buffered read of --io starts there)
+    if (!Decoding_IsInit && !RAWcooked_LibraryName.empty() && !Decoders_AreMissing && !IsRejected && !Shutdown_IsDone)
+        Decoding_Init();
 
     // End of the outputs of frames decoded in other threads, so all errors are known at the end of the parsing
     for (auto TrackInfo_Current : TrackInfo)
@@ -1066,6 +1073,34 @@ void matroska::Segment_Cluster()
 
     IsList = true;
 
+    if (Decoding_Init()) // No file parsing requested, we stop now
+    {
+        Buffer_Offset = Buffer.Size();
+        return;
+    }
+
+    Actions[Action_Hash] = false;
+
+    if (!FileMap2)
+    {
+        // Clusters in another file map with a buffered read (the reversibility data stays in the memory map of the whole file), deleted by the destructor
+        FileMap2 = FileMap;
+        if (OpenStyle != filemap::method::mmap && !FileName.empty())
+        {
+            FileMap = new filemap;
+            FileMap->Open_ReadMode(FileName, 0, OpenStyle, 0, 256 * 1024 * 1024);
+            Buffer = *FileMap;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
+// Init of the outputs and checks, before the first block, or at the end of the parsing if there is no Cluster
+// Returns true if no file parsing is requested
+bool matroska::Decoding_Init()
+{
+    Decoding_IsInit = true;
+
     // Attachments with a size of 0 and a name not in UTF-8, names of all attachments are known
     for (auto& Name : AttachedFile_FileNames_Empty)
     {
@@ -1106,11 +1141,8 @@ void matroska::Segment_Cluster()
         }
     }
 
-    if (!Actions[Action_Decode] && !Actions[Action_Check] && !Actions[Action_Conch]) // No file parsing requested, we stop now
-    {
-        Buffer_Offset = Buffer.Size();
-        return;
-    }
+    if (!Actions[Action_Decode] && !Actions[Action_Check] && !Actions[Action_Conch])
+        return true;
 
     // Init
     for (const auto& TrackInfo_Current : TrackInfo)
@@ -1119,18 +1151,7 @@ void matroska::Segment_Cluster()
     if (ReversibilityData && !FrameWriter_Template->Compound)
         InitOutput_Find();
 
-    Actions[Action_Hash] = false;
-
-    if (!FileMap2)
-    {
-        FileMap2 = FileMap;
-        if (OpenStyle != filemap::method::mmap && !FileName.empty())
-        {
-            FileMap = new filemap;
-            FileMap->Open_ReadMode(FileName, 0, OpenStyle, 0, 256 * 1024 * 1024);
-            Buffer = *FileMap;
-        }
-    }
+    return false;
 }
 
 //---------------------------------------------------------------------------

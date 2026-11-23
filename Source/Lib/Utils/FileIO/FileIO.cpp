@@ -460,7 +460,11 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             auto F = new ifstream(FileName, Flags);
             #endif //defined(_WIN32) || defined(_WINDOWS)
             if (!F->is_open())
+            {
+                delete F;
+                delete P;
                 return 1;
+            }
             auto ShallSeek = !FileSize || Begin;
             if (!FileSize)
             {
@@ -470,7 +474,11 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             {
                 F->seekg(Begin, F->beg);
                 if (!F->good())
+                {
+                    delete F;
+                    delete P;
                     return 1;
+                }
             }
             P->F.Ifstream = F;
             break;
@@ -483,7 +491,10 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             FILE* F = fopen(FileName, "rb");
             #endif //defined(_WIN32) || defined(_WINDOWS)
             if (!F)
+            {
+                delete P;
                 return 1;
+            }
             if (!FileSize)
             {
                 #if defined(_WIN32) || defined(_WINDOWS)
@@ -495,6 +506,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
                 #endif
                 {
                     fclose(F);
+                    delete P;
                     return 1;
                 }
                 FileSize = Fstat.st_size;
@@ -510,7 +522,10 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
             auto F = open(FileName, O_RDONLY);
             #endif //defined(_WIN32) || defined(_WINDOWS)
             if (F == -1)
+            {
+                delete P;
                 return 1;
+            }
             if (!FileSize)
             {
                 #if defined(_WIN32) || defined(_WINDOWS)
@@ -526,6 +541,7 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
                     #else
                     close(F);
                     #endif
+                    delete P;
                     return 1;
                 }
                 FileSize = Fstat.st_size;
@@ -538,7 +554,10 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
         {
             auto NewFile = CreateFileW(WideFileName(FileName).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
             if (NewFile == INVALID_HANDLE_VALUE)
+            {
+                delete P;
                 return 1;
+            }
             if (!FileSize)
             {
                 DWORD FileSizeHigh;
@@ -549,14 +568,22 @@ int filemap::Open_ReadMode(const char* FileName, uintmax_t FileSize, method NewS
                     FileSize = ((size_t)FileSizeHigh) << 32 | FileSizeLow;
                 }
                 else
+                {
+                    CloseHandle(NewFile);
+                    delete P;
                     return 1;
+                }
             }
             if (Begin)
             {
                 LARGE_INTEGER GoTo;
                 GoTo.QuadPart = Begin;
                 if (!SetFilePointerEx(NewFile, GoTo, nullptr, 0))
+                {
+                    CloseHandle(NewFile);
+                    delete P;
                     return 1;
+                }
                 P->Data_Shift = Begin;
             }
             P->F.Handle = NewFile;
@@ -1100,6 +1127,42 @@ int filemap::Close()
     {
         ClearBase();
         Header_Size = 0;
+        Method = {};
+    }
+
+    // Close buffered read: buffer, file, and their info (not a memory map, nor a mapping handle)
+    else if (Method != method::mmap)
+    {
+        if (Private2 != (decltype(Private2))-1)
+        {
+            auto P = (private_buffered*)Private2;
+            if (Data())
+                delete[] (Data() + P->Data_Shift); // Start of the buffer, see Remap()
+            switch (Method)
+            {
+            default: // case style::fstream:
+                delete P->F.Ifstream;
+                break;
+            case method::fopen:
+                fclose(P->F.File);
+                break;
+            case method::open:
+                #if defined(_WIN32) || defined(_WINDOWS)
+                _close(P->F.Int);
+                #else //defined(_WIN32) || defined(_WINDOWS)
+                close(P->F.Int);
+                #endif //defined(_WIN32) || defined(_WINDOWS)
+                break;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            case method::createfile:
+                CloseHandle(P->F.Handle);
+                break;
+            #endif //defined(_WIN32) || defined(_WINDOWS)
+            }
+            delete P;
+            Private2 = (decltype(Private2))-1;
+        }
+        ClearBase();
         Method = {};
     }
 
