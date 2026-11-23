@@ -485,7 +485,7 @@ void matroska::ParseBuffer()
             TRACE_SCOPE("Remap");
             FileMap->Remap(Buffer_Offset, Buffer_Offset + 256 * 1024 * 1024);
             Buffer = *FileMap;
-            if (OpenStyle == filemap::method::mmap)
+            if (!FileMap2 || FileMap == FileMap2) // Reversibility data is in this file map (the file map of the clusters is another one with a buffered read, see Segment_Cluster())
             {
             if (ReversibilityData)
                 ReversibilityData->SetBaseData(Buffer.Data());
