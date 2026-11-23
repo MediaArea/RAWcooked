@@ -444,7 +444,7 @@ void matroska::ParseBuffer()
             Output_Wait(); // Only blocks are parsed during the output of a frame in another thread
         IsList = false;
         (this->*Call)();
-        if (IsRejected)
+        if (Decoders_AreMissing || IsRejected)
         {
             // Parsing stopped, the rest of the file is not read (no remap, no hash of the file)
             Actions[Action_Hash] = false;
