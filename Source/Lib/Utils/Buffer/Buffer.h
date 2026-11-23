@@ -387,12 +387,6 @@ public:
         AssignBase(NewData, NewSize);
     }
 
-    void CopyCut(const uint8_t* NewData, size_t NewSize)
-    {
-        Resize(NewSize);
-        memcpy(DataForModification(), NewData, NewSize);
-    }
-
     void Resize(size_t NewSize)
     {
         if (NewSize <= Size())
