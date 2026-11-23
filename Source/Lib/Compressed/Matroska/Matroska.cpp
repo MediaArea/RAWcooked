@@ -263,6 +263,8 @@ matroska::matroska(const string& OutputDirectoryName, user_mode* Mode, ask_callb
 matroska::~matroska()
 {
     Shutdown();
+    if (FileMap2 && FileMap != FileMap2)
+        delete FileMap; // File map of the clusters with a buffered read, see Segment_Cluster()
     delete Hashes_FromRAWcooked;
     delete Hashes_FromAttachments;
     delete FrameWriter_Template;
@@ -1081,6 +1083,7 @@ void matroska::Segment_Cluster()
 
     if (!FileMap2)
     {
+        // Clusters in another file map with a buffered read (the reversibility data stays in the memory map of the whole file), deleted by the destructor
         FileMap2 = FileMap;
         if (OpenStyle != filemap::method::mmap && !FileName.empty())
         {

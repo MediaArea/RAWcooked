@@ -1103,6 +1103,42 @@ int filemap::Close()
         Method = {};
     }
 
+    // Close buffered read: buffer, file, and their info (not a memory map, nor a mapping handle)
+    else if (Method != method::mmap)
+    {
+        if (Private2 != (decltype(Private2))-1)
+        {
+            auto P = (private_buffered*)Private2;
+            if (Data())
+                delete[] (Data() + P->Data_Shift); // Start of the buffer, see Remap()
+            switch (Method)
+            {
+            default: // case style::fstream:
+                delete P->F.Ifstream;
+                break;
+            case method::fopen:
+                fclose(P->F.File);
+                break;
+            case method::open:
+                #if defined(_WIN32) || defined(_WINDOWS)
+                _close(P->F.Int);
+                #else //defined(_WIN32) || defined(_WINDOWS)
+                close(P->F.Int);
+                #endif //defined(_WIN32) || defined(_WINDOWS)
+                break;
+            #if defined(_WIN32) || defined(_WINDOWS)
+            case method::createfile:
+                CloseHandle(P->F.Handle);
+                break;
+            #endif //defined(_WIN32) || defined(_WINDOWS)
+            }
+            delete P;
+            Private2 = (decltype(Private2))-1;
+        }
+        ClearBase();
+        Method = {};
+    }
+
     // Close map, kept by its users if any
     else if (Map)
     {
