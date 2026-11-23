@@ -6,6 +6,7 @@
 
 //---------------------------------------------------------------------------
 #include <cstring>
+#include <new>
 #include "zlib.h"
 #include "Lib/Compressed/RAWcooked/Reversibility.h"
 #include "Lib/Compressed/RAWcooked/Track.h"
@@ -94,21 +95,20 @@ static void SanitizeFileName(buffer& FileName)
 }
 
 //---------------------------------------------------------------------------
-static bool Uncompress(const buffer_view& In, buffer& Out)
+bool UncompressBounded(const uint8_t* Data, size_t Size, buffer& Out)
 {
-    // Size in EBML style
-    auto Data = In.Data();
-    auto Size = In.Size();
+    Out.Clear(); // No partial content if not readable
     if (!Size)
-    {
-        Out.Clear();
         return false;
-    }
-    decltype(Size) Offset = 0;
+    if (!Data)
+        return true;
+
+    // Size in EBML style
+    size_t Offset = 0;
     uint64_t UncompressedSize = Data[0];
     if (!UncompressedSize)
         return true; // Out of specifications
-    uint64_t s = 0;
+    size_t s = 0;
     while (!(UncompressedSize & (((uint64_t)1) << (7 - s))))
         s++;
     UncompressedSize ^= (((uint64_t)1) << (7 - s));
@@ -122,24 +122,46 @@ static bool Uncompress(const buffer_view& In, buffer& Out)
         UncompressedSize |= Data[Offset];
     }
     Offset++;
+    auto Stream_Size = (uint64_t)(Size - Offset);
+    if (UncompressedSize && Stream_Size < ((uint64_t)1 << 53) && UncompressedSize > 1032 * Stream_Size + 64)
+        return true; // Above the maximal deflate ratio, before any allocation
+    if (UncompressedSize > (uint64_t)(size_t)-1)
+        return true; // Not addressable
 
     // Read buffer
-    if (UncompressedSize)
+    try
     {
-        // Uncompressed
-        Out.Create(UncompressedSize);
+        if (UncompressedSize)
+        {
+            // Uncompressed
+            Out.Create((size_t)UncompressedSize);
 
-        uLongf t = (uLongf)UncompressedSize;
-        if (uncompress((Bytef*)Out.Data(), &t, (const Bytef*)Data + Offset, (uLong)(Size - Offset)) < 0 || t != UncompressedSize)
-            return true; // Problem
+            uLongf t = (uLongf)UncompressedSize;
+            if (uncompress((Bytef*)Out.Data(), &t, (const Bytef*)Data + Offset, (uLong)Stream_Size) != Z_OK || t != UncompressedSize)
+            {
+                Out.Clear(); // No partially inflated content
+                return true; // Problem
+            }
+        }
+        else
+        {
+            // Not compressed
+            Out.Create(Data + Offset, Size - Offset);
+        }
     }
-    else
+    catch (const std::bad_alloc&)
     {
-        // Not compressed
-        Out.Create(Data + Offset, Size - Offset);
+        Out.Clear();
+        return true;
     }
 
     return false;
+}
+
+//---------------------------------------------------------------------------
+static bool Uncompress(const buffer_view& In, buffer& Out)
+{
+    return UncompressBounded(In.Data(), In.Size(), Out);
 }
 
 //---------------------------------------------------------------------------
@@ -251,7 +273,7 @@ buffer reversibility::Data(element Element, size_t Pos) const
         FileName_FromStored(Name);
         if (FileNames_AreLegacy)
             FileName_LegacyToUTF8(Name);
-        if (Name.size() != Content.Size() || memcmp(Name.data(), Content.Data(), Name.size()))
+        if (Name.size() != Content.Size() || (Name.size() && memcmp(Name.data(), Content.Data(), Name.size())))
             Content.Create((const uint8_t*)Name.data(), Name.size());
     }
 
@@ -386,6 +408,7 @@ void reversibility::filesize::SetData(size_t Pos, uint64_t Value)
                 memcpy(NewContent, Content_, OldMaxCount * sizeof(std::remove_pointer<decltype(Content_)>::type));
                 delete[] Content_;
             }
+            memset(NewContent + OldMaxCount, 0, (MaxCount_ - OldMaxCount) * sizeof(std::remove_pointer<decltype(Content_)>::type)); // Frames without file size
             Content_ = NewContent;
         }
     }

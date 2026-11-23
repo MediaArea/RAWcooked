@@ -63,6 +63,7 @@ private:
 
     // Temp
     bool                        KeyFrame_IsPresent;
+    bool                        ConfigurationRecord_IsValid = false; // The slices of the frames are allocated during the decoding of the first frame of each slot, when the frame size is known
     ThreadPool*                 Pool;
 
     // Frames being decoded, each one with its slices: a keyframe uses a free slot, other frames use the slot of the previous frame (decoding states of the previous frame)

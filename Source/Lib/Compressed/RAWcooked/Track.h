@@ -111,6 +111,7 @@ private:
     input_base_uncompressed*    DecodedFrameParser = nullptr;
     base_wrapper*               Wrapper = nullptr;
     raw_frame*                  RawFrame = nullptr;
+    uint64_t                    Audio_DataSize = (uint64_t)-1; // Size of the audio data declared in the header of the file, (uint64_t)-1 if unknown
     ::format                    Format = format::None;
     uint32_t                    Width = 0;
     uint32_t                    Height = 0;

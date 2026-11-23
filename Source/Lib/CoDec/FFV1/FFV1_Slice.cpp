@@ -150,10 +150,11 @@ bool slice::SliceHeader()
     }
 
     //Computing boundaries, being careful about how are computed boundaries when there is not an integral number for Width  / num_h_slices or Height / num_v_slices (the last slice has more pixels)
-    slice_x = slice_x  * P->width / P->num_h_slices;
-    slice_y = slice_y  * P->height / P->num_v_slices;
-    slice_w = slice_x2 * P->width / P->num_h_slices - slice_x;
-    slice_h = slice_y2 * P->height / P->num_v_slices - slice_y;
+    //64-bit products: no overflow with big frames or many slices
+    slice_x = (uint32_t)((uint64_t)slice_x  * P->width / P->num_h_slices);
+    slice_y = (uint32_t)((uint64_t)slice_y  * P->height / P->num_v_slices);
+    slice_w = (uint32_t)((uint64_t)slice_x2 * P->width / P->num_h_slices - slice_x);
+    slice_h = (uint32_t)((uint64_t)slice_y2 * P->height / P->num_v_slices - slice_y);
 
     for (uint8_t i = 0; i < P->quant_table_set_index_count; i++)
     {
@@ -256,7 +257,8 @@ bool slice::Parse()
 
     if (P->ConfigurationRecord_IsPresent)
     {
-        SliceHeader();
+        if (!SliceHeader())
+            return true; // Error is set, the position of the slice is unknown: nothing is decoded
     }
     else
     {
@@ -273,6 +275,8 @@ bool slice::Parse()
 
     if (keyframe)
         GOP_Init();
+    if (!Coder)
+        return P->Error("FFV1-SLICE-NoKeyFrame:1"); // No decoding states (error in the keyframe of this slice): nothing is decoded
 
     size_t Buffer_Offset;
     switch (P->coder_type)

@@ -235,6 +235,7 @@ ELEMENT_END()
 ELEMENT_BEGIN(Segment_Tracks_TrackEntry)
 ELEMENT_VOID(       6, Segment_Tracks_TrackEntry_CodecID)
 ELEMENT_VOID(    23A2, Segment_Tracks_TrackEntry_CodecPrivate)
+ELEMENT_VOID(      57, Segment_Tracks_TrackEntry_TrackNumber)
 ELEMENT_CASE(      60, Segment_Tracks_TrackEntry_Video)
 ELEMENT_END()
 
@@ -1276,20 +1277,33 @@ void matroska::ProcessBlock()
         return;
     }
 
-    if (Levels[Level].Offset_End - Buffer_Offset > 4)
+    // Track number (EBML variable-size integer, 1 to 8 bytes), 16-bit timestamp, flags
+    auto Block_Size = Levels[Level].Offset_End - Buffer_Offset;
+    if (!Block_Size)
+        return; // Problem
+    uint8_t TrackID_First = Buffer[Buffer_Offset];
+    if (!TrackID_First)
+        return; // Problem (invalid size marker)
+    size_t TrackID_Size = 1;
+    while (!(TrackID_First & (0x80 >> (TrackID_Size - 1))))
+        TrackID_Size++;
+    if (Block_Size > TrackID_Size + 3)
     {
-        uint8_t TrackID = Buffer[Buffer_Offset] & 0x7F;
-        if (!TrackID || TrackID > TrackInfo.size())
+        uint64_t TrackID = TrackID_First & (0xFF >> TrackID_Size);
+        for (size_t i = 1; i < TrackID_Size; i++)
+            TrackID = (TrackID << 8) | Buffer[Buffer_Offset + i];
+        auto TrackPos = TrackNumber_Find(TrackID);
+        if (TrackPos == (size_t)-1)
             return; // Problem
-        TrackInfo_Pos = TrackID - 1;
+        TrackInfo_Pos = TrackPos;
         track_info* TrackInfo_Current = TrackInfo[TrackInfo_Pos];
 
         // Timestamp
-        int16_t Block_Timestamp = ((Buffer[Buffer_Offset + 1] << 8) | Buffer[Buffer_Offset + 2]);
+        int16_t Block_Timestamp = ((Buffer[Buffer_Offset + TrackID_Size] << 8) | Buffer[Buffer_Offset + TrackID_Size + 1]);
         ProgressIndicator_Timestamp.store(Cluster_Timestamp + Block_Timestamp, std::memory_order_relaxed);
 
         // Parsing
-        auto CurrentBufferOffset = Buffer_Offset + 4;
+        auto CurrentBufferOffset = Buffer_Offset + TrackID_Size + 3;
         auto CurrentBufferData = Buffer.Data() + CurrentBufferOffset;
         auto CurrentBufferSize = Levels[Level].Offset_End - CurrentBufferOffset;
         if (Output_Track && Output_Track != TrackInfo_Current && (Output_Track->Output_IsShared() || TrackInfo_Current->Output_IsShared()))
@@ -1344,6 +1358,44 @@ void matroska::Segment_Tracks_TrackEntry()
     TrackInfo_Pos++;
     if (TrackInfo_Pos >= TrackInfo.size())
         TrackInfo.push_back(new track_info(FrameWriter_Template, Actions, Errors, FramesPool));
+    if (TrackInfo_Pos >= TrackInfo_Numbers.size())
+        TrackInfo_Numbers.resize(TrackInfo_Pos + 1);
+    TrackInfo_Numbers[TrackInfo_Pos] = TrackInfo_Pos + 1; // Until the TrackNumber element is read (it is mandatory, the position is used if it is missing)
+}
+
+//---------------------------------------------------------------------------
+void matroska::Segment_Tracks_TrackEntry_TrackNumber()
+{
+    // Unsigned integer of 1 to 8 bytes, not 0
+    auto Size = Levels[Level].Offset_End - Buffer_Offset;
+    if (!Size || Size > 8)
+        return; // Invalid, the position is kept
+    uint64_t Value = 0;
+    for (size_t i = 0; i < Size; i++)
+        Value = (Value << 8) | Buffer[Buffer_Offset + i];
+    if (!Value)
+        return; // Invalid, the position is kept
+    TrackInfo_Numbers[TrackInfo_Pos] = Value;
+    if (Value != TrackInfo_Pos + 1)
+        TrackNumbers_ArePositions = false;
+}
+
+//---------------------------------------------------------------------------
+size_t matroska::TrackNumber_Find(uint64_t TrackNumber) const
+{
+    if (!TrackNumber)
+        return (size_t)-1;
+
+    // Usual case: all track numbers are the positions + 1 (no duplicate possible)
+    if (TrackNumbers_ArePositions)
+        return TrackNumber <= TrackInfo_Numbers.size() ? (size_t)TrackNumber - 1 : (size_t)-1;
+
+    // Other numbers: first track entry with this number (a duplicated number is invalid, the next entries with it get no block)
+    // Note: RawCookedTrack elements describe the track entries by position, whatever their track numbers
+    for (size_t i = 0; i < TrackInfo_Numbers.size(); i++)
+        if (TrackInfo_Numbers[i] == TrackNumber)
+            return i;
+    return (size_t)-1;
 }
 
 //---------------------------------------------------------------------------
@@ -1592,31 +1644,19 @@ bool track_info::ParseDecodedFrame(const buffer& BeforeData, const buffer& After
 //---------------------------------------------------------------------------
 void matroska::Uncompress(buffer& Output)
 {
-    uint64_t RealBuffer_Size = Get_EB();
-    if (RealBuffer_Size)
+    // Same bounded reader as the reversibility data (no allocation above the maximal deflate ratio, no exception), empty if not readable
+    if (Buffer_Offset > Levels[Level].Offset_End || Levels[Level].Offset_End > Buffer.Size())
     {
-        Output.Create(RealBuffer_Size);
-
-        uLongf t = (uLongf)RealBuffer_Size;
-        if (uncompress((Bytef*)Output.Data(), &t, (const Bytef*)Buffer.Data() + Buffer_Offset, (uLong)(Levels[Level].Offset_End - Buffer_Offset))<0)
-        {
-            Output.Clear();
-        }
-        if (t != RealBuffer_Size)
-        {
-            Output.Clear();
-        }
+        Output.Clear();
+        return;
     }
-    else
-    {
-        StoreFromCurrentToEndOfElement(Output);
-    }
+    UncompressBounded(Buffer.Data() + Buffer_Offset, (size_t)(Levels[Level].Offset_End - Buffer_Offset), Output);
 }
 
 //---------------------------------------------------------------------------
 void matroska::Segment_Attachments_AttachedFile_FileData_RawCookedxxx_yyy(reversibility::element Element, type Type)
 {
-    auto& Data = TrackInfo_Pos==(uint64_t)-1 ? ReversibilityData : TrackInfo[TrackInfo_Pos]->ReversibilityData;
+    auto& Data = TrackInfo_Pos==(size_t)-1 ? ReversibilityData : TrackInfo[TrackInfo_Pos]->ReversibilityData;
     if (!Data)
     {
         Data = new reversibility();

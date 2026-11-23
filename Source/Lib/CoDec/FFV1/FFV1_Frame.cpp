@@ -11,6 +11,7 @@
 #include "Lib/Utils/CRC32/ZenCRC32.h"
 #include "Lib/Utils/Trace/Trace.h"
 #include <atomic>
+#include <new>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -124,6 +125,7 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 
     P.ConfigurationRecord_IsPresent = true;
     Clear();
+    ConfigurationRecord_IsValid = false;
 
     //Coherency tests
     if (Buffer_Size<4)
@@ -136,14 +138,12 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
     if (P.Parse(E, true))
         return true;
 
-    // Slices
-    for (size_t s = 0; s < Slots_Count; s++)
-    {
-        auto& Slot = Slots[s];
-        Slot.Slices_Count = P.num_h_slices * P.num_v_slices;
-        Slot.Slices = new slice_struct[Slot.Slices_Count];
-        memset(Slot.Slices, 0x00, Slot.Slices_Count * sizeof(slice_struct));
-    }
+    // Slice grid, the slices are allocated with the first frame when the frame size is known (at most 1 slice per pixel in each direction)
+    if (!P.num_h_slices)
+        return P.Error("FFV1-HEADER-num_h_slices:1");
+    if (!P.num_v_slices)
+        return P.Error("FFV1-HEADER-num_v_slices:1");
+    ConfigurationRecord_IsValid = true;
 
     // Reserved + configuration_record_crc_parity
 
@@ -153,7 +153,7 @@ bool ffv1_frame::OutOfBand(const uint8_t* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::function<void(bool Error)> Done)
 {
-    if (P.ConfigurationRecord_IsPresent && !Slots[0].Slices)
+    if (P.ConfigurationRecord_IsPresent && !ConfigurationRecord_IsValid)
     {
         Done(true); //There is a problem
         return;
@@ -230,15 +230,26 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
         Done(true);
     };
 
-    if (!Slot->Slices)
+    // Memory errors (e.g. big frames) end this frame with an error, the slot is not kept busy
+    auto Abort_Memory = [&]()
+    {
+        P.Error("FFV1-FRAME-memory:1");
+        Abort();
+    };
+
+    if (!P.ConfigurationRecord_IsPresent && !Slot->Slices)
     {
         // No slice in this stream, fake 1 slice
+        Slot->Slices = new (std::nothrow) slice_struct[1];
+        if (!Slot->Slices)
+        {
+            Abort_Memory();
+            return;
+        }
         Slot->Slices_Count = 1;
-        Slot->Slices = new slice_struct[1];
         memset(Slot->Slices, 0x00, sizeof(slice_struct));
     }
     auto Slices = Slot->Slices;
-
     size_t Slices_Size = 0;
     if (P.ConfigurationRecord_IsPresent)
     {
@@ -255,6 +266,21 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
             return;
         }
 
+        // Slices of the slot, not more than the pixels of the frame
+        if (!Slot->Slices)
+        {
+            auto Slices_Count = (size_t)P.num_h_slices * P.num_v_slices;
+            Slot->Slices = new (std::nothrow) slice_struct[Slices_Count];
+            if (!Slot->Slices)
+            {
+                Abort_Memory();
+                return;
+            }
+            memset(Slot->Slices, 0x00, Slices_Count * sizeof(slice_struct));
+            Slot->Slices_Count = Slices_Count;
+            Slices = Slot->Slices;
+        }
+
         size_t info = 0
         | ((P.bits_per_raw_sample - 1)          <<  0)
         | (P.chroma_planes                      <<  6)
@@ -264,7 +290,15 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
         | (P.colorspace_type                    << 16)
         | ((P.num_h_slices - 1)                 << 24)
         ;
-      RawFrame->Create(P.width, P.height, info);
+        try
+        {
+            RawFrame->Create(P.width, P.height, info);
+        }
+        catch (const std::bad_alloc&)
+        {
+            Abort_Memory();
+            return;
+        }
 
         uint64_t Slices_BufferPos = Buffer_Size;
         while (Slices_BufferPos)
@@ -289,7 +323,12 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
             slice_struct& Slice_Current = Slices[Slices_Size];
             slice*& Slice_Content = Slice_Current.Content;
             if (!Slice_Content)
-                Slice_Content = new slice(&P);
+                Slice_Content = new (std::nothrow) slice(&P);
+            if (!Slice_Content)
+            {
+                Abort_Memory();
+                return;
+            }
             Slice_Content->Init(Buffer + Slices_BufferPos, Size, keyframe, !Slices_BufferPos, RawFrame);
             Slices_Size++;
         }
@@ -302,7 +341,12 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
         Slice_Current.BufferSize = Buffer_Size;
         slice*& Slice_Content = Slice_Current.Content;
         if (!Slice_Content)
-            Slice_Content = new slice(&P);
+            Slice_Content = new (std::nothrow) slice(&P);
+        if (!Slice_Content)
+        {
+            Abort_Memory();
+            return;
+        }
         Slice_Content->Init(Buffer, Buffer_Size, keyframe, true, RawFrame);
     }
 
@@ -341,7 +385,14 @@ void ffv1_frame::Slice_Run(ffv1_frame_slot* Slot, slice* Slice)
     }
     {
         TRACE_SCOPE("Slice", Slot->Frame->Index);
-        Slice->Parse();
+        try
+        {
+            Slice->Parse();
+        }
+        catch (const std::bad_alloc&)
+        {
+            P.Error("FFV1-SLICE-memory:1"); // The slice is not decoded, the frame ends with an error
+        }
     }
     if (++Slot->Finished == Count)
         Frame_End(Slot);

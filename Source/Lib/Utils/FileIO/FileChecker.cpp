@@ -28,6 +28,7 @@ namespace filechecker_issue {
             "missing frame in source (extra frames in compressed file)",
             "extra frame in source (missing frames in compressed file)",
             "track format (unsupported)",
+            "audio size not same as in the file header (missing or extra audio in compressed file)",
         };
 
         namespace undecodable { static_assert(Max == sizeof(MessageText) / sizeof(const char*), IncoherencyMessage); }

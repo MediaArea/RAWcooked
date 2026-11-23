@@ -14,6 +14,10 @@
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+// Data with its uncompressed size in EBML style (0 if not compressed) then zlib content, empty output and true if not readable
+bool UncompressBounded(const uint8_t* Data, size_t Size, buffer& Out);
+
+//---------------------------------------------------------------------------
 class reversibility
 {
 public:
