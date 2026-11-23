@@ -179,6 +179,7 @@ private:
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_CodecID);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_CodecPrivate);
+    MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_TrackNumber);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelWidth);
     MATROSKA_ELEMENT(Segment_Tracks_TrackEntry_Video_PixelHeight);
@@ -192,7 +193,9 @@ private:
     track_info*                 Output_Track = nullptr; // Track with a possible frame output in another thread
     shared_ptr<block_pool>      Block_Pool; // Buffers for copies of frame data
     void                        Output_Wait();
-    vector<uint8_t>             ID_to_TrackOrder;
+    vector<uint64_t>            TrackInfo_Numbers; // TrackNumber declared by each TrackEntry (same index as TrackInfo), the position + 1 if not declared
+    bool                        TrackNumbers_ArePositions = true; // All declared track numbers are the positions + 1 (fast path)
+    size_t                      TrackNumber_Find(uint64_t TrackNumber) const; // Index in TrackInfo, or SIZE_MAX
     string                      AttachedFile_FileName;
     enum flags
     {
