@@ -13,6 +13,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Parameters.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder_RangeCoder.h"
 #include "Lib/CoDec/FFV1/Coder/FFV1_Coder_GolombRice.h"
+#include <atomic>
 class transform_base;
 //---------------------------------------------------------------------------
 
@@ -29,7 +30,7 @@ public:
     ~slice();
 
     // Content
-    void                        Init(const uint8_t* Buffer, size_t Buffer_Size, bool keyframe, bool IsFirstSlice, raw_frame* RawFrame);
+    void                        Init(const uint8_t* Buffer, size_t Buffer_Size, bool keyframe, bool IsFirstSlice, raw_frame* RawFrame, std::atomic<bool>* FrameError); // FrameError is set if there is an issue in this slice
     bool                        Parse();
 
     // Metadata (no impact on decoding)
@@ -51,6 +52,8 @@ private:
     parameters*                 P;
     rangecoder                  E;
     raw_frame*                  RawFrame;
+    std::atomic<bool>*          FrameError = nullptr;
+    bool                        Error(const char* Message); // Message kept by the parameters (the first one), issue of the frame
 
     // Cache (useful only for splitiing init from parsing)
     const uint8_t*              Buffer;

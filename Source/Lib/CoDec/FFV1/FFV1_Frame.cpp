@@ -41,6 +41,7 @@ struct ffv1_frame_slot
     std::atomic<size_t>         Started{ 0 };
     std::atomic<size_t>         Finished{ 0 };
     bool                        Busy = false; // From the slot selection to the end of the decoding
+    std::atomic<bool>           Error{ false }; // Issue in this frame, or in a previous frame it depends on (not a keyframe)
 };
 
 //***************************************************************************
@@ -212,6 +213,8 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
         }
         Slot = &Slots[s];
         Slot->Busy = true;
+        if (keyframe)
+            Slot->Error = false; // Else the decoding states of the previous frame are used, an issue of the previous frame is also an issue of this frame
         Slot_Last = s;
         trace::Counter("Ours frames", (int64_t)Slots_Busy());
     }
@@ -220,6 +223,7 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
     Slot->Trace_Begin = Trace_Begin;
     auto Abort = [&]()
     {
+        Slot->Error = true;
         Done = std::move(Slot->Done);
         {
             std::lock_guard<std::mutex> Lock(Mutex);
@@ -329,7 +333,7 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
                 Abort_Memory();
                 return;
             }
-            Slice_Content->Init(Buffer + Slices_BufferPos, Size, keyframe, !Slices_BufferPos, RawFrame);
+            Slice_Content->Init(Buffer + Slices_BufferPos, Size, keyframe, !Slices_BufferPos, RawFrame, &Slot->Error);
             Slices_Size++;
         }
         Slices_Size--;
@@ -347,7 +351,7 @@ void ffv1_frame::Process(const uint8_t* Buffer, size_t Buffer_Size, std::functio
             Abort_Memory();
             return;
         }
-        Slice_Content->Init(Buffer, Buffer_Size, keyframe, true, RawFrame);
+        Slice_Content->Init(Buffer, Buffer_Size, keyframe, true, RawFrame, &Slot->Error);
     }
 
     Slot->Count = Slices_Size + 1;
@@ -392,6 +396,7 @@ void ffv1_frame::Slice_Run(ffv1_frame_slot* Slot, slice* Slice)
         catch (const std::bad_alloc&)
         {
             P.Error("FFV1-SLICE-memory:1"); // The slice is not decoded, the frame ends with an error
+            Slot->Error = true;
         }
     }
     if (++Slot->Finished == Count)
@@ -405,7 +410,7 @@ void ffv1_frame::Frame_End(ffv1_frame_slot* Slot)
     if (Slot->Trace_Begin)
         trace::Span("Ours frame", Slot->Trace_Begin, trace::Now(), Slot->Frame->Index);
     auto Done = std::move(Slot->Done);
-    Done(P.Error() ? true : false);
+    Done(Slot->Error.load()); // Issue of this frame only (the issue of a frame does not affect next keyframes)
 
     // Notification with the lock, else this object may be deleted (after a Wait()) before the notification
     std::lock_guard<std::mutex> Lock(Mutex);
