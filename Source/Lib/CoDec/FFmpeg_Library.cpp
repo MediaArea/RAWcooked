@@ -873,6 +873,72 @@ bool FFmpeg_Library_VulkanSetupFailed(string& Name, bool& IsGPU, bool& Unsupport
     return true;
 }
 
+//---------------------------------------------------------------------------
+static bool Decode_Failed = false;
+static ffmpeg_decode_failure Decode_Failed_Info;
+static vector<ffmpeg_decode_failure> Decoders_Disabled;
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_SetDecodeFailed(const ffmpeg_decode_failure& Failure)
+{
+    {
+        lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+        if (Vulkan_Missing != (size_t)-1)
+            return; // First reason only
+        Decode_Failed = true;
+        Decode_Failed_Info = Failure;
+    }
+    FFmpeg_Library_SetVulkanMissing(Failure.Device);
+}
+
+//---------------------------------------------------------------------------
+bool FFmpeg_Library_DecodeFailed(ffmpeg_decode_failure& Failure)
+{
+    lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+    if (!Decode_Failed)
+        return false;
+    Failure = Decode_Failed_Info;
+    return true;
+}
+
+//---------------------------------------------------------------------------
+string FFmpeg_Library_DecoderName(const ffmpeg_decode_failure& Failure)
+{
+    if (!Failure.Vulkan)
+        return "the FFmpeg ffv1 decoder";
+    return "the FFmpeg ffv1_vulkan decoder on " + (Failure.Name.empty() ? "the Vulkan device with index " + to_string(Failure.Device) : Failure.Name);
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_AddDecoderDisabled(const ffmpeg_decode_failure& Failure)
+{
+    lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+    Decoders_Disabled.push_back(Failure);
+}
+
+//---------------------------------------------------------------------------
+vector<ffmpeg_decode_failure> FFmpeg_Library_DecodersDisabled()
+{
+    lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+    vector<ffmpeg_decode_failure> Result;
+    Result.swap(Decoders_Disabled);
+    return Result;
+}
+
+//---------------------------------------------------------------------------
+void FFmpeg_Library_ResetVulkanIssues()
+{
+    lock_guard<mutex> Lock(Vulkan_SetupFailed_Mutex);
+    Vulkan_Missing = (size_t)-1;
+    Vulkan_SetupFailed = false;
+    Vulkan_SetupFailed_Name.clear();
+    Vulkan_SetupFailed_IsGPU = true;
+    Vulkan_SetupFailed_Unsupported = false;
+    Decode_Failed = false;
+    Decode_Failed_Info = ffmpeg_decode_failure();
+    Decoders_Disabled.clear();
+}
+
 #ifndef RAWCOOKED_FFMPEG
 
 //---------------------------------------------------------------------------

@@ -783,7 +783,9 @@ int core::ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName
     size_t Decoding_Frames[decoders_stats::Max] = {};
     double Decoding_Seconds = 0;
     double Decoding_Content_Seconds = 0;
-    if (!ParseInfo.IsDetected)
+    // With the auto decoder, the check is done again with less FFmpeg decoders with Vulkan (our decoder only if there was 1 of them) if one of them failed early in the file to decode a frame that our decoder can not decode again (not a keyframe), if no issue was found before
+    auto Restartable = Global.Actions[Action_AutoDecoder] && !Global.Actions[Action_Decode] && FileOpenName && !Global.Errors.HasErrors() && !Global.Errors.HasWarnings();
+    while (!ParseInfo.IsDetected)
     {
         // Threads
         unsigned threads;
@@ -820,6 +822,33 @@ int core::ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName
         Decoding_Content_Seconds = M->Timestamp_Get() / 1000.0;
         for (size_t i = 0; i < decoders_stats::Max; i++)
             Decoding_Frames[i] = DecodersStats.Frames[i] - Decoding_Frames[i];
+        ffmpeg_decode_failure Failure;
+        if (Restartable && M->Decoders_AreMissing && FFmpeg_Library_DecodeFailed(Failure) && Failure.Vulkan && (M->Decoders_AreMissing_Progress < 1.0 / 256 || Failure.Frame < 256)) // Early in the file (1/256 of the file, or the first frames of a short file), else a long check would be done again
+        {
+            // Same check again with 1 less FFmpeg decoder with Vulkan on this device, issues of the stopped check are forgotten
+            delete M;
+            delete Thread_Pool;
+            AutoDecoder_VulkanMax[Failure.Device] = Failure.Decoders - 1;
+            FFmpeg_Library_ResetVulkanIssues();
+            Global.Errors.ClearErrors();
+            Global.FFmpeg_Error.clear();
+            if (!Global.Quiet || Global.Log)
+            {
+                auto Info = "\nInfo: " + FFmpeg_Library_DecoderName(Failure) + " failed to decode the frame " + to_string(Failure.Frame + 1) + ",\n      checking again with "
+                          + (Failure.Decoders > 1 ? to_string(Failure.Decoders - 1) : string("no")) + " vulkan decoder on this device.\n";
+                if (!Global.Quiet)
+                    cerr << Info;
+                if (Global.Log)
+                    *Global.Log += Info;
+            }
+            ParseInfo.FileMap.Close();
+            if (input::OpenInput(ParseInfo.FileMap, *FileOpenName, 0, &Global.Errors))
+            {
+                ReturnValue = 1;
+                break;
+            }
+            continue;
+        }
         if (Decoding_NOK)
         {
             ReturnValue = 1;
@@ -891,10 +920,15 @@ int core::ParseFile_Compressed(parse_info& ParseInfo, const string* FileOpenName
         }
         delete M;
         delete Thread_Pool;
+        break;
     }
 
     // End
     string Info;
+    for (const auto& Disabled : FFmpeg_Library_DecodersDisabled())
+        if (!Global.Quiet || Global.Log)
+            Info += "\nInfo: " + FFmpeg_Library_DecoderName(Disabled) + " failed to decode the frame " + to_string(Disabled.Frame + 1)
+                  + ",\n      decoded by the " + (Disabled.ByInternal ? "internal" : "FFmpeg ffv1") + " decoder, this decoder was not used for next frames.";
     if (ParseInfo.IsDetected && !Global.Quiet && !DoesNotHaveReversibility)
     {
         if (Global.Actions[Action_Decode])

@@ -23,6 +23,7 @@
 //---------------------------------------------------------------------------
 decoders_stats DecodersStats;
 vector<size_t> VulkanDecoders_Devices;
+map<size_t, size_t> AutoDecoder_VulkanMax;
 
 //---------------------------------------------------------------------------
 string decoders_stats::Shares(const size_t* Frames) const
@@ -497,10 +498,17 @@ base_wrapper* CreateWrapper(format Format, ThreadPool* Pool, bool UseInternalDec
             UseInternalDecoder = true;
             UseFFmpegDecoder = false;
             auto Devices = FFmpeg_Library_Vulkan(AllowVulkanCPU);
+            auto Max = [](size_t Device)
+            {
+                auto Limit = AutoDecoder_VulkanMax.find(Device);
+                return Limit == AutoDecoder_VulkanMax.end() ? (size_t)2 : Limit->second;
+            };
             for (auto Device : Devices)
-                VulkanDecoders.push_back({ Device, false, false });
+                if (Max(Device) >= 1)
+                    VulkanDecoders.push_back({ Device, false, false });
             for (auto Device : Devices)
-                VulkanDecoders.push_back({ Device, true, false });
+                if (Max(Device) >= 2)
+                    VulkanDecoders.push_back({ Device, true, false });
         }
         else if (UseVulkanDecoder)
         {

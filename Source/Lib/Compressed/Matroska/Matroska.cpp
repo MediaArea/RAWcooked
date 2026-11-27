@@ -530,8 +530,11 @@ void matroska::ParseBuffer()
     for (auto TrackInfo_Current : TrackInfo)
         TrackInfo_Current->Output_End();
     Output_Wait();
-    if (Decoders_Check && !Decoders_Check())
+    if (Decoders_Check && !Decoders_Check() && !Decoders_AreMissing)
+    {
         Decoders_AreMissing = true; // A decoder may know that it can not be used only during the decoding of the last frames (e.g. Vulkan setup failure), after the parsing of the last block
+        Decoders_AreMissing_Progress = 1;
+    }
 
     // Clean up
     if (RAWcooked_LibraryName.empty())
@@ -594,7 +597,7 @@ void matroska::Segment()
 
     // In case of partial check, or if decoders are not available
     if (Decoders_Check && !Decoders_Check())
-        Decoders_AreMissing = true;
+        Decoders_AreMissing = true; // Before any decoding, Decoders_AreMissing_Progress is 0
     if (Decoders_AreMissing || (!Actions[Action_Decode] && !Actions[Action_Info] && Actions[Action_QuickCheckAfterEncode])) // Quick check after encoding
     {
         Buffer_Offset = Buffer.Size();
@@ -1293,6 +1296,7 @@ void matroska::ProcessBlock()
     if (Decoders_Check && !Decoders_Check())
     {
         Decoders_AreMissing = true;
+        Decoders_AreMissing_Progress = Buffer.Size() ? (float)Buffer_Offset / Buffer.Size() : 1; // Size is kept by remaps
         IsList = true;
         Buffer_Offset = Buffer.Size();
         return;
