@@ -56,6 +56,7 @@ public:
     bool                        NoOutputCheck = false;
     std::function<bool()>       Decoders_Check; // Called when the format is detected, before any decoding, and before each block (a decoder may know later that it is not available e.g. a Vulkan device), parsing is stopped if it returns false
     bool                        Decoders_AreMissing = false;
+    float                       Decoders_AreMissing_Progress = 0; // Position of the parsing in the file (from 0 to 1) when it is stopped because a decoder is missing
     hashes*                     Hashes_FromRAWcooked = nullptr;
     hashes*                     Hashes_FromAttachments = nullptr;
     output_hash*                OutputHash = nullptr;

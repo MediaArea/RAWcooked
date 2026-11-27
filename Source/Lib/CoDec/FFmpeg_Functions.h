@@ -50,6 +50,10 @@ extern "C"
 // libavutil/log.h
 #define AV_LOG_QUIET                        -8
 
+// libavutil/error.h
+#define AVERROR_INVALIDDATA                 (-(int)('I' | ('N' << 8) | ('D' << 16) | ((unsigned)'A' << 24)))
+#define AVERROR_UNKNOWN                     (-(int)('U' | ('N' << 8) | ('K' << 16) | ((unsigned)'N' << 24)))
+
 // libavutil/pixfmt.h, libavcodec/codec_id.h, libavutil/hwcontext.h (enums, int sized)
 typedef int AVPixelFormat;
 #define AV_PIX_FMT_NONE                     -1

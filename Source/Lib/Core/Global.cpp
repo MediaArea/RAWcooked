@@ -180,7 +180,26 @@ bool global::CheckFFmpeg(bool IsCompressed)
             FFmpeg_Error = "Error: decoder value '" + Decoder_Value + "' is not available (" + Error + ").";
             return false;
         }
+    }
 
+    // FFmpeg decoder with Vulkan failed to decode a frame that our decoder can not decode again (also with the auto decoder)
+    ffmpeg_decode_failure Failure;
+    if (FFmpeg_Library_DecodeFailed(Failure))
+    {
+        auto Decoder = Failure.Device ? "vulkan" + to_string(Failure.Device) : string("vulkan");
+        FFmpeg_Error = "Error: " + FFmpeg_Library_DecoderName(Failure) + " failed to decode the frame " + to_string(Failure.Frame + 1) + ",\n"
+                       "       which no other decoder can decode again (not a keyframe, or no other\n"
+                       "       decoder for it), decoding is stopped. It may be an issue of this\n"
+                       "       decoder" + (Failure.Vulkan ? string(" (e.g. of the ") + (Failure.IsGPU ? "GPU or of its driver" : "Vulkan implementation") + ')' : string()) + " or of the file, test with\n"
+                     + (Failure.Vulkan && Failure.Decoders > 1
+                     ? "       1 vulkan decoder on this device, e.g. --decoder internal+" + Decoder + '.'
+                     : string("       the internal decoder, --decoder internal."));
+        return false;
+    }
+
+    if ((Actions[Action_FFmpegDecoder] || Actions[Action_VulkanDecoder])
+     && (IsCompressed || ((Actions[Action_Encode] || Actions[Action_Check]) && !DisplayCommand && (!Actions[Action_CheckOptionIsSet] || Actions[Action_Check]))))
+    {
         // Vulkan device of a vulkan decoder not available (known when the decoder creates the device) or not usable by the decoder (known when the decoder decodes the first frame)
         auto Vulkan_Missing = FFmpeg_Library_VulkanMissing();
         if (Vulkan_Missing != (size_t)-1)

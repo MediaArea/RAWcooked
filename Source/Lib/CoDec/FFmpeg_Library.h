@@ -53,6 +53,30 @@ size_t FFmpeg_Library_VulkanMissing();
 void FFmpeg_Library_SetVulkanSetupFailed(size_t Device, const std::string& Name, bool IsGPU, bool Unsupported);
 bool FFmpeg_Library_VulkanSetupFailed(std::string& Name, bool& IsGPU, bool& Unsupported);
 
+// FFmpeg decoder failed (issue of the decoder, not of the frame) to decode a frame that another decoder can not decode again (not a keyframe, or no other decoder for it), FFmpeg_Library_VulkanMissing() is then also set (the caller stops)
+// FFmpeg_Library_DecodeFailed() returns false if it is not the reason of FFmpeg_Library_VulkanMissing(), else sets the values
+struct ffmpeg_decode_failure
+{
+    bool                        Vulkan = true; // FFmpeg decoder with Vulkan, else FFmpeg decoder on CPU (the values of the device are not used)
+    size_t                      Device = 0;
+    std::string                 Name; // Name of the device, maybe empty
+    bool                        IsGPU = true; // False if it is a CPU implementation
+    size_t                      Decoders = 1; // Count of FFmpeg decoders with Vulkan used on this device
+    size_t                      Frame = 0; // Index of the frame in its track
+    bool                        ByInternal = true; // Decoder which decoded the frame again (FFmpeg_Library_AddDecoderDisabled()): our decoder, else the FFmpeg decoder on CPU
+};
+void FFmpeg_Library_SetDecodeFailed(const ffmpeg_decode_failure& Failure);
+bool FFmpeg_Library_DecodeFailed(ffmpeg_decode_failure& Failure);
+std::string FFmpeg_Library_DecoderName(const ffmpeg_decode_failure& Failure); // e.g. "the FFmpeg ffv1_vulkan decoder on <device>", for messages
+
+// FFmpeg decoders which failed (issue of the decoder) to decode a keyframe, decoded again by another decoder, these FFmpeg decoders are not used for next frames
+// FFmpeg_Library_DecodersDisabled() returns them and forgets them
+void FFmpeg_Library_AddDecoderDisabled(const ffmpeg_decode_failure& Failure);
+std::vector<ffmpeg_decode_failure> FFmpeg_Library_DecodersDisabled();
+
+// Vulkan issues forgotten, before a new decoding of the same content (e.g. with less FFmpeg decoders with Vulkan after a failure)
+void FFmpeg_Library_ResetVulkanIssues();
+
 // Name of the Vulkan device used by default by FFmpeg (detected if not already done, the device is then kept for the decoder), empty if not available
 // IsGPU: set to true if the device is a GPU, false if it is a CPU implementation (e.g. lavapipe) or if not available
 std::string FFmpeg_Library_VulkanName(bool* IsGPU = nullptr);

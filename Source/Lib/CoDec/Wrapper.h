@@ -117,4 +117,7 @@ extern decoders_stats DecodersStats;
 // Vulkan devices of the FFmpeg decoders with Vulkan hardware decoding if Action_VulkanDecoder (index of the device of each decoder, 2 decoders on the same device decode more frames in parallel), for all tracks
 extern std::vector<size_t> VulkanDecoders_Devices;
 
+// Maximum count of FFmpeg decoders with Vulkan on each Vulkan device (by index) with the auto decoder, 2 if not set (the second one only on big GPUs), lowered after a failure of these decoders
+extern std::map<size_t, size_t> AutoDecoder_VulkanMax;
+
 #endif

@@ -10,6 +10,7 @@
 #include "Lib/CoDec/FFV1/FFV1_Frame.h"
 #include "Lib/CoDec/FFV1/FFV1_Frame_FFmpeg.h"
 #include "Lib/CoDec/FFmpeg_Functions.h"
+#include "Lib/CoDec/FFmpeg_Library.h"
 #include "Lib/CoDec/Wrapper.h"
 #include "Lib/Utils/RawFrame/RawFrame.h"
 #include "Lib/Utils/Trace/Trace.h"
@@ -104,6 +105,15 @@ static void (* const Pool_Starts[Decoder_Max])() = { LowPriority, Pool_Start<Dec
                                                       Pool_Start<Decoder_Vulkan + 4>, Pool_Start<Decoder_Vulkan + 5>, Pool_Start<Decoder_Vulkan + 6>, Pool_Start<Decoder_Vulkan + 7> };
 
 //---------------------------------------------------------------------------
+// An FFmpeg decoder with Vulkan which failed to decode a frame can be released, else it is kept until the end of the program
+// (before libavcodec 63.8, e.g. FFmpeg 9.0, the release of a frame whose hardware decoding setup failed partway crashes, at the next frame or when the decoder is released,
+// and a frame which is not a keyframe crashes after an invalid frame, such frames are not decoded)
+static bool Vulkan_FailureIsSafe()
+{
+    return ffmpeg::avcodec_version() >= ((63 << 16) | (8 << 8));
+}
+
+//---------------------------------------------------------------------------
 struct hybrid_job
 {
     AVBufferRef*                Packet = nullptr; // Frame data with FFmpeg padding, shared with FFmpeg decoders
@@ -114,6 +124,8 @@ struct hybrid_job
     bool                        Error = false;
     bool                        WarmUp = false; // Not output, for the initialization of an FFmpeg decoder
     bool                        First = false; // First frame for an FFmpeg decoder, decoded by the fallback decoder if this decoder fails
+    bool                        Backup = false; // Keyframe for an FFmpeg decoder, decoded by the fallback decoder (our decoder, or the FFmpeg decoder on CPU for an FFmpeg decoder with Vulkan) if this decoder fails (issue of the decoder)
+    size_t                      Backup_Of = (size_t)-1; // FFmpeg decoder which failed to decode this keyframe, decoded by the fallback decoder
 };
 
 //---------------------------------------------------------------------------
@@ -135,13 +147,16 @@ struct ffv1_frame_hybrid_private
     bool                        Working[Decoder_Max] = {}; // Decoding a frame
     bool                        Pending[Decoder_Max] = {}; // Decoder other than the fallback decoder without frame yet, its first frame is a warm-up or a first frame
     bool                        Disabled[Decoder_Max] = {}; // Decoder can not decode the stream
+    bool                        Failed[Decoder_Max] = {}; // FFmpeg decoder with Vulkan failed to decode a frame, not used for next frames and maybe not released (see Vulkan_FailureIsSafe())
+    bool                        Backup_Waiting[Decoder_Max] = {}; // FFmpeg decoder with Vulkan failed to decode a keyframe, busy until our decoder decodes it: not used for next frames if our decoder decodes it (issue of the FFmpeg decoder), else used again (issue of the frame)
     double                      Duration[Decoder_Max] = {}; // Average duration of the decoding of a frame, in seconds
     bool                        Ending = false; // No more frames
     size_t                      Last = Decoder_Max; // Decoder of the previous frame
+    size_t                      Skip_Decoder = Decoder_Max; // Decoder which decoded an invalid frame, next frames which are not keyframes for this decoder are not decoded
     bool                        Intra = false; // All frames are keyframes
     bool                        SliceCrc = false; // Slices with a CRC, checked by us for frames decoded by FFmpeg decoders (FFmpeg conceals a slice with a wrong CRC, without error)
-    std::deque<hybrid_job*>     Redo; // First frames for FFmpeg decoders which failed, to be decoded by the fallback decoder
-    size_t                      First_Pending = 0; // Count of first frames for FFmpeg decoders not decoded, the fallback decoder may have to decode them
+    std::deque<hybrid_job*>     Redo; // First frames and keyframes for FFmpeg decoders which failed, to be decoded by the fallback decoder
+    size_t                      Redo_Pending = 0; // Count of these frames not decoded by FFmpeg decoders, the fallback decoder may have to decode them
 
     unsigned                    Pool_Count = 0; // Count of threads of the pool of each FFmpeg decoder, created with the decoder
 
@@ -224,10 +239,11 @@ struct ffv1_frame_hybrid_private
     ~ffv1_frame_hybrid_private()
     {
         for (size_t i = 0; i < Decoder_Max; i++)
-        {
-            Vulkan_Keep(i);
-            delete FFmpeg[i];
-        }
+            if (!Failed[i] || Vulkan_FailureIsSafe())
+            {
+                Vulkan_Keep(i);
+                delete FFmpeg[i];
+            }
         delete Ours;
         for (auto Pool : Pools)
             if (Pool)
@@ -239,6 +255,9 @@ struct ffv1_frame_hybrid_private
 
     ffv1_frame_ffmpeg* Decoder_New(size_t i);
     void Vulkan_Keep(size_t i);
+    size_t Vulkan_Decoders(size_t i);
+    ffmpeg_decode_failure Decoder_Failure(size_t i, const hybrid_job* Job);
+    void Backup_End(hybrid_job* Job, bool Error);
     void Run(size_t i);
     void Transfer(size_t i);
     hybrid_job* Job_New();
@@ -297,6 +316,56 @@ void ffv1_frame_hybrid_private::Vulkan_Keep(size_t i)
 }
 
 //---------------------------------------------------------------------------
+// Count of FFmpeg decoders with Vulkan used on the device of the decoder, Mutex must be locked
+size_t ffv1_frame_hybrid_private::Vulkan_Decoders(size_t i)
+{
+    size_t Count = 0;
+    for (size_t j = Decoder_Vulkan; j < Decoder_Max; j++)
+        if (Used[j] && Vulkan_First[j] == Vulkan_First[i] && (Vulkan_First[j] == j || Vulkan_Useful[j]))
+            Count++;
+    return Count;
+}
+
+//---------------------------------------------------------------------------
+// Failure of an FFmpeg decoder to decode the frame of the job, Mutex must be locked
+ffmpeg_decode_failure ffv1_frame_hybrid_private::Decoder_Failure(size_t i, const hybrid_job* Job)
+{
+    ffmpeg_decode_failure Failure;
+    Failure.Vulkan = i >= Decoder_Vulkan;
+    if (Failure.Vulkan)
+    {
+        Failure.Device = Vulkan_Device[i];
+        Failure.Name = Vulkan_Name[Vulkan_First[i]];
+        Failure.IsGPU = Vulkan_IsGPU[Vulkan_First[i]];
+        Failure.Decoders = Vulkan_Decoders(i);
+    }
+    Failure.Frame = Job->Frame->Index;
+    Failure.ByInternal = Fallback == Decoder_Ours;
+    return Failure;
+}
+
+//---------------------------------------------------------------------------
+// End of the decoding by the fallback decoder of a keyframe an FFmpeg decoder failed to decode, Mutex must be locked
+// Issue of the FFmpeg decoder if the fallback decoder decodes it, the FFmpeg decoder is then not used for next frames, else issue of the frame
+void ffv1_frame_hybrid_private::Backup_End(hybrid_job* Job, bool Error)
+{
+    auto Failed_Decoder = Job->Backup_Of;
+    if (Failed_Decoder == (size_t)-1)
+        return;
+    Job->Backup_Of = (size_t)-1;
+    Backup_Waiting[Failed_Decoder] = false;
+    if (Error)
+    {
+        Busy[Failed_Decoder] = false;
+        return;
+    }
+    Disabled[Failed_Decoder] = true; // Stays busy
+    if (Failed_Decoder >= Decoder_Vulkan)
+        Failed[Failed_Decoder] = true;
+    FFmpeg_Library_AddDecoderDisabled(Decoder_Failure(Failed_Decoder, Job));
+}
+
+//---------------------------------------------------------------------------
 // Decoder thread
 void ffv1_frame_hybrid_private::Run(size_t i)
 {
@@ -307,7 +376,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
     {
-        Condition.wait(Lock, [&] { return Next[i] || (i == Fallback && !Redo.empty()) || Stop || (i == Decoder_Ours && Ending && Ours && !First_Pending); });
+        Condition.wait(Lock, [&] { return Next[i] || (i == Fallback && !Redo.empty()) || Stop || (i == Decoder_Ours && Ending && Ours && !Redo_Pending); });
         auto Job = Next[i];
         if (Job)
             Next[i] = nullptr;
@@ -353,6 +422,7 @@ void ffv1_frame_hybrid_private::Run(size_t i)
                 std::lock_guard<std::mutex> Lock_(Mutex);
                 Duration[Decoder_Ours] = Duration[Decoder_Ours] ? (Duration[Decoder_Ours] * 3 + Job_Duration) / 4 : Job_Duration;
                 trace::Counter(Names[Decoder_Ours].Duration, (int64_t)(Duration[Decoder_Ours] * 1000));
+                Backup_End(Job, Error);
                 Job_Free(Job);
                 Condition.notify_all();
             });
@@ -369,7 +439,9 @@ void ffv1_frame_hybrid_private::Run(size_t i)
         bool Error;
         bool Missing; // Vulkan device requested and not available, the frame is not decoded again and the caller stops
         bool Redo_; // First frame for this FFmpeg decoder, it can not decode the stream, the frame is decoded by the fallback decoder
-        auto Crc_Error = false; // Frame decoded, but a slice has a wrong CRC (issue of the frame, not of the decoder)
+        auto Crc_Error = false; // A slice has a wrong CRC (issue of the frame, not of the decoder)
+        bool Invalid; // Issue of the frame (invalid content, or wrong slice CRC), not of the decoder: the frame is reported and this decoder decodes next frames
+        bool Backup; // Keyframe this FFmpeg decoder failed to decode (issue of the decoder), the frame is decoded by the fallback decoder and this decoder is not used for next frames if the fallback decoder decodes it
         {
             TRACE_SCOPE(Job->WarmUp ? Names[i].WarmUp : Names[i].Decode, Job->Frame ? Job->Frame->Index : (size_t)-1);
             if (!Decoder)
@@ -389,21 +461,34 @@ void ffv1_frame_hybrid_private::Run(size_t i)
                 if (Issue != ffv1_frame_ffmpeg::vulkan_issue::None)
                     FFmpeg_Library_SetVulkanSetupFailed(Vulkan_Device[i], Vulkan_Name[Vulkan_First[i]], Vulkan_IsGPU[Vulkan_First[i]], Issue == ffv1_frame_ffmpeg::vulkan_issue::Unsupported);
             }
-            Missing = Error && FFmpeg_Library_VulkanMissing() != (size_t)-1;
-            Redo_ = Job->First && Error && !Missing && !Vulkan_Required[i]; // An explicitly requested decoder decodes the frame, a frame it can not decode has an issue
-            if (Job->WarmUp || Redo_)
-                Decoder->Discard(); // Not output
-            else if (!Error && SliceCrc)
+            if (SliceCrc && !Job->WarmUp)
                 Crc_Error = ffv1_frame::SliceCrc_Error(Job->Packet->data, Job->Packet_Size, Pools[i]); // Checked by us, FFmpeg conceals a slice with a wrong CRC (decoded frame without error)
-            if (!Redo_)
+            Missing = Error && FFmpeg_Library_VulkanMissing() != (size_t)-1;
+            Redo_ = Job->First && Error && !Missing && !Vulkan_Required[i] && !Crc_Error; // An explicitly requested decoder decodes the frame, a frame it can not decode has an issue (unless another decoder can decode it again)
+            Invalid = (Error || Crc_Error) && !Missing && !Redo_ && !Job->WarmUp && (Crc_Error || Decoder->InvalidData());
+            Backup = Error && !Missing && !Redo_ && !Invalid && Job->Backup;
+            if (Job->WarmUp || Redo_ || Backup)
+                Decoder->Discard(); // Not output
+            if (!Redo_ && !Backup)
                 ffmpeg::av_buffer_unref(&Job->Packet); // FFmpeg has its own reference if needed, else the packet is kept for the fallback decoder
         }
         auto Job_Duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - Start).count();
 
         Lock.lock();
         Working[i] = false;
-        if (Job->First)
-            First_Pending--;
+        if (Job->First || Job->Backup)
+            Redo_Pending--;
+        if (Error && !Backup && !Invalid && i >= Decoder_Vulkan)
+            Failed[i] = true; // Not used for next frames (also if it is a warm-up or a first frame)
+        if (Invalid && !Intra)
+            Skip_Decoder = i; // Next frames which are not keyframes depend on this frame, they are not decoded (no decoder can decode them, and this decoder may crash with them)
+        if (Error && !Missing && !Redo_ && !Backup && !Invalid && !Job->WarmUp)
+        {
+            // Issue of the decoder with a frame which can not be decoded again by another decoder (not a keyframe, or no fallback decoder for it), the caller stops (e.g. the check is done again with less FFmpeg decoders with Vulkan)
+            FFmpeg_Library_SetDecodeFailed(Decoder_Failure(i, Job));
+            Missing = true;
+        }
+        Backup_End(Job, Error || Crc_Error); // If this decoder is the fallback decoder of an FFmpeg decoder with Vulkan which failed to decode this frame
         if (!Job->WarmUp && !Job->First)
         {
             Duration[i] = Duration[i] ? (Duration[i] * 3 + Job_Duration) / 4 : Job_Duration; // Duration of the first frame includes the initialization
@@ -425,13 +510,23 @@ void ffv1_frame_hybrid_private::Run(size_t i)
                     else
                         Disabled[j] = true; // Stays busy
                 }
-        if (Redo_)
+        if (Redo_ || Backup)
         {
-            // FFmpeg decoder can not decode the stream, the frame is decoded by the fallback decoder
-            Disabled[i] = true; // FFmpeg decoder stays busy
+            // FFmpeg decoder can not decode the stream or failed to decode a keyframe, the frame is decoded by the fallback decoder
+            if (Backup)
+            {
+                // FFmpeg decoder stays busy until the fallback decoder decodes the frame (then not used for next frames if the fallback decoder decodes it)
+                Job->Backup_Of = i;
+                Backup_Waiting[i] = true;
+            }
+            else
+                Disabled[i] = true; // FFmpeg decoder stays busy
             Job->First = false;
+            Job->Backup = false;
             Redo.push_back(Job);
             Busy[Fallback] = true;
+            if (Last == i)
+                Last = Fallback; // Next frames which are not keyframes need the decoding states of this frame
         }
         else if (Job->WarmUp)
         {
@@ -463,15 +558,16 @@ void ffv1_frame_hybrid_private::Transfer(size_t i)
     std::unique_lock<std::mutex> Lock(Mutex);
     for (;;)
     {
-        Condition.wait(Lock, [&] { return !Jobs.empty() || Stop || (Ending && !Next[i] && !Working[i] && (i != Fallback || (Redo.empty() && !First_Pending)) && FFmpeg[i]); });
+        Condition.wait(Lock, [&] { return !Jobs.empty() || Stop || (Ending && !Next[i] && !Working[i] && !Backup_Waiting[i] && (i != Fallback || (Redo.empty() && !Redo_Pending)) && FFmpeg[i]); });
         if (Jobs.empty())
         {
             if (Stop)
                 return;
 
             // No more frames, FFmpeg decoder is released during the output of last frames
-            Vulkan_Keep(i);
-            auto Decoder_Old = FFmpeg[i];
+            auto Decoder_Old = Failed[i] && !Vulkan_FailureIsSafe() ? nullptr : FFmpeg[i];
+            if (Decoder_Old)
+                Vulkan_Keep(i);
             auto Pool_Old = Pools[i];
             FFmpeg[i] = nullptr;
             Pools[i] = nullptr;
@@ -530,6 +626,8 @@ void ffv1_frame_hybrid_private::Job_Free(hybrid_job* Job)
     Job->Error = false;
     Job->WarmUp = false;
     Job->First = false;
+    Job->Backup = false;
+    Job->Backup_Of = (size_t)-1;
     Jobs_Free.push_back(Job);
 }
 
@@ -715,7 +813,14 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
             i = P->Fallback;
         }
         else if (!KeyFrame)
+        {
             i = P->Last;
+            if (i == P->Skip_Decoder)
+            {
+                i = Decoder_Max; // Previous frame is invalid, this frame depends on it
+                return true;
+            }
+        }
         else
         {
             for (size_t j = Decoder_Max; j-- > 0;)
@@ -730,7 +835,7 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
     });
     if (i == Decoder_Max)
     {
-        // Frame not decoded
+        // Frame not decoded (an issue of the decoder or of the previous frame)
         for (auto WarmUp_Job : WarmUp_Jobs)
             if (WarmUp_Job)
             {
@@ -748,8 +853,12 @@ void ffv1_frame_hybrid::Decode(const uint8_t* Buffer, size_t Buffer_Size, data_h
         // First frame for this FFmpeg decoder (all frames are keyframes)
         P->Pending[i] = false;
         Job->First = true;
-        P->First_Pending++;
     }
+    if (KeyFrame && i == P->Skip_Decoder)
+        P->Skip_Decoder = Decoder_Max; // Next frames depend on this keyframe
+    Job->Backup = KeyFrame && i != Decoder_Ours && P->Fallback < i && P->Fallback < Decoder_Vulkan; // The fallback decoder (our decoder, or the FFmpeg decoder on CPU for an FFmpeg decoder with Vulkan) decodes it if this FFmpeg decoder fails
+    if (Job->First || Job->Backup)
+        P->Redo_Pending++;
     for (size_t j = 0; j < Decoder_Max; j++)
         if (WarmUp_Jobs[j])
         {

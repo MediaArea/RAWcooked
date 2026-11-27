@@ -182,6 +182,7 @@ bool ffv1_frame_ffmpeg::Decode(AVBufferRef* Buffer, size_t Buffer_Size)
 //---------------------------------------------------------------------------
 bool ffv1_frame_ffmpeg::Decode(AVFrame* Frame, AVBufferRef* Buffer, size_t Buffer_Size)
 {
+    Decode_Result = AVERROR_UNKNOWN;
     if (!ffmpeg::avcodec_is_open(Context))
     {
         TRACE_SCOPE("FFmpeg open");
@@ -194,11 +195,21 @@ bool ffv1_frame_ffmpeg::Decode(AVFrame* Frame, AVBufferRef* Buffer, size_t Buffe
     Packet->data = Buffer->data;
     Packet->size = (int)Buffer_Size;
     trace::scope Trace_Send("FFmpeg send packet", RawFrame_Index);
-    auto Result = ffmpeg::avcodec_send_packet(Context, Packet); // Decoding is synchronous (slice threads only), FFmpeg keeps its own reference to the buffer if it needs it after the decoding (e.g. Vulkan)
+    Decode_Result = ffmpeg::avcodec_send_packet(Context, Packet); // Decoding is synchronous (slice threads only), FFmpeg keeps its own reference to the buffer if it needs it after the decoding (e.g. Vulkan)
     Trace_Send.End();
     ffmpeg::av_packet_unref(Packet);
+    if (Decode_Result < 0)
+        return true;
     TRACE_SCOPE("FFmpeg receive frame", RawFrame_Index);
-    return Result < 0 || ffmpeg::avcodec_receive_frame(Context, Frame) < 0;
+    Decode_Result = ffmpeg::avcodec_receive_frame(Context, Frame);
+    return Decode_Result < 0;
+}
+
+//---------------------------------------------------------------------------
+bool ffv1_frame_ffmpeg::InvalidData() const
+{
+    // Only from the parsing of the frame header and of the slice positions, the hardware decoding with Vulkan returns other errors (e.g. GPU memory)
+    return Decode_Result == AVERROR_INVALIDDATA;
 }
 
 //---------------------------------------------------------------------------

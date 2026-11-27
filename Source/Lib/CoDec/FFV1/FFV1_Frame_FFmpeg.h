@@ -47,6 +47,8 @@ public:
     size_t RawFrame_Index = (size_t)-1; // Index of the frame given to Decode(), for instrumentation
     bool Output(); // To raw frame
     void Discard(); // Last decoded frame, instead of Output()
+    int Decode_Result = 0; // FFmpeg result of the last Decode(), negative if it failed
+    bool InvalidData() const; // Decode() failed because the content of the frame is invalid (issue of the frame, not of the decoder)
     // Decode() failed because hardware decoding with Vulkan is not possible (issue of the decoder, not of the frame): its setup failed (e.g. issue of the GPU or of its driver), or it is not proposed by FFmpeg for this stream (e.g. FFV1 version 0 or 1, or FFmpeg build without it)
     enum class vulkan_issue : uint8_t
     {

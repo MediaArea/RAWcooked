@@ -118,7 +118,7 @@ bool slice::SliceHeader()
     slice_x = E.u(States);
     if (slice_x >= P->num_h_slices)
     {
-        P->Error("FFV1-SLICE-slice_xywh:1");
+        Error("FFV1-SLICE-slice_xywh:1");
 
         return false;
     }
@@ -126,7 +126,7 @@ bool slice::SliceHeader()
     slice_y = E.u(States);
     if (slice_y >= P->num_v_slices)
     {
-        P->Error("FFV1-SLICE-slice_xywh:1");
+        Error("FFV1-SLICE-slice_xywh:1");
 
         return false;
     }
@@ -135,7 +135,7 @@ bool slice::SliceHeader()
     uint32_t slice_x2 = slice_x + slice_width_minus1 + 1; //right boundary
     if (slice_x2 > P->num_h_slices)
     {
-        P->Error("FFV1-SLICE-slice_xywh:1");
+        Error("FFV1-SLICE-slice_xywh:1");
 
         return false;
     }
@@ -144,7 +144,7 @@ bool slice::SliceHeader()
     uint32_t slice_y2 = slice_y + slice_height_minus1 + 1; //bottom boundary
     if (slice_y2 > P->num_v_slices)
     {
-        P->Error("FFV1-SLICE-slice_xywh:1");
+        Error("FFV1-SLICE-slice_xywh:1");
 
         return false;
     }
@@ -161,18 +161,18 @@ bool slice::SliceHeader()
         quant_table_set_indexes[i].Index = E.u(States);
         if (quant_table_set_indexes[i].Index >= P->quant_table_set_count)
         {
-            P->Error("FFV1-SLICE-quant_table_index:1");
+            Error("FFV1-SLICE-quant_table_index:1");
 
             return false;
         }
     }
     picture_structure = E.u(States);
     if (picture_structure>3)
-        P->Error("FFV1-SLICE-picture_structure:1");
+        Error("FFV1-SLICE-picture_structure:1");
     sar_num = E.u(States);
     sar_den = E.u(States);
     //if ((sar_num && !sar_den) || (!sar_num && sar_den))
-    //    P->Error("FFV1-SLICE-sar_den:1"); //TODO: check FFmpeg code, looks like it is set to 0/1 when unknown
+    //    Error("FFV1-SLICE-sar_den:1"); //TODO: check FFmpeg code, looks like it is set to 0/1 when unknown
 
     return true;
 }
@@ -198,13 +198,24 @@ void slice::GOP_Init()
 }
 
 //---------------------------------------------------------------------------
-void slice::Init(const uint8_t* Buffer_, size_t Buffer_Size_, bool keyframe_, bool IsFirstSlice_, raw_frame* RawFrame_)
+void slice::Init(const uint8_t* Buffer_, size_t Buffer_Size_, bool keyframe_, bool IsFirstSlice_, raw_frame* RawFrame_, std::atomic<bool>* FrameError_)
 {
     RawFrame = RawFrame_;
+    FrameError = FrameError_;
     Buffer = Buffer_;
     Buffer_Size = Buffer_Size_;
     keyframe = keyframe_;
     IsFirstSlice = IsFirstSlice_;
+}
+
+//---------------------------------------------------------------------------
+bool slice::Error(const char* Message)
+{
+    if (Message)
+        P->Error(Message);
+    if (FrameError)
+        *FrameError = true;
+    return true;
 }
 
 //---------------------------------------------------------------------------
@@ -227,7 +238,7 @@ bool slice::Parse()
         if (keyframe)
         {
             if (P->Parse(E, false))
-                return true;
+                return Error(nullptr); // Message set by the parameters
         }
 
         //Frame
@@ -247,7 +258,7 @@ bool slice::Parse()
 
     // CRC check
     if (P->ec == 1 && ZenCRC32(Buffer, Buffer_Size))
-        P->Error("FFV1-SLICE-slice_crc_parity:1"); // We do not stop here, to try to decode the slice anyway
+        Error("FFV1-SLICE-slice_crc_parity:1"); // We do not stop here, to try to decode the slice anyway
 
     // RangeCoder reset
     Buffer_Size -= P->TailSize;
@@ -276,7 +287,7 @@ bool slice::Parse()
     if (keyframe)
         GOP_Init();
     if (!Coder)
-        return P->Error("FFV1-SLICE-NoKeyFrame:1"); // No decoding states (error in the keyframe of this slice): nothing is decoded
+        return Error("FFV1-SLICE-NoKeyFrame:1"); // No decoding states (error in the keyframe of this slice): nothing is decoded
 
     size_t Buffer_Offset;
     switch (P->coder_type)
@@ -300,20 +311,20 @@ bool slice::Parse()
 
     Buffer_Offset += SliceContent();
     if (Buffer_Offset<Buffer_Size)
-        P->Error("FFV1-SLICE-JUNK:1");
+        Error("FFV1-SLICE-JUNK:1");
 
     //SliceFooter
     if (P->ConfigurationRecord_IsPresent)
     {
         //uint32_t slice_size = BigEndian2int24u(Before + (size_t)Buffer_Offset); // slice_size //TODO: test when in buggy stream parsing mode
         //if (Element_Offset_Begin + slice_size != Buffer_Offset)
-        //    P->Error("FFV1-SLICE-slice_size:1");
+        //    Error("FFV1-SLICE-slice_size:1");
         if (P->ec == 1)
         {
             Buffer_Offset += 3;
             uint8_t error_status = Buffer[Buffer_Offset]; // error_status
             if (error_status)
-                return P->Error("FFV1-SLICE-error_status:1");
+                return Error("FFV1-SLICE-error_status:1");
             Buffer_Offset += 5; // error_status + slice_crc_parity
         }
     }
@@ -347,7 +358,7 @@ size_t slice::SliceContent()
     }
 
     if (Coder->IsUnderrun())
-        P->Error("FFV1-SLICE-SliceContent:1");
+        Error("FFV1-SLICE-SliceContent:1");
     return Coder->BytesUsed();
 }
 
